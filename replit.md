@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a real-time dashboard for Meta Ads lead management with integrated Google Sheets synchronization. The system displays lead generation data from Meta Ads campaigns organized by car brands (Fiat, Peugeot, Toyota, Chevrolet, Renault, Citroen). Features include real-time statistics, automated data synchronization, comprehensive lead tracking, and a full client management system (ABM) with database integration.
+This is a real-time dashboard for Meta Ads lead management with integrated Google Sheets synchronization and direct Meta Ads API integration. The system displays lead generation data from Meta Ads campaigns organized by car brands (Fiat, Peugeot, Toyota, Chevrolet, Renault, Citroen). Features include real-time statistics, automated data synchronization, comprehensive lead tracking, full client management system (ABM), and direct Meta Ads API integration for real-time campaign spending metrics.
 
 ## User Preferences
 
@@ -42,6 +42,7 @@ The application uses PostgreSQL with the following main entities:
 2. **Client Management (ABM)**: Complete CRUD system for client information with brands, zones, and commercial details
 3. **Campaign Analytics**: Performance tracking with lead counts, spending, and conversion rates
 4. **Google Sheets Integration**: Automatic synchronization with Fiat and Peugeot lead sheets
+5. **Meta Ads API Integration**: Real-time campaign spending data directly from Meta Ads Marketing API v21.0
 
 ### UI Components
 - **Navigation**: Consistent navigation bar across all pages
@@ -64,6 +65,14 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
+### Meta Ads API Integration (Latest)
+- **Meta Ads Service**: Created separate module using Marketing API v21.0 for real-time campaign spending data
+- **API Endpoints**: Full REST API for Meta Ads configuration, campaign metrics, budgets, and account summaries
+- **Real-time Metrics**: Campaign spending, impressions, clicks, CPC, CPM, and frequency data
+- **Auto-sync**: Automatic synchronization every 30 minutes with manual sync capabilities
+- **Dashboard**: Complete Meta Ads dashboard with configuration, status monitoring, and campaign visualization
+- **Isolated Module**: Designed as separate system to avoid conflicts with existing Google Sheets integration
+
 ### Client Management System Implementation
 - **Database Schema**: Added comprehensive "clientes" table with fields for commercial information, CUIT, billing type, brands, and zones
 - **API Endpoints**: Implemented full CRUD REST API for client management (/api/clientes)
@@ -84,6 +93,7 @@ The application uses PostgreSQL with the following main entities:
 - **drizzle-orm**: Type-safe database ORM with PostgreSQL support
 - **@tanstack/react-query**: Server state management and caching
 - **ws**: WebSocket implementation for real-time communication
+- **axios**: HTTP client for Meta Ads API integration
 
 ### UI Dependencies
 - **@radix-ui/***: Accessible component primitives for shadcn/ui

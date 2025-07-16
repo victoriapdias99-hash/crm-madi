@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { googleSheetsService, type SheetLead } from "./google-sheets";
+import { registerMetaAdsRoutes } from "./meta-ads-routes";
 import { 
   insertLeadSchema, 
   insertCampaignSchema, 
@@ -321,6 +322,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to fetch clientes from Google Sheets' });
     }
   });
+
+  // Registrar rutas de Meta Ads (módulo de prueba)
+  registerMetaAdsRoutes(app);
 
   // Campaign routes
   app.get('/api/campaigns', async (req, res) => {
