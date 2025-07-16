@@ -1,10 +1,11 @@
 import { 
-  users, campaigns, leads, dailyStats, leadNotes,
+  users, campaigns, leads, dailyStats, leadNotes, clientes,
   type User, type InsertUser,
   type Campaign, type InsertCampaign,
   type Lead, type InsertLead,
   type DailyStats, type InsertDailyStats,
-  type LeadNote, type InsertLeadNote
+  type LeadNote, type InsertLeadNote,
+  type Cliente, type InsertCliente
 } from "@shared/schema";
 
 export interface IStorage {
@@ -38,6 +39,13 @@ export interface IStorage {
   getTotalSpend(timeframe?: string): Promise<number>;
   getConversionRate(timeframe?: string): Promise<number>;
   getCostPerLead(timeframe?: string): Promise<number>;
+
+  // Cliente operations
+  getCliente(id: number): Promise<Cliente | undefined>;
+  getAllClientes(): Promise<Cliente[]>;
+  createCliente(cliente: InsertCliente): Promise<Cliente>;
+  updateCliente(id: number, updates: Partial<Cliente>): Promise<Cliente | undefined>;
+  deleteCliente(id: number): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -46,12 +54,14 @@ export class MemStorage implements IStorage {
   private leads: Map<number, Lead>;
   private dailyStats: Map<number, DailyStats>;
   private leadNotes: Map<number, LeadNote>;
+  private clientes: Map<number, Cliente>;
   
   private currentUserId: number;
   private currentCampaignId: number;
   private currentLeadId: number;
   private currentDailyStatsId: number;
   private currentLeadNoteId: number;
+  private currentClienteId: number;
 
   constructor() {
     this.users = new Map();
@@ -59,12 +69,14 @@ export class MemStorage implements IStorage {
     this.leads = new Map();
     this.dailyStats = new Map();
     this.leadNotes = new Map();
+    this.clientes = new Map();
     
     this.currentUserId = 1;
     this.currentCampaignId = 1;
     this.currentLeadId = 1;
     this.currentDailyStatsId = 1;
     this.currentLeadNoteId = 1;
+    this.currentClienteId = 1;
 
     // Crear datos de ejemplo
     this.seedData();
@@ -437,6 +449,52 @@ export class MemStorage implements IStorage {
     const leadsCount = await this.getLeadsCount(timeframe);
     
     return leadsCount > 0 ? totalSpend / leadsCount : 0;
+  }
+
+  // Cliente operations
+  async getCliente(id: number): Promise<Cliente | undefined> {
+    return this.clientes.get(id);
+  }
+
+  async getAllClientes(): Promise<Cliente[]> {
+    return Array.from(this.clientes.values()).sort((a, b) => a.nombreCliente.localeCompare(b.nombreCliente));
+  }
+
+  async createCliente(insertCliente: InsertCliente): Promise<Cliente> {
+    const id = this.currentClienteId++;
+    const cliente: Cliente = {
+      id,
+      nombreCliente: insertCliente.nombreCliente,
+      nombreComercial: insertCliente.nombreComercial,
+      telefono: insertCliente.telefono || null,
+      email: insertCliente.email || null,
+      fechaAlta: new Date(),
+      cuitCliente: insertCliente.cuitCliente || null,
+      tipoFacturacion: insertCliente.tipoFacturacion,
+      marcasSolicitadas: insertCliente.marcasSolicitadas || [],
+      zonas: insertCliente.zonas || [],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.clientes.set(id, cliente);
+    return cliente;
+  }
+
+  async updateCliente(id: number, updates: Partial<Cliente>): Promise<Cliente | undefined> {
+    const cliente = this.clientes.get(id);
+    if (!cliente) return undefined;
+    
+    const updatedCliente = { 
+      ...cliente, 
+      ...updates,
+      updatedAt: new Date()
+    };
+    this.clientes.set(id, updatedCliente);
+    return updatedCliente;
+  }
+
+  async deleteCliente(id: number): Promise<boolean> {
+    return this.clientes.delete(id);
   }
 }
 

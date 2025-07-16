@@ -249,6 +249,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoints para gestión de clientes
+  app.get('/api/clientes', async (req, res) => {
+    try {
+      const clientes = await storage.getAllClientes();
+      res.json(clientes);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch clientes' });
+    }
+  });
+
+  app.get('/api/clientes/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const cliente = await storage.getCliente(id);
+      
+      if (!cliente) {
+        return res.status(404).json({ error: 'Cliente not found' });
+      }
+      
+      res.json(cliente);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch cliente' });
+    }
+  });
+
+  app.post('/api/clientes', async (req, res) => {
+    try {
+      const cliente = await storage.createCliente(req.body);
+      res.status(201).json(cliente);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to create cliente' });
+    }
+  });
+
+  app.put('/api/clientes/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const cliente = await storage.updateCliente(id, req.body);
+      
+      if (!cliente) {
+        return res.status(404).json({ error: 'Cliente not found' });
+      }
+      
+      res.json(cliente);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to update cliente' });
+    }
+  });
+
+  app.delete('/api/clientes/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteCliente(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: 'Cliente not found' });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to delete cliente' });
+    }
+  });
+
+  app.get('/api/sheets/clientes', async (req, res) => {
+    try {
+      const clientesData = await googleSheetsService.getClientesData();
+      res.json(clientesData);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch clientes from Google Sheets' });
+    }
+  });
+
   // Campaign routes
   app.get('/api/campaigns', async (req, res) => {
     try {

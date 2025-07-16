@@ -9,6 +9,7 @@ import CampaignDashboard from "@/pages/campaign-dashboard";
 import DatosDiariosDashboard from "@/pages/datos-diarios-dashboard";
 import Login from "@/pages/login";
 import LeadDetails from "@/pages/lead-details";
+import ClientesManagement from "@/pages/clientes-management";
 
 function Router() {
   return (
@@ -16,6 +17,7 @@ function Router() {
       <Route path="/" component={DatosDiariosDashboard} />
       <Route path="/dashboard" component={CampaignDashboard} />
       <Route path="/simple" component={SimpleDashboard} />
+      <Route path="/clientes" component={ClientesManagement} />
       <Route path="/login" component={Login} />
       <Route path="/leads/:id" component={LeadDetails} />
       <Route component={NotFound} />

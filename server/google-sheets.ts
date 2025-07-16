@@ -232,6 +232,49 @@ class GoogleSheetsService {
     }
   }
 
+  async getClientesData(): Promise<any[]> {
+    if (!this.sheets) {
+      console.log('Google Sheets API not configured');
+      return [];
+    }
+
+    try {
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: this.spreadsheetId,
+        range: `Clientes!A1:J100`, // Obtener los primeros 100 registros
+      });
+
+      const rows = response.data.values || [];
+      if (rows.length < 2) return [];
+
+      // La primera fila son los headers
+      const headers = rows[0];
+      const dataRows = rows.slice(1);
+
+      const processedData = dataRows
+        .filter(row => row[0] && row[0].trim() !== '') // Filtrar filas vacías
+        .map(row => {
+          return {
+            nombreCliente: row[0] || '',
+            nombreComercial: row[1] || '',
+            telefono: row[2] || '',
+            email: row[3] || '',
+            fechaAlta: row[4] ? new Date(row[4]) : new Date(),
+            cuitCliente: row[5] || '',
+            tipoFacturacion: row[6] || 'C',
+            marcasSolicitadas: row[7] ? row[7].split(',').map((m: string) => m.trim()) : [],
+            zonas: row[8] ? row[8].split(',').map((z: string) => z.trim()) : []
+          };
+        });
+
+      console.log(`Fetched ${processedData.length} clients from Clientes sheet`);
+      return processedData;
+    } catch (error) {
+      console.error('Error fetching Clientes data:', error);
+      return [];
+    }
+  }
+
   async startPeriodicSync(callback: (leads: SheetLead[]) => void) {
     if (!this.sheets) {
       console.log('Google Sheets API not configured, skipping periodic sync');

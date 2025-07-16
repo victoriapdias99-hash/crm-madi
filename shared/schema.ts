@@ -120,6 +120,22 @@ export const dashboardCampaigns = pgTable("dashboard_campaigns", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Gestión de clientes
+export const clientes = pgTable("clientes", {
+  id: serial("id").primaryKey(),
+  nombreCliente: text("nombre_cliente").notNull(),
+  nombreComercial: text("nombre_comercial").notNull(),
+  telefono: text("telefono"),
+  email: text("email"),
+  fechaAlta: timestamp("fecha_alta").defaultNow(),
+  cuitCliente: text("cuit_cliente"),
+  tipoFacturacion: text("tipo_facturacion").notNull(), // "C" o "A"
+  marcasSolicitadas: text("marcas_solicitadas").array(), // Array de marcas
+  zonas: text("zonas").array(), // Array de zonas: AMBA, NACIONAL, LOCALIZADO
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Zod schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -211,6 +227,20 @@ export const insertDashboardCampaignSchema = createInsertSchema(dashboardCampaig
 export type DashboardCampaign = typeof dashboardCampaigns.$inferSelect;
 export type InsertDashboardCampaign = z.infer<typeof insertDashboardCampaignSchema>;
 
+export const insertClienteSchema = createInsertSchema(clientes).pick({
+  nombreCliente: true,
+  nombreComercial: true,
+  telefono: true,
+  email: true,
+  cuitCliente: true,
+  tipoFacturacion: true,
+  marcasSolicitadas: true,
+  zonas: true,
+});
+
+export type Cliente = typeof clientes.$inferSelect;
+export type InsertCliente = z.infer<typeof insertClienteSchema>;
+
 // Enums
 export const LEAD_STATUS = {
   NEW: 'new',
@@ -238,3 +268,30 @@ export const NOTE_TYPES = {
 } as const;
 
 export type NoteType = typeof NOTE_TYPES[keyof typeof NOTE_TYPES];
+
+// Clientes - Enums
+export const TIPO_FACTURACION = {
+  C: 'C',
+  A: 'A'
+} as const;
+
+export type TipoFacturacion = typeof TIPO_FACTURACION[keyof typeof TIPO_FACTURACION];
+
+export const MARCAS = {
+  FIAT: 'FIAT',
+  PEUGEOT: 'PEUGEOT',
+  TOYOTA: 'TOYOTA',
+  CHEVROLET: 'CHEVROLET',
+  RENAULT: 'RENAULT',
+  CITROEN: 'CITROEN'
+} as const;
+
+export type Marca = typeof MARCAS[keyof typeof MARCAS];
+
+export const ZONAS = {
+  AMBA: 'AMBA',
+  NACIONAL: 'NACIONAL',
+  LOCALIZADO: 'LOCALIZADO'
+} as const;
+
+export type Zona = typeof ZONAS[keyof typeof ZONAS];

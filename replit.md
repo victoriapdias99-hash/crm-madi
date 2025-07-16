@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a real-time dashboard for Meta Ads lead management with integrated Google Sheets synchronization. The system displays lead generation data from Meta Ads campaigns organized by car brands (Fiat, Peugeot, Toyota, Chevrolet, Renault, Citroen). Features include real-time statistics, automated data synchronization, and comprehensive lead tracking with PHP-style accessibility.
+This is a real-time dashboard for Meta Ads lead management with integrated Google Sheets synchronization. The system displays lead generation data from Meta Ads campaigns organized by car brands (Fiat, Peugeot, Toyota, Chevrolet, Renault, Citroen). Features include real-time statistics, automated data synchronization, comprehensive lead tracking, and a full client management system (ABM) with database integration.
 
 ## User Preferences
 
@@ -27,25 +27,27 @@ Preferred communication style: Simple, everyday language.
 
 ### Database Schema
 The application uses PostgreSQL with the following main entities:
-- **Users**: Player accounts with authentication
-- **Game Rooms**: Multiplayer game instances with host management
-- **Players**: Character assignments within game rooms
-- **Chat Messages**: Real-time communication between players
-- **Game Progress**: Tracking player actions and vocabulary learning
+- **Users**: System user accounts with authentication
+- **Campaigns**: Meta Ads campaigns with budget and status tracking
+- **Leads**: Individual lead records from Meta Ads with detailed information
+- **Daily Stats**: Performance metrics for campaigns by date
+- **Lead Notes**: User notes and interactions with leads
+- **Clientes**: Client management with commercial information, brands, and zones
+- **Dashboard Campaigns**: Campaign tracking for dashboard analytics
 
 ## Key Components
 
-### Game Flow
-1. **Character Selection**: Players choose from detective, linguist, translator, or cultural expert roles
-2. **Room Management**: Create or join multiplayer game rooms with configurable settings
-3. **Mystery Solving**: Collaborative gameplay with language learning elements
-4. **Real-time Communication**: WebSocket-based chat and game state synchronization
+### Dashboard Features
+1. **Datos Diarios Dashboard**: Real-time view of Google Sheets "Datos Diarios" data with manual CPL and order inputs
+2. **Client Management (ABM)**: Complete CRUD system for client information with brands, zones, and commercial details
+3. **Campaign Analytics**: Performance tracking with lead counts, spending, and conversion rates
+4. **Google Sheets Integration**: Automatic synchronization with Fiat and Peugeot lead sheets
 
 ### UI Components
-- **Character Panel**: Displays team members, progress tracking, and character abilities
-- **Main Game Area**: Central mystery interface with clues and vocabulary learning
-- **Communication Panel**: Real-time chat with game action capabilities
-- **Game Header**: Room status, connection state, and language selection
+- **Navigation**: Consistent navigation bar across all pages
+- **Datos Diarios Table**: Interactive table with manual input fields and automatic calculations
+- **Client Management**: Form-based CRUD interface with validation for client data
+- **Real-time Updates**: WebSocket-based dashboard updates and data synchronization
 
 ### Storage Layer
 - **Database Storage**: Production-ready PostgreSQL implementation via Drizzle
@@ -54,11 +56,26 @@ The application uses PostgreSQL with the following main entities:
 
 ## Data Flow
 
-1. **Client Connection**: WebSocket connection established on game page load
-2. **Room Joining**: Players join rooms and receive current game state
-3. **Real-time Updates**: Game actions broadcast to all room participants
-4. **State Synchronization**: Game progress, chat messages, and player status synced across clients
-5. **Persistence**: All game data persisted to PostgreSQL for resume capability
+1. **Google Sheets Sync**: Automatic periodic synchronization with Google Sheets for lead and client data
+2. **Real-time Dashboard**: WebSocket connections provide live updates of campaign metrics
+3. **Manual Input Processing**: User inputs for CPL and orders processed with automatic calculations
+4. **Client Management**: Full CRUD operations for client data with validation and persistence
+5. **Database Persistence**: All data stored in PostgreSQL with proper relationships and indexing
+
+## Recent Changes (January 2025)
+
+### Client Management System Implementation
+- **Database Schema**: Added comprehensive "clientes" table with fields for commercial information, CUIT, billing type, brands, and zones
+- **API Endpoints**: Implemented full CRUD REST API for client management (/api/clientes)
+- **Frontend Interface**: Created responsive client management page with forms, validation, and data tables
+- **Navigation**: Added navigation component for seamless movement between dashboard sections
+- **Integration**: Connected Google Sheets "Clientes" data with database storage and UI
+
+### Technical Improvements
+- **Storage Layer**: Extended IStorage interface and MemStorage implementation for client operations
+- **Form Validation**: Implemented Zod schema validation for client data with TypeScript type safety
+- **UI Components**: Enhanced forms with multi-select checkboxes for brands and zones, proper field validation
+- **Data Synchronization**: Maintained real-time updates with TanStack Query and proper cache invalidation
 
 ## External Dependencies
 
