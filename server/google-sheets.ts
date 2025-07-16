@@ -17,17 +17,50 @@ interface SheetLead {
 class GoogleSheetsService {
   private sheets: any;
   private spreadsheetId: string;
-  private apiKey: string;
+  private auth: any;
 
   constructor() {
-    this.apiKey = process.env.GOOGLE_SHEETS_API_KEY || '';
     this.spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID || '1jgi8XIWFUdu6x68oIDaGldr3s19JQC_LBZ8ZzQAsPJA';
     
-    if (this.apiKey) {
+    // Try to use service account first, fall back to API key
+    this.initializeAuth();
+  }
+
+  private initializeAuth() {
+    const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+    const apiKey = process.env.GOOGLE_SHEETS_API_KEY;
+
+    if (serviceAccountJson) {
+      try {
+        const credentials = JSON.parse(serviceAccountJson);
+        this.auth = new google.auth.GoogleAuth({
+          credentials,
+          scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly']
+        });
+        
+        this.sheets = google.sheets({ 
+          version: 'v4', 
+          auth: this.auth 
+        });
+        console.log('Google Sheets: Using service account authentication');
+      } catch (error) {
+        console.error('Error parsing service account JSON:', error);
+        this.fallbackToApiKey(apiKey);
+      }
+    } else if (apiKey) {
+      this.fallbackToApiKey(apiKey);
+    } else {
+      console.log('No Google Sheets credentials configured');
+    }
+  }
+
+  private fallbackToApiKey(apiKey: string) {
+    if (apiKey) {
       this.sheets = google.sheets({ 
         version: 'v4', 
-        auth: this.apiKey 
+        auth: apiKey 
       });
+      console.log('Google Sheets: Using API key authentication');
     }
   }
 
@@ -54,7 +87,7 @@ class GoogleSheetsService {
   }
 
   async getSheetData(sheetName: string): Promise<SheetLead[]> {
-    if (!this.sheets || !this.apiKey) {
+    if (!this.sheets) {
       console.log('Google Sheets API not configured');
       return [];
     }
@@ -84,7 +117,7 @@ class GoogleSheetsService {
   }
 
   async getAllLeadsFromSheets(): Promise<SheetLead[]> {
-    if (!this.sheets || !this.apiKey) {
+    if (!this.sheets) {
       console.log('Google Sheets API not configured');
       return [];
     }
@@ -106,7 +139,7 @@ class GoogleSheetsService {
   }
 
   async getAvailableSheets(): Promise<string[]> {
-    if (!this.sheets || !this.apiKey) {
+    if (!this.sheets) {
       return [];
     }
 
@@ -130,7 +163,7 @@ class GoogleSheetsService {
   }
 
   async startPeriodicSync(callback: (leads: SheetLead[]) => void) {
-    if (!this.sheets || !this.apiKey) {
+    if (!this.sheets) {
       console.log('Google Sheets API not configured, skipping periodic sync');
       return;
     }
