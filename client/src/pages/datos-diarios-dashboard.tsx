@@ -38,11 +38,7 @@ export default function DatosDiariosDashboard() {
 
   const updateCplMutation = useMutation({
     mutationFn: async ({ clienteIndex, cpl }: { clienteIndex: number; cpl: number }) => {
-      await apiRequest(`/api/dashboard/update-cpl`, {
-        method: 'POST',
-        body: JSON.stringify({ clienteIndex, cpl }),
-        headers: { 'Content-Type': 'application/json' }
-      });
+      await apiRequest('/api/dashboard/update-cpl', 'POST', { clienteIndex, cpl });
     },
     onSuccess: () => {
       toast({
@@ -60,11 +56,11 @@ export default function DatosDiariosDashboard() {
     }
   });
 
-  // Calcular inversiones basadas en CPL manual
+  // Calcular inversiones basadas en CPL manual con 2% de impuestos
   const calculateInversions = (data: DatosDiariosData, cpl: number) => {
-    const inversionRealizada = data.enviados * cpl;
-    const inversionPendiente = data.faltantesAEnviar * cpl;
-    const inversionTotal = data.pedidosPorDia * cpl;
+    const inversionRealizada = data.enviados * cpl * 1.02; // +2% impuestos
+    const inversionPendiente = data.faltantesAEnviar * cpl * 1.02; // +2% impuestos
+    const inversionTotal = data.pedidosPorDia * cpl * 1.02; // +2% impuestos
     
     return {
       inversionRealizada,
@@ -174,9 +170,9 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">% Desvío</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Faltantes</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Manual (ARS)</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Realizada</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Pendiente</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Total</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Realizada (con impuestos)</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Pendiente (con impuestos)</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Total (con impuestos)</th>
                   </tr>
                 </thead>
                 <tbody>
