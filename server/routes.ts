@@ -91,8 +91,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
 
+    // Create unique ID based on lead data, not time
+    const leadHash = `${sheetLead.email}_${sheetLead.phone}_${sheetLead.source}_${sheetLead.campaign}`;
+    const uniqueId = leadHash.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
+
     return {
-      metaLeadId: `SHEET_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      metaLeadId: `SHEET_${uniqueId}`,
       campaignId,
       firstName,
       lastName,
@@ -104,7 +108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       campaignName: sheetLead.campaign,
       status: 'new' as const,
       source: 'google_sheets',
-      cost: sheetLead.cost || '0',
+      cost: sheetLead.cost ? (parseFloat(sheetLead.cost.replace(/[^0-9.-]/g, '')) * 1400).toString() : '0', // Convertir USD a ARS (aprox 1400 pesos por dólar)
       leadDate: new Date(sheetLead.timestamp).toISOString()
     };
   }
@@ -114,14 +118,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       let newLeadsCount = 0;
       
+      // Get all existing leads to check for duplicates
+      const existingLeads = await storage.getLeads({ limit: 10000 });
+      const existingMetaIds = new Set(existingLeads.map(lead => lead.metaLeadId));
+      
       for (const sheetLead of leads) {
-        // Check if lead already exists by email
-        const existingLeads = await storage.getLeads({ limit: 1000 });
-        const existingLead = existingLeads.find(lead => lead.email === sheetLead.email);
+        const dbLead = convertSheetLeadToDbLead(sheetLead);
         
-        if (!existingLead) {
-          const dbLead = convertSheetLeadToDbLead(sheetLead);
+        // Check if lead already exists by unique metaLeadId
+        if (!existingMetaIds.has(dbLead.metaLeadId)) {
           await storage.createLead(dbLead);
+          existingMetaIds.add(dbLead.metaLeadId); // Add to set to prevent duplicates in same batch
           newLeadsCount++;
         }
       }
@@ -188,6 +195,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(stats);
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch dashboard stats' });
+    }
+  });
+
+  app.get('/api/dashboard/leads-by-brand', async (req, res) => {
+    try {
+      const leads = await storage.getLeads({ limit: 10000 });
+      const brandCounts: Record<string, number> = {};
+      
+      // Contar leads por marca de auto desde Google Sheets
+      leads.forEach(lead => {
+        if (lead.source === 'google_sheets' && lead.campaignName) {
+          const brand = lead.campaignName.toLowerCase();
+          if (brand.includes('fiat')) brandCounts['Fiat'] = (brandCounts['Fiat'] || 0) + 1;
+          else if (brand.includes('peugeot')) brandCounts['Peugeot'] = (brandCounts['Peugeot'] || 0) + 1;
+          else if (brand.includes('toyota')) brandCounts['Toyota'] = (brandCounts['Toyota'] || 0) + 1;
+          else if (brand.includes('chevrolet')) brandCounts['Chevrolet'] = (brandCounts['Chevrolet'] || 0) + 1;
+          else if (brand.includes('renault')) brandCounts['Renault'] = (brandCounts['Renault'] || 0) + 1;
+          else if (brand.includes('citroen')) brandCounts['Citroen'] = (brandCounts['Citroen'] || 0) + 1;
+          else brandCounts['Otros'] = (brandCounts['Otros'] || 0) + 1;
+        }
+      });
+      
+      res.json(brandCounts);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch leads by brand' });
+    }
+  });
+
+  app.get('/api/dashboard/campaigns', async (req, res) => {
+    try {
+      // Datos basados en la estructura de la hoja Dashboard de Google Sheets
+      const campaignData = [
+        {
+          cliente: 'A',
+          campana: '1',
+          zona: 'NACIONAL',
+          enviados: 25,
+          entregadosPorDia: 80,
+          pedidosPorDia: 100,
+          porcentajeDesvio: -20.00,
+          datosPedidos: 0,
+          faltantesAEnviar: 75,
+          cpl: 1500, // En pesos argentinos
+          inversionRealizada: 37500,
+          inversionPendiente: 112500,
+          inversionTotal: 150000,
+          inversionTotalPendiente: 0
+        },
+        {
+          cliente: 'A',
+          campana: '2',
+          zona: 'NACIONAL',
+          enviados: 20,
+          entregadosPorDia: 0,
+          pedidosPorDia: 100,
+          porcentajeDesvio: -100.00,
+          datosPedidos: 0,
+          faltantesAEnviar: 80,
+          cpl: 1500,
+          inversionRealizada: 30000,
+          inversionPendiente: 120000,
+          inversionTotal: 150000,
+          inversionTotalPendiente: 0
+        },
+        {
+          cliente: 'B',
+          campana: '1',
+          zona: 'AMBA',
+          enviados: 5,
+          entregadosPorDia: 10,
+          pedidosPorDia: 20,
+          porcentajeDesvio: -50.00,
+          datosPedidos: 0,
+          faltantesAEnviar: 15,
+          cpl: 2000,
+          inversionRealizada: 10000,
+          inversionPendiente: 30000,
+          inversionTotal: 40000,
+          inversionTotalPendiente: 0
+        }
+      ];
+      
+      res.json(campaignData);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch campaign dashboard' });
     }
   });
 

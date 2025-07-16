@@ -5,13 +5,15 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import SimpleDashboard from "@/pages/simple-dashboard";
+import CampaignDashboard from "@/pages/campaign-dashboard";
 import Login from "@/pages/login";
 import LeadDetails from "@/pages/lead-details";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={SimpleDashboard} />
+      <Route path="/" component={CampaignDashboard} />
+      <Route path="/simple" component={SimpleDashboard} />
       <Route path="/login" component={Login} />
       <Route path="/leads/:id" component={LeadDetails} />
       <Route component={NotFound} />

@@ -87,6 +87,39 @@ export const leadNotes = pgTable("lead_notes", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Dashboard de campañas según estructura de Google Sheets
+export const dashboardCampaigns = pgTable("dashboard_campaigns", {
+  id: serial("id").primaryKey(),
+  cliente: text("cliente").notNull(), // Cliente (A, B, etc.)
+  campana: text("campana").notNull(), // Campaña (1, 2, etc.)
+  zona: text("zona").notNull(), // NACIONAL, AMBA, CORDOBA
+  enviados: integer("enviados").default(0), // Total enviados
+  entregadosPorDia: numeric("entregados_por_dia", { precision: 10, scale: 2 }), // Promedio entregados
+  pedidosPorDia: integer("pedidos_por_dia").default(0), // Número fijo manual
+  porcentajeDesvio: numeric("porcentaje_desvio", { precision: 5, scale: 2 }), // % desvío
+  datosPedidos: integer("datos_pedidos").default(0), // Cantidad total pedida
+  faltantesAEnviar: integer("faltantes_a_enviar").default(0), // Pedidos - Enviados
+  cpl: numeric("cpl", { precision: 10, scale: 2 }), // Coste por lead en pesos argentinos
+  inversionRealizada: numeric("inversion_realizada", { precision: 12, scale: 2 }), // En pesos
+  inversionPendiente: numeric("inversion_pendiente", { precision: 12, scale: 2 }), // En pesos
+  inversionTotal: numeric("inversion_total", { precision: 12, scale: 2 }), // En pesos
+  inversionTotalPendiente: numeric("inversion_total_pendiente", { precision: 12, scale: 2 }), // En pesos
+  // Datos diarios (día 1 al 31)
+  dia1: integer("dia_1").default(0), dia2: integer("dia_2").default(0), dia3: integer("dia_3").default(0),
+  dia4: integer("dia_4").default(0), dia5: integer("dia_5").default(0), dia6: integer("dia_6").default(0),
+  dia7: integer("dia_7").default(0), dia8: integer("dia_8").default(0), dia9: integer("dia_9").default(0),
+  dia10: integer("dia_10").default(0), dia11: integer("dia_11").default(0), dia12: integer("dia_12").default(0),
+  dia13: integer("dia_13").default(0), dia14: integer("dia_14").default(0), dia15: integer("dia_15").default(0),
+  dia16: integer("dia_16").default(0), dia17: integer("dia_17").default(0), dia18: integer("dia_18").default(0),
+  dia19: integer("dia_19").default(0), dia20: integer("dia_20").default(0), dia21: integer("dia_21").default(0),
+  dia22: integer("dia_22").default(0), dia23: integer("dia_23").default(0), dia24: integer("dia_24").default(0),
+  dia25: integer("dia_25").default(0), dia26: integer("dia_26").default(0), dia27: integer("dia_27").default(0),
+  dia28: integer("dia_28").default(0), dia29: integer("dia_29").default(0), dia30: integer("dia_30").default(0),
+  dia31: integer("dia_31").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Zod schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -157,6 +190,26 @@ export type InsertDailyStats = z.infer<typeof insertDailyStatsSchema>;
 
 export type LeadNote = typeof leadNotes.$inferSelect;
 export type InsertLeadNote = z.infer<typeof insertLeadNoteSchema>;
+
+export const insertDashboardCampaignSchema = createInsertSchema(dashboardCampaigns).pick({
+  cliente: true,
+  campana: true,
+  zona: true,
+  enviados: true,
+  entregadosPorDia: true,
+  pedidosPorDia: true,
+  porcentajeDesvio: true,
+  datosPedidos: true,
+  faltantesAEnviar: true,
+  cpl: true,
+  inversionRealizada: true,
+  inversionPendiente: true,
+  inversionTotal: true,
+  inversionTotalPendiente: true,
+});
+
+export type DashboardCampaign = typeof dashboardCampaigns.$inferSelect;
+export type InsertDashboardCampaign = z.infer<typeof insertDashboardCampaignSchema>;
 
 // Enums
 export const LEAD_STATUS = {
