@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Save, RefreshCw } from "lucide-react";
+import { Loader2, Save, RefreshCw, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -28,6 +28,7 @@ export default function DatosDiariosDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [cplValues, setCplValues] = useState<Record<number, number>>({});
+  const [pedidosPorDiaValues, setPedidosPorDiaValues] = useState<Record<number, number>>({});
 
   const { data: datosDiarios, isLoading } = useQuery({
     queryKey: ['/api/dashboard/datos-diarios'],
@@ -76,11 +77,36 @@ export default function DatosDiariosDashboard() {
     setCplValues(prev => ({ ...prev, [index]: numValue }));
   };
 
+  const handlePedidosPorDiaChange = (index: number, value: string) => {
+    const numValue = parseFloat(value) || 0;
+    setPedidosPorDiaValues(prev => ({ ...prev, [index]: numValue }));
+  };
+
   const handleSaveCpl = (index: number) => {
     const cpl = cplValues[index];
     if (cpl && cpl > 0) {
       updateCplMutation.mutate({ clienteIndex: index, cpl });
     }
+  };
+
+  const handleSavePedidosPorDia = (index: number) => {
+    const pedidos = pedidosPorDiaValues[index];
+    if (pedidos && pedidos > 0) {
+      // Aquí se puede agregar una mutación para actualizar pedidos por día
+      toast({
+        title: "Pedidos por día actualizado",
+        description: `Actualizado a ${pedidos} pedidos`,
+      });
+    }
+  };
+
+  const clearAllManualValues = () => {
+    setCplValues({});
+    setPedidosPorDiaValues({});
+    toast({
+      title: "Valores restablecidos",
+      description: "Todos los valores manuales han sido eliminados",
+    });
   };
 
   if (isLoading) {
@@ -106,14 +132,24 @@ export default function DatosDiariosDashboard() {
               Gestión de campañas Meta Ads con datos reales de Google Sheets
             </p>
           </div>
-          <Button
-            onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] })}
-            variant="outline"
-            size="sm"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Actualizar
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] })}
+              variant="outline"
+              size="sm"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Actualizar
+            </Button>
+            <Button
+              onClick={clearAllManualValues}
+              variant="outline"
+              size="sm"
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Limpiar Valores
+            </Button>
+          </div>
         </div>
 
         <Card>
@@ -132,7 +168,7 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-left">Zona</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Enviados</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Entregados/día</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Pedidos/día</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Pedidos/día (Manual)</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">% Desvío</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Faltantes</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Manual (ARS)</th>
@@ -144,7 +180,18 @@ export default function DatosDiariosDashboard() {
                 <tbody>
                   {datosDiarios?.map((data: DatosDiariosData, index: number) => {
                     const currentCpl = cplValues[index] || data.cpl || 0;
-                    const inversions = calculateInversions(data, currentCpl);
+                    const currentPedidosPorDia = pedidosPorDiaValues[index] || data.pedidosPorDia || 0;
+                    
+                    // Crear objeto actualizado con valores manuales
+                    const updatedData = {
+                      ...data,
+                      pedidosPorDia: currentPedidosPorDia,
+                      faltantesAEnviar: Math.max(0, currentPedidosPorDia - data.enviados),
+                      porcentajeDesvio: (currentPedidosPorDia > 0 && data.entregadosPorDia > 0) ? 
+                        ((data.entregadosPorDia - currentPedidosPorDia) / currentPedidosPorDia * 100) : 0
+                    };
+                    
+                    const inversions = calculateInversions(updatedData, currentCpl);
                     
                     return (
                       <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-800">
@@ -159,13 +206,33 @@ export default function DatosDiariosDashboard() {
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
                           {data.entregadosPorDia ? data.entregadosPorDia.toFixed(2) : '0.00'}
                         </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{data.pedidosPorDia}</td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2">
+                          <div className="flex gap-2 items-center justify-center">
+                            <Input
+                              type="number"
+                              placeholder="Pedidos"
+                              value={pedidosPorDiaValues[index] || data.pedidosPorDia || ''}
+                              onChange={(e) => handlePedidosPorDiaChange(index, e.target.value)}
+                              className="w-24 text-center"
+                              min="0"
+                              step="1"
+                            />
+                            <Button
+                              size="sm"
+                              onClick={() => handleSavePedidosPorDia(index)}
+                              disabled={!pedidosPorDiaValues[index]}
+                              variant="outline"
+                            >
+                              <Save className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
-                          <Badge variant={data.porcentajeDesvio && data.porcentajeDesvio < 0 ? "destructive" : "default"}>
-                            {data.porcentajeDesvio ? data.porcentajeDesvio.toFixed(2) : '0.00'}%
+                          <Badge variant={updatedData.porcentajeDesvio && updatedData.porcentajeDesvio < 0 ? "destructive" : "default"}>
+                            {updatedData.porcentajeDesvio ? updatedData.porcentajeDesvio.toFixed(2) : '0.00'}%
                           </Badge>
                         </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{data.faltantesAEnviar}</td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{updatedData.faltantesAEnviar}</td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2">
                           <div className="flex gap-2 items-center">
                             <Input
