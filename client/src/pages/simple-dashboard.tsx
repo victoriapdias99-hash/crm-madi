@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, queryClient } from "@tanstack/react-query";
 
 interface DashboardStats {
   leadsCount: number;
@@ -39,6 +39,21 @@ export default function SimpleDashboard() {
     queryFn: () => fetch('/api/leads?limit=10').then(res => res.json())
   });
 
+  // Fetch Google Sheets status
+  const { data: sheetsStatus } = useQuery({
+    queryKey: ['/api/sheets/status'],
+    queryFn: () => fetch('/api/sheets/status').then(res => res.json())
+  });
+
+  // Manual sync mutation
+  const syncMutation = useMutation({
+    mutationFn: () => fetch('/api/sheets/sync', { method: 'POST' }).then(res => res.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
+    }
+  });
+
   // WebSocket connection for real-time updates
   useEffect(() => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -63,9 +78,30 @@ export default function SimpleDashboard() {
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
       <h1 style={{ color: '#333', marginBottom: '10px' }}>Dashboard Meta Ads</h1>
-      <p style={{ color: '#666', marginBottom: '20px' }}>
-        Estado: {isConnected ? '✅ Conectado' : '❌ Desconectado'}
-      </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <p style={{ color: '#666', margin: '0' }}>
+          WebSocket: {isConnected ? '✅ Conectado' : '❌ Desconectado'}
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <p style={{ color: '#666', margin: '0' }}>
+            Google Sheets: {sheetsStatus?.connected ? '✅ Conectado' : '❌ Desconectado'}
+          </p>
+          <button 
+            onClick={() => syncMutation.mutate()}
+            disabled={syncMutation.isPending || !sheetsStatus?.connected}
+            style={{ 
+              padding: '8px 16px', 
+              backgroundColor: syncMutation.isPending ? '#ccc' : '#007bff', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '4px',
+              cursor: syncMutation.isPending ? 'not-allowed' : 'pointer'
+            }}
+          >
+            {syncMutation.isPending ? 'Sincronizando...' : 'Sincronizar'}
+          </button>
+        </div>
+      </div>
       
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '30px' }}>
         <div style={{ padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #dee2e6' }}>

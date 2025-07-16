@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
+import { googleSheetsService, type SheetLead } from "./google-sheets";
 import { 
   insertLeadSchema, 
   insertCampaignSchema, 
@@ -83,6 +84,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
   }
+
+  // Function to convert Google Sheets lead to database lead format
+  function convertSheetLeadToDbLead(sheetLead: SheetLead, campaignId: number = 1) {
+    const nameParts = sheetLead.name.split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+
+    return {
+      metaLeadId: `SHEET_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      campaignId,
+      firstName,
+      lastName,
+      email: sheetLead.email,
+      phone: sheetLead.phone,
+      city: sheetLead.city,
+      interest: sheetLead.interest,
+      budget: sheetLead.budget,
+      campaignName: sheetLead.campaign,
+      status: 'new' as const,
+      source: 'google_sheets',
+      cost: sheetLead.cost || '0',
+      leadDate: new Date(sheetLead.timestamp).toISOString()
+    };
+  }
+
+  // Handle Google Sheets sync
+  async function handleSheetSync(leads: SheetLead[]) {
+    try {
+      let newLeadsCount = 0;
+      
+      for (const sheetLead of leads) {
+        // Check if lead already exists by email
+        const existingLeads = await storage.getLeads({ limit: 1000 });
+        const existingLead = existingLeads.find(lead => lead.email === sheetLead.email);
+        
+        if (!existingLead) {
+          const dbLead = convertSheetLeadToDbLead(sheetLead);
+          await storage.createLead(dbLead);
+          newLeadsCount++;
+        }
+      }
+
+      if (newLeadsCount > 0) {
+        console.log(`Added ${newLeadsCount} new leads from Google Sheets`);
+        
+        // Broadcast update to dashboard
+        const stats = await getRealtimeStats();
+        broadcastDashboardUpdate(stats);
+      }
+    } catch (error) {
+      console.error('Error handling sheet sync:', error);
+    }
+  }
+
+  // Start Google Sheets periodic sync
+  googleSheetsService.startPeriodicSync(handleSheetSync);
 
   // Auth routes
   app.post('/api/login', async (req, res) => {
@@ -256,6 +313,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(note);
     } catch (error) {
       res.status(400).json({ error: 'Invalid note data' });
+    }
+  });
+
+  // Google Sheets integration routes
+  app.get('/api/sheets/status', async (req, res) => {
+    try {
+      const hasApiKey = !!process.env.GOOGLE_SHEETS_API_KEY;
+      const hasSpreadsheetId = !!process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+      
+      if (!hasApiKey || !hasSpreadsheetId) {
+        return res.json({
+          connected: false,
+          message: 'Google Sheets API credentials not configured'
+        });
+      }
+
+      // Test connection by trying to get available sheets
+      const sheets = await googleSheetsService.getAvailableSheets();
+      
+      res.json({
+        connected: true,
+        sheetsCount: sheets.length,
+        availableSheets: sheets,
+        message: 'Connected to Google Sheets'
+      });
+    } catch (error) {
+      res.json({
+        connected: false,
+        message: 'Failed to connect to Google Sheets',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.post('/api/sheets/sync', async (req, res) => {
+    try {
+      console.log('Manual Google Sheets sync requested');
+      const leads = await googleSheetsService.getAllLeadsFromSheets();
+      await handleSheetSync(leads);
+      
+      res.json({
+        success: true,
+        message: `Synced ${leads.length} leads from Google Sheets`,
+        leadsCount: leads.length
+      });
+    } catch (error) {
+      console.error('Manual sync error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to sync Google Sheets',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/sheets/preview', async (req, res) => {
+    try {
+      const sheetName = req.query.sheet as string || 'Fiat';
+      const leads = await googleSheetsService.getSheetData(sheetName);
+      
+      res.json({
+        sheetName,
+        leadsCount: leads.length,
+        leads: leads.slice(0, 10) // Preview first 10 leads
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: 'Failed to preview sheet data',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
