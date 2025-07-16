@@ -27,28 +27,16 @@ class GoogleSheetsService {
   }
 
   private initializeAuth() {
-    const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
     const apiKey = process.env.GOOGLE_SHEETS_API_KEY;
 
-    if (serviceAccountJson) {
-      try {
-        const credentials = JSON.parse(serviceAccountJson);
-        this.auth = new google.auth.GoogleAuth({
-          credentials,
-          scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly']
-        });
-        
-        this.sheets = google.sheets({ 
-          version: 'v4', 
-          auth: this.auth 
-        });
-        console.log('Google Sheets: Using service account authentication');
-      } catch (error) {
-        console.error('Error parsing service account JSON:', error);
-        this.fallbackToApiKey(apiKey);
-      }
-    } else if (apiKey) {
-      this.fallbackToApiKey(apiKey);
+    console.log('API key exists:', !!apiKey);
+
+    if (apiKey) {
+      this.sheets = google.sheets({ 
+        version: 'v4', 
+        auth: apiKey 
+      });
+      console.log('Google Sheets: Using API key authentication');
     } else {
       console.log('No Google Sheets credentials configured');
     }
