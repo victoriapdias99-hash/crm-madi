@@ -1,8 +1,8 @@
-# Mystery Language Quest - Game Platform
+# Meta Ads Lead Management Dashboard
 
 ## Overview
 
-This is a real-time multiplayer language learning game where players work together to solve mysteries while learning new languages. The application features a React frontend with a Node.js/Express backend, real-time communication via WebSockets, and uses PostgreSQL with Drizzle ORM for data persistence.
+This is a real-time dashboard for Meta Ads lead management with integrated Google Sheets synchronization. The system displays lead generation data from Meta Ads campaigns organized by car brands (Fiat, Peugeot, Toyota, Chevrolet, Renault, Citroen). Features include real-time statistics, automated data synchronization, and comprehensive lead tracking with PHP-style accessibility.
 
 ## User Preferences
 
