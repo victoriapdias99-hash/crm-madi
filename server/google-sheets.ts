@@ -150,6 +150,88 @@ class GoogleSheetsService {
     }
   }
 
+  async getDatosDiariosData(): Promise<any[]> {
+    if (!this.sheets) {
+      console.log('Google Sheets API not configured');
+      return [];
+    }
+
+    try {
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: this.spreadsheetId,
+        range: `Datos Diarios!A1:AJ100`, // Obtener los primeros 100 registros
+      });
+
+      const rows = response.data.values || [];
+      if (rows.length < 2) return [];
+
+      // La primera fila es el título (julio 2025)
+      // La segunda fila son los headers
+      const headers = rows[1];
+      const dataRows = rows.slice(2);
+
+      const processedData = dataRows
+        .filter(row => {
+          const cliente = row[0] && row[0].trim();
+          // Filtrar filas vacías y registros no válidos
+          return cliente && 
+                 cliente !== 'CLIENTE' && 
+                 !cliente.includes('2025') &&
+                 !cliente.toLowerCase().includes('junio') &&
+                 !cliente.toLowerCase().includes('julio');
+        })
+        .map(row => {
+          const cliente = row[0] || '';
+          const zona = row[1] || '';
+          
+          // Extraer días del 1 al 31 (columnas 2 a 32)
+          const diasData: number[] = [];
+          for (let i = 2; i <= 32; i++) {
+            const value = row[i];
+            diasData.push(value && !isNaN(Number(value)) ? Number(value) : 0);
+          }
+
+          // Extraer datos calculados (columnas siguientes)
+          const enviados = row[33] && !isNaN(Number(row[33])) ? Number(row[33]) : 0;
+          const entregadosPorDia = row[34] && !isNaN(Number(row[34])) ? Number(row[34]) : 0;
+          const pedidosPorDia = row[35] && !isNaN(Number(row[35])) ? Number(row[35]) : 0;
+
+          // Extraer nombre del cliente del campo "cliente"
+          const extractClientName = (clienteField: string) => {
+            // Ejemplos: "NOVO GROUP - FIAT" -> "NOVO GROUP", "RENAULT" -> "RENAULT"
+            const parts = clienteField.split(' - ');
+            return parts[0].trim();
+          };
+
+          const clienteNombre = extractClientName(cliente);
+
+          return {
+            cliente,
+            clienteNombre,
+            zona,
+            diasData,
+            enviados,
+            entregadosPorDia,
+            pedidosPorDia,
+            // Campos calculados
+            porcentajeDesvio: (pedidosPorDia > 0 && entregadosPorDia > 0) ? ((entregadosPorDia - pedidosPorDia) / pedidosPorDia * 100) : 0,
+            faltantesAEnviar: Math.max(0, pedidosPorDia - enviados),
+            // CPL se establecerá manualmente por el usuario
+            cpl: 0,
+            inversionRealizada: 0,
+            inversionPendiente: 0,
+            inversionTotal: 0
+          };
+        });
+
+      console.log(`Fetched ${processedData.length} records from Datos Diarios`);
+      return processedData;
+    } catch (error) {
+      console.error('Error fetching Datos Diarios data:', error);
+      return [];
+    }
+  }
+
   async startPeriodicSync(callback: (leads: SheetLead[]) => void) {
     if (!this.sheets) {
       console.log('Google Sheets API not configured, skipping periodic sync');

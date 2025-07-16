@@ -223,63 +223,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/dashboard/campaigns', async (req, res) => {
+  app.get('/api/dashboard/datos-diarios', async (req, res) => {
     try {
-      // Datos basados en la estructura de la hoja Dashboard de Google Sheets
-      const campaignData = [
-        {
-          cliente: 'A',
-          campana: '1',
-          zona: 'NACIONAL',
-          enviados: 25,
-          entregadosPorDia: 80,
-          pedidosPorDia: 100,
-          porcentajeDesvio: -20.00,
-          datosPedidos: 0,
-          faltantesAEnviar: 75,
-          cpl: 1500, // En pesos argentinos
-          inversionRealizada: 37500,
-          inversionPendiente: 112500,
-          inversionTotal: 150000,
-          inversionTotalPendiente: 0
-        },
-        {
-          cliente: 'A',
-          campana: '2',
-          zona: 'NACIONAL',
-          enviados: 20,
-          entregadosPorDia: 0,
-          pedidosPorDia: 100,
-          porcentajeDesvio: -100.00,
-          datosPedidos: 0,
-          faltantesAEnviar: 80,
-          cpl: 1500,
-          inversionRealizada: 30000,
-          inversionPendiente: 120000,
-          inversionTotal: 150000,
-          inversionTotalPendiente: 0
-        },
-        {
-          cliente: 'B',
-          campana: '1',
-          zona: 'AMBA',
-          enviados: 5,
-          entregadosPorDia: 10,
-          pedidosPorDia: 20,
-          porcentajeDesvio: -50.00,
-          datosPedidos: 0,
-          faltantesAEnviar: 15,
-          cpl: 2000,
-          inversionRealizada: 10000,
-          inversionPendiente: 30000,
-          inversionTotal: 40000,
-          inversionTotalPendiente: 0
-        }
-      ];
-      
-      res.json(campaignData);
+      // Obtener datos reales desde la hoja "Datos Diarios"
+      const datosDiarios = await googleSheetsService.getDatosDiariosData();
+      res.json(datosDiarios);
     } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch campaign dashboard' });
+      res.status(500).json({ error: 'Failed to fetch datos diarios' });
+    }
+  });
+
+  app.post('/api/dashboard/update-cpl', async (req, res) => {
+    try {
+      const { clienteIndex, cpl } = req.body;
+      
+      // Aquí se podría almacenar en base de datos o en memoria
+      // Por ahora simplemente confirmamos la actualización
+      res.json({ 
+        success: true, 
+        message: `CPL actualizado para cliente ${clienteIndex}`,
+        cpl: parseFloat(cpl)
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to update CPL' });
     }
   });
 
