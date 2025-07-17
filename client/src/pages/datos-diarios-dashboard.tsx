@@ -17,9 +17,12 @@ interface DatosDiariosData {
   enviados: number;
   entregadosPorDia: number;
   pedidosPorDia: number;
+  pedidosTotal: number;
+  numeroCampana: number;
   porcentajeDesvio: number;
   faltantesAEnviar: number;
   cpl: number;
+  ventaPorCampana: number;
   inversionRealizada: number;
   inversionPendiente: number;
   inversionTotal: number;
@@ -167,6 +170,8 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Enviados</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Entregados/día</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Pedidos/día (Manual)</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Pedidos Total</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">N° Campaña</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">% Desvío</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Faltantes</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Manual (ARS)</th>
@@ -224,6 +229,12 @@ export default function DatosDiariosDashboard() {
                               <Save className="h-3 w-3" />
                             </Button>
                           </div>
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          {data.pedidosTotal || 0}
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          {data.numeroCampana || 1}
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
                           <Badge variant={updatedData.porcentajeDesvio && updatedData.porcentajeDesvio < 0 ? "destructive" : "default"}>

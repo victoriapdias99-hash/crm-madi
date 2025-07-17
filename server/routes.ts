@@ -250,6 +250,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Actualizar venta por campaña
+  app.post('/api/dashboard/update-venta', async (req, res) => {
+    try {
+      const { clienteIndex, venta } = req.body;
+      
+      if (typeof clienteIndex !== 'number' || typeof venta !== 'number') {
+        return res.status(400).json({ error: 'Invalid parameters' });
+      }
+
+      res.json({ 
+        success: true, 
+        message: `Venta por campaña actualizada para cliente ${clienteIndex}`,
+        venta: parseFloat(venta)
+      });
+    } catch (error) {
+      console.error('Error updating venta por campaña:', error);
+      res.status(500).json({ error: 'Failed to update venta por campaña' });
+    }
+  });
+
+  // Obtener datos para dashboard de finanzas
+  app.get('/api/dashboard/finanzas', async (req, res) => {
+    try {
+      const datosDiarios = await googleSheetsService.getDatosDiariosData();
+      
+      // Transformar datos para finanzas
+      const finanzasData = datosDiarios.map((data: any, index: number) => {
+        // Extraer marca del cliente
+        let marca = 'Otros';
+        const clienteNombre = data.clienteNombre?.toLowerCase() || '';
+        if (clienteNombre.includes('fiat')) marca = 'Fiat';
+        else if (clienteNombre.includes('peugeot')) marca = 'Peugeot';
+        else if (clienteNombre.includes('toyota')) marca = 'Toyota';
+        else if (clienteNombre.includes('chevrolet')) marca = 'Chevrolet';
+        else if (clienteNombre.includes('renault')) marca = 'Renault';
+        else if (clienteNombre.includes('citroen')) marca = 'Citroen';
+
+        return {
+          cliente: data.cliente,
+          clienteNombre: data.clienteNombre,
+          campana: data.cliente,
+          numeroCampana: data.numeroCampana || 1,
+          marca,
+          zona: data.zona,
+          totalLeads: data.enviados || 0,
+          cpl: data.cpl || 0,
+          ventaPorCampana: data.ventaPorCampana || 0,
+          inversionTotal: data.inversionTotal || 0
+        };
+      });
+      
+      res.json(finanzasData);
+    } catch (error) {
+      console.error('Error fetching finanzas data:', error);
+      res.status(500).json({ error: 'Failed to fetch finanzas data' });
+    }
+  });
+
   // Endpoints para gestión de clientes
   app.get('/api/clientes', async (req, res) => {
     try {

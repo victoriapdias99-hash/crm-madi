@@ -205,6 +205,11 @@ class GoogleSheetsService {
 
           const clienteNombre = extractClientName(cliente);
 
+          // Extraer campos adicionales desde las columnas correspondientes
+          const pedidosTotal = row[36] && !isNaN(Number(row[36])) ? Number(row[36]) : 0;
+          const numeroCampana = row[37] && !isNaN(Number(row[37])) ? Number(row[37]) : 1;
+          const ventaPorCampana = row[38] && !isNaN(Number(row[38])) ? Number(row[38]) : 0;
+
           return {
             cliente,
             clienteNombre,
@@ -213,6 +218,9 @@ class GoogleSheetsService {
             enviados,
             entregadosPorDia,
             pedidosPorDia,
+            pedidosTotal,
+            numeroCampana,
+            ventaPorCampana,
             // Campos calculados
             porcentajeDesvio: (pedidosPorDia > 0 && entregadosPorDia > 0) ? ((entregadosPorDia - pedidosPorDia) / pedidosPorDia * 100) : 0,
             faltantesAEnviar: Math.max(0, pedidosPorDia - enviados),

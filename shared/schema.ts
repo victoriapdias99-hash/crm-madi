@@ -96,8 +96,11 @@ export const dashboardCampaigns = pgTable("dashboard_campaigns", {
   enviados: integer("enviados").default(0), // Total enviados
   entregadosPorDia: numeric("entregados_por_dia", { precision: 10, scale: 2 }), // Promedio entregados
   pedidosPorDia: integer("pedidos_por_dia").default(0), // Número fijo manual
+  pedidosTotal: integer("pedidos_total").default(0), // Total de pedidos
+  numeroCampana: integer("numero_campana").default(1), // Número de campaña por cliente
   porcentajeDesvio: numeric("porcentaje_desvio", { precision: 5, scale: 2 }), // % desvío
   datosPedidos: integer("datos_pedidos").default(0), // Cantidad total pedida
+  ventaPorCampana: numeric("venta_por_campana", { precision: 12, scale: 2 }).default("0"), // Venta por campaña (input manual)
   faltantesAEnviar: integer("faltantes_a_enviar").default(0), // Pedidos - Enviados
   cpl: numeric("cpl", { precision: 10, scale: 2 }), // Coste por lead en pesos argentinos
   inversionRealizada: numeric("inversion_realizada", { precision: 12, scale: 2 }), // En pesos

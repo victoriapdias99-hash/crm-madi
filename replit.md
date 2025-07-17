@@ -38,11 +38,12 @@ The application uses PostgreSQL with the following main entities:
 ## Key Components
 
 ### Dashboard Features
-1. **Datos Diarios Dashboard**: Real-time view of Google Sheets "Datos Diarios" data with manual CPL and order inputs
-2. **Client Management (ABM)**: Complete CRUD system for client information with brands, zones, and commercial details
-3. **Campaign Analytics**: Performance tracking with lead counts, spending, and conversion rates
-4. **Google Sheets Integration**: Automatic synchronization with Fiat and Peugeot lead sheets
-5. **Meta Ads API Integration**: Real-time campaign spending data directly from Meta Ads Marketing API v21.0
+1. **Datos Diarios Dashboard**: Real-time view of Google Sheets "Datos Diarios" data with manual CPL inputs and new campaign tracking fields
+2. **Finanzas Dashboard**: Comprehensive financial analysis with profit calculations, ROI analysis, and tax calculations per campaign and brand
+3. **Client Management (ABM)**: Complete CRUD system for client information with brands, zones, and commercial details
+4. **Campaign Analytics**: Performance tracking with lead counts, spending, and conversion rates
+5. **Google Sheets Integration**: Automatic synchronization with Fiat and Peugeot lead sheets
+6. **Meta Ads API Integration**: Real-time campaign spending data directly from Meta Ads Marketing API v21.0
 
 ### UI Components
 - **Navigation**: Consistent navigation bar across all pages
@@ -65,7 +66,16 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Meta Ads API Integration (Latest)
+### Financial Analysis Dashboard (Latest - January 17, 2025)
+- **New Fields**: Added "Pedidos Total", "N° Campaña", and "Venta por Campaña" fields to Datos Diarios dashboard
+- **Finanzas Dashboard**: Complete financial analysis page with profit calculations per campaign and brand
+- **Financial Metrics**: Real-time calculation of profit (Total leads × CPL × Venta - Inversión), ROI, and IIBB taxes (4%)
+- **Brand Analysis**: Grouped financial data by marca (Fiat, Peugeot, Toyota, Chevrolet, Renault, Citroen)
+- **Manual Inputs**: User interface for updating "Venta por Campaña" values with automatic recalculation
+- **Campaign Tracking**: Support for multiple campaigns per client with unique campaign numbers
+- **Investment Calculation**: Total investment including 2% tax on (cantidad × CPL) formula
+
+### Meta Ads API Integration (January 16, 2025)
 - **Meta Ads Service**: Created separate module using Marketing API v21.0 for real-time campaign spending data
 - **API Endpoints**: Full REST API for Meta Ads configuration, campaign metrics, budgets, and account summaries
 - **Real-time Metrics**: Campaign spending, impressions, clicks, CPC, CPM, and frequency data

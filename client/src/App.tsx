@@ -11,6 +11,7 @@ import Login from "@/pages/login";
 import LeadDetails from "@/pages/lead-details";
 import ClientesManagement from "@/pages/clientes-management";
 import MetaAdsDashboard from "@/pages/meta-ads-dashboard";
+import FinanzasDashboard from "@/pages/finanzas-dashboard";
 
 function Router() {
   return (
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/simple" component={SimpleDashboard} />
       <Route path="/clientes" component={ClientesManagement} />
       <Route path="/meta-ads" component={MetaAdsDashboard} />
+      <Route path="/finanzas" component={FinanzasDashboard} />
       <Route path="/login" component={Login} />
       <Route path="/leads/:id" component={LeadDetails} />
       <Route component={NotFound} />
