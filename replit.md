@@ -66,7 +66,16 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Sistema de Pruebas Funcionales Automatizadas (Latest - January 17, 2025)
+### Expansión Sistema Clientes con Targeting Geográfico (Latest - January 17, 2025)
+- **Nuevas Marcas**: Expandido de 6 a 12 marcas disponibles (VW, Mercedes, Ford, Jeep, China, Otra)
+- **Provincias Buenos Aires**: Dropdown completo con todas las provincias de Buenos Aires para targeting localizado
+- **Exclusiones Geográficas**: Sistema tipo Google Maps para excluir áreas específicas (ciudades, regiones, radios)
+- **Tipo de Cliente**: Categorización comercial (AGENCIA, GRUPO COMERCIAL, COMERCIALIZADORA, VENDEDOR)
+- **Integración**: Campo para tipo de integración (Pilot, Tecnom, Asofix, Otro)
+- **Formulario Expandido**: Interface mejorada con componentes modulares y mejor organización visual
+- **Schema Actualizado**: Base de datos extendida con nuevos campos de targeting y comerciales
+
+### Sistema de Pruebas Funcionales Automatizadas (January 17, 2025)
 - **Analista Funcional Automatizado**: Implementado sistema de testing completo que verifica cada cambio
 - **Test Runner**: Módulo de pruebas que valida APIs, persistencia de datos, y cálculos financieros
 - **Panel de Pruebas**: Interfaz visual en el dashboard para ejecutar y ver resultados de pruebas

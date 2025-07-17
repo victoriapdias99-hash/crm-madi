@@ -3,15 +3,16 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Building2, Mail, Phone } from "lucide-react";
+import { Plus, Edit, Trash2, Building2, Mail, Phone, MapPin, Globe } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertClienteSchema, type Cliente, type InsertCliente, TIPO_FACTURACION, MARCAS, ZONAS } from "@shared/schema";
+import { 
+  insertClienteSchema, 
+  type Cliente, 
+  type InsertCliente
+} from "@shared/schema";
+import ClienteForm from "@/components/cliente-form";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -76,8 +77,12 @@ export default function ClientesManagement() {
       cuitCliente: "",
       tipoFacturacion: "C",
       marcasSolicitadas: [],
-      zonas: []
-    }
+      zonas: [],
+      provinciaBuenosAires: "",
+      exclusionesGeograficas: [],
+      integracion: "",
+      tipoCliente: "",
+    },
   });
 
   const openDialog = (cliente?: Cliente) => {
@@ -91,7 +96,11 @@ export default function ClientesManagement() {
         cuitCliente: cliente.cuitCliente || "",
         tipoFacturacion: cliente.tipoFacturacion,
         marcasSolicitadas: cliente.marcasSolicitadas || [],
-        zonas: cliente.zonas || []
+        zonas: cliente.zonas || [],
+        provinciaBuenosAires: cliente.provinciaBuenosAires || "",
+        exclusionesGeograficas: cliente.exclusionesGeograficas || [],
+        integracion: cliente.integracion || "",
+        tipoCliente: cliente.tipoCliente || "",
       });
     } else {
       setEditingCliente(null);
@@ -103,10 +112,20 @@ export default function ClientesManagement() {
         cuitCliente: "",
         tipoFacturacion: "C",
         marcasSolicitadas: [],
-        zonas: []
+        zonas: [],
+        provinciaBuenosAires: "",
+        exclusionesGeograficas: [],
+        integracion: "",
+        tipoCliente: "",
       });
     }
     setIsDialogOpen(true);
+  };
+
+  const handleDelete = (id: number) => {
+    if (confirm("¿Estás seguro de que quieres eliminar este cliente?")) {
+      deleteMutation.mutate(id);
+    }
   };
 
   const onSubmit = (data: InsertCliente) => {
@@ -117,26 +136,27 @@ export default function ClientesManagement() {
     }
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm("¿Estás seguro de que quieres eliminar este cliente?")) {
-      deleteMutation.mutate(id);
-    }
-  };
-
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="text-center">Cargando clientes...</div>
+      <div className="p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p>Cargando clientes...</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Gestión de Clientes</h1>
-          <p className="text-muted-foreground">Administra tus clientes y su información comercial</p>
+          <h1 className="text-2xl font-bold tracking-tight">Gestión de Clientes</h1>
+          <p className="text-muted-foreground">
+            Administra la información comercial y datos de targeting de tus clientes
+          </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -145,185 +165,18 @@ export default function ClientesManagement() {
               Nuevo Cliente
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingCliente ? "Editar Cliente" : "Nuevo Cliente"}
               </DialogTitle>
             </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="nombreCliente"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nombre Cliente *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ej: NOVO GROUP" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="nombreComercial"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nombre Comercial *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ej: Novo Automotores" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="telefono"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Teléfono</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ej: +54 11 1234-5678" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="Ej: contacto@novo.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="cuitCliente"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>CUIT</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ej: 20-12345678-9" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="tipoFacturacion"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tipo Facturación *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar tipo" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {Object.entries(TIPO_FACTURACION).map(([key, value]) => (
-                              <SelectItem key={key} value={value}>
-                                {value}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="marcasSolicitadas"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Marcas Solicitadas</FormLabel>
-                      <div className="grid grid-cols-3 gap-2">
-                        {Object.entries(MARCAS).map(([key, value]) => (
-                          <div key={key} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={key}
-                              checked={field.value?.includes(value)}
-                              onCheckedChange={(checked) => {
-                                const newValue = checked
-                                  ? [...(field.value || []), value]
-                                  : field.value?.filter(m => m !== value) || [];
-                                field.onChange(newValue);
-                              }}
-                            />
-                            <label htmlFor={key} className="text-sm font-medium">
-                              {value}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="zonas"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Zonas</FormLabel>
-                      <div className="flex gap-4">
-                        {Object.entries(ZONAS).map(([key, value]) => (
-                          <div key={key} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`zona-${key}`}
-                              checked={field.value?.includes(value)}
-                              onCheckedChange={(checked) => {
-                                const newValue = checked
-                                  ? [...(field.value || []), value]
-                                  : field.value?.filter(z => z !== value) || [];
-                                field.onChange(newValue);
-                              }}
-                            />
-                            <label htmlFor={`zona-${key}`} className="text-sm font-medium">
-                              {value}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    disabled={createMutation.isPending || updateMutation.isPending}
-                  >
-                    {editingCliente ? "Actualizar" : "Crear"} Cliente
-                  </Button>
-                </div>
-              </form>
-            </Form>
+            <ClienteForm
+              form={form}
+              onSubmit={onSubmit}
+              isLoading={createMutation.isPending || updateMutation.isPending}
+              isEditing={!!editingCliente}
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -339,6 +192,11 @@ export default function ClientesManagement() {
                     {cliente.nombreCliente}
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">{cliente.nombreComercial}</p>
+                  {cliente.tipoCliente && (
+                    <Badge variant="outline" className="text-xs">
+                      {cliente.tipoCliente}
+                    </Badge>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <Button size="sm" variant="outline" onClick={() => openDialog(cliente)}>
@@ -356,35 +214,52 @@ export default function ClientesManagement() {
               </div>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                {/* Contacto */}
                 <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Contacto</h4>
                   <div className="flex items-center gap-2 text-sm">
                     <Phone className="w-4 h-4" />
                     <span>{cliente.telefono || "No especificado"}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm">
                     <Mail className="w-4 h-4" />
-                    <span>{cliente.email || "No especificado"}</span>
+                    <span className="truncate">{cliente.email || "No especificado"}</span>
                   </div>
                 </div>
+
+                {/* Información Comercial */}
                 <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Comercial</h4>
                   <p className="text-sm"><strong>CUIT:</strong> {cliente.cuitCliente || "No especificado"}</p>
                   <p className="text-sm"><strong>Facturación:</strong> {cliente.tipoFacturacion}</p>
+                  {cliente.integracion && (
+                    <p className="text-sm"><strong>Integración:</strong> {cliente.integracion}</p>
+                  )}
                 </div>
+
+                {/* Marcas */}
                 <div className="space-y-2">
-                  <p className="text-sm font-medium">Marcas:</p>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Marcas</h4>
                   <div className="flex flex-wrap gap-1">
                     {cliente.marcasSolicitadas?.length ? 
-                      cliente.marcasSolicitadas.map(marca => (
+                      cliente.marcasSolicitadas.slice(0, 4).map(marca => (
                         <Badge key={marca} variant="secondary" className="text-xs">{marca}</Badge>
                       )) : 
                       <span className="text-xs text-muted-foreground">Sin marcas</span>
                     }
+                    {cliente.marcasSolicitadas && cliente.marcasSolicitadas.length > 4 && (
+                      <Badge variant="outline" className="text-xs">
+                        +{cliente.marcasSolicitadas.length - 4}
+                      </Badge>
+                    )}
                   </div>
                 </div>
+
+                {/* Zonas y Ubicación */}
                 <div className="space-y-2">
-                  <p className="text-sm font-medium">Zonas:</p>
-                  <div className="flex flex-wrap gap-1">
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Cobertura</h4>
+                  <div className="flex flex-wrap gap-1 mb-2">
                     {cliente.zonas?.length ? 
                       cliente.zonas.map(zona => (
                         <Badge key={zona} variant="outline" className="text-xs">{zona}</Badge>
@@ -392,10 +267,30 @@ export default function ClientesManagement() {
                       <span className="text-xs text-muted-foreground">Sin zonas</span>
                     }
                   </div>
+                  {cliente.provinciaBuenosAires && (
+                    <div className="flex items-center gap-1 text-xs">
+                      <MapPin className="w-3 h-3" />
+                      <span>{cliente.provinciaBuenosAires}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Exclusiones */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Exclusiones</h4>
+                  {cliente.exclusionesGeograficas && cliente.exclusionesGeograficas.length > 0 ? (
+                    <div className="flex items-center gap-1 text-xs">
+                      <Globe className="w-3 h-3" />
+                      <span>{cliente.exclusionesGeograficas.length} área(s) excluida(s)</span>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Sin exclusiones</span>
+                  )}
                 </div>
               </div>
+
               {cliente.fechaAlta && (
-                <div className="mt-3 pt-3 border-t">
+                <div className="mt-4 pt-3 border-t">
                   <p className="text-xs text-muted-foreground">
                     Cliente desde: {new Date(cliente.fechaAlta).toLocaleDateString('es-AR')}
                   </p>

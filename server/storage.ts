@@ -220,6 +220,72 @@ export class MemStorage implements IStorage {
 
     stats.forEach(stat => this.dailyStats.set(stat.id, stat));
     this.currentDailyStatsId = 3;
+
+    // Clientes de ejemplo con nuevos campos
+    const clientes = [
+      {
+        id: 1,
+        nombreCliente: "NOVO GROUP - FIAT",
+        nombreComercial: "Novo Automotores", 
+        telefono: "+54 11 4444-5555",
+        email: "contacto@novo.com",
+        fechaAlta: new Date("2024-01-15"),
+        cuitCliente: "20-34567890-1",
+        tipoFacturacion: "A",
+        marcasSolicitadas: ["Fiat", "VW"],
+        zonas: ["AMBA", "NACIONAL"],
+        provinciaBuenosAires: "La Plata",
+        exclusionesGeograficas: [
+          { id: "1", name: "Villa Carlos Paz", type: "city" },
+          { id: "2", name: "Córdoba Capital", type: "city" }
+        ],
+        integracion: "Pilot",
+        tipoCliente: "AGENCIA",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 2,
+        nombreCliente: "AUTO PREMIUM MERCEDES",
+        nombreComercial: "Premium Motors",
+        telefono: "+54 11 5555-6666",
+        email: "ventas@premium.com",
+        fechaAlta: new Date("2024-02-10"),
+        cuitCliente: "30-45678901-2",
+        tipoFacturacion: "C",
+        marcasSolicitadas: ["Mercedes", "Ford", "Jeep"],
+        zonas: ["AMBA"],
+        provinciaBuenosAires: "San Isidro",
+        exclusionesGeograficas: [
+          { id: "3", name: "Radio 100km de Mendoza", type: "radius" }
+        ],
+        integracion: "Tecnom",
+        tipoCliente: "COMERCIALIZADORA",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 3,
+        nombreCliente: "GRUPO TOYOTA CHINA",
+        nombreComercial: "Toyota China Motors",
+        telefono: "+54 11 7777-8888",
+        email: "info@toyotachina.com",
+        fechaAlta: new Date("2024-03-05"),
+        cuitCliente: "27-56789012-3",
+        tipoFacturacion: "A",
+        marcasSolicitadas: ["Toyota", "China", "Otra"],
+        zonas: ["LOCALIZADO"],
+        provinciaBuenosAires: "Quilmes",
+        exclusionesGeograficas: [],
+        integracion: "Asofix",
+        tipoCliente: "GRUPO COMERCIAL",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ];
+
+    clientes.forEach(cliente => this.clientes.set(cliente.id, cliente));
+    this.currentClienteId = 4;
   }
 
   // User operations
@@ -491,6 +557,10 @@ export class MemStorage implements IStorage {
       tipoFacturacion: insertCliente.tipoFacturacion,
       marcasSolicitadas: insertCliente.marcasSolicitadas || [],
       zonas: insertCliente.zonas || [],
+      provinciaBuenosAires: insertCliente.provinciaBuenosAires || null,
+      exclusionesGeograficas: insertCliente.exclusionesGeograficas || null,
+      integracion: insertCliente.integracion || null,
+      tipoCliente: insertCliente.tipoCliente || null,
       createdAt: new Date(),
       updatedAt: new Date()
     };

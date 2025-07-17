@@ -133,8 +133,12 @@ export const clientes = pgTable("clientes", {
   fechaAlta: timestamp("fecha_alta").defaultNow(),
   cuitCliente: text("cuit_cliente"),
   tipoFacturacion: text("tipo_facturacion").notNull(), // "C" o "A"
-  marcasSolicitadas: text("marcas_solicitadas").array(), // Array de marcas
+  marcasSolicitadas: text("marcas_solicitadas").array(), // Array de marcas: Fiat, Peugeot, Toyota, Chevrolet, Renault, Citroen, VW, Mercedes, Ford, Jeep, China, Otra
   zonas: text("zonas").array(), // Array de zonas: AMBA, NACIONAL, LOCALIZADO
+  provinciaBuenosAires: text("provincia_buenos_aires"), // Provincia específica de Buenos Aires
+  exclusionesGeograficas: jsonb("exclusiones_geograficas"), // Exclusiones tipo Google Maps
+  integracion: text("integracion"), // Pilot, Tecnom, Asofix, Otro
+  tipoCliente: text("tipo_cliente"), // AGENCIA, GRUPO COMERCIAL, COMERCIALIZADORA, VENDEDOR
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -239,6 +243,10 @@ export const insertClienteSchema = createInsertSchema(clientes).pick({
   tipoFacturacion: true,
   marcasSolicitadas: true,
   zonas: true,
+  provinciaBuenosAires: true,
+  exclusionesGeograficas: true,
+  integracion: true,
+  tipoCliente: true,
 });
 
 export type Cliente = typeof clientes.$inferSelect;
@@ -271,6 +279,54 @@ export const NOTE_TYPES = {
 } as const;
 
 export type NoteType = typeof NOTE_TYPES[keyof typeof NOTE_TYPES];
+
+// Nuevas constantes para clientes
+export const MARCAS_DISPONIBLES = [
+  'Fiat', 'Peugeot', 'Toyota', 'Chevrolet', 'Renault', 'Citroen', 
+  'VW', 'Mercedes', 'Ford', 'Jeep', 'China', 'Otra'
+] as const;
+
+export const PROVINCIAS_BUENOS_AIRES = [
+  'Adolfo Alsina', 'Alberti', 'Almirante Brown', 'Arrecifes', 'Avellaneda',
+  'Ayacucho', 'Azul', 'Bahía Blanca', 'Balcarce', 'Baradero', 'Benito Juárez',
+  'Berazategui', 'Berisso', 'Bolívar', 'Bragado', 'Brandsen', 'Campana',
+  'Cañuelas', 'Capilla del Señor', 'Capitán Sarmiento', 'Carapachay', 'Carhué',
+  'Carlos Casares', 'Carlos Tejedor', 'Carmen de Areco', 'Carmen de Patagones',
+  'Castelli', 'Chacabuco', 'Chascomús', 'Chivilcoy', 'Colón', 'Coronel Dorrego',
+  'Coronel Pringles', 'Coronel Rosales', 'Coronel Suárez', 'Daireaux', 'Dolores',
+  'Ensenada', 'Escobar', 'Esteban Echeverría', 'Exaltación de la Cruz', 'Ezeiza',
+  'Florencio Varela', 'Florentino Ameghino', 'General Alvarado', 'General Alvear',
+  'General Arenales', 'General Belgrano', 'General Guido', 'General Lamadrid',
+  'General Las Heras', 'General Lavalle', 'General Madariaga', 'General Paz',
+  'General Pinto', 'General Pueyrredón', 'General Rodríguez', 'General San Martín',
+  'General Viamonte', 'General Villegas', 'Guaminí', 'Hipólito Yrigoyen',
+  'Hurlingham', 'Ituzaingó', 'José C. Paz', 'Junín', 'La Costa', 'La Matanza',
+  'La Plata', 'Lanús', 'Las Flores', 'Laprida', 'Leandro N. Alem', 'Lincoln',
+  'Lobería', 'Lobos', 'Lomas de Zamora', 'Luján', 'Magdalena', 'Maipú',
+  'Malvinas Argentinas', 'Mar Chiquita', 'Marcos Paz', 'Mercedes', 'Merlo',
+  'Monte', 'Monte Hermoso', 'Moreno', 'Morón', 'Navarro', 'Necochea',
+  'Nueve de Julio', 'Olavarría', 'Patagones', 'Pehuajó', 'Pellegrini',
+  'Pergamino', 'Pila', 'Pilar', 'Pinamar', 'Presidente Perón', 'Puán',
+  'Punta Indio', 'Quilmes', 'Ramallo', 'Rauch', 'Rivadavia', 'Rojas',
+  'Roque Pérez', 'Saavedra', 'Saladillo', 'Salliqueló', 'Salto', 'San Andrés de Giles',
+  'San Antonio de Areco', 'San Cayetano', 'San Fernando', 'San Isidro', 'San Miguel',
+  'San Nicolás', 'San Pedro', 'San Vicente', 'Suipacha', 'Tandil', 'Tapalqué',
+  'Tigre', 'Tordillo', 'Tornquist', 'Trenque Lauquen', 'Tres Arroyos', 'Tres de Febrero',
+  'Tres Lomas', 'Tupungato', 'Villarino', 'Villa Gesell', 'Zárate'
+] as const;
+
+export const TIPOS_INTEGRACION = [
+  'Pilot', 'Tecnom', 'Asofix', 'Otro'
+] as const;
+
+export const TIPOS_CLIENTE = [
+  'AGENCIA', 'GRUPO COMERCIAL', 'COMERCIALIZADORA', 'VENDEDOR'
+] as const;
+
+export type MarcaDisponible = typeof MARCAS_DISPONIBLES[number];
+export type ProvinciaBuenosAires = typeof PROVINCIAS_BUENOS_AIRES[number];
+export type TipoIntegracion = typeof TIPOS_INTEGRACION[number];
+export type TipoCliente = typeof TIPOS_CLIENTE[number];
 
 // Clientes - Enums
 export const TIPO_FACTURACION = {
