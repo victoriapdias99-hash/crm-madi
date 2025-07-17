@@ -14,7 +14,7 @@ import {
   TIPO_FACTURACION,
   MARCAS_DISPONIBLES,
   ZONAS,
-  PROVINCIAS_BUENOS_AIRES,
+
   TIPOS_INTEGRACION,
   TIPOS_CLIENTE
 } from "@shared/schema";
@@ -87,7 +87,6 @@ export default function ClientesManagement() {
       tipoFacturacion: "C",
       marcasSolicitadas: [],
       zonas: [],
-      provinciaBuenosAires: "",
       exclusionesGeograficas: [],
       integracion: "",
       tipoCliente: "",
@@ -106,7 +105,6 @@ export default function ClientesManagement() {
         tipoFacturacion: cliente.tipoFacturacion,
         marcasSolicitadas: cliente.marcasSolicitadas || [],
         zonas: cliente.zonas || [],
-        provinciaBuenosAires: cliente.provinciaBuenosAires || "",
         exclusionesGeograficas: cliente.exclusionesGeograficas || [],
         integracion: cliente.integracion || "",
         tipoCliente: cliente.tipoCliente || "",
@@ -333,32 +331,6 @@ export default function ClientesManagement() {
                   />
                 </div>
 
-                {/* Provincia Buenos Aires */}
-                <FormField
-                  control={form.control}
-                  name="provinciaBuenosAires"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Provincia Buenos Aires</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar provincia" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="max-h-60">
-                          {PROVINCIAS_BUENOS_AIRES.map((provincia) => (
-                            <SelectItem key={provincia} value={provincia}>
-                              {provincia}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 {/* Marcas Solicitadas */}
                 <FormField
                   control={form.control}
@@ -536,12 +508,7 @@ export default function ClientesManagement() {
                       <span className="text-xs text-muted-foreground">Sin zonas</span>
                     }
                   </div>
-                  {cliente.provinciaBuenosAires && (
-                    <div className="flex items-center gap-1 text-xs">
-                      <MapPin className="w-3 h-3" />
-                      <span>{cliente.provinciaBuenosAires}</span>
-                    </div>
-                  )}
+
                 </div>
 
                 {/* Exclusiones */}
