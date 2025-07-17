@@ -36,15 +36,23 @@ export default function ClientesManagement() {
 
   const createMutation = useMutation({
     mutationFn: async (data: InsertCliente) => {
+      console.log('Frontend: Sending cliente data:', data);
       await apiRequest('/api/clientes', 'POST', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/clientes'] });
       setIsDialogOpen(false);
+      form.reset();
       toast({ title: "Cliente creado exitosamente" });
     },
-    onError: () => {
-      toast({ title: "Error al crear cliente", variant: "destructive" });
+    onError: (error: any) => {
+      console.error('Frontend: Error creating cliente:', error);
+      const errorMessage = error?.message || "Error desconocido al crear cliente";
+      toast({ 
+        title: "Error al crear cliente", 
+        description: errorMessage,
+        variant: "destructive" 
+      });
     }
   });
 
@@ -136,6 +144,9 @@ export default function ClientesManagement() {
   };
 
   const onSubmit = (data: InsertCliente) => {
+    console.log('Form submitted with data:', data);
+    console.log('Form errors:', form.formState.errors);
+    
     if (editingCliente) {
       updateMutation.mutate({ id: editingCliente.id, data });
     } else {

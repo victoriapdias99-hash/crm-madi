@@ -362,10 +362,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/clientes', async (req, res) => {
     try {
-      const cliente = await storage.createCliente(req.body);
+      console.log('Creating cliente with data:', req.body);
+      const validatedData = insertClienteSchema.parse(req.body);
+      const cliente = await storage.createCliente(validatedData);
+      console.log('Cliente created successfully:', cliente);
       res.status(201).json(cliente);
     } catch (error) {
-      res.status(500).json({ error: 'Failed to create cliente' });
+      console.error('Error creating cliente:', error);
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Failed to create cliente' });
+      }
     }
   });
 

@@ -196,6 +196,7 @@ export async function runTests() {
 }
 
 // Si se ejecuta directamente
-if (require.main === module) {
+// Auto-run tests if this file is executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
   runTests();
 }
