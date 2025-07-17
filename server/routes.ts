@@ -228,8 +228,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Obtener datos reales desde la hoja "Datos Diarios"
       const datosDiarios = await googleSheetsService.getDatosDiariosData();
-      res.json(datosDiarios);
+      
+      // Enriquecer con valores almacenados en memoria
+      const enrichedData = await Promise.all(
+        datosDiarios.map(async (data: any, index: number) => {
+          const storedCpl = await storage.getCpl(index);
+          const storedVenta = await storage.getVentaPorCampana(index);
+          const storedPedidos = await storage.getPedidosPorDia(index);
+          
+          return {
+            ...data,
+            cpl: storedCpl || data.cpl || 0,
+            ventaPorCampana: storedVenta || data.ventaPorCampana || 0,
+            pedidosPorDiaManual: storedPedidos || data.pedidosPorDia || 0
+          };
+        })
+      );
+      
+      res.json(enrichedData);
     } catch (error) {
+      console.error('Error fetching datos diarios:', error);
       res.status(500).json({ error: 'Failed to fetch datos diarios' });
     }
   });
@@ -238,14 +256,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { clienteIndex, cpl } = req.body;
       
-      // Aquí se podría almacenar en base de datos o en memoria
-      // Por ahora simplemente confirmamos la actualización
+      if (typeof clienteIndex !== 'number' || typeof cpl !== 'number') {
+        return res.status(400).json({ error: 'Invalid parameters' });
+      }
+
+      // Almacenar en memoria
+      await storage.updateCpl(clienteIndex, cpl);
+      
       res.json({ 
         success: true, 
         message: `CPL actualizado para cliente ${clienteIndex}`,
         cpl: parseFloat(cpl)
       });
     } catch (error) {
+      console.error('Error updating CPL:', error);
       res.status(500).json({ error: 'Failed to update CPL' });
     }
   });
@@ -258,6 +282,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (typeof clienteIndex !== 'number' || typeof venta !== 'number') {
         return res.status(400).json({ error: 'Invalid parameters' });
       }
+
+      // Almacenar en memoria
+      await storage.updateVentaPorCampana(clienteIndex, venta);
 
       res.json({ 
         success: true, 

@@ -40,6 +40,14 @@ export interface IStorage {
   getConversionRate(timeframe?: string): Promise<number>;
   getCostPerLead(timeframe?: string): Promise<number>;
 
+  // CPL and manual values storage
+  updateCpl(clienteIndex: number, cpl: number): Promise<void>;
+  getCpl(clienteIndex: number): Promise<number>;
+  updateVentaPorCampana(clienteIndex: number, venta: number): Promise<void>;
+  getVentaPorCampana(clienteIndex: number): Promise<number>;
+  updatePedidosPorDia(clienteIndex: number, pedidos: number): Promise<void>;
+  getPedidosPorDia(clienteIndex: number): Promise<number>;
+
   // Cliente operations
   getCliente(id: number): Promise<Cliente | undefined>;
   getAllClientes(): Promise<Cliente[]>;
@@ -56,6 +64,11 @@ export class MemStorage implements IStorage {
   private leadNotes: Map<number, LeadNote>;
   private clientes: Map<number, Cliente>;
   
+  // Storage for manual values
+  private cplValues: Map<number, number>;
+  private ventaPorCampanaValues: Map<number, number>;
+  private pedidosPorDiaValues: Map<number, number>;
+  
   private currentUserId: number;
   private currentCampaignId: number;
   private currentLeadId: number;
@@ -70,6 +83,11 @@ export class MemStorage implements IStorage {
     this.dailyStats = new Map();
     this.leadNotes = new Map();
     this.clientes = new Map();
+    
+    // Initialize manual values storage
+    this.cplValues = new Map();
+    this.ventaPorCampanaValues = new Map();
+    this.pedidosPorDiaValues = new Map();
     
     this.currentUserId = 1;
     this.currentCampaignId = 1;
@@ -495,6 +513,34 @@ export class MemStorage implements IStorage {
 
   async deleteCliente(id: number): Promise<boolean> {
     return this.clientes.delete(id);
+  }
+
+  // CPL and manual values operations
+  async updateCpl(clienteIndex: number, cpl: number): Promise<void> {
+    this.cplValues.set(clienteIndex, cpl);
+    console.log(`CPL updated for client ${clienteIndex}: ${cpl}`);
+  }
+
+  async getCpl(clienteIndex: number): Promise<number> {
+    return this.cplValues.get(clienteIndex) || 0;
+  }
+
+  async updateVentaPorCampana(clienteIndex: number, venta: number): Promise<void> {
+    this.ventaPorCampanaValues.set(clienteIndex, venta);
+    console.log(`Venta por campaña updated for client ${clienteIndex}: ${venta}`);
+  }
+
+  async getVentaPorCampana(clienteIndex: number): Promise<number> {
+    return this.ventaPorCampanaValues.get(clienteIndex) || 0;
+  }
+
+  async updatePedidosPorDia(clienteIndex: number, pedidos: number): Promise<void> {
+    this.pedidosPorDiaValues.set(clienteIndex, pedidos);
+    console.log(`Pedidos por día updated for client ${clienteIndex}: ${pedidos}`);
+  }
+
+  async getPedidosPorDia(clienteIndex: number): Promise<number> {
+    return this.pedidosPorDiaValues.get(clienteIndex) || 0;
   }
 }
 

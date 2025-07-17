@@ -200,7 +200,7 @@ export default function DatosDiariosDashboard() {
                 </thead>
                 <tbody>
                   {datosDiarios?.map((data: DatosDiariosData, index: number) => {
-                    const currentCpl = cplValues[index] || data.cpl || 0;
+                    const currentCpl = data.cpl || 0; // Use stored CPL from server
                     const currentPedidosPorDia = pedidosPorDiaValues[index] || data.pedidosPorDia || 0;
                     
                     // Crear objeto actualizado con valores manuales
@@ -262,26 +262,57 @@ export default function DatosDiariosDashboard() {
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{updatedData.faltantesAEnviar}</td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2">
                           <div className="flex gap-2 items-center">
-                            <Input
-                              type="number"
-                              placeholder="CPL"
-                              value={cplValues[index] || ''}
-                              onChange={(e) => handleCplChange(index, e.target.value)}
-                              className="w-24"
-                              min="0"
-                              step="0.01"
-                            />
-                            <Button
-                              size="sm"
-                              onClick={() => handleSaveCpl(index)}
-                              disabled={!cplValues[index] || updateCplMutation.isPending}
-                            >
-                              {updateCplMutation.isPending ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
-                                <Save className="h-3 w-3" />
-                              )}
-                            </Button>
+                            {data.cpl && data.cpl > 0 ? (
+                              <div className="flex gap-2 items-center">
+                                <Badge variant="secondary" className="text-sm">
+                                  CPL: ARS ${data.cpl.toLocaleString('es-AR')}
+                                </Badge>
+                                <Input
+                                  type="number"
+                                  placeholder="Nuevo CPL"
+                                  value={cplValues[index] || ''}
+                                  onChange={(e) => handleCplChange(index, e.target.value)}
+                                  className="w-20 text-xs"
+                                  min="0"
+                                  step="0.01"
+                                />
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleSaveCpl(index)}
+                                  disabled={!cplValues[index] || updateCplMutation.isPending}
+                                  variant="outline"
+                                >
+                                  {updateCplMutation.isPending ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <Save className="h-3 w-3" />
+                                  )}
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex gap-2 items-center">
+                                <Input
+                                  type="number"
+                                  placeholder="CPL"
+                                  value={cplValues[index] || ''}
+                                  onChange={(e) => handleCplChange(index, e.target.value)}
+                                  className="w-24"
+                                  min="0"
+                                  step="0.01"
+                                />
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleSaveCpl(index)}
+                                  disabled={!cplValues[index] || updateCplMutation.isPending}
+                                >
+                                  {updateCplMutation.isPending ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <Save className="h-3 w-3" />
+                                  )}
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
