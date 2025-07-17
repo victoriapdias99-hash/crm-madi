@@ -686,5 +686,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test runner endpoint para pruebas funcionales
+  app.post('/api/run-tests', async (req, res) => {
+    try {
+      const { FunctionalTester } = await import('./test-runner');
+      const tester = new FunctionalTester();
+      const results = await tester.runAllTests();
+      
+      const allPassed = results.every(r => r.passed);
+      
+      res.json({
+        success: allPassed,
+        results,
+        summary: {
+          total: results.length,
+          passed: results.filter(r => r.passed).length,
+          failed: results.filter(r => !r.passed).length
+        }
+      });
+    } catch (error) {
+      console.error('Error running tests:', error);
+      res.status(500).json({ error: 'Failed to run tests' });
+    }
+  });
+
   return httpServer;
 }

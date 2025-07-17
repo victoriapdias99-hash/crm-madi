@@ -66,6 +66,16 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
+### Sistema de Pruebas Funcionales Automatizadas (Latest - January 17, 2025)
+- **Analista Funcional Automatizado**: Implementado sistema de testing completo que verifica cada cambio
+- **Test Runner**: Módulo de pruebas que valida APIs, persistencia de datos, y cálculos financieros
+- **Panel de Pruebas**: Interfaz visual en el dashboard para ejecutar y ver resultados de pruebas
+- **Validación Automática**: Cada funcionalidad se prueba automáticamente después de implementación
+- **Cobertura de Pruebas**: CPL updates, persistencia, venta por campaña, datos diarios API, y cálculos financieros
+- **Reportes Detallados**: Resultados con status pass/fail, detalles de errores, y resumen estadístico
+
+## Recent Changes (January 2025)
+
 ### Financial Analysis Dashboard (Latest - January 17, 2025)
 - **New Fields**: Added "Pedidos Total", "N° Campaña", and "Venta por Campaña" fields to Datos Diarios dashboard
 - **Finanzas Dashboard**: Complete financial analysis page with profit calculations per campaign and brand

@@ -8,6 +8,7 @@ import { Loader2, Save, RefreshCw, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Navigation } from "@/components/navigation";
+import TestPanel from "@/components/test-panel";
 
 interface DatosDiariosData {
   cliente: string;
@@ -170,6 +171,9 @@ export default function DatosDiariosDashboard() {
             </Button>
           </div>
         </div>
+
+        {/* Panel de Pruebas Funcionales */}
+        <TestPanel />
 
         <Card>
           <CardHeader>
