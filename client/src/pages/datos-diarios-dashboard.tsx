@@ -41,16 +41,21 @@ export default function DatosDiariosDashboard() {
 
   const updateCplMutation = useMutation({
     mutationFn: async ({ clienteIndex, cpl }: { clienteIndex: number; cpl: number }) => {
-      await apiRequest('/api/dashboard/update-cpl', 'POST', { clienteIndex, cpl });
+      console.log('Updating CPL:', { clienteIndex, cpl });
+      const response = await apiRequest('POST', '/api/dashboard/update-cpl', { clienteIndex, cpl });
+      console.log('CPL update response:', response);
+      return response;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('CPL update successful:', data);
       toast({
         title: "CPL Actualizado",
         description: "El CPL se ha actualizado correctamente",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('CPL update error:', error);
       toast({
         title: "Error",
         description: "No se pudo actualizar el CPL",
@@ -84,8 +89,21 @@ export default function DatosDiariosDashboard() {
 
   const handleSaveCpl = (index: number) => {
     const cpl = cplValues[index];
+    console.log('Attempting to save CPL:', { index, cpl });
     if (cpl && cpl > 0) {
       updateCplMutation.mutate({ clienteIndex: index, cpl });
+      // Clear the input after saving
+      setCplValues(prev => {
+        const newValues = { ...prev };
+        delete newValues[index];
+        return newValues;
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Por favor ingrese un CPL válido mayor a 0",
+        variant: "destructive",
+      });
     }
   };
 

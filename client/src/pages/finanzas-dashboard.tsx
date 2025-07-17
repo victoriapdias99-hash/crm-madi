@@ -47,7 +47,7 @@ export default function FinanzasDashboard() {
 
   const updateVentaMutation = useMutation({
     mutationFn: async ({ clienteIndex, venta }: { clienteIndex: number; venta: number }) => {
-      await apiRequest('/api/dashboard/update-venta', 'POST', { clienteIndex, venta });
+      await apiRequest('POST', '/api/dashboard/update-venta', { clienteIndex, venta });
     },
     onSuccess: () => {
       toast({
