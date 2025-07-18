@@ -188,7 +188,7 @@ export default function ClientesManagement() {
               Nuevo Cliente
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingCliente ? "Editar Cliente" : "Nuevo Cliente"}
@@ -458,7 +458,7 @@ export default function ClientesManagement() {
       </div>
 
       <div className="grid gap-4">
-        {clientes.map((cliente: Cliente) => (
+        {clientes && clientes.length > 0 ? clientes.map((cliente: Cliente) => (
           <Card key={cliente.id} className="dashboard-card">
             <CardHeader className="pb-3">
               <div className="flex justify-between items-start">
@@ -570,10 +570,10 @@ export default function ClientesManagement() {
               )}
             </CardContent>
           </Card>
-        ))}
+        )) : null}
       </div>
 
-      {clientes.length === 0 && (
+      {clientes && clientes.length === 0 && (
         <Card>
           <CardContent className="p-8 text-center">
             <Building2 className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
