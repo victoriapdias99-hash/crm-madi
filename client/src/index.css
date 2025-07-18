@@ -196,3 +196,21 @@
 .table-modern tbody tr:hover {
   background: hsl(var(--muted) / 0.5);
 }
+
+/* Corregir transparencia en modales */
+[data-radix-dialog-content] {
+  background: hsl(var(--background)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  backdrop-filter: none !important;
+}
+
+.dark [data-radix-dialog-content] {
+  background: hsl(var(--background)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+/* Form modern styles */
+.form-modern {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}

@@ -1,10 +1,14 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { BarChart3, Building2, Calendar, Settings, TrendingUp, Calculator, Target } from "lucide-react";
+import { BarChart3, Building2, Calendar, Settings, TrendingUp, Calculator, Target, Home, ArrowLeft } from "lucide-react";
 
 export function Navigation() {
   const [location] = useLocation();
+
+  const goBack = () => {
+    window.history.back();
+  };
 
   const navItems = [
     {
@@ -54,6 +58,28 @@ export function Navigation() {
   return (
     <Card className="p-4 mb-6">
       <div className="flex flex-wrap gap-2">
+        {/* Botones de navegación especiales */}
+        <Link href="/">
+          <Button 
+            variant={location === "/" ? "default" : "outline"}
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <Home className="w-4 h-4" />
+            Inicio
+          </Button>
+        </Link>
+        <Button 
+          variant="outline"
+          size="sm"
+          onClick={goBack}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Atrás
+        </Button>
+        
+        {/* Resto de items de navegación */}
         {navItems.map((item) => {
           const Icon = item.icon;
           return (
