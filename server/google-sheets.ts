@@ -196,10 +196,20 @@ class GoogleSheetsService {
           const enviadosFromColumn = row[33] && !isNaN(Number(row[33])) ? Number(row[33]) : 0;
           const sumaDias = diasData.reduce((sum, day) => sum + day, 0);
           
-          // Debug específico para RENAULT
+          // Debug específico para RENAULT y AVEC
           if (cliente.toLowerCase().includes('renault')) {
             console.log(`RENAULT debug: columna 33 = ${enviadosFromColumn}, suma días = ${sumaDias}`);
             console.log(`RENAULT días individuales:`, diasData.slice(0, 10));
+          }
+          
+          if (cliente.toLowerCase().includes('grupo') || cliente.toLowerCase().includes('quijada') || cliente.toLowerCase().includes('avec')) {
+            console.log(`AVEC/GRUPO QUIJADA debug para cliente "${cliente}":`, {
+              enviadosFromColumn,
+              sumaDias,
+              diasData: diasData.slice(0, 10),
+              zona,
+              pedidosPorDia: row[35]
+            });
           }
           
           // Para RENAULT, forzar el valor correcto ya que sabemos que debe ser 39
