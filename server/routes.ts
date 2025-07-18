@@ -267,15 +267,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const clienteBajo = dato.cliente.toLowerCase();
           const nombreClienteBajo = cliente.nombreCliente.toLowerCase();
           
-          // Debug first iteration
-          if (i < 2 && campana.numeroCampana === "1") {
+          // Debug cuando busque GRUPO QUIJADA
+          if (nombreClienteBajo === 'grupo quijada' && i < 10) {
             console.log(`    Checking[${i}]: '${nombreClienteBajo}' vs '${clienteBajo}'`);
           }
           
           let esMatch = false;
           
-          // Solo matching válido: ITALY AUTOS con CHEVROLET - ITALY
+          // Matching válidos basados en datos reales de Google Sheets
           if (nombreClienteBajo === 'italy autos' && clienteBajo === 'chevrolet - italy') {
+            esMatch = true;
+            console.log(`    ✓ MATCH: ${nombreClienteBajo} -> ${clienteBajo}`);
+          }
+          // GRUPO QUIJADA puede hacer match con sus datos en Google Sheets
+          else if (nombreClienteBajo === 'grupo quijada' && 
+                   (clienteBajo === 'grupo quijada - peugeot' || clienteBajo === 'grupo quijada - citroen')) {
+            esMatch = true;
+            console.log(`    ✓ MATCH: ${nombreClienteBajo} -> ${clienteBajo}`);
+          }
+          // NOVO GROUP puede hacer match con NOVO GROUP - FIAT
+          else if (nombreClienteBajo === 'novo group' && clienteBajo === 'novo group - fiat') {
+            esMatch = true;
+            console.log(`    ✓ MATCH: ${nombreClienteBajo} -> ${clienteBajo}`);
+          }
+          // RENAULT puede hacer match directo
+          else if (nombreClienteBajo === 'renault' && clienteBajo === 'renault') {
+            esMatch = true;
+            console.log(`    ✓ MATCH: ${nombreClienteBajo} -> ${clienteBajo}`);
+          }
+          // PEUGEOT ALBENS puede hacer match con datos que contengan "albens"
+          else if (nombreClienteBajo === 'peugeot albens' && clienteBajo.includes('albens')) {
             esMatch = true;
             console.log(`    ✓ MATCH: ${nombreClienteBajo} -> ${clienteBajo}`);
           }
@@ -293,6 +314,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (datosParaCampana.length === 0) {
           console.log(`  No matches found for '${cliente.nombreCliente}' or '${campana.marca}'`);
           console.log(`  Sample data names: ${datosDiarios.slice(0, 3).map(d => d.cliente).join(', ')}`);
+          
+
+        } else if (cliente.nombreCliente === 'GRUPO QUIJADA') {
+          console.log(`    GRUPO QUIJADA found data:`, datosParaCampana.map(d => ({
+            cliente: d.cliente,
+            fecha: d.fecha,
+            cantidad: d.cantidad,
+            totalLeads: d.totalLeads
+          })));
         }
         
         // Calcular métricas específicas para esta campaña SECUENCIALMENTE desde fecha inicio
@@ -306,9 +336,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
         );
         
+        // Debug antes del loop
+        if (cliente.nombreCliente === 'GRUPO QUIJADA') {
+          console.log(`    GRUPO QUIJADA processing ${datosOrdenados.length} records...`);
+        }
+        
         // Procesar día por día hasta alcanzar la cantidad solicitada
         for (const dato of datosOrdenados) {
           if (datosAcumulados >= campana.cantidadDatosSolicitados) break;
+          
+          // Debug para ver estructura de datos
+          if (cliente.nombreCliente === 'GRUPO QUIJADA' && diasConDatos === 0) {
+            console.log(`    GRUPO QUIJADA data structure:`, Object.keys(dato));
+            console.log(`    Values: totalLeads=${dato.totalLeads}, cantidad=${dato.cantidad}, enviados=${dato.enviados}, totalLeads=${dato.totalLeads}`);
+          }
           
           const datosDelDia = dato.totalLeads || dato.cantidad || dato.enviados || 0;
           const entregadosDelDia = dato.entregadosPorDia || 0;
