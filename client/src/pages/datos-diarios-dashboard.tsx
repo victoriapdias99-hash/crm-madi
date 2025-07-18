@@ -116,8 +116,8 @@ export default function DatosDiariosDashboard() {
   // Calcular inversiones basadas en CPL manual con 2% de impuestos
   const calculateInversions = (data: DatosDiariosData, cpl: number) => {
     const inversionRealizada = data.enviados * cpl * 1.02; // +2% impuestos
-    const inversionPendiente = data.faltantesAEnviar * cpl * 1.02; // +2% impuestos
-    const inversionTotal = data.pedidosPorDia * cpl * 1.02; // +2% impuestos
+    const inversionPendiente = (data.pedidosTotal - data.enviados) * cpl * 1.02; // CPL × (Pedidos Total - Enviados) +2% impuestos
+    const inversionTotal = data.pedidosTotal * cpl * 1.02; // +2% impuestos
     
     return {
       inversionRealizada,

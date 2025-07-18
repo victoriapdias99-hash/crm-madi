@@ -68,11 +68,15 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Arreglos Críticos de Fechas y CPL Completados (Latest - January 18, 2025)
+### Arreglos Críticos Dashboard Completados (Latest - January 18, 2025)
 - **Problema de Fechas Resuelto**: Fechas ahora se guardan correctamente (18/07/2025 se guarda como 18, no 17)
 - **Error CPL Arreglado**: Campo CPL funciona perfectamente para guardar valores
+- **Pedidos por Día Funcional**: Implementado endpoint y frontend para actualizar pedidos por día
+- **% Desvío Corregido**: Fórmula cambiada a (Total pedidos - Enviados) / Enviados × 100
+- **Pedidos Total Mapeado**: Ahora mapea correctamente desde cantidadDatosSolicitados de la campaña
+- **Inversión Pendiente Corregida**: Fórmula CPL × (Pedidos Total - Enviados) × 1.02
 - **DatabaseStorage Mejorado**: Implementada tabla `dashboard_manual_values` para persistencia de CPL y valores manuales
-- **NOVO GROUP Funcionando**: Ahora encuentra correctamente 995/100 datos de "FIAT AUTOS DEL SOL" (Completada)
+- **NOVO GROUP Funcionando**: Ahora encuentra correctamente 1000/100 datos de "FIAT AUTOS DEL SOL" (Completada)
 - **RENAULT Mejorado**: Funciona con 19/40 datos (En Progreso) con cálculos correctos
 - **Sistema de Matching Robusto**: Reglas de matching optimizadas para todos los clientes
 - **Migración Database**: Nueva tabla para valores manuales aplicada exitosamente
