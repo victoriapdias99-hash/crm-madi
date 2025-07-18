@@ -509,6 +509,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const storedVenta = await storage.getVentaPorCampana(campanIndex);
         const storedPedidos = await storage.getPedidosPorDia(campanIndex);
         
+        // Corregir el cálculo de pedidos total y % desvío
+        const pedidosTotal = campana.cantidadDatosSolicitados; // Cantidad total pedida de la campaña
+        const porcentajeDesvio = datosFinales > 0 ? ((pedidosTotal - datosFinales) / datosFinales * 100) : 0;
+        
         mappedData.push({
           cliente: `${cliente.nombreCliente} - ${campana.marca}`,
           clienteNombre: cliente.nombreCliente,
@@ -517,8 +521,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           enviados: datosFinales,
           entregadosPorDia: entregadosPorDiaPromedio,
           pedidosPorDia: storedPedidos || 0,
-          pedidosTotal: (storedPedidos || 0) * diasConDatos,
-          porcentajeDesvio: storedPedidos > 0 ? ((entregadosPorDiaPromedio - storedPedidos) / storedPedidos * 100) : 0,
+          pedidosTotal: pedidosTotal,
+          porcentajeDesvio: Math.round(porcentajeDesvio),
           porcentajeDatosEnviados: Math.round(porcentajeDatosEnviados),
           faltantesAEnviar: faltantesAEnviar,
           cpl: storedCpl || 0,
@@ -799,6 +803,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error updating venta por campaña:', error);
       res.status(500).json({ error: 'Failed to update venta por campaña' });
+    }
+  });
+
+  // Actualizar pedidos por día
+  app.post('/api/dashboard/update-pedidos-por-dia', async (req, res) => {
+    try {
+      const { clienteIndex, pedidos } = req.body;
+      
+      if (typeof clienteIndex !== 'number' || typeof pedidos !== 'number') {
+        return res.status(400).json({ error: 'Invalid parameters' });
+      }
+
+      await storage.updatePedidosPorDia(clienteIndex, pedidos);
+
+      res.json({ 
+        success: true, 
+        message: `Pedidos por día actualizado para cliente ${clienteIndex}`,
+        pedidos: parseInt(pedidos)
+      });
+    } catch (error) {
+      console.error('Error updating pedidos por día:', error);
+      res.status(500).json({ error: 'Failed to update pedidos por día' });
     }
   });
 

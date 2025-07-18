@@ -66,6 +66,31 @@ export default function DatosDiariosDashboard() {
     }
   });
 
+  const updatePedidosPorDiaMutation = useMutation({
+    mutationFn: async ({ clienteIndex, pedidos }: { clienteIndex: number; pedidos: number }) => {
+      console.log('Updating Pedidos por Día:', { clienteIndex, pedidos });
+      const response = await apiRequest('POST', '/api/dashboard/update-pedidos-por-dia', { clienteIndex, pedidos });
+      console.log('Pedidos por día update response:', response);
+      return response;
+    },
+    onSuccess: (data) => {
+      console.log('Pedidos por día update successful:', data);
+      toast({
+        title: "Pedidos por Día Actualizado",
+        description: "Los pedidos por día se han actualizado correctamente",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+    },
+    onError: (error) => {
+      console.error('Pedidos por día update error:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar los pedidos por día",
+        variant: "destructive",
+      });
+    }
+  });
+
   const mapearCampanasMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest('POST', '/api/dashboard/mapear-campanas');
@@ -125,7 +150,7 @@ export default function DatosDiariosDashboard() {
     } else {
       toast({
         title: "Error",
-        description: "Por favor ingrese un CPL válido mayor a 0",
+        description: "Por favor ingrese un CPL válido",
         variant: "destructive",
       });
     }
@@ -133,11 +158,20 @@ export default function DatosDiariosDashboard() {
 
   const handleSavePedidosPorDia = (index: number) => {
     const pedidos = pedidosPorDiaValues[index];
+    console.log('Attempting to save Pedidos por Día:', { index, pedidos });
     if (pedidos && pedidos > 0) {
-      // Aquí se puede agregar una mutación para actualizar pedidos por día
+      updatePedidosPorDiaMutation.mutate({ clienteIndex: index, pedidos });
+      // Clear the input after saving
+      setPedidosPorDiaValues(prev => {
+        const newValues = { ...prev };
+        delete newValues[index];
+        return newValues;
+      });
+    } else {
       toast({
-        title: "Pedidos por día actualizado",
-        description: `Actualizado a ${pedidos} pedidos`,
+        title: "Error",
+        description: "Por favor ingrese un valor válido de pedidos por día",
+        variant: "destructive",
       });
     }
   };
@@ -283,17 +317,14 @@ export default function DatosDiariosDashboard() {
                               placeholder="Pedidos"
                               value={pedidosPorDiaValues[index] || data.pedidosPorDia || ''}
                               onChange={(e) => handlePedidosPorDiaChange(index, e.target.value)}
-                              className="w-24 text-center"
-                              min="0"
-                              step="1"
+                              className="w-20"
                             />
                             <Button
-                              size="sm"
                               onClick={() => handleSavePedidosPorDia(index)}
-                              disabled={!pedidosPorDiaValues[index]}
-                              variant="outline"
+                              size="sm"
+                              disabled={updatePedidosPorDiaMutation.isPending}
                             >
-                              <Save className="h-3 w-3" />
+                              <Save className="h-4 w-4" />
                             </Button>
                           </div>
                         </td>
