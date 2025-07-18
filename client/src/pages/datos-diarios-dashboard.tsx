@@ -44,7 +44,7 @@ export default function DatosDiariosDashboard() {
   const updateCplMutation = useMutation({
     mutationFn: async ({ clienteIndex, cpl }: { clienteIndex: number; cpl: number }) => {
       console.log('Updating CPL:', { clienteIndex, cpl });
-      const response = await apiRequest('POST', '/api/dashboard/update-cpl', { clienteIndex, cpl });
+      const response = await apiRequest('/api/dashboard/update-cpl', 'POST', { clienteIndex, cpl });
       console.log('CPL update response:', response);
       return response;
     },
@@ -69,7 +69,7 @@ export default function DatosDiariosDashboard() {
   const updatePedidosPorDiaMutation = useMutation({
     mutationFn: async ({ clienteIndex, pedidos }: { clienteIndex: number; pedidos: number }) => {
       console.log('Updating Pedidos por Día:', { clienteIndex, pedidos });
-      const response = await apiRequest('POST', '/api/dashboard/update-pedidos-por-dia', { clienteIndex, pedidos });
+      const response = await apiRequest('/api/dashboard/update-pedidos-por-dia', 'POST', { clienteIndex, pedidos });
       console.log('Pedidos por día update response:', response);
       return response;
     },
@@ -93,7 +93,7 @@ export default function DatosDiariosDashboard() {
 
   const mapearCampanasMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/dashboard/mapear-campanas');
+      const response = await apiRequest('/api/dashboard/mapear-campanas', 'POST');
       return response;
     },
     onSuccess: (data) => {
