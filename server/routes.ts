@@ -418,6 +418,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Campañas comerciales routes
+  app.get('/api/campanas-comerciales', async (req, res) => {
+    try {
+      const campanas = await storage.getAllCampanasComerciales();
+      res.json(campanas);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch campañas comerciales' });
+    }
+  });
+
+  app.get('/api/campanas-comerciales/cliente/:clienteId', async (req, res) => {
+    try {
+      const clienteId = parseInt(req.params.clienteId);
+      const campanas = await storage.getCampanasPorCliente(clienteId);
+      res.json(campanas);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch campañas for cliente' });
+    }
+  });
+
+  app.post('/api/campanas-comerciales', async (req, res) => {
+    try {
+      console.log('Creating campaña comercial with data:', req.body);
+      const validatedData = insertCampanaComercialSchema.parse(req.body);
+      const campana = await storage.createCampanaComercial(validatedData);
+      console.log('Campaña comercial created successfully:', campana);
+      res.status(201).json(campana);
+    } catch (error: any) {
+      console.error('Error creating campaña comercial:', error);
+      if (error.name === 'ZodError') {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Failed to create campaña comercial' });
+      }
+    }
+  });
+
+  app.get('/api/campanas-comerciales/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const campana = await storage.getCampanaComercial(id);
+      
+      if (!campana) {
+        return res.status(404).json({ error: 'Campaña comercial not found' });
+      }
+      
+      res.json(campana);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch campaña comercial' });
+    }
+  });
+
+  app.put('/api/campanas-comerciales/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const campana = await storage.updateCampanaComercial(id, req.body);
+      
+      if (!campana) {
+        return res.status(404).json({ error: 'Campaña comercial not found' });
+      }
+      
+      res.json(campana);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to update campaña comercial' });
+    }
+  });
+
+  app.delete('/api/campanas-comerciales/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteCampanaComercial(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: 'Campaña comercial not found' });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to delete campaña comercial' });
+    }
+  });
+
   // Registrar rutas de Meta Ads (módulo de prueba)
   registerMetaAdsRoutes(app);
 

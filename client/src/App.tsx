@@ -10,6 +10,7 @@ import DatosDiariosDashboard from "@/pages/datos-diarios-dashboard";
 import Login from "@/pages/login";
 import LeadDetails from "@/pages/lead-details";
 import ClientesManagement from "@/pages/clientes-management";
+import CampanasManagement from "@/pages/campanas-management";
 import MetaAdsDashboard from "@/pages/meta-ads-dashboard";
 import FinanzasDashboard from "@/pages/finanzas-dashboard";
 
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/dashboard" component={CampaignDashboard} />
       <Route path="/simple" component={SimpleDashboard} />
       <Route path="/clientes" component={ClientesManagement} />
+      <Route path="/campanas" component={CampanasManagement} />
       <Route path="/meta-ads" component={MetaAdsDashboard} />
       <Route path="/finanzas" component={FinanzasDashboard} />
       <Route path="/login" component={Login} />

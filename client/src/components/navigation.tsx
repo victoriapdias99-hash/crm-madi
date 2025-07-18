@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { BarChart3, Building2, Calendar, Settings, TrendingUp, Calculator } from "lucide-react";
+import { BarChart3, Building2, Calendar, Settings, TrendingUp, Calculator, Target } from "lucide-react";
 
 export function Navigation() {
   const [location] = useLocation();
@@ -24,6 +24,12 @@ export function Navigation() {
       label: "Clientes",
       icon: Building2,
       active: location === "/clientes"
+    },
+    {
+      href: "/campanas",
+      label: "Campañas",
+      icon: Target,
+      active: location === "/campanas"
     },
     {
       href: "/meta-ads",
