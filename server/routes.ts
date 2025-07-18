@@ -11,7 +11,8 @@ import {
   insertLeadNoteSchema,
   insertUserSchema,
   insertClienteSchema,
-  insertCampanaComercialSchema
+  insertCampanaComercialSchema,
+  createCampanaComercialSchema
 } from "@shared/schema";
 
 interface WebSocketWithData extends WebSocket {
@@ -533,9 +534,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('Creating campaña comercial with data:', req.body);
       
-      // Validar datos sin fecha_fin (se calculará automáticamente)
-      const { fechaFin, ...dataWithoutFechaFin } = req.body;
-      const validatedData = insertCampanaComercialSchema.omit({ fechaFin: true }).parse(dataWithoutFechaFin);
+      // Validar datos sin fecha_fin y numeroCampana (se calcularán automáticamente)
+      const { fechaFin, numeroCampana, ...dataWithoutCalculatedFields } = req.body;
+      
+      // Usar el schema específico para crear (sin campos calculados)
+      console.log('Data to validate:', dataWithoutCalculatedFields);
+      
+      const validatedData = createCampanaComercialSchema.parse(dataWithoutCalculatedFields);
+      
+      // Generar número de campaña automáticamente basado en cliente
+      const existingCampanas = await storage.getCampanasPorCliente(validatedData.clienteId);
+      const nextNumber = existingCampanas.length + 1;
+      const numeroGenerado = `${nextNumber}`;
       
       // Calcular fecha de fin automáticamente basada en datos disponibles
       const fechaFinCalculada = await calculateFechaFin(
@@ -544,15 +554,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         validatedData.marca
       );
       
+      console.log('Generated numero_campana:', numeroGenerado);
       console.log('Calculated fecha_fin:', fechaFinCalculada);
       
       const campanaDatos = {
         ...validatedData,
+        numeroCampana: numeroGenerado,
         fechaFin: fechaFinCalculada
       };
       
       const campana = await storage.createCampanaComercial(campanaDatos);
-      console.log('Campaña comercial created successfully with calculated fecha_fin:', campana);
+      console.log('Campaña comercial created successfully:', campana);
       res.status(201).json(campana);
     } catch (error: any) {
       console.error('Error creating campaña comercial:', error);

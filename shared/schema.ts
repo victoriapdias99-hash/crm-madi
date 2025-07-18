@@ -283,6 +283,17 @@ export const insertCampanaComercialSchema = createInsertSchema(campanasComercial
   fechaFin: true,
 });
 
+// Schema para crear campañas sin campos calculados automáticamente
+export const createCampanaComercialSchema = createInsertSchema(campanasComerciales)
+  .omit({ 
+    id: true, 
+    numeroCampana: true, 
+    fechaFin: true, 
+    fechaCreacion: true, 
+    createdAt: true, 
+    updatedAt: true 
+  });
+
 export type CampanaComercial = typeof campanasComerciales.$inferSelect;
 export type InsertCampanaComercial = z.infer<typeof insertCampanaComercialSchema>;
 
