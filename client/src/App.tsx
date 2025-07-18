@@ -4,7 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
-import CampaignDashboard from "@/pages/campaign-dashboard";
+
 import DatosDiariosDashboard from "@/pages/datos-diarios-dashboard";
 import DatosDiariosMatching from "@/pages/datos-diarios-matching";
 import Login from "@/pages/login";
@@ -21,7 +21,7 @@ function Router() {
       <Route path="/" component={DatosDiariosDashboard} />
       <Route path="/datos-diarios" component={DatosDiariosDashboard} />
       <Route path="/datos-diarios-dashboard" component={DatosDiariosDashboard} />
-      <Route path="/dashboard" component={CampaignDashboard} />
+
       <Route path="/matching" component={DatosDiariosMatching} />
       <Route path="/clientes" component={ClientesManagement} />
       <Route path="/campanas" component={CampanasManagement} />

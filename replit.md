@@ -68,7 +68,14 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Arreglos Críticos Dashboard Completados (Latest - January 18, 2025)
+### Eliminación Página Dashboard Innecesaria (Latest - January 18, 2025)
+- **Página Dashboard Removida**: Eliminada página "Dashboard" (/dashboard) que no se utilizaba
+- **Navegación Limpia**: Removido botón "Dashboard" del sistema de navegación
+- **Rutas Actualizadas**: Eliminada ruta /dashboard del router principal
+- **Importaciones Limpiadas**: Removida importación de CampaignDashboard component
+- **Sistema Optimizado**: Interfaz más limpia sin elementos innecesarios
+
+### Arreglos Críticos Dashboard Completados (January 18, 2025)
 - **Problema de Fechas Resuelto**: Fechas ahora se guardan correctamente (18/07/2025 se guarda como 18, no 17)
 - **Error CPL Arreglado**: Campo CPL funciona perfectamente para guardar valores
 - **Pedidos por Día Funcional**: Implementado endpoint y frontend para actualizar pedidos por día

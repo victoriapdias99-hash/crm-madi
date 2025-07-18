@@ -17,12 +17,7 @@ export function Navigation() {
       icon: BarChart3,
       active: location === "/"
     },
-    {
-      href: "/dashboard",
-      label: "Dashboard",
-      icon: Calendar,
-      active: location === "/dashboard"
-    },
+
     {
       href: "/matching",
       label: "Matching",
