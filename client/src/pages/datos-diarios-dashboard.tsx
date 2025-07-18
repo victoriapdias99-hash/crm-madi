@@ -190,12 +190,20 @@ export default function DatosDiariosDashboard() {
               Mapear Campañas
             </Button>
             <Button
-              onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] })}
+              onClick={() => {
+                queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+                queryClient.invalidateQueries({ queryKey: ['/api/campanas-comerciales'] });
+                queryClient.invalidateQueries({ queryKey: ['/api/clientes'] });
+                toast({
+                  title: "Datos actualizados",
+                  description: "Se refrescaron los datos de campañas y clientes",
+                });
+              }}
               variant="outline"
               size="sm"
             >
               <RefreshCw className="h-4 w-4 mr-2" />
-              Refrescar Datos
+              Actualizar
             </Button>
             <Button
               onClick={clearAllManualValues}
