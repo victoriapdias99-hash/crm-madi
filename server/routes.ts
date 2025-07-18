@@ -486,9 +486,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/campanas-comerciales', async (req, res) => {
     try {
       console.log('Creating campaña comercial with data:', req.body);
-      const validatedData = insertCampanaComercialSchema.parse(req.body);
-      const campana = await storage.createCampanaComercial(validatedData);
-      console.log('Campaña comercial created successfully:', campana);
+      
+      // Validar datos sin fecha_fin (se calculará automáticamente)
+      const { fechaFin, ...dataWithoutFechaFin } = req.body;
+      const validatedData = insertCampanaComercialSchema.omit({ fechaFin: true }).parse(dataWithoutFechaFin);
+      
+      // Calcular fecha de fin automáticamente basada en datos disponibles
+      const fechaFinCalculada = await calculateFechaFin(
+        validatedData.fechaCampana,
+        validatedData.cantidadDatosSolicitados,
+        validatedData.marca
+      );
+      
+      const campanaDatos = {
+        ...validatedData,
+        fechaFin: fechaFinCalculada
+      };
+      
+      const campana = await storage.createCampanaComercial(campanaDatos);
+      console.log('Campaña comercial created successfully with calculated fecha_fin:', campana);
       res.status(201).json(campana);
     } catch (error: any) {
       console.error('Error creating campaña comercial:', error);
@@ -846,6 +862,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to run tests' });
     }
   });
+
+  // Función para calcular fecha de fin automáticamente
+  async function calculateFechaFin(fechaInicio: string, cantidadSolicitada: number, marca: string): Promise<string> {
+    try {
+      // Obtener datos diarios desde Google Sheets
+      const datosDiarios = await googleSheetsService.getDatosDiariosData();
+      
+      // Filtrar datos desde fecha de inicio y por marca
+      const fechaInicioObj = new Date(fechaInicio);
+      let contador = 0;
+      let fechaFin = fechaInicioObj;
+      
+      // Ordenar datos por fecha y contar desde la fecha de inicio
+      const datosOrdenados = datosDiarios
+        .filter((dato: any) => dato.marca && dato.marca.toLowerCase() === marca.toLowerCase())
+        .sort((a: any, b: any) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+      
+      for (const dato of datosOrdenados) {
+        const fechaDato = new Date(dato.fecha);
+        if (fechaDato >= fechaInicioObj) {
+          contador += dato.cantidad || 1; // Sumar cantidad de leads del día
+          fechaFin = fechaDato;
+          
+          if (contador >= cantidadSolicitada) {
+            break;
+          }
+        }
+      }
+      
+      return fechaFin.toISOString().split('T')[0];
+    } catch (error) {
+      console.error('Error calculating fecha fin:', error);
+      // Fallback: sumar días estimados (1 dato por día)
+      const fechaInicio = new Date(fechaInicio);
+      fechaInicio.setDate(fechaInicio.getDate() + cantidadSolicitada);
+      return fechaInicio.toISOString().split('T')[0];
+    }
+  }
 
   return httpServer;
 }

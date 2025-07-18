@@ -28,8 +28,8 @@ export default function CampanasManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const form = useForm<InsertCampanaComercial>({
-    resolver: zodResolver(insertCampanaComercialSchema),
+  const form = useForm<Omit<InsertCampanaComercial, 'fechaFin'>>({
+    resolver: zodResolver(insertCampanaComercialSchema.omit({ fechaFin: true })),
     defaultValues: {
       clienteId: 0,
       numeroCampana: "",
@@ -51,7 +51,7 @@ export default function CampanasManagement() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: InsertCampanaComercial) => {
+    mutationFn: async (data: Omit<InsertCampanaComercial, 'fechaFin'>) => {
       console.log('Frontend: Sending campaña data:', data);
       await apiRequest('/api/campanas-comerciales', 'POST', data);
     },
@@ -267,42 +267,26 @@ export default function CampanasManagement() {
                   />
                 </div>
 
-                {/* Fechas de Campaña */}
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="fechaCampana"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Fecha de Inicio</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="date"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="fechaFin"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Fecha de Fin</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="date"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                {/* Fecha de Inicio */}
+                <FormField
+                  control={form.control}
+                  name="fechaCampana"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fecha de Inicio *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                      <p className="text-sm text-muted-foreground">
+                        La fecha de fin se calculará automáticamente según la cantidad de datos solicitados
+                      </p>
+                    </FormItem>
+                  )}
+                />
 
                 <div className="grid grid-cols-2 gap-4">
                   {/* Marca */}
