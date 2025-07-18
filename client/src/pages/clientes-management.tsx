@@ -296,8 +296,8 @@ export default function ClientesManagement() {
                       )}
                     />
                   </div>
-                </div>
 
+                  <div className="form-grid">
                     <FormField
                       control={form.control}
                       name="integracion"
