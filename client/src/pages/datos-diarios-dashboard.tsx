@@ -8,6 +8,7 @@ import { Loader2, Save, RefreshCw, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Navigation } from "@/components/navigation";
+import { CPLStorage } from "@/lib/cpl-storage";
 import TestPanel from "@/components/test-panel";
 
 interface DatosDiariosData {
@@ -337,7 +338,7 @@ export default function DatosDiariosDashboard() {
                     const originalIndex = datosDiarios?.findIndex(d => d.cliente === data.cliente && d.numeroCampana === data.numeroCampana) || 0;
                     const uniqueKey = `${data.cliente}-${data.numeroCampana}`;
                     
-                    const currentCpl = data.cpl || 0; // Use stored CPL from server
+                    const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0; // Use CPL from storage or server
                     const currentPedidosPorDia = pedidosPorDiaValues[originalIndex] || data.pedidosPorDia || 0;
                     
                     // Crear objeto actualizado con valores manuales
@@ -397,60 +398,14 @@ export default function DatosDiariosDashboard() {
                           </Badge>
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{updatedData.faltantesAEnviar}</td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2">
-                          <div className="flex gap-2 items-center">
-                            {data.cpl && data.cpl > 0 ? (
-                              <div className="flex gap-2 items-center">
-                                <Badge variant="secondary" className="text-sm">
-                                  CPL: ARS ${data.cpl.toLocaleString('es-AR')}
-                                </Badge>
-                                <Input
-                                  type="number"
-                                  placeholder="Nuevo CPL"
-                                  value={cplValues[index] || ''}
-                                  onChange={(e) => handleCplChange(index, e.target.value)}
-                                  className="w-20 text-xs"
-                                  min="0"
-                                  step="0.01"
-                                />
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleSaveCpl(index)}
-                                  disabled={!cplValues[index] || updateCplMutation.isPending}
-                                  variant="outline"
-                                >
-                                  {updateCplMutation.isPending ? (
-                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                  ) : (
-                                    <Save className="h-3 w-3" />
-                                  )}
-                                </Button>
-                              </div>
-                            ) : (
-                              <div className="flex gap-2 items-center">
-                                <Input
-                                  type="number"
-                                  placeholder="CPL"
-                                  value={cplValues[index] || ''}
-                                  onChange={(e) => handleCplChange(index, e.target.value)}
-                                  className="w-24"
-                                  min="0"
-                                  step="0.01"
-                                />
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleSaveCpl(index)}
-                                  disabled={!cplValues[index] || updateCplMutation.isPending}
-                                >
-                                  {updateCplMutation.isPending ? (
-                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                  ) : (
-                                    <Save className="h-3 w-3" />
-                                  )}
-                                </Button>
-                              </div>
-                            )}
-                          </div>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          {currentCpl > 0 ? (
+                            <Badge variant="secondary" className="text-sm">
+                              ARS ${currentCpl.toLocaleString('es-AR')}
+                            </Badge>
+                          ) : (
+                            <span className="text-gray-400 text-sm">Sin CPL</span>
+                          )}
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
                           ARS ${inversions.inversionRealizada.toLocaleString('es-AR')}
@@ -509,7 +464,7 @@ export default function DatosDiariosDashboard() {
                 <tbody>
                   {datosDiarios?.filter(data => data.porcentajeDatosEnviados >= 100).map((data: DatosDiariosData, index: number) => {
                     const originalIndex = datosDiarios?.findIndex(d => d.cliente === data.cliente && d.numeroCampana === data.numeroCampana) || 0;
-                    const currentCpl = data.cpl || 0;
+                    const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0;
                     const currentPedidosPorDia = pedidosPorDiaValues[originalIndex] || data.pedidosPorDia || 0;
                     
                     const updatedData = {
@@ -575,37 +530,12 @@ export default function DatosDiariosDashboard() {
                             {updatedData.faltantesAEnviar}
                           </Badge>
                         </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2">
-                          <div className="flex gap-2 items-center justify-center">
-                            <div className="flex flex-col items-center">
-                              <div className="text-xs text-gray-500 mb-1">CPL: ARS ${currentCpl || 0}</div>
-                              <Input
-                                type="number"
-                                placeholder="CPL"
-                                value={cplValues[originalIndex] || ''}
-                                onChange={(e) => handleCplChange(originalIndex, e.target.value)}
-                                className="w-24"
-                              />
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleSaveCpl(originalIndex)}
-                              disabled={updateCplMutation.isPending}
-                            >
-                              {updateCplMutation.isPending ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
-                                <Save className="h-3 w-3" />
-                              )}
-                            </Button>
-                          </div>
-                        </td>
+
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
-                          {data.cpl > 0 ? (
+                          {currentCpl > 0 ? (
                             <div className="flex flex-col items-center gap-1">
                               <div className="text-green-600 font-semibold">
-                                ${data.cpl.toLocaleString('es-AR')}
+                                ${currentCpl.toLocaleString('es-AR')}
                               </div>
                               <div className="text-xs text-gray-500">Guardado</div>
                             </div>

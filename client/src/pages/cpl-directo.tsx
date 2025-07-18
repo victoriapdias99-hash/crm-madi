@@ -9,8 +9,18 @@ import { Save, Loader2, DollarSign, CheckCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { Navigation } from "@/components/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { CPLStorage } from "@/lib/cpl-storage";
 
-// Almacén local simple para CPL
+// Almacén local simple para CPL - usando localStorage para persistencia
+const getCplFromStorage = (key: string): number => {
+  const stored = localStorage.getItem(`cpl_${key}`);
+  return stored ? parseFloat(stored) : 0;
+};
+
+const setCplToStorage = (key: string, value: number): void => {
+  localStorage.setItem(`cpl_${key}`, value.toString());
+};
+
 const cplStorage = new Map<string, number>();
 
 export default function CPLDirecto() {
@@ -35,7 +45,8 @@ export default function CPLDirecto() {
     const cpl = cplValues[key];
     
     if (cpl && cpl > 0) {
-      // Guardar en memoria local
+      // Guardar usando la utilidad CPLStorage
+      CPLStorage.set(cliente, numeroCampana, cpl);
       cplStorage.set(key, cpl);
       setSavedCpls(prev => ({ ...prev, [key]: cpl }));
       
@@ -61,7 +72,7 @@ export default function CPLDirecto() {
 
   const getCplActual = (cliente: string, numeroCampana: string) => {
     const key = `${cliente}-${numeroCampana}`;
-    return savedCpls[key] || cplStorage.get(key) || 0;
+    return savedCpls[key] || cplStorage.get(key) || CPLStorage.get(cliente, numeroCampana) || 0;
   };
 
   if (isLoading) {
