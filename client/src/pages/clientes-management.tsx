@@ -317,7 +317,7 @@ export default function ClientesManagement() {
                       render={({ field }) => (
                         <FormItem className="form-field-enhanced">
                           <FormLabel>Integración</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Seleccionar integración" />
@@ -325,6 +325,30 @@ export default function ClientesManagement() {
                             </FormControl>
                             <SelectContent>
                               {TIPOS_INTEGRACION.map((tipo) => (
+                                <SelectItem key={tipo} value={tipo}>
+                                  {tipo}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="tipoCliente"
+                      render={({ field }) => (
+                        <FormItem className="form-field-enhanced">
+                          <FormLabel>Tipo de Cliente</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Seleccionar tipo" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {TIPOS_CLIENTE.map((tipo) => (
                                 <SelectItem key={tipo} value={tipo}>
                                   {tipo}
                                 </SelectItem>

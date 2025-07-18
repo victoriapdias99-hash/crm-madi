@@ -13,6 +13,7 @@ import ClientesManagement from "@/pages/clientes-management";
 import CampanasManagement from "@/pages/campanas-management";
 import MetaAdsDashboard from "@/pages/meta-ads-dashboard";
 import FinanzasDashboard from "@/pages/finanzas-dashboard";
+import ReportesGraficos from "@/pages/reportes-graficos";
 
 function Router() {
   return (
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/campanas" component={CampanasManagement} />
       <Route path="/meta-ads" component={MetaAdsDashboard} />
       <Route path="/finanzas" component={FinanzasDashboard} />
+      <Route path="/reportes" component={ReportesGraficos} />
       <Route path="/login" component={Login} />
       <Route path="/leads/:id" component={LeadDetails} />
       <Route component={NotFound} />

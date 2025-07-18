@@ -99,6 +99,7 @@ export const dashboardCampaigns = pgTable("dashboard_campaigns", {
   pedidosTotal: integer("pedidos_total").default(0), // Total de pedidos
   numeroCampana: integer("numero_campana").default(1), // Número de campaña por cliente
   porcentajeDesvio: numeric("porcentaje_desvio", { precision: 5, scale: 2 }), // % desvío
+  porcentajeDatosEnviados: numeric("porcentaje_datos_enviados", { precision: 5, scale: 2 }), // % datos enviados (relacionado con campañas)
   datosPedidos: integer("datos_pedidos").default(0), // Cantidad total pedida
   ventaPorCampana: numeric("venta_por_campana", { precision: 12, scale: 2 }).default("0"), // Venta por campaña (input manual)
   faltantesAEnviar: integer("faltantes_a_enviar").default(0), // Pedidos - Enviados
@@ -239,6 +240,7 @@ export const insertDashboardCampaignSchema = createInsertSchema(dashboardCampaig
   entregadosPorDia: true,
   pedidosPorDia: true,
   porcentajeDesvio: true,
+  porcentajeDatosEnviados: true,
   datosPedidos: true,
   faltantesAEnviar: true,
   cpl: true,

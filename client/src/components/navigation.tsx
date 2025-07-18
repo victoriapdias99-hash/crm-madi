@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { BarChart3, Building2, Calendar, Settings, TrendingUp, Calculator, Target, Home, ArrowLeft, Link2 } from "lucide-react";
+import { BarChart3, Building2, Calendar, Settings, TrendingUp, Calculator, Target, Home, ArrowLeft, Link2, PieChart } from "lucide-react";
 
 export function Navigation() {
   const [location] = useLocation();
@@ -52,6 +52,12 @@ export function Navigation() {
       label: "Finanzas",
       icon: Calculator,
       active: location === "/finanzas"
+    },
+    {
+      href: "/reportes",
+      label: "Reportes",
+      icon: PieChart,
+      active: location === "/reportes"
     }
   ];
 

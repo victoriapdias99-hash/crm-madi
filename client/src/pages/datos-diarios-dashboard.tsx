@@ -21,6 +21,7 @@ interface DatosDiariosData {
   pedidosTotal: number;
   numeroCampana: number;
   porcentajeDesvio: number;
+  porcentajeDatosEnviados: number;
   faltantesAEnviar: number;
   cpl: number;
   ventaPorCampana: number;
@@ -195,6 +196,7 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Pedidos Total</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">N° Campaña</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">% Desvío</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">% Datos Enviados</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Faltantes</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Manual (ARS)</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Realizada (con impuestos)</th>
@@ -261,6 +263,11 @@ export default function DatosDiariosDashboard() {
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
                           <Badge variant={updatedData.porcentajeDesvio && updatedData.porcentajeDesvio < 0 ? "destructive" : "default"}>
                             {updatedData.porcentajeDesvio ? updatedData.porcentajeDesvio.toFixed(2) : '0.00'}%
+                          </Badge>
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          <Badge variant={data.porcentajeDatosEnviados >= 80 ? "default" : data.porcentajeDatosEnviados >= 50 ? "secondary" : "destructive"}>
+                            {data.porcentajeDatosEnviados ? data.porcentajeDatosEnviados.toFixed(2) : '0.00'}%
                           </Badge>
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{updatedData.faltantesAEnviar}</td>

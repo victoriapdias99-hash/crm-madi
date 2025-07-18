@@ -28,11 +28,10 @@ export default function CampanasManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const form = useForm<Omit<InsertCampanaComercial, 'fechaFin'>>({
-    resolver: zodResolver(insertCampanaComercialSchema.omit({ fechaFin: true })),
+  const form = useForm<Omit<InsertCampanaComercial, 'fechaFin' | 'numeroCampana'>>({
+    resolver: zodResolver(insertCampanaComercialSchema.omit({ fechaFin: true, numeroCampana: true })),
     defaultValues: {
       clienteId: 0,
-      numeroCampana: "",
       cantidadDatosSolicitados: 0,
       marca: "",
       zona: "",
@@ -51,7 +50,7 @@ export default function CampanasManagement() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: Omit<InsertCampanaComercial, 'fechaFin'>) => {
+    mutationFn: async (data: Omit<InsertCampanaComercial, 'fechaFin' | 'numeroCampana'>) => {
       console.log('Frontend: Sending campaña data:', data);
       await apiRequest('/api/campanas-comerciales', 'POST', data);
     },
@@ -116,23 +115,19 @@ export default function CampanasManagement() {
       setEditingCampana(campana);
       form.reset({
         clienteId: campana.clienteId,
-        numeroCampana: campana.numeroCampana,
         cantidadDatosSolicitados: campana.cantidadDatosSolicitados,
         marca: campana.marca,
         zona: campana.zona,
         fechaCampana: campana.fechaCampana || "",
-        fechaFin: campana.fechaFin || "",
       });
     } else {
       setEditingCampana(null);
       form.reset({
         clienteId: 0,
-        numeroCampana: "",
         cantidadDatosSolicitados: 0,
         marca: "",
         zona: "",
         fechaCampana: "",
-        fechaFin: "",
       });
     }
     setIsDialogOpen(true);
@@ -142,12 +137,10 @@ export default function CampanasManagement() {
     setEditingCampana(null); // No editing, creating new
     form.reset({
       clienteId: campana.clienteId,
-      numeroCampana: `${campana.numeroCampana} - Copia`,
       cantidadDatosSolicitados: campana.cantidadDatosSolicitados,
       marca: campana.marca,
       zona: campana.zona,
       fechaCampana: "", // Clear date for new campaign
-      fechaFin: "",
     });
     setIsDialogOpen(true);
   };
@@ -229,43 +222,26 @@ export default function CampanasManagement() {
                   )}
                 />
 
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Número de Campaña */}
-                  <FormField
-                    control={form.control}
-                    name="numeroCampana"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Número de Campaña *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ej: CAMP-2025-001" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Cantidad de Datos */}
-                  <FormField
-                    control={form.control}
-                    name="cantidadDatosSolicitados"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Cantidad de Datos Solicitados *</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            min="1"
-                            placeholder="Ej: 500" 
-                            {...field} 
-                            onChange={(e) => field.onChange(parseInt(e.target.value))}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                {/* Cantidad de Datos */}
+                <FormField
+                  control={form.control}
+                  name="cantidadDatosSolicitados"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cantidad de Datos Solicitados *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min="1"
+                          placeholder="Ej: 500" 
+                          {...field} 
+                          onChange={(e) => field.onChange(parseInt(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 {/* Fecha de Inicio */}
                 <FormField
@@ -371,9 +347,9 @@ export default function CampanasManagement() {
             <CardHeader className="pb-3">
               <div className="flex justify-between items-start">
                 <div>
-                  <CardTitle className="text-lg">{campana.numeroCampana}</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {getClienteNombre(campana.clienteId)}
+                  <CardTitle className="text-lg">{getClienteNombre(campana.clienteId)}</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1 font-mono">
+                    Campaña: {campana.numeroCampana}
                   </p>
                 </div>
                 <div className="flex space-x-2">
