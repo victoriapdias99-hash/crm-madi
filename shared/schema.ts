@@ -140,6 +140,7 @@ export const clientes = pgTable("clientes", {
   exclusionesGeograficas: jsonb("exclusiones_geograficas"), // Exclusiones tipo Google Maps
   integracion: text("integracion"), // Pilot, Tecnom, Asofix, Otro
   tipoCliente: text("tipo_cliente"), // AGENCIA, GRUPO COMERCIAL, COMERCIALIZADORA, VENDEDOR
+  informacionAdicional: text("informacion_adicional"), // Campo adicional de 500 caracteres
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -152,6 +153,7 @@ export const campanasComerciales = pgTable("campanas_comerciales", {
   cantidadDatosSolicitados: integer("cantidad_datos_solicitados").notNull(),
   marca: text("marca").notNull(), // Una de las marcas disponibles
   zona: text("zona").notNull(), // AMBA, NACIONAL, LOCALIZADO
+  fechaCampana: date("fecha_campana"), // Campo fecha cuando se da de alta la campaña
   fechaCreacion: timestamp("fecha_creacion").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -262,6 +264,7 @@ export const insertClienteSchema = createInsertSchema(clientes).pick({
   exclusionesGeograficas: true,
   integracion: true,
   tipoCliente: true,
+  informacionAdicional: true,
 });
 
 export type Cliente = typeof clientes.$inferSelect;
@@ -273,6 +276,7 @@ export const insertCampanaComercialSchema = createInsertSchema(campanasComercial
   cantidadDatosSolicitados: true,
   marca: true,
   zona: true,
+  fechaCampana: true,
 });
 
 export type CampanaComercial = typeof campanasComerciales.$inferSelect;

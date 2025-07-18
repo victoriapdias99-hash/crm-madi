@@ -193,8 +193,12 @@ class GoogleSheetsService {
 
           // Extraer datos calculados (columnas siguientes)
           const enviados = row[33] && !isNaN(Number(row[33])) ? Number(row[33]) : 0;
-          const entregadosPorDia = row[34] && !isNaN(Number(row[34])) ? Number(row[34]) : 0;
           const pedidosPorDia = row[35] && !isNaN(Number(row[35])) ? Number(row[35]) : 0;
+          
+          // Calcular entregados por día como promedio de datos diarios por marca y campaña
+          const validDias = diasData.filter(day => day > 0);
+          const entregadosPorDia = validDias.length > 0 ? 
+            validDias.reduce((sum, day) => sum + day, 0) / validDias.length : 0;
 
           // Extraer nombre del cliente del campo "cliente"
           const extractClientName = (clienteField: string) => {

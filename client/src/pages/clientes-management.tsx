@@ -422,6 +422,33 @@ export default function ClientesManagement() {
                   />
                 </div>
 
+                {/* Información Adicional */}
+                <div className="form-section">
+                  <h3>📝 Información Adicional</h3>
+                  <FormField
+                    control={form.control}
+                    name="informacionAdicional"
+                    render={({ field }) => (
+                      <FormItem className="form-field-enhanced">
+                        <FormLabel>Información Adicional</FormLabel>
+                        <FormControl>
+                          <textarea
+                            {...field}
+                            placeholder="Información adicional sobre el cliente, notas comerciales, observaciones, etc."
+                            maxLength={500}
+                            rows={4}
+                            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
+                          />
+                        </FormControl>
+                        <div className="text-xs text-muted-foreground">
+                          {field.value?.length || 0}/500 caracteres
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
                 <div className="flex justify-end gap-2 pt-4">
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="hover:bg-secondary transition-colors">
                     Cancelar
@@ -544,11 +571,21 @@ export default function ClientesManagement() {
                 </div>
               </div>
 
-              {cliente.fechaAlta && (
-                <div className="mt-4 pt-3 border-t">
-                  <p className="text-xs text-muted-foreground">
-                    Cliente desde: {new Date(cliente.fechaAlta).toLocaleDateString('es-AR')}
-                  </p>
+              {(cliente.informacionAdicional || cliente.fechaAlta) && (
+                <div className="mt-4 pt-3 border-t space-y-2">
+                  {cliente.informacionAdicional && (
+                    <div>
+                      <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Información Adicional:</h5>
+                      <p className="text-xs text-muted-foreground bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                        {cliente.informacionAdicional}
+                      </p>
+                    </div>
+                  )}
+                  {cliente.fechaAlta && (
+                    <p className="text-xs text-muted-foreground">
+                      Cliente desde: {new Date(cliente.fechaAlta).toLocaleDateString('es-AR')}
+                    </p>
+                  )}
                 </div>
               )}
             </CardContent>

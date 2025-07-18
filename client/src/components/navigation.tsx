@@ -46,12 +46,6 @@ export function Navigation() {
       label: "Finanzas",
       icon: Calculator,
       active: location === "/finanzas"
-    },
-    {
-      href: "/simple",
-      label: "Simple",
-      icon: Settings,
-      active: location === "/simple"
     }
   ];
 

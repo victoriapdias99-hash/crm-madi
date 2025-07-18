@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Building2, Calendar, Target, Package } from "lucide-react";
+import { Plus, Building2, Calendar, Target, Package, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -36,6 +36,7 @@ export default function CampanasManagement() {
       cantidadDatosSolicitados: 0,
       marca: "",
       zona: "",
+      fechaCampana: "",
     },
   });
 
@@ -119,6 +120,7 @@ export default function CampanasManagement() {
         cantidadDatosSolicitados: campana.cantidadDatosSolicitados,
         marca: campana.marca,
         zona: campana.zona,
+        fechaCampana: campana.fechaCampana || "",
       });
     } else {
       setEditingCampana(null);
@@ -128,8 +130,22 @@ export default function CampanasManagement() {
         cantidadDatosSolicitados: 0,
         marca: "",
         zona: "",
+        fechaCampana: "",
       });
     }
+    setIsDialogOpen(true);
+  };
+
+  const duplicateCampana = (campana: CampanaComercial) => {
+    setEditingCampana(null); // No editing, creating new
+    form.reset({
+      clienteId: campana.clienteId,
+      numeroCampana: `${campana.numeroCampana} - Copia`,
+      cantidadDatosSolicitados: campana.cantidadDatosSolicitados,
+      marca: campana.marca,
+      zona: campana.zona,
+      fechaCampana: "", // Clear date for new campaign
+    });
     setIsDialogOpen(true);
   };
 
@@ -248,6 +264,26 @@ export default function CampanasManagement() {
                   />
                 </div>
 
+                {/* Fecha de Campaña */}
+                <div className="grid grid-cols-1 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="fechaCampana"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Fecha de Campaña</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="date"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   {/* Marca */}
                   <FormField
@@ -346,6 +382,15 @@ export default function CampanasManagement() {
                   </Button>
                   <Button
                     size="sm"
+                    variant="secondary"
+                    onClick={() => duplicateCampana(campana)}
+                    className="bg-blue-100 hover:bg-blue-200 text-blue-700"
+                  >
+                    <Copy className="w-4 h-4 mr-1" />
+                    Duplicar
+                  </Button>
+                  <Button
+                    size="sm"
                     variant="destructive"
                     onClick={() => handleDelete(campana.id)}
                   >
@@ -355,7 +400,7 @@ export default function CampanasManagement() {
               </div>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 {/* Marca */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
@@ -385,6 +430,17 @@ export default function CampanasManagement() {
                     <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Datos Solicitados</h4>
                   </div>
                   <p className="text-sm font-semibold">{campana.cantidadDatosSolicitados.toLocaleString()}</p>
+                </div>
+
+                {/* Fecha de Campaña */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-teal-500" />
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Fecha Campaña</h4>
+                  </div>
+                  <p className="text-sm">
+                    {campana.fechaCampana ? new Date(campana.fechaCampana).toLocaleDateString('es-AR') : 'No especificada'}
+                  </p>
                 </div>
 
                 {/* Fecha de Creación */}
