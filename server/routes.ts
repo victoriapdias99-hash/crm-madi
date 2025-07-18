@@ -1011,6 +1011,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Usar el schema específico para crear (sin campos calculados)
       console.log('Data to validate:', dataWithoutCalculatedFields);
       
+      // Arreglar problema de fecha (ajustar timezone)
+      if (dataWithoutCalculatedFields.fechaCampana) {
+        const fechaInput = new Date(dataWithoutCalculatedFields.fechaCampana);
+        // Crear fecha en UTC para evitar problemas de timezone
+        const fechaCorregida = new Date(fechaInput.getTime() + fechaInput.getTimezoneOffset() * 60000);
+        dataWithoutCalculatedFields.fechaCampana = fechaCorregida.toISOString().split('T')[0];
+        console.log('Fecha original:', dataWithoutCalculatedFields.fechaCampana, 'Fecha corregida:', fechaCorregida.toISOString().split('T')[0]);
+      }
+      
       const validatedData = createCampanaComercialSchema.parse(dataWithoutCalculatedFields);
       
       // Generar número de campaña automáticamente basado en cliente

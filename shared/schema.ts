@@ -153,7 +153,8 @@ export const campanasComerciales = pgTable("campanas_comerciales", {
   numeroCampana: text("numero_campana").notNull(),
   cantidadDatosSolicitados: integer("cantidad_datos_solicitados").notNull(),
   marca: text("marca").notNull(), // Una de las marcas disponibles
-  zona: text("zona").notNull(), // AMBA, NACIONAL, LOCALIZADO
+  zona: text("zona").notNull(), // Provincia de Argentina o AMBA, NACIONAL
+  localizado: text("localizado"), // Campo para targeting específico o localización
   fechaCampana: date("fecha_campana"), // Campo fecha cuando se da de alta la campaña
   fechaFin: date("fecha_fin"), // Fecha de finalización para rangos de matching
   fechaCreacion: timestamp("fecha_creacion").defaultNow(),
@@ -279,6 +280,7 @@ export const insertCampanaComercialSchema = createInsertSchema(campanasComercial
   cantidadDatosSolicitados: true,
   marca: true,
   zona: true,
+  localizado: true,
   fechaCampana: true,
   fechaFin: true,
 });
@@ -400,5 +402,34 @@ export const ZONAS = {
 
 export type Zona = typeof ZONAS[keyof typeof ZONAS];
 
-// Zonas como array para formularios
-export const ZONAS_DISPONIBLES = ['AMBA', 'NACIONAL', 'LOCALIZADO'] as const;
+// Provincias de Argentina completas para targeting geográfico
+export const PROVINCIAS_ARGENTINA = [
+  'AMBA',
+  'NACIONAL',
+  'Buenos Aires',
+  'Catamarca',
+  'Chaco',
+  'Chubut',
+  'Córdoba',
+  'Corrientes',
+  'Entre Ríos',
+  'Formosa',
+  'Jujuy',
+  'La Pampa',
+  'La Rioja',
+  'Mendoza',
+  'Misiones',
+  'Neuquén',
+  'Río Negro',
+  'Salta',
+  'San Juan',
+  'San Luis',
+  'Santa Cruz',
+  'Santa Fe',
+  'Santiago del Estero',
+  'Tierra del Fuego',
+  'Tucumán'
+] as const;
+
+// Zonas como array para formularios (ahora incluye todas las provincias)
+export const ZONAS_DISPONIBLES = PROVINCIAS_ARGENTINA;

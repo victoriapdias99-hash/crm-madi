@@ -297,14 +297,14 @@ export default function CampanasManagement() {
                     name="zona"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Zona *</FormLabel>
+                        <FormLabel>Provincia/Zona *</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar zona" />
+                              <SelectValue placeholder="Seleccionar provincia" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
+                          <SelectContent className="max-h-60">
                             {ZONAS_DISPONIBLES.map((zona) => (
                               <SelectItem key={zona} value={zona}>
                                 {zona}
@@ -313,10 +313,34 @@ export default function CampanasManagement() {
                           </SelectContent>
                         </Select>
                         <FormMessage />
+                        <p className="text-xs text-muted-foreground">
+                          Selecciona la provincia de Argentina o AMBA/NACIONAL
+                        </p>
                       </FormItem>
                     )}
                   />
                 </div>
+
+                {/* Campo Localizado */}
+                <FormField
+                  control={form.control}
+                  name="localizado"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Localización Específica</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Ej: Ciudades específicas, zonas, radios de targeting..."
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                      <p className="text-sm text-muted-foreground">
+                        Opcional: Especifica targeting geográfico adicional o localización específica
+                      </p>
+                    </FormItem>
+                  )}
+                />
 
                 <div className="flex justify-end space-x-2 pt-4">
                   <Button 
