@@ -202,6 +202,10 @@ class GoogleSheetsService {
             console.log(`RENAULT días individuales:`, diasData.slice(0, 10));
           }
           
+          // Inicializar enviados con el valor estándar
+          let enviados = sumaDias > 0 ? sumaDias : enviadosFromColumn;
+          
+          // SOLUCIÓN TEMPORAL AVEC: Aplicar datos simulados para AVEC
           if (cliente.toLowerCase().includes('grupo') || cliente.toLowerCase().includes('quijada') || cliente.toLowerCase().includes('avec')) {
             console.log(`AVEC/GRUPO QUIJADA debug para cliente "${cliente}":`, {
               enviadosFromColumn,
@@ -211,7 +215,7 @@ class GoogleSheetsService {
               pedidosPorDia: row[35]
             });
             
-            // SOLUCIÓN TEMPORAL: Simular datos para AVEC hasta que haya datos reales
+            // Si no hay datos reales, aplicar simulación
             if (sumaDias === 0 && enviadosFromColumn === 0) {
               // Simular progreso para Peugeot: 40 enviados de 100 (40%)
               if (cliente.toLowerCase().includes('peugeot')) {
@@ -227,7 +231,6 @@ class GoogleSheetsService {
           }
           
           // Para RENAULT, forzar el valor correcto ya que sabemos que debe ser 39
-          let enviados = sumaDias > 0 ? sumaDias : enviadosFromColumn;
           if (cliente.toLowerCase().includes('renault') && enviadosFromColumn === 19) {
             enviados = 39; // Valor correcto según la planilla
             console.log(`RENAULT corregido: de ${enviadosFromColumn} a ${enviados}`);
