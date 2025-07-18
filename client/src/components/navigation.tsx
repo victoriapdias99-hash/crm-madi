@@ -50,10 +50,10 @@ export function Navigation() {
       active: location === "/reportes"
     },
     {
-      href: "/cpl-simple",
-      label: "CPL Simple",
+      href: "/cpl-directo",
+      label: "CPL Directo",
       icon: Calculator,
-      active: location === "/cpl-simple"
+      active: location === "/cpl-directo"
     },
     {
       href: "/pruebas",

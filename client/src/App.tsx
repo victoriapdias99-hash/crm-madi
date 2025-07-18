@@ -16,6 +16,7 @@ import FinanzasDashboard from "@/pages/finanzas-dashboard";
 import ReportesGraficos from "@/pages/reportes-graficos";
 import FunctionalAnalyst from "@/pages/functional-analyst";
 import CPLSimple from "@/pages/cpl-simple";
+import CPLDirecto from "@/pages/cpl-directo";
 
 function Router() {
   return (
@@ -32,6 +33,7 @@ function Router() {
       <Route path="/reportes" component={ReportesGraficos} />
       <Route path="/pruebas" component={FunctionalAnalyst} />
       <Route path="/cpl-simple" component={CPLSimple} />
+      <Route path="/cpl-directo" component={CPLDirecto} />
       <Route path="/login" component={Login} />
       <Route path="/leads/:id" component={LeadDetails} />
       <Route component={NotFound} />
