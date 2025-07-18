@@ -232,23 +232,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Obtener datos reales desde la hoja "Datos Diarios"
       const datosDiarios = await googleSheetsService.getDatosDiariosData();
       
-      // Enriquecer con valores almacenados en memoria
-      const enrichedData = await Promise.all(
-        datosDiarios.map(async (data: any, index: number) => {
-          const storedCpl = await storage.getCpl(index);
-          const storedVenta = await storage.getVentaPorCampana(index);
-          const storedPedidos = await storage.getPedidosPorDia(index);
-          
-          return {
-            ...data,
-            cpl: storedCpl || data.cpl || 0,
-            ventaPorCampana: storedVenta || data.ventaPorCampana || 0,
-            pedidosPorDiaManual: storedPedidos || data.pedidosPorDia || 0
-          };
-        })
-      );
+      // Obtener todas las campañas comerciales para mapeo
+      const campanasComerciales = await storage.getAllCampanasComerciales();
       
-      res.json(enrichedData);
+      // Crear mapeo mejorado que prioriza por campaña
+      const mappedData = [];
+      
+      // Procesar cada campaña individualmente
+      for (const campana of campanasComerciales) {
+        const cliente = await storage.getCliente(campana.clienteId);
+        if (!cliente) continue;
+        
+        const fechaInicioCampana = new Date(campana.fechaCampana);
+        
+        // Filtrar datos específicos para esta campaña (sin restricción de fecha por ahora)
+        const datosParaCampana = datosDiarios.filter(dato => {
+          const clienteCoincide = dato.cliente.toLowerCase().includes(cliente.nombreCliente.toLowerCase()) ||
+                                 dato.clienteNombre.toLowerCase().includes(cliente.nombreCliente.toLowerCase()) ||
+                                 dato.cliente.toLowerCase().includes(campana.marca.toLowerCase());
+          
+          return clienteCoincide;
+        });
+        
+        console.log(`Campaign ${campana.numeroCampana} - Found ${datosParaCampana.length} matching data records for ${cliente.nombreCliente}`);
+        
+        // Calcular métricas específicas para esta campaña
+        let datosAcumulados = 0;
+        let entregadosPorDiaTotal = 0;
+        let diasConDatos = 0;
+        
+        const datosOrdenados = datosParaCampana.sort((a, b) => 
+          new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
+        );
+        
+        for (const dato of datosOrdenados) {
+          if (datosAcumulados >= campana.cantidadDatosSolicitados) break;
+          
+          const datosDelDia = dato.totalLeads || dato.cantidad || dato.enviados || 1;
+          datosAcumulados += datosDelDia;
+          entregadosPorDiaTotal += (dato.entregadosPorDia || 0);
+          diasConDatos++;
+        }
+        
+        const porcentajeDatosEnviados = Math.min(100, (datosAcumulados / campana.cantidadDatosSolicitados) * 100);
+        const faltantesAEnviar = Math.max(0, campana.cantidadDatosSolicitados - datosAcumulados);
+        const entregadosPorDiaPromedio = diasConDatos > 0 ? Math.round(entregadosPorDiaTotal / diasConDatos) : 0;
+        
+        // Obtener valores almacenados en memoria para esta campaña específica
+        const campanIndex = campanasComerciales.findIndex(c => c.id === campana.id);
+        const storedCpl = await storage.getCpl(campanIndex);
+        const storedVenta = await storage.getVentaPorCampana(campanIndex);
+        const storedPedidos = await storage.getPedidosPorDia(campanIndex);
+        
+        mappedData.push({
+          cliente: `${cliente.nombreCliente} - ${campana.marca}`,
+          clienteNombre: cliente.nombreCliente,
+          zona: campana.zona,
+          numeroCampana: campana.numeroCampana,
+          enviados: datosAcumulados,
+          entregadosPorDia: entregadosPorDiaPromedio,
+          pedidosPorDia: storedPedidos || 0,
+          pedidosTotal: (storedPedidos || 0) * diasConDatos,
+          porcentajeDesvio: storedPedidos > 0 ? ((entregadosPorDiaPromedio - storedPedidos) / storedPedidos * 100) : 0,
+          porcentajeDatosEnviados: Math.round(porcentajeDatosEnviados),
+          faltantesAEnviar: faltantesAEnviar,
+          cpl: storedCpl || 0,
+          ventaPorCampana: storedVenta || 0,
+          inversionRealizada: datosAcumulados * (storedCpl || 0) * 1.02, // 2% impuestos
+          inversionPendiente: faltantesAEnviar * (storedCpl || 0) * 1.02,
+          inversionTotal: campana.cantidadDatosSolicitados * (storedCpl || 0) * 1.02,
+          fechaCampana: campana.fechaCampana,
+          cantidadSolicitada: campana.cantidadDatosSolicitados,
+          diasProcesados: diasConDatos
+        });
+      }
+      
+      // Si no hay campañas comerciales, usar datos por defecto desde Google Sheets
+      if (mappedData.length === 0) {
+        console.log('No commercial campaigns found, using default Google Sheets data');
+        const enrichedData = await Promise.all(
+          datosDiarios.map(async (data: any, index: number) => {
+            const storedCpl = await storage.getCpl(index);
+            const storedVenta = await storage.getVentaPorCampana(index);
+            const storedPedidos = await storage.getPedidosPorDia(index);
+            
+            return {
+              ...data,
+              cpl: storedCpl || data.cpl || 0,
+              ventaPorCampana: storedVenta || data.ventaPorCampana || 0,
+              pedidosPorDiaManual: storedPedidos || data.pedidosPorDia || 0
+            };
+          })
+        );
+        
+        console.log(`Processed ${enrichedData.length} default records for datos diarios dashboard`);
+        return res.json(enrichedData);
+      }
+
+      console.log(`Processed ${mappedData.length} campaigns for datos diarios dashboard`);
+      res.json(mappedData);
     } catch (error) {
       console.error('Error fetching datos diarios:', error);
       res.status(500).json({ error: 'Failed to fetch datos diarios' });
@@ -258,7 +340,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mapear campañas comerciales con datos diarios dinámicamente
   app.post('/api/dashboard/mapear-campanas', async (req, res) => {
     try {
-      console.log('Starting campaign mapping process...');
+      console.log('Starting enhanced campaign mapping process...');
       
       // Obtener todas las campañas comerciales
       const campanasComerciales = await storage.getAllCampanasComerciales();
@@ -269,26 +351,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Found ${datosDiarios.length} daily data records`);
       
       let mappedCount = 0;
+      const mapeoDetallado = [];
       
-      // Mapear cada campaña con sus respectivos datos diarios
+      // Mapear cada campaña individualmente por número y fecha
       for (const campana of campanasComerciales) {
         // Buscar cliente asociado
         const cliente = await storage.getCliente(campana.clienteId);
         if (!cliente) continue;
         
-        // Buscar datos diarios que coincidan con la marca de la campaña
-        const datosRelacionados = datosDiarios.filter(dato => 
-          dato.cliente.toLowerCase().includes(cliente.nombreCliente.toLowerCase()) ||
-          dato.clienteNombre.toLowerCase().includes(cliente.nombreCliente.toLowerCase()) ||
-          dato.cliente.toLowerCase().includes(campana.marca.toLowerCase())
+        console.log(`Processing Campaign ${campana.numeroCampana} - ${cliente.nombreCliente} - ${campana.marca}`);
+        console.log(`Campaign start date: ${campana.fechaCampana}, requested data: ${campana.cantidadDatosSolicitados}`);
+        
+        // Filtrar datos por cliente/marca Y fecha de inicio de campaña
+        const fechaInicioCampana = new Date(campana.fechaCampana);
+        
+        const datosRelacionados = datosDiarios.filter(dato => {
+          if (!dato.fecha) return false;
+          
+          const fechaDato = new Date(dato.fecha);
+          
+          // Debe ser posterior o igual a la fecha de inicio de la campaña
+          const dentroRangoFecha = fechaDato >= fechaInicioCampana;
+          
+          // Debe coincidir la marca/cliente
+          const clienteCoincide = dato.cliente.toLowerCase().includes(cliente.nombreCliente.toLowerCase()) ||
+                                 dato.clienteNombre.toLowerCase().includes(cliente.nombreCliente.toLowerCase()) ||
+                                 dato.cliente.toLowerCase().includes(campana.marca.toLowerCase());
+          
+          return dentroRangoFecha && clienteCoincide;
+        });
+        
+        // Calcular datos obtenidos hasta ahora
+        let datosAcumulados = 0;
+        let diasProcesados = 0;
+        
+        // Ordenar datos por fecha para contar secuencialmente
+        const datosOrdenados = datosRelacionados.sort((a, b) => 
+          new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
         );
         
+        for (const dato of datosOrdenados) {
+          if (datosAcumulados >= campana.cantidadDatosSolicitados) break;
+          
+          const datosDelDia = dato.totalLeads || dato.cantidad || dato.enviados || 1;
+          datosAcumulados += datosDelDia;
+          diasProcesados++;
+        }
+        
+        const porcentajeCompletado = Math.min(100, (datosAcumulados / campana.cantidadDatosSolicitados) * 100);
+        const datosFaltantes = Math.max(0, campana.cantidadDatosSolicitados - datosAcumulados);
+        
+        const mapeoInfo = {
+          campanaNumerо: campana.numeroCampana,
+          clienteNombre: cliente.nombreCliente,
+          marca: campana.marca,
+          fechaInicio: campana.fechaCampana,
+          datosSolicitados: campana.cantidadDatosSolicitados,
+          datosObtenidos: datosAcumulados,
+          datosFaltantes: datosFaltantes,
+          porcentajeCompletado: Math.round(porcentajeCompletado),
+          diasProcesados: diasProcesados,
+          datosEncontrados: datosRelacionados.length
+        };
+        
+        mapeoDetallado.push(mapeoInfo);
+        
+        console.log(`Campaign ${campana.numeroCampana} mapping result:`, mapeoInfo);
+        
         if (datosRelacionados.length > 0) {
-          console.log(`Mapping campaign ${campana.numeroCampana} for client ${cliente.nombreCliente} with ${datosRelacionados.length} data records`);
-          
-          // Aquí se puede agregar lógica adicional para actualizar la base de datos
-          // con los datos mapeados si es necesario
-          
           mappedCount++;
         }
       }
@@ -300,7 +430,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         mapped: mappedCount,
         totalCampaigns: campanasComerciales.length,
         totalDataRecords: datosDiarios.length,
-        message: `Se mapearon ${mappedCount} campañas exitosamente`
+        mapeoDetallado: mapeoDetallado,
+        message: `Se mapearon ${mappedCount} campañas exitosamente con datos específicos por fecha`
       });
     } catch (error) {
       console.error('Error mapping campaigns:', error);
