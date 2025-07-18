@@ -395,11 +395,13 @@ export default function DatosDiariosDashboard() {
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2">
                           <div className="flex flex-col items-center gap-1">
-                            <Progress 
-                              value={Math.min(data.porcentajeDatosEnviados || 0, 100)} 
-                              className="w-20 h-2" 
-                            />
-                            <span className="text-xs font-medium">
+                            <div className="w-20 h-3 bg-gray-200 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-yellow-500 transition-all duration-300"
+                                style={{ width: `${Math.min(data.porcentajeDatosEnviados || 0, 100)}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-bold text-yellow-700">
                               {data.porcentajeDatosEnviados ? data.porcentajeDatosEnviados.toFixed(1) : '0.0'}%
                             </span>
                           </div>
@@ -529,11 +531,13 @@ export default function DatosDiariosDashboard() {
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2">
                           <div className="flex flex-col items-center gap-1">
-                            <Progress 
-                              value={Math.min(data.porcentajeDatosEnviados || 0, 100)} 
-                              className="w-20 h-2" 
-                            />
-                            <span className="text-xs font-medium text-green-600">
+                            <div className="w-20 h-3 bg-gray-200 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-green-500 transition-all duration-300"
+                                style={{ width: `${Math.min(data.porcentajeDatosEnviados || 0, 100)}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-bold text-green-700">
                               {data.porcentajeDatosEnviados ? data.porcentajeDatosEnviados.toFixed(1) : '0.0'}%
                             </span>
                           </div>
