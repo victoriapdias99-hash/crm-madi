@@ -12,6 +12,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { Navigation } from "@/components/navigation";
 import { 
   insertCampanaComercialSchema, 
   type CampanaComercial, 
@@ -158,6 +159,7 @@ export default function CampanasManagement() {
 
   return (
     <div className="space-y-6 p-6">
+      <Navigation />
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">

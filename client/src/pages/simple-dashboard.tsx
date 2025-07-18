@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
+import { Navigation } from "@/components/navigation";
 
 interface DashboardStats {
   leadsCount: number;
@@ -78,6 +79,7 @@ export default function SimpleDashboard() {
 
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
+      <Navigation />
       <h1 style={{ color: '#333', marginBottom: '10px' }}>Dashboard Meta Ads</h1>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <p style={{ color: '#666', margin: '0' }}>

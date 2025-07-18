@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TrendingUp, Users, DollarSign, Target, Search, Filter, Eye } from "lucide-react";
 import { Link } from "wouter";
+import { Navigation } from "@/components/navigation";
 
 interface DashboardStats {
   leadsCount: number;
@@ -133,6 +134,7 @@ export default function Dashboard() {
   
   return (
     <div className="min-h-screen bg-gray-50 p-6">
+      <Navigation />
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Phone, Mail, MapPin, DollarSign, Calendar, MessageSquare, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Navigation } from "@/components/navigation";
 
 interface Lead {
   id: number;
@@ -172,6 +173,7 @@ export default function LeadDetails() {
   if (leadLoading) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
+        <Navigation />
         <div className="max-w-4xl mx-auto">
           <div className="text-center py-12">Cargando lead...</div>
         </div>
@@ -182,6 +184,7 @@ export default function LeadDetails() {
   if (error || !lead) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
+        <Navigation />
         <div className="max-w-4xl mx-auto">
           <Alert variant="destructive">
             <AlertDescription>
@@ -203,6 +206,7 @@ export default function LeadDetails() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
+      <Navigation />
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">

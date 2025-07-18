@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, TrendingUp, TrendingDown, DollarSign, Users, Target, BarChart3 } from "lucide-react";
 import { useState } from "react";
+import { Navigation } from "@/components/navigation";
 
 interface DashboardData {
   cliente: string;
@@ -70,6 +71,7 @@ export default function CampaignDashboard() {
   if (dashboardLoading || sheetsLoading || leadsLoading) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
+        <Navigation />
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
@@ -82,6 +84,7 @@ export default function CampaignDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
+      <Navigation />
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
