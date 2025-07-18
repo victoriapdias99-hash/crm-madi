@@ -195,172 +195,148 @@ export default function ClientesManagement() {
               </DialogTitle>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 form-modern">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="form-modern">
                 {/* Información Básica */}
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="nombreCliente"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nombre Cliente *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ej: NOVO GROUP" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="nombreComercial"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nombre Comercial *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ej: Novo Automotores" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="telefono"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Teléfono</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ej: +54 11 1234-5678" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="Ej: contacto@novo.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="cuitCliente"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>CUIT</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ej: 20-12345678-9" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="tipoFacturacion"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tipo Facturación *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <div className="form-section">
+                  <h3>📋 Información Básica</h3>
+                  <div className="form-grid">
+                    <FormField
+                      control={form.control}
+                      name="nombreCliente"
+                      render={({ field }) => (
+                        <FormItem className="form-field-enhanced">
+                          <FormLabel>Nombre Cliente *</FormLabel>
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar tipo" />
-                            </SelectTrigger>
+                            <Input placeholder="Ej: NOVO GROUP" {...field} />
                           </FormControl>
-                          <SelectContent>
-                            {Object.entries(TIPO_FACTURACION).map(([key, value]) => (
-                              <SelectItem key={key} value={value}>
-                                {value}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                {/* Campos Comerciales */}
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="tipoCliente"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tipo de Cliente</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="nombreComercial"
+                      render={({ field }) => (
+                        <FormItem className="form-field-enhanced">
+                          <FormLabel>Nombre Comercial *</FormLabel>
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar tipo" />
-                            </SelectTrigger>
+                            <Input placeholder="Ej: Novo Automotores" {...field} />
                           </FormControl>
-                          <SelectContent>
-                            {TIPOS_CLIENTE.map((tipo) => (
-                              <SelectItem key={tipo} value={tipo}>
-                                {tipo}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="integracion"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Integración</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar integración" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {TIPOS_INTEGRACION.map((tipo) => (
-                              <SelectItem key={tipo} value={tipo}>
-                                {tipo}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
-                {/* Marcas Solicitadas */}
-                <FormField
-                  control={form.control}
-                  name="marcasSolicitadas"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Marcas Solicitadas</FormLabel>
-                      <div className="grid grid-cols-4 gap-2">
-                        {MARCAS_DISPONIBLES.map((marca) => (
-                          <FormItem
-                            key={marca}
-                            className="flex flex-row items-start space-x-3 space-y-0"
-                          >
+                  <div className="form-grid">
+                    <FormField
+                      control={form.control}
+                      name="telefono"
+                      render={({ field }) => (
+                        <FormItem className="form-field-enhanced">
+                          <FormLabel>Teléfono</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ej: +54 11 1234-5678" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem className="form-field-enhanced">
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="Ej: contacto@novo.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="form-grid">
+                    <FormField
+                      control={form.control}
+                      name="cuitCliente"
+                      render={({ field }) => (
+                        <FormItem className="form-field-enhanced">
+                          <FormLabel>CUIT</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ej: 20-12345678-9" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="tipoFacturacion"
+                      render={({ field }) => (
+                        <FormItem className="form-field-enhanced">
+                          <FormLabel>Tipo Facturación *</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Seleccionar tipo" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {Object.entries(TIPO_FACTURACION).map(([key, value]) => (
+                                <SelectItem key={key} value={value}>
+                                  {value}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                    <FormField
+                      control={form.control}
+                      name="integracion"
+                      render={({ field }) => (
+                        <FormItem className="form-field-enhanced">
+                          <FormLabel>Integración</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Seleccionar integración" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {TIPOS_INTEGRACION.map((tipo) => (
+                                <SelectItem key={tipo} value={tipo}>
+                                  {tipo}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                {/* Marcas y Targeting */}
+                <div className="form-section">
+                  <h3>🎯 Marcas y Targeting</h3>
+                  <FormField
+                    control={form.control}
+                    name="marcasSolicitadas"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Marcas Solicitadas</FormLabel>
+                        <div className="checkbox-group">
+                          {MARCAS_DISPONIBLES.map((marca) => (
+                            <div key={marca} className="checkbox-item">
                               <Checkbox
                                 checked={field.value?.includes(marca)}
                                 onCheckedChange={(checked) => {
@@ -372,32 +348,26 @@ export default function ClientesManagement() {
                                   }
                                 }}
                               />
-                            </FormControl>
-                            <FormLabel className="text-sm font-normal">
-                              {marca}
-                            </FormLabel>
-                          </FormItem>
-                        ))}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                              <FormLabel className="text-sm font-normal cursor-pointer">
+                                {marca}
+                              </FormLabel>
+                            </div>
+                          ))}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                {/* Zonas */}
-                <FormField
-                  control={form.control}
-                  name="zonas"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Zonas</FormLabel>
-                      <div className="grid grid-cols-3 gap-2">
-                        {Object.values(ZONAS).map((zona) => (
-                          <FormItem
-                            key={zona}
-                            className="flex flex-row items-start space-x-3 space-y-0"
-                          >
-                            <FormControl>
+                  <FormField
+                    control={form.control}
+                    name="zonas"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Zonas de Cobertura</FormLabel>
+                        <div className="checkbox-group">
+                          {Object.values(ZONAS).map((zona) => (
+                            <div key={zona} className="checkbox-item">
                               <Checkbox
                                 checked={field.value?.includes(zona)}
                                 onCheckedChange={(checked) => {
@@ -409,35 +379,35 @@ export default function ClientesManagement() {
                                   }
                                 }}
                               />
-                            </FormControl>
-                            <FormLabel className="text-sm font-normal">
-                              {zona}
-                            </FormLabel>
-                          </FormItem>
-                        ))}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
+                              <FormLabel className="text-sm font-normal cursor-pointer">
+                                {zona}
+                              </FormLabel>
+                            </div>
+                          ))}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
                   )}
                 />
 
-                {/* Zonas Excluyentes */}
-                <FormField
-                  control={form.control}
-                  name="zonasExcluyentes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Zonas Excluyentes</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          placeholder="Ej: Villa Carlos Paz, La Falda, Capilla del Monte..."
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={form.control}
+                    name="zonasExcluyentes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Zonas Excluyentes</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="Ej: Villa Carlos Paz, La Falda, Capilla del Monte..."
+                            className="form-field-enhanced"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <div className="flex justify-end gap-2 pt-4">
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="hover:bg-secondary transition-colors">
