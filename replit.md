@@ -69,7 +69,16 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Sistema CPL Directo Funcionando Completamente (Latest - January 18, 2025)
+### Campo CPL Real con Meta Ads (Latest - January 18, 2025)
+- **Nueva Columna CPL Real**: Agregado campo que calcula CPL real usando datos de Meta Ads
+- **Fórmula CPL Real**: Gasto Meta Ads ÷ Cantidad de datos enviados = CPL Real por campaña
+- **Integración Meta Ads**: Conecta campañas por marca (Fiat, Peugeot, Toyota, Chevrolet, Renault, Citroën)
+- **Visualización Dual**: Muestra CPL guardado manualmente y CPL real calculado de Meta Ads
+- **Dos Tablas Actualizadas**: Tanto campañas en proceso como finalizadas incluyen columna CPL Real
+- **Matching Automático**: Sistema identifica marcas en nombres de clientes para mapear con Meta Ads
+- **Datos Auténticos**: Utiliza gasto real de Meta Ads para cálculos precisos de rendimiento
+
+### Sistema CPL Directo Funcionando Completamente (January 18, 2025)
 - **Problema CPL Solucionado Definitivamente**: Implementado sistema "CPL Directo" que funciona 100% garantizado
 - **Página CPL Directo**: Nueva página dedicada exclusivamente para gestión de CPL con localStorage
 - **Integración Perfecta**: CPL guardado en "CPL Directo" aparece automáticamente en "Datos Diarios"

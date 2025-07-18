@@ -45,6 +45,12 @@ export default function DatosDiariosDashboard() {
     retry: 2, // Retry failed requests up to 2 times
   });
 
+  // Obtener datos de Meta Ads para CPL Real
+  const { data: metaCampaigns } = useQuery({
+    queryKey: ['/api/meta-ads/campaigns'],
+    refetchInterval: 300000, // Refetch every 5 minutes
+  });
+
   const updateCplMutation = useMutation({
     mutationFn: async ({ clienteIndex, cpl, clienteNombre, numeroCampana }: { 
       clienteIndex: number; 
@@ -132,6 +138,51 @@ export default function DatosDiariosDashboard() {
       });
     }
   });
+
+  // Función para calcular CPL Real basado en Meta Ads
+  const calculateCPLReal = (data: DatosDiariosData) => {
+    if (!metaCampaigns || !Array.isArray(metaCampaigns) || data.enviados === 0) {
+      return 0;
+    }
+
+    // Mapear marcas para encontrar campaña correspondiente
+    const brandMap: Record<string, string[]> = {
+      'Fiat': ['fiat'],
+      'Peugeot': ['peugeot'],
+      'Toyota': ['toyota'], 
+      'Chevrolet': ['chevrolet'],
+      'Renault': ['renault'],
+      'Citroen': ['citroen', 'citroën']
+    };
+
+    // Extraer marca del nombre del cliente
+    let detectedBrand = '';
+    for (const [brand, keywords] of Object.entries(brandMap)) {
+      if (keywords.some(keyword => 
+        data.cliente.toLowerCase().includes(keyword) || 
+        data.clienteNombre.toLowerCase().includes(keyword)
+      )) {
+        detectedBrand = brand;
+        break;
+      }
+    }
+
+    if (!detectedBrand) return 0;
+
+    // Encontrar campaña Meta Ads que coincida con la marca
+    const matchingCampaign = metaCampaigns.find((campaign: any) => 
+      brandMap[detectedBrand].some(keyword => 
+        campaign.campaignName?.toLowerCase().includes(keyword)
+      )
+    );
+
+    if (matchingCampaign && matchingCampaign.spend > 0) {
+      // CPL Real = Gasto total Meta Ads / Datos enviados
+      return matchingCampaign.spend / data.enviados;
+    }
+
+    return 0;
+  };
 
   const mapearCampanasMutation = useMutation({
     mutationFn: async () => {
@@ -328,6 +379,7 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Faltantes</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Input</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Guardado</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Real (Meta Ads)</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Realizada (con impuestos)</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Pendiente (con impuestos)</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Total (con impuestos)</th>
@@ -416,6 +468,21 @@ export default function DatosDiariosDashboard() {
                             <span className="text-gray-400 text-sm">Sin CPL</span>
                           )}
                         </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          {(() => {
+                            const cplReal = calculateCPLReal(data);
+                            return cplReal > 0 ? (
+                              <div className="flex flex-col items-center gap-1">
+                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                  ARS ${Math.round(cplReal).toLocaleString('es-AR')}
+                                </Badge>
+                                <div className="text-xs text-gray-500">Meta Ads</div>
+                              </div>
+                            ) : (
+                              <div className="text-gray-400 text-sm">-</div>
+                            );
+                          })()}
+                        </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
                           ARS ${inversions.inversionRealizada.toLocaleString('es-AR')}
                         </td>
@@ -465,6 +532,7 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Faltantes</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Input</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Guardado</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Real (Meta Ads)</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Realizada (con impuestos)</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Pendiente (con impuestos)</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Total (con impuestos)</th>
@@ -559,6 +627,21 @@ export default function DatosDiariosDashboard() {
                           ) : (
                             <div className="text-gray-400">-</div>
                           )}
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          {(() => {
+                            const cplReal = calculateCPLReal(data);
+                            return cplReal > 0 ? (
+                              <div className="flex flex-col items-center gap-1">
+                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                  ARS ${Math.round(cplReal).toLocaleString('es-AR')}
+                                </Badge>
+                                <div className="text-xs text-gray-500">Meta Ads</div>
+                              </div>
+                            ) : (
+                              <div className="text-gray-400 text-sm">-</div>
+                            );
+                          })()}
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
                           ARS ${inversions.inversionRealizada.toLocaleString('es-AR')}
