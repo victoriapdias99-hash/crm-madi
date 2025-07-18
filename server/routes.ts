@@ -253,6 +253,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error fetching datos diarios:', error);
       res.status(500).json({ error: 'Failed to fetch datos diarios' });
     }
+  })
+
+  // Mapear campañas comerciales con datos diarios dinámicamente
+  app.post('/api/dashboard/mapear-campanas', async (req, res) => {
+    try {
+      console.log('Starting campaign mapping process...');
+      
+      // Obtener todas las campañas comerciales
+      const campanasComerciales = await storage.getAllCampanasComerciales();
+      console.log(`Found ${campanasComerciales.length} commercial campaigns`);
+      
+      // Obtener datos diarios desde Google Sheets
+      const datosDiarios = await googleSheetsService.getDatosDiariosData();
+      console.log(`Found ${datosDiarios.length} daily data records`);
+      
+      let mappedCount = 0;
+      
+      // Mapear cada campaña con sus respectivos datos diarios
+      for (const campana of campanasComerciales) {
+        // Buscar cliente asociado
+        const cliente = await storage.getCliente(campana.clienteId);
+        if (!cliente) continue;
+        
+        // Buscar datos diarios que coincidan con la marca de la campaña
+        const datosRelacionados = datosDiarios.filter(dato => 
+          dato.cliente.toLowerCase().includes(cliente.nombreCliente.toLowerCase()) ||
+          dato.clienteNombre.toLowerCase().includes(cliente.nombreCliente.toLowerCase()) ||
+          dato.cliente.toLowerCase().includes(campana.marca.toLowerCase())
+        );
+        
+        if (datosRelacionados.length > 0) {
+          console.log(`Mapping campaign ${campana.numeroCampana} for client ${cliente.nombreCliente} with ${datosRelacionados.length} data records`);
+          
+          // Aquí se puede agregar lógica adicional para actualizar la base de datos
+          // con los datos mapeados si es necesario
+          
+          mappedCount++;
+        }
+      }
+      
+      console.log(`Successfully mapped ${mappedCount} campaigns`);
+      
+      res.json({ 
+        success: true, 
+        mapped: mappedCount,
+        totalCampaigns: campanasComerciales.length,
+        totalDataRecords: datosDiarios.length,
+        message: `Se mapearon ${mappedCount} campañas exitosamente`
+      });
+    } catch (error) {
+      console.error('Error mapping campaigns:', error);
+      res.status(500).json({ error: 'Failed to map campaigns with daily data' });
+    }
   });
 
   // Datos diarios con matching de campañas

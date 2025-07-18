@@ -66,6 +66,28 @@ export default function DatosDiariosDashboard() {
     }
   });
 
+  const mapearCampanasMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/dashboard/mapear-campanas');
+      return response;
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Mapeo Exitoso",
+        description: `Se mapearon ${data.mapped || 0} campañas con datos diarios`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+    },
+    onError: (error) => {
+      console.error('Mapeo error:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo realizar el mapeo de campañas",
+        variant: "destructive",
+      });
+    }
+  });
+
   // Calcular inversiones basadas en CPL manual con 2% de impuestos
   const calculateInversions = (data: DatosDiariosData, cpl: number) => {
     const inversionRealizada = data.enviados * cpl * 1.02; // +2% impuestos
@@ -155,12 +177,25 @@ export default function DatosDiariosDashboard() {
           </div>
           <div className="flex gap-2">
             <Button
+              onClick={() => mapearCampanasMutation.mutate()}
+              disabled={mapearCampanasMutation.isPending}
+              variant="default"
+              size="sm"
+            >
+              {mapearCampanasMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              Mapear Campañas
+            </Button>
+            <Button
               onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] })}
               variant="outline"
               size="sm"
             >
               <RefreshCw className="h-4 w-4 mr-2" />
-              Actualizar
+              Refrescar Datos
             </Button>
             <Button
               onClick={clearAllManualValues}
@@ -194,7 +229,6 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Entregados/día</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Pedidos/día (Manual)</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Pedidos Total</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">N° Campaña</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">% Desvío</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">% Datos Enviados</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Faltantes</th>
@@ -226,6 +260,7 @@ export default function DatosDiariosDashboard() {
                           <div>
                             <div className="font-medium">{data.clienteNombre}</div>
                             <div className="text-sm text-gray-500">{data.cliente}</div>
+                            <div className="text-xs text-blue-600 font-semibold">Campaña #{data.numeroCampana || 1}</div>
                           </div>
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2">{data.zona}</td>
@@ -256,9 +291,6 @@ export default function DatosDiariosDashboard() {
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
                           {data.pedidosTotal || 0}
-                        </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
-                          {data.numeroCampana || 1}
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
                           <Badge variant={updatedData.porcentajeDesvio && updatedData.porcentajeDesvio < 0 ? "destructive" : "default"}>
