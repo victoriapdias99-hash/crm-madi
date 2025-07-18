@@ -9,7 +9,8 @@ import {
   insertCampaignSchema, 
   insertDailyStatsSchema,
   insertLeadNoteSchema,
-  insertUserSchema
+  insertUserSchema,
+  insertClienteSchema
 } from "@shared/schema";
 
 interface WebSocketWithData extends WebSocket {
