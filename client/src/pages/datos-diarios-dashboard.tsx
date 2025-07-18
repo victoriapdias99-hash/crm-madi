@@ -253,18 +253,21 @@ export default function DatosDiariosDashboard() {
         {/* Panel de Pruebas Funcionales */}
         {/* <TestPanel /> */}
 
+        {/* Campañas en Proceso */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              Datos de Campañas por Cliente
-              <Badge variant="secondary">{datosDiarios?.length || 0} registros</Badge>
+              🚀 Campañas en Proceso
+              <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+                {datosDiarios?.filter(data => data.porcentajeDatosEnviados < 100).length || 0} activas
+              </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full border-collapse border border-gray-300 dark:border-gray-600">
                 <thead>
-                  <tr className="bg-gray-100 dark:bg-gray-800">
+                  <tr className="bg-yellow-50 dark:bg-yellow-900/20">
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-left">Cliente</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-left">Zona</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Enviados</th>
@@ -281,7 +284,7 @@ export default function DatosDiariosDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {datosDiarios?.map((data: DatosDiariosData, index: number) => {
+                  {datosDiarios?.filter(data => data.porcentajeDatosEnviados < 100).map((data: DatosDiariosData, index: number) => {
                     const currentCpl = data.cpl || 0; // Use stored CPL from server
                     const currentPedidosPorDia = pedidosPorDiaValues[index] || data.pedidosPorDia || 0;
                     
@@ -411,6 +414,164 @@ export default function DatosDiariosDashboard() {
                   })}
                 </tbody>
               </table>
+              {datosDiarios?.filter(data => data.porcentajeDatosEnviados < 100).length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  No hay campañas en proceso actualmente
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Campañas Finalizadas */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              ✅ Campañas Finalizadas
+              <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
+                {datosDiarios?.filter(data => data.porcentajeDatosEnviados >= 100).length || 0} completadas
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse border border-gray-300 dark:border-gray-600">
+                <thead>
+                  <tr className="bg-green-50 dark:bg-green-900/20">
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-left">Cliente</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-left">Zona</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Enviados</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Entregados/día</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Pedidos/día (Manual)</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Pedidos Total</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">% Desvío</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">% Datos Enviados</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Faltantes</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Manual (ARS)</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Realizada (con impuestos)</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Pendiente (con impuestos)</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Total (con impuestos)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {datosDiarios?.filter(data => data.porcentajeDatosEnviados >= 100).map((data: DatosDiariosData, index: number) => {
+                    const originalIndex = datosDiarios?.findIndex(d => d.cliente === data.cliente && d.numeroCampana === data.numeroCampana) || 0;
+                    const currentCpl = data.cpl || 0;
+                    const currentPedidosPorDia = pedidosPorDiaValues[originalIndex] || data.pedidosPorDia || 0;
+                    
+                    const updatedData = {
+                      ...data,
+                      pedidosPorDia: currentPedidosPorDia,
+                      faltantesAEnviar: Math.max(0, data.pedidosTotal - data.enviados),
+                      porcentajeDesvio: (currentPedidosPorDia > 0 && data.entregadosPorDia > 0) ? 
+                        ((data.entregadosPorDia - currentPedidosPorDia) / currentPedidosPorDia * 100) : 0
+                    };
+                    
+                    const inversions = calculateInversions(updatedData, currentCpl);
+                    
+                    return (
+                      <tr key={`completed-${index}`} className="hover:bg-green-50 dark:hover:bg-green-900/10">
+                        <td className="border border-gray-300 dark:border-gray-600 p-2">
+                          <div>
+                            <div className="font-medium">{data.clienteNombre}</div>
+                            <div className="text-sm text-gray-500">{data.cliente}</div>
+                            <div className="text-xs text-green-600 font-semibold">Campaña #{data.numeroCampana || 1}</div>
+                          </div>
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2">{data.zona}</td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{data.enviados}</td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          {data.entregadosPorDia ? data.entregadosPorDia.toFixed(2) : '0.00'}
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2">
+                          <div className="flex gap-2 items-center justify-center">
+                            <Input
+                              type="number"
+                              placeholder="Pedidos"
+                              value={pedidosPorDiaValues[originalIndex] || data.pedidosPorDia || ''}
+                              onChange={(e) => handlePedidosPorDiaChange(originalIndex, e.target.value)}
+                              className="w-20"
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleSavePedidosPorDia(originalIndex)}
+                              disabled={updatePedidosPorDiaMutation.isPending}
+                            >
+                              {updatePedidosPorDiaMutation.isPending ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Save className="h-3 w-3" />
+                              )}
+                            </Button>
+                          </div>
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
+                          {data.pedidosTotal}
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          {updatedData.porcentajeDesvio.toFixed(1)}%
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
+                            {data.porcentajeDatosEnviados}%
+                          </Badge>
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          <Badge variant="outline" className="bg-gray-100 text-gray-600">
+                            {updatedData.faltantesAEnviar}
+                          </Badge>
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2">
+                          <div className="text-center">
+                            {data.cpl > 0 ? (
+                              <div className="text-green-600 font-semibold">
+                                ${data.cpl.toLocaleString('es-AR')}
+                              </div>
+                            ) : (
+                              <div className="flex gap-2 items-center justify-center">
+                                <Input
+                                  type="number"
+                                  placeholder="CPL"
+                                  value={cplValues[originalIndex] || ''}
+                                  onChange={(e) => handleCplChange(originalIndex, e.target.value)}
+                                  className="w-24"
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleSaveCpl(originalIndex)}
+                                  disabled={updateCplMutation.isPending}
+                                >
+                                  {updateCplMutation.isPending ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <Save className="h-3 w-3" />
+                                  )}
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
+                          ARS ${inversions.inversionRealizada.toLocaleString('es-AR')}
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
+                          ARS ${inversions.inversionPendiente.toLocaleString('es-AR')}
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
+                          ARS ${inversions.inversionTotal.toLocaleString('es-AR')}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {datosDiarios?.filter(data => data.porcentajeDatosEnviados >= 100).length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  No hay campañas finalizadas aún
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

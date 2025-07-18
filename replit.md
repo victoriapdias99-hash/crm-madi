@@ -75,6 +75,9 @@ The application uses PostgreSQL with the following main entities:
 - **% Desvío Corregido**: Fórmula cambiada a (Total pedidos - Enviados) / Enviados × 100
 - **Pedidos Total Mapeado**: Ahora mapea correctamente desde cantidadDatosSolicitados de la campaña
 - **Inversión Pendiente Corregida**: Fórmula CPL × (Pedidos Total - Enviados) × 1.02
+- **Faltantes Corregidos**: Fórmula cambiada a Pedidos Total - Enviados
+- **Dashboard Dividido**: Separado en "Campañas en Proceso" (< 100%) y "Campañas Finalizadas" (>= 100%)
+- **UI Mejorada**: Colores diferenciados (amarillo para proceso, verde para finalizadas) con iconos y badges
 - **DatabaseStorage Mejorado**: Implementada tabla `dashboard_manual_values` para persistencia de CPL y valores manuales
 - **NOVO GROUP Funcionando**: Ahora encuentra correctamente 1000/100 datos de "FIAT AUTOS DEL SOL" (Completada)
 - **RENAULT Mejorado**: Funciona con 19/40 datos (En Progreso) con cálculos correctos
