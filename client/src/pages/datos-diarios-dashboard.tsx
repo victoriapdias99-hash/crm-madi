@@ -39,6 +39,8 @@ export default function DatosDiariosDashboard() {
   const { data: datosDiarios, isLoading } = useQuery({
     queryKey: ['/api/dashboard/datos-diarios'],
     refetchInterval: 300000, // Refrescar cada 5 minutos
+    staleTime: 60000, // Data remains fresh for 1 minute
+    retry: 2, // Retry failed requests up to 2 times
   });
 
   const updateCplMutation = useMutation({
@@ -46,14 +48,28 @@ export default function DatosDiariosDashboard() {
       console.log('Updating CPL:', { clienteIndex, cpl });
       const response = await apiRequest('/api/dashboard/update-cpl', 'POST', { clienteIndex, cpl });
       console.log('CPL update response:', response);
-      return response;
+      return { ...response, clienteIndex, cpl };
     },
     onSuccess: (data) => {
       console.log('CPL update successful:', data);
+      
+      // Actualizar cache localmente para respuesta inmediata
+      queryClient.setQueryData(['/api/dashboard/datos-diarios'], (oldData: any) => {
+        if (!oldData) return oldData;
+        return oldData.map((item: any, index: number) => {
+          if (index === data.clienteIndex) {
+            return { ...item, cpl: data.cpl };
+          }
+          return item;
+        });
+      });
+      
       toast({
         title: "CPL Actualizado",
-        description: "El CPL se ha actualizado correctamente",
+        description: `CPL actualizado a ARS $${data.cpl.toLocaleString('es-AR')}`,
       });
+      
+      // Invalidar queries para sincronización completa
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
     },
     onError: (error) => {
@@ -71,14 +87,28 @@ export default function DatosDiariosDashboard() {
       console.log('Updating Pedidos por Día:', { clienteIndex, pedidos });
       const response = await apiRequest('/api/dashboard/update-pedidos-por-dia', 'POST', { clienteIndex, pedidos });
       console.log('Pedidos por día update response:', response);
-      return response;
+      return { ...response, clienteIndex, pedidos };
     },
     onSuccess: (data) => {
       console.log('Pedidos por día update successful:', data);
+      
+      // Actualizar cache localmente para respuesta inmediata
+      queryClient.setQueryData(['/api/dashboard/datos-diarios'], (oldData: any) => {
+        if (!oldData) return oldData;
+        return oldData.map((item: any, index: number) => {
+          if (index === data.clienteIndex) {
+            return { ...item, pedidosPorDia: data.pedidos };
+          }
+          return item;
+        });
+      });
+      
       toast({
         title: "Pedidos por Día Actualizado",
-        description: "Los pedidos por día se han actualizado correctamente",
+        description: `Pedidos por día actualizado a ${data.pedidos}`,
       });
+      
+      // Invalidar queries para sincronización completa
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
     },
     onError: (error) => {
@@ -525,8 +555,11 @@ export default function DatosDiariosDashboard() {
                         <td className="border border-gray-300 dark:border-gray-600 p-2">
                           <div className="text-center">
                             {data.cpl > 0 ? (
-                              <div className="text-green-600 font-semibold">
-                                ${data.cpl.toLocaleString('es-AR')}
+                              <div className="flex flex-col items-center gap-1">
+                                <div className="text-green-600 font-semibold">
+                                  ${data.cpl.toLocaleString('es-AR')}
+                                </div>
+                                <div className="text-xs text-gray-500">CPL guardado</div>
                               </div>
                             ) : (
                               <div className="flex gap-2 items-center justify-center">

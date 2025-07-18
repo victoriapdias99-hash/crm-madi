@@ -406,9 +406,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const manana = new Date(hoy.getTime() + 24 * 60 * 60 * 1000);
         const esFuturo = fechaInicio > manana;
         
-        // Log inicial para debug
-        console.log(`  Processing campaign: ${cliente.nombreCliente} - ${campana.marca} (${campana.numeroCampana})`);
-        
         // Approach directo: asignar datos manualmente basado en el matching
         let datosParaCampana = [];
         
@@ -418,22 +415,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const clienteBajo = dato.cliente.toLowerCase();
           const nombreClienteBajo = cliente.nombreCliente.toLowerCase();
           
-          // Debug para clientes específicos
-          if ((nombreClienteBajo === 'grupo quijada' || nombreClienteBajo.includes('renault') || nombreClienteBajo.includes('novo')) && i < 10) {
-            console.log(`    Checking[${i}]: '${nombreClienteBajo}' vs '${clienteBajo}' - enviados: ${dato.enviados}`);
-          }
-          
           // Usar el sistema de matching avanzado
           const esMatch = clientMatchingSystem.isMatch(nombreClienteBajo, clienteBajo);
           
           if (esMatch) {
-            const matchingRule = clientMatchingSystem.findMatchingRule(nombreClienteBajo, clienteBajo);
-            console.log(`    ✓ MATCH (${matchingRule?.matchType || 'custom'}): ${nombreClienteBajo} -> ${clienteBajo} - enviados: ${dato.enviados}`);
-          }
-          
-          if (esMatch) {
             datosParaCampana.push(dato);
-            console.log(`    Added data record to campaign ${campana.numeroCampana}`);
           }
         }
         
@@ -463,15 +449,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Los datos de Google Sheets no están organizados por fecha individual
         // sino que son registros de resumen por campaña/cliente
         for (const dato of datosParaCampana) {
-          // Debug para clientes específicos
-          if (cliente.nombreCliente.includes('NOVO') || cliente.nombreCliente.includes('RENAULT')) {
-            console.log(`    Processing data for ${cliente.nombreCliente}:`, {
-              cliente: dato.cliente,
-              enviados: dato.enviados,
-              entregadosPorDia: dato.entregadosPorDia
-            });
-          }
-          
           // Usar la estructura correcta de datos de Google Sheets
           const datosDelDia = dato.enviados || 0;  // Campo principal de datos enviados
           const entregadosDelDia = dato.entregadosPorDia || 0;
@@ -482,8 +459,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             entregadosPorDiaTotal += entregadosDelDia;
             diasConDatos++;
             fechaFinReal = new Date().toISOString().split('T')[0]; // Fecha actual como fecha real
-            
-            console.log(`  Registro ${diasConDatos}: ${datosDelDia} datos enviados, ${entregadosDelDia} entregados/día`);
           }
         }
         
@@ -495,7 +470,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           estadoCampana = 'Sin Datos';
         }
         
-        console.log(`Campaign ${campana.numeroCampana} final status: ${estadoCampana}, ${datosAcumulados}/${campana.cantidadDatosSolicitados} data`);
+        // Estado de campaña calculado
         
         // Limitar datos acumulados a la cantidad solicitada para esta campaña específica
         const datosFinales = Math.min(datosAcumulados, campana.cantidadDatosSolicitados);
