@@ -316,8 +316,12 @@ export default function DatosDiariosDashboard() {
                 </thead>
                 <tbody>
                   {datosDiarios?.filter(data => data.porcentajeDatosEnviados < 100).map((data: DatosDiariosData, index: number) => {
+                    // Usar el índice original de la lista completa para identificar correctamente el registro
+                    const originalIndex = datosDiarios?.findIndex(d => d.cliente === data.cliente && d.numeroCampana === data.numeroCampana) || 0;
+                    const uniqueKey = `${data.cliente}-${data.numeroCampana}`;
+                    
                     const currentCpl = data.cpl || 0; // Use stored CPL from server
-                    const currentPedidosPorDia = pedidosPorDiaValues[index] || data.pedidosPorDia || 0;
+                    const currentPedidosPorDia = pedidosPorDiaValues[originalIndex] || data.pedidosPorDia || 0;
                     
                     // Crear objeto actualizado con valores manuales
                     const updatedData = {
@@ -331,7 +335,7 @@ export default function DatosDiariosDashboard() {
                     const inversions = calculateInversions(updatedData, currentCpl);
                     
                     return (
-                      <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <tr key={uniqueKey} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                         <td className="border border-gray-300 dark:border-gray-600 p-2">
                           <div>
                             <div className="font-medium">{data.clienteNombre}</div>
@@ -349,12 +353,12 @@ export default function DatosDiariosDashboard() {
                             <Input
                               type="number"
                               placeholder="Pedidos"
-                              value={pedidosPorDiaValues[index] || data.pedidosPorDia || ''}
-                              onChange={(e) => handlePedidosPorDiaChange(index, e.target.value)}
+                              value={pedidosPorDiaValues[originalIndex] || data.pedidosPorDia || ''}
+                              onChange={(e) => handlePedidosPorDiaChange(originalIndex, e.target.value)}
                               className="w-20"
                             />
                             <Button
-                              onClick={() => handleSavePedidosPorDia(index)}
+                              onClick={() => handleSavePedidosPorDia(originalIndex)}
                               size="sm"
                               disabled={updatePedidosPorDiaMutation.isPending}
                             >
@@ -556,13 +560,16 @@ export default function DatosDiariosDashboard() {
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2">
                           <div className="flex gap-2 items-center justify-center">
-                            <Input
-                              type="number"
-                              placeholder="CPL"
-                              value={cplValues[originalIndex] || data.cpl || ''}
-                              onChange={(e) => handleCplChange(originalIndex, e.target.value)}
-                              className="w-24"
-                            />
+                            <div className="flex flex-col items-center">
+                              <div className="text-xs text-gray-500 mb-1">CPL: ARS ${currentCpl || 0}</div>
+                              <Input
+                                type="number"
+                                placeholder="CPL"
+                                value={cplValues[originalIndex] || ''}
+                                onChange={(e) => handleCplChange(originalIndex, e.target.value)}
+                                className="w-24"
+                              />
+                            </div>
                             <Button
                               size="sm"
                               variant="outline"

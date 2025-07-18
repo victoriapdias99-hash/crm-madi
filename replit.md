@@ -68,7 +68,14 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Eliminación Página Dashboard Innecesaria (Latest - January 18, 2025)
+### Corrección CPL Input con Índices Correctos (Latest - January 18, 2025)
+- **Problema CPL Resuelto**: Arreglado error donde CPL se guardaba en un cliente y aparecía en otro
+- **Índices Únicos**: Implementado sistema de índices originales para identificar correctamente cada registro
+- **Valor Mostrado**: Agregado display "CPL: ARS $XXX" junto al recuadro de input como solicitado
+- **Identificación Única**: Cada registro usa clave única basada en cliente + número de campaña
+- **Corrección RENAULT**: Mantiene valor corregido de 39 datos enviados en lugar de 19
+
+### Eliminación Página Dashboard Innecesaria (January 18, 2025)
 - **Página Dashboard Removida**: Eliminada página "Dashboard" (/dashboard) que no se utilizaba
 - **Navegación Limpia**: Removido botón "Dashboard" del sistema de navegación
 - **Rutas Actualizadas**: Eliminada ruta /dashboard del router principal
