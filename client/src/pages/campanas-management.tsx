@@ -253,7 +253,11 @@ export default function CampanasManagement() {
                       <FormControl>
                         <Input 
                           type="date"
-                          {...field}
+                          value={field.value}
+                          onChange={(e) => {
+                            // Asegurar que la fecha se mantenga exacta sin conversión de timezone
+                            field.onChange(e.target.value);
+                          }}
                         />
                       </FormControl>
                       <FormMessage />

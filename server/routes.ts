@@ -419,8 +419,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const nombreClienteBajo = cliente.nombreCliente.toLowerCase();
           
           // Debug para clientes específicos
-          if ((nombreClienteBajo === 'grupo quijada' || nombreClienteBajo.includes('renault')) && i < 10) {
-            console.log(`    Checking[${i}]: '${nombreClienteBajo}' vs '${clienteBajo}'`);
+          if ((nombreClienteBajo === 'grupo quijada' || nombreClienteBajo.includes('renault') || nombreClienteBajo.includes('novo')) && i < 10) {
+            console.log(`    Checking[${i}]: '${nombreClienteBajo}' vs '${clienteBajo}' - enviados: ${dato.enviados}`);
           }
           
           // Usar el sistema de matching avanzado
@@ -428,7 +428,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (esMatch) {
             const matchingRule = clientMatchingSystem.findMatchingRule(nombreClienteBajo, clienteBajo);
-            console.log(`    ✓ MATCH (${matchingRule?.matchType || 'custom'}): ${nombreClienteBajo} -> ${clienteBajo}`);
+            console.log(`    ✓ MATCH (${matchingRule?.matchType || 'custom'}): ${nombreClienteBajo} -> ${clienteBajo} - enviados: ${dato.enviados}`);
           }
           
           if (esMatch) {
@@ -480,7 +480,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log(`    Values: totalLeads=${dato.totalLeads}, cantidad=${dato.cantidad}, enviados=${dato.enviados}, totalLeads=${dato.totalLeads}`);
           }
           
-          const datosDelDia = dato.totalLeads || dato.cantidad || dato.enviados || 0;
+          // Usar la estructura correcta de datos de Google Sheets
+          const datosDelDia = dato.enviados || 0;  // Campo principal de datos enviados
           const entregadosDelDia = dato.entregadosPorDia || 0;
           
           // Solo contar si hay datos ese día
@@ -1011,13 +1012,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Usar el schema específico para crear (sin campos calculados)
       console.log('Data to validate:', dataWithoutCalculatedFields);
       
-      // Arreglar problema de fecha (ajustar timezone)
+      // Arreglar problema de fecha (mantener fecha exacta sin conversión de timezone)
       if (dataWithoutCalculatedFields.fechaCampana) {
-        const fechaInput = new Date(dataWithoutCalculatedFields.fechaCampana);
-        // Crear fecha en UTC para evitar problemas de timezone
-        const fechaCorregida = new Date(fechaInput.getTime() + fechaInput.getTimezoneOffset() * 60000);
-        dataWithoutCalculatedFields.fechaCampana = fechaCorregida.toISOString().split('T')[0];
-        console.log('Fecha original:', dataWithoutCalculatedFields.fechaCampana, 'Fecha corregida:', fechaCorregida.toISOString().split('T')[0]);
+        // Simplemente mantener la fecha como string sin conversiones
+        console.log('Fecha recibida sin conversión:', dataWithoutCalculatedFields.fechaCampana);
       }
       
       const validatedData = createCampanaComercialSchema.parse(dataWithoutCalculatedFields);
