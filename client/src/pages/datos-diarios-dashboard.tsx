@@ -307,7 +307,8 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">% Desvío</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">% Datos Enviados</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Faltantes</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Manual (ARS)</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Input</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Guardado</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Realizada (con impuestos)</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Pendiente (con impuestos)</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Total (con impuestos)</th>
@@ -477,7 +478,8 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">% Desvío</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">% Datos Enviados</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Faltantes</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Manual (ARS)</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Input</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Guardado</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Realizada (con impuestos)</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Pendiente (con impuestos)</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Total (con impuestos)</th>
@@ -553,38 +555,39 @@ export default function DatosDiariosDashboard() {
                           </Badge>
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2">
-                          <div className="text-center">
-                            {data.cpl > 0 ? (
-                              <div className="flex flex-col items-center gap-1">
-                                <div className="text-green-600 font-semibold">
-                                  ${data.cpl.toLocaleString('es-AR')}
-                                </div>
-                                <div className="text-xs text-gray-500">CPL guardado</div>
-                              </div>
-                            ) : (
-                              <div className="flex gap-2 items-center justify-center">
-                                <Input
-                                  type="number"
-                                  placeholder="CPL"
-                                  value={cplValues[originalIndex] || ''}
-                                  onChange={(e) => handleCplChange(originalIndex, e.target.value)}
-                                  className="w-24"
-                                />
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleSaveCpl(originalIndex)}
-                                  disabled={updateCplMutation.isPending}
-                                >
-                                  {updateCplMutation.isPending ? (
-                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                  ) : (
-                                    <Save className="h-3 w-3" />
-                                  )}
-                                </Button>
-                              </div>
-                            )}
+                          <div className="flex gap-2 items-center justify-center">
+                            <Input
+                              type="number"
+                              placeholder="CPL"
+                              value={cplValues[originalIndex] || data.cpl || ''}
+                              onChange={(e) => handleCplChange(originalIndex, e.target.value)}
+                              className="w-24"
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleSaveCpl(originalIndex)}
+                              disabled={updateCplMutation.isPending}
+                            >
+                              {updateCplMutation.isPending ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Save className="h-3 w-3" />
+                              )}
+                            </Button>
                           </div>
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          {data.cpl > 0 ? (
+                            <div className="flex flex-col items-center gap-1">
+                              <div className="text-green-600 font-semibold">
+                                ${data.cpl.toLocaleString('es-AR')}
+                              </div>
+                              <div className="text-xs text-gray-500">Guardado</div>
+                            </div>
+                          ) : (
+                            <div className="text-gray-400">-</div>
+                          )}
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
                           ARS ${inversions.inversionRealizada.toLocaleString('es-AR')}
