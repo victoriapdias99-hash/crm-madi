@@ -12,6 +12,7 @@ import LeadDetails from "@/pages/lead-details";
 import ClientesManagement from "@/pages/clientes-management";
 import CampanasManagement from "@/pages/campanas-management";
 import MetaAdsDashboard from "@/pages/meta-ads-dashboard";
+import MetaAdsConfig from "@/pages/meta-ads-config";
 import FinanzasDashboard from "@/pages/finanzas-dashboard";
 import ReportesGraficos from "@/pages/reportes-graficos";
 import FunctionalAnalyst from "@/pages/functional-analyst";
@@ -29,6 +30,7 @@ function Router() {
       <Route path="/clientes" component={ClientesManagement} />
       <Route path="/campanas" component={CampanasManagement} />
       <Route path="/meta-ads" component={MetaAdsDashboard} />
+      <Route path="/meta-ads-config" component={MetaAdsConfig} />
       <Route path="/finanzas" component={FinanzasDashboard} />
       <Route path="/reportes" component={ReportesGraficos} />
       <Route path="/pruebas" component={FunctionalAnalyst} />

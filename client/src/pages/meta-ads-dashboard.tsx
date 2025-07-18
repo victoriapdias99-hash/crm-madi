@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { RefreshCw, DollarSign, TrendingUp, Users, BarChart3 } from "lucide-react";
+import { RefreshCw, DollarSign, TrendingUp, Users, BarChart3, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Navigation } from "@/components/navigation";
@@ -131,6 +131,15 @@ export default function MetaAdsDashboard() {
           </div>
           
           <div className="flex gap-3">
+            <Button
+              onClick={() => window.location.href = '/meta-ads-config'}
+              variant="outline"
+              className="border-orange-200 hover:bg-orange-50 text-orange-600"
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Configurar
+            </Button>
+            
             <Button
               onClick={() => testConnectionMutation.mutate()}
               disabled={testConnectionMutation.isPending}
