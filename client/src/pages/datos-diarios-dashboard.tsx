@@ -178,7 +178,7 @@ export default function DatosDiariosDashboard() {
 
   const handleSaveCpl = (index: number) => {
     const cpl = cplValues[index];
-    const data = datosDiariosData?.[index];
+    const data = datosDiarios?.data?.[index];
     
     console.log('Attempting to save CPL:', { index, cpl, data });
     if (cpl && cpl > 0 && data) {

@@ -15,6 +15,7 @@ import MetaAdsDashboard from "@/pages/meta-ads-dashboard";
 import FinanzasDashboard from "@/pages/finanzas-dashboard";
 import ReportesGraficos from "@/pages/reportes-graficos";
 import FunctionalAnalyst from "@/pages/functional-analyst";
+import CPLSimple from "@/pages/cpl-simple";
 
 function Router() {
   return (
@@ -30,6 +31,7 @@ function Router() {
       <Route path="/finanzas" component={FinanzasDashboard} />
       <Route path="/reportes" component={ReportesGraficos} />
       <Route path="/pruebas" component={FunctionalAnalyst} />
+      <Route path="/cpl-simple" component={CPLSimple} />
       <Route path="/login" component={Login} />
       <Route path="/leads/:id" component={LeadDetails} />
       <Route component={NotFound} />
