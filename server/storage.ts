@@ -1028,6 +1028,115 @@ export class DatabaseStorage implements IStorage {
     return (result.rowCount || 0) > 0;
   }
 
+  // CPL operations for DatabaseStorage
+  async updateCpl(clienteIndex: number, cpl: number): Promise<void> {
+    // Store in dashboard_manual_values table
+    await db.insert(dashboardManualValues).values({
+      clienteIndex,
+      cpl,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).onConflictDoUpdate({
+      target: dashboardManualValues.clienteIndex,
+      set: {
+        cpl,
+        updatedAt: new Date()
+      }
+    });
+    console.log(`CPL updated in database for client ${clienteIndex}: ${cpl}`);
+  }
+
+  async getCpl(clienteIndex: number): Promise<number> {
+    const [result] = await db
+      .select({ cpl: dashboardManualValues.cpl })
+      .from(dashboardManualValues)
+      .where(eq(dashboardManualValues.clienteIndex, clienteIndex));
+    return result?.cpl || 0;
+  }
+
+  async updateCplByClienteAndCampana(clienteNombre: string, numeroCampana: string, cpl: number): Promise<void> {
+    // Create a unique key for this combination
+    const uniqueKey = `${clienteNombre}-${numeroCampana}`;
+    
+    // Store in dashboard_manual_values table using the unique key as identifier
+    await db.insert(dashboardManualValues).values({
+      clienteIndex: this.hashString(uniqueKey),
+      cpl,
+      clienteNombre,
+      numeroCampana,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).onConflictDoUpdate({
+      target: dashboardManualValues.clienteIndex,
+      set: {
+        cpl,
+        clienteNombre,
+        numeroCampana,
+        updatedAt: new Date()
+      }
+    });
+    
+    console.log(`CPL updated in database for client ${clienteNombre} campaign ${numeroCampana}: ${cpl}`);
+  }
+
+  private hashString(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash);
+  }
+
+  async updateVentaPorCampana(clienteIndex: number, venta: number): Promise<void> {
+    await db.insert(dashboardManualValues).values({
+      clienteIndex,
+      ventaPorCampana: venta,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).onConflictDoUpdate({
+      target: dashboardManualValues.clienteIndex,
+      set: {
+        ventaPorCampana: venta,
+        updatedAt: new Date()
+      }
+    });
+    console.log(`Venta por campaña updated in database for client ${clienteIndex}: ${venta}`);
+  }
+
+  async getVentaPorCampana(clienteIndex: number): Promise<number> {
+    const [result] = await db
+      .select({ ventaPorCampana: dashboardManualValues.ventaPorCampana })
+      .from(dashboardManualValues)
+      .where(eq(dashboardManualValues.clienteIndex, clienteIndex));
+    return result?.ventaPorCampana || 0;
+  }
+
+  async updatePedidosPorDia(clienteIndex: number, pedidos: number): Promise<void> {
+    await db.insert(dashboardManualValues).values({
+      clienteIndex,
+      pedidosPorDia: pedidos,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).onConflictDoUpdate({
+      target: dashboardManualValues.clienteIndex,
+      set: {
+        pedidosPorDia: pedidos,
+        updatedAt: new Date()
+      }
+    });
+    console.log(`Pedidos por día updated in database for client ${clienteIndex}: ${pedidos}`);
+  }
+
+  async getPedidosPorDia(clienteIndex: number): Promise<number> {
+    const [result] = await db
+      .select({ pedidosPorDia: dashboardManualValues.pedidosPorDia })
+      .from(dashboardManualValues)
+      .where(eq(dashboardManualValues.clienteIndex, clienteIndex));
+    return result?.pedidosPorDia || 0;
+  }
+
   // Matching de campañas con datos de Google Sheets
   async getCampanasConMatching(): Promise<any[]> {
     // Obtener todas las campañas con información del cliente
