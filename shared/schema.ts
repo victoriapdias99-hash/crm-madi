@@ -144,6 +144,19 @@ export const clientes = pgTable("clientes", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Gestión de campañas comerciales
+export const campanasComerciales = pgTable("campanas_comerciales", {
+  id: serial("id").primaryKey(),
+  clienteId: integer("cliente_id").references(() => clientes.id).notNull(),
+  numeroCampana: text("numero_campana").notNull(),
+  cantidadDatosSolicitados: integer("cantidad_datos_solicitados").notNull(),
+  marca: text("marca").notNull(), // Una de las marcas disponibles
+  zona: text("zona").notNull(), // AMBA, NACIONAL, LOCALIZADO
+  fechaCreacion: timestamp("fecha_creacion").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Zod schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -254,6 +267,17 @@ export const insertClienteSchema = createInsertSchema(clientes).pick({
 export type Cliente = typeof clientes.$inferSelect;
 export type InsertCliente = z.infer<typeof insertClienteSchema>;
 
+export const insertCampanaComercialSchema = createInsertSchema(campanasComerciales).pick({
+  clienteId: true,
+  numeroCampana: true,
+  cantidadDatosSolicitados: true,
+  marca: true,
+  zona: true,
+});
+
+export type CampanaComercial = typeof campanasComerciales.$inferSelect;
+export type InsertCampanaComercial = z.infer<typeof insertCampanaComercialSchema>;
+
 // Enums
 export const LEAD_STATUS = {
   NEW: 'new',
@@ -356,3 +380,6 @@ export const ZONAS = {
 } as const;
 
 export type Zona = typeof ZONAS[keyof typeof ZONAS];
+
+// Zonas como array para formularios
+export const ZONAS_DISPONIBLES = ['AMBA', 'NACIONAL', 'LOCALIZADO'] as const;

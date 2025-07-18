@@ -54,6 +54,14 @@ export interface IStorage {
   createCliente(cliente: InsertCliente): Promise<Cliente>;
   updateCliente(id: number, updates: Partial<Cliente>): Promise<Cliente | undefined>;
   deleteCliente(id: number): Promise<boolean>;
+
+  // Campaña comercial operations
+  getCampanaComercial(id: number): Promise<CampanaComercial | undefined>;
+  getAllCampanasComerciales(): Promise<CampanaComercial[]>;
+  getCampanasPorCliente(clienteId: number): Promise<CampanaComercial[]>;
+  createCampanaComercial(campana: InsertCampanaComercial): Promise<CampanaComercial>;
+  updateCampanaComercial(id: number, updates: Partial<CampanaComercial>): Promise<CampanaComercial | undefined>;
+  deleteCampanaComercial(id: number): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -63,6 +71,7 @@ export class MemStorage implements IStorage {
   private dailyStats: Map<number, DailyStats>;
   private leadNotes: Map<number, LeadNote>;
   private clientes: Map<number, Cliente>;
+  private campanasComerciales: Map<number, CampanaComercial>;
   
   // Storage for manual values
   private cplValues: Map<number, number>;
@@ -75,6 +84,7 @@ export class MemStorage implements IStorage {
   private currentDailyStatsId: number;
   private currentLeadNoteId: number;
   private currentClienteId: number;
+  private currentCampanaComercialId: number;
 
   constructor() {
     this.users = new Map();
@@ -83,6 +93,7 @@ export class MemStorage implements IStorage {
     this.dailyStats = new Map();
     this.leadNotes = new Map();
     this.clientes = new Map();
+    this.campanasComerciales = new Map();
     
     // Initialize manual values storage
     this.cplValues = new Map();
@@ -95,6 +106,7 @@ export class MemStorage implements IStorage {
     this.currentDailyStatsId = 1;
     this.currentLeadNoteId = 1;
     this.currentClienteId = 1;
+    this.currentCampanaComercialId = 1;
 
     // Crear datos de ejemplo
     this.seedData();
@@ -612,6 +624,57 @@ export class MemStorage implements IStorage {
 
   async getPedidosPorDia(clienteIndex: number): Promise<number> {
     return this.pedidosPorDiaValues.get(clienteIndex) || 0;
+  }
+
+  // Campaña comercial operations
+  async getCampanaComercial(id: number): Promise<CampanaComercial | undefined> {
+    return this.campanasComerciales.get(id);
+  }
+
+  async getAllCampanasComerciales(): Promise<CampanaComercial[]> {
+    return Array.from(this.campanasComerciales.values()).sort((a, b) => 
+      (b.fechaCreacion?.getTime() || 0) - (a.fechaCreacion?.getTime() || 0)
+    );
+  }
+
+  async getCampanasPorCliente(clienteId: number): Promise<CampanaComercial[]> {
+    return Array.from(this.campanasComerciales.values())
+      .filter(campana => campana.clienteId === clienteId)
+      .sort((a, b) => (b.fechaCreacion?.getTime() || 0) - (a.fechaCreacion?.getTime() || 0));
+  }
+
+  async createCampanaComercial(insertCampana: InsertCampanaComercial): Promise<CampanaComercial> {
+    const id = this.currentCampanaComercialId++;
+    const campana: CampanaComercial = {
+      id,
+      clienteId: insertCampana.clienteId,
+      numeroCampana: insertCampana.numeroCampana,
+      cantidadDatosSolicitados: insertCampana.cantidadDatosSolicitados,
+      marca: insertCampana.marca,
+      zona: insertCampana.zona,
+      fechaCreacion: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.campanasComerciales.set(id, campana);
+    return campana;
+  }
+
+  async updateCampanaComercial(id: number, updates: Partial<CampanaComercial>): Promise<CampanaComercial | undefined> {
+    const campana = this.campanasComerciales.get(id);
+    if (!campana) return undefined;
+    
+    const updatedCampana = { 
+      ...campana, 
+      ...updates,
+      updatedAt: new Date()
+    };
+    this.campanasComerciales.set(id, updatedCampana);
+    return updatedCampana;
+  }
+
+  async deleteCampanaComercial(id: number): Promise<boolean> {
+    return this.campanasComerciales.delete(id);
   }
 }
 
