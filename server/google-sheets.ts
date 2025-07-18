@@ -192,7 +192,10 @@ class GoogleSheetsService {
           }
 
           // Extraer datos calculados (columnas siguientes)
-          const enviados = row[33] && !isNaN(Number(row[33])) ? Number(row[33]) : 0;
+          // Cambiar enviados para usar la suma de días en lugar de la columna 33
+          const enviadosFromColumn = row[33] && !isNaN(Number(row[33])) ? Number(row[33]) : 0;
+          const sumaDias = diasData.reduce((sum, day) => sum + day, 0);
+          const enviados = sumaDias > 0 ? sumaDias : enviadosFromColumn;
           const pedidosPorDia = row[35] && !isNaN(Number(row[35])) ? Number(row[35]) : 0;
           
           // Calcular entregados por día como promedio de datos diarios por marca y campaña
