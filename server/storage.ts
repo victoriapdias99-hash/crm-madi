@@ -557,6 +557,7 @@ export class MemStorage implements IStorage {
       tipoFacturacion: insertCliente.tipoFacturacion,
       marcasSolicitadas: insertCliente.marcasSolicitadas || [],
       zonas: insertCliente.zonas || [],
+      zonasExcluyentes: insertCliente.zonasExcluyentes || null,
       provinciaBuenosAires: insertCliente.provinciaBuenosAires || null,
       exclusionesGeograficas: insertCliente.exclusionesGeograficas || null,
       integracion: insertCliente.integracion || null,
