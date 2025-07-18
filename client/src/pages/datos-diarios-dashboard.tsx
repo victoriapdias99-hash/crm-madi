@@ -44,9 +44,19 @@ export default function DatosDiariosDashboard() {
   });
 
   const updateCplMutation = useMutation({
-    mutationFn: async ({ clienteIndex, cpl }: { clienteIndex: number; cpl: number }) => {
-      console.log('Updating CPL:', { clienteIndex, cpl });
-      const response = await apiRequest('/api/dashboard/update-cpl', 'POST', { clienteIndex, cpl });
+    mutationFn: async ({ clienteIndex, cpl, clienteNombre, numeroCampana }: { 
+      clienteIndex: number; 
+      cpl: number; 
+      clienteNombre?: string; 
+      numeroCampana?: string; 
+    }) => {
+      console.log('Updating CPL:', { clienteIndex, cpl, clienteNombre, numeroCampana });
+      const response = await apiRequest('/api/dashboard/update-cpl', 'POST', { 
+        clienteIndex, 
+        cpl, 
+        clienteNombre, 
+        numeroCampana 
+      });
       console.log('CPL update response:', response);
       return { ...response, clienteIndex, cpl };
     },
@@ -168,9 +178,16 @@ export default function DatosDiariosDashboard() {
 
   const handleSaveCpl = (index: number) => {
     const cpl = cplValues[index];
-    console.log('Attempting to save CPL:', { index, cpl });
-    if (cpl && cpl > 0) {
-      updateCplMutation.mutate({ clienteIndex: index, cpl });
+    const data = datosDiariosData?.[index];
+    
+    console.log('Attempting to save CPL:', { index, cpl, data });
+    if (cpl && cpl > 0 && data) {
+      updateCplMutation.mutate({ 
+        clienteIndex: index, 
+        cpl,
+        clienteNombre: data.cliente,
+        numeroCampana: data.numeroCampana
+      });
       // Clear the input after saving
       setCplValues(prev => {
         const newValues = { ...prev };

@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { BarChart3, Building2, Calendar, Settings, TrendingUp, Calculator, Target, Home, ArrowLeft, Link2, PieChart } from "lucide-react";
+import { BarChart3, Building2, Calendar, Settings, TrendingUp, Calculator, Target, Home, ArrowLeft, Link2, PieChart, TestTube } from "lucide-react";
 
 export function Navigation() {
   const [location] = useLocation();
@@ -18,12 +18,7 @@ export function Navigation() {
       active: location === "/"
     },
 
-    {
-      href: "/matching",
-      label: "Matching",
-      icon: Link2,
-      active: location === "/matching"
-    },
+
     {
       href: "/clientes",
       label: "Clientes",
@@ -53,6 +48,12 @@ export function Navigation() {
       label: "Reportes",
       icon: PieChart,
       active: location === "/reportes"
+    },
+    {
+      href: "/pruebas",
+      label: "Pruebas",
+      icon: TestTube,
+      active: location === "/pruebas"
     }
   ];
 
@@ -70,15 +71,17 @@ export function Navigation() {
             Inicio
           </Button>
         </Link>
-        <Button 
-          variant="outline"
-          size="sm"
-          onClick={goBack}
-          className="flex items-center gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Atrás
-        </Button>
+        {location !== "/" && (
+          <Button 
+            variant="outline"
+            size="sm"
+            onClick={goBack}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Atrás
+          </Button>
+        )}
         
         {/* Resto de items de navegación */}
         {navItems.map((item) => {

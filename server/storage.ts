@@ -46,6 +46,7 @@ export interface IStorage {
   // CPL and manual values storage
   updateCpl(clienteIndex: number, cpl: number): Promise<void>;
   getCpl(clienteIndex: number): Promise<number>;
+  updateCplByClienteAndCampana(clienteNombre: string, numeroCampana: string, cpl: number): Promise<void>;
   updateVentaPorCampana(clienteIndex: number, venta: number): Promise<void>;
   getVentaPorCampana(clienteIndex: number): Promise<number>;
   updatePedidosPorDia(clienteIndex: number, pedidos: number): Promise<void>;
@@ -78,6 +79,7 @@ export class MemStorage implements IStorage {
   
   // Storage for manual values
   private cplValues: Map<number, number>;
+  private cplValuesByClienteCampana: Map<string, number>;
   private ventaPorCampanaValues: Map<number, number>;
   private pedidosPorDiaValues: Map<number, number>;
   
@@ -100,6 +102,7 @@ export class MemStorage implements IStorage {
     
     // Initialize manual values storage
     this.cplValues = new Map();
+    this.cplValuesByClienteCampana = new Map();
     this.ventaPorCampanaValues = new Map();
     this.pedidosPorDiaValues = new Map();
     
@@ -613,6 +616,22 @@ export class MemStorage implements IStorage {
   async getCpl(clienteIndex: number): Promise<number> {
     return this.cplValues.get(clienteIndex) || 0;
   }
+
+  async updateCplByClienteAndCampana(clienteNombre: string, numeroCampana: string, cpl: number): Promise<void> {
+    // Crear una clave única basada en cliente y número de campaña
+    const uniqueKey = `${clienteNombre}-${numeroCampana}`;
+    
+    // Usar un mapa específico para claves de cliente-campaña
+    if (!this.cplValuesByClienteCampana) {
+      this.cplValuesByClienteCampana = new Map<string, number>();
+    }
+    
+    this.cplValuesByClienteCampana.set(uniqueKey, cpl);
+    
+    console.log(`CPL updated for client ${clienteNombre} campaign ${numeroCampana}: ${cpl}`);
+  }
+
+
 
   async updateVentaPorCampana(clienteIndex: number, venta: number): Promise<void> {
     this.ventaPorCampanaValues.set(clienteIndex, venta);

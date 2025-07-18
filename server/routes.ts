@@ -739,23 +739,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/dashboard/update-cpl', async (req, res) => {
     try {
-      const { clienteIndex, cpl } = req.body;
+      const { clienteIndex, cpl, clienteNombre, numeroCampana } = req.body;
       
-      if (typeof clienteIndex !== 'number' || typeof cpl !== 'number') {
-        return res.status(400).json({ error: 'Invalid parameters' });
+      if (typeof cpl !== 'number') {
+        return res.status(400).json({ error: 'Invalid CPL value' });
       }
 
-      // Almacenar en memoria
-      await storage.updateCpl(clienteIndex, cpl);
-      
-      res.json({ 
-        success: true, 
-        message: `CPL actualizado para cliente ${clienteIndex}`,
-        cpl: parseFloat(cpl)
-      });
+      // Si se envía clienteNombre y numeroCampana, usamos esos para identificar
+      if (clienteNombre && numeroCampana) {
+        await storage.updateCplByClienteAndCampana(clienteNombre, numeroCampana, cpl);
+        console.log(`CPL updated for client ${clienteNombre} campaign ${numeroCampana}: ${cpl}`);
+        
+        res.json({ 
+          success: true, 
+          message: `CPL actualizado para ${clienteNombre} campaña ${numeroCampana}`,
+          cpl: parseFloat(cpl)
+        });
+      } else if (typeof clienteIndex === 'number') {
+        // Fallback al método anterior
+        await storage.updateCpl(clienteIndex, cpl);
+        console.log(`CPL updated in database for client ${clienteIndex}: ${cpl}`);
+        
+        res.json({ 
+          success: true, 
+          message: `CPL actualizado para cliente ${clienteIndex}`,
+          cpl: parseFloat(cpl)
+        });
+      } else {
+        res.status(400).json({ error: 'Must provide either clienteIndex or clienteNombre+numeroCampana' });
+      }
     } catch (error) {
       console.error('Error updating CPL:', error);
       res.status(500).json({ error: 'Failed to update CPL' });
+    }
+  });
+
+  // Endpoint para el analista funcional
+  app.post('/api/functional-analyst/run-tests', async (req, res) => {
+    try {
+      const { functionalAnalyst } = await import('./functional-analyst');
+      const results = await functionalAnalyst.runAutomatedTests();
+      
+      res.json(results);
+    } catch (error) {
+      console.error('Error running functional tests:', error);
+      res.status(500).json({ error: 'Failed to run functional tests' });
+    }
+  });
+
+  // Endpoint para obtener resultados de pruebas
+  app.get('/api/functional-analyst/results', async (req, res) => {
+    try {
+      const { functionalAnalyst } = await import('./functional-analyst');
+      const results = await functionalAnalyst.runCPLIntegrityTests();
+      
+      res.json(results);
+    } catch (error) {
+      console.error('Error getting test results:', error);
+      res.status(500).json({ error: 'Failed to get test results' });
     }
   });
 
