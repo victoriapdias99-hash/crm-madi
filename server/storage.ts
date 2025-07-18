@@ -1,12 +1,15 @@
 import { 
-  users, campaigns, leads, dailyStats, leadNotes, clientes,
+  users, campaigns, leads, dailyStats, leadNotes, clientes, campanasComerciales,
   type User, type InsertUser,
   type Campaign, type InsertCampaign,
   type Lead, type InsertLead,
   type DailyStats, type InsertDailyStats,
   type LeadNote, type InsertLeadNote,
-  type Cliente, type InsertCliente
+  type Cliente, type InsertCliente,
+  type CampanaComercial, type InsertCampanaComercial
 } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -247,6 +250,7 @@ export class MemStorage implements IStorage {
         marcasSolicitadas: ["Fiat", "VW"],
         zonas: ["AMBA", "NACIONAL"],
         provinciaBuenosAires: "La Plata",
+        zonasExcluyentes: "Villa Carlos Paz, Córdoba Capital",
         exclusionesGeograficas: [
           { id: "1", name: "Villa Carlos Paz", type: "city" },
           { id: "2", name: "Córdoba Capital", type: "city" }
@@ -268,6 +272,7 @@ export class MemStorage implements IStorage {
         marcasSolicitadas: ["Mercedes", "Ford", "Jeep"],
         zonas: ["AMBA"],
         provinciaBuenosAires: "San Isidro",
+        zonasExcluyentes: "Radio 100km de Mendoza",
         exclusionesGeograficas: [
           { id: "3", name: "Radio 100km de Mendoza", type: "radius" }
         ],
@@ -288,6 +293,7 @@ export class MemStorage implements IStorage {
         marcasSolicitadas: ["Toyota", "China", "Otra"],
         zonas: ["LOCALIZADO"],
         provinciaBuenosAires: "Quilmes",
+        zonasExcluyentes: "",
         exclusionesGeograficas: [],
         integracion: "Asofix",
         tipoCliente: "GRUPO COMERCIAL",
@@ -678,4 +684,245 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// DatabaseStorage implementation
+export class DatabaseStorage implements IStorage {
+  // User operations
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  // Campaign operations
+  async getCampaign(id: number): Promise<Campaign | undefined> {
+    const [campaign] = await db.select().from(campaigns).where(eq(campaigns.id, id));
+    return campaign || undefined;
+  }
+
+  async getAllCampaigns(): Promise<Campaign[]> {
+    return await db.select().from(campaigns);
+  }
+
+  async createCampaign(campaign: InsertCampaign): Promise<Campaign> {
+    const [newCampaign] = await db
+      .insert(campaigns)
+      .values(campaign)
+      .returning();
+    return newCampaign;
+  }
+
+  async updateCampaign(id: number, updates: Partial<Campaign>): Promise<Campaign | undefined> {
+    const [updated] = await db
+      .update(campaigns)
+      .set(updates)
+      .where(eq(campaigns.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  // Lead operations
+  async getLead(id: number): Promise<Lead | undefined> {
+    const [lead] = await db.select().from(leads).where(eq(leads.id, id));
+    return lead || undefined;
+  }
+
+  async getLeads(filters?: { status?: string; campaignId?: number; limit?: number }): Promise<Lead[]> {
+    let query = db.select().from(leads);
+    
+    if (filters?.status) {
+      query = query.where(eq(leads.status, filters.status)) as any;
+    }
+    if (filters?.campaignId) {
+      query = query.where(eq(leads.campaignId, filters.campaignId)) as any;
+    }
+    if (filters?.limit) {
+      query = query.limit(filters.limit) as any;
+    }
+    
+    return await query;
+  }
+
+  async createLead(lead: InsertLead): Promise<Lead> {
+    const [newLead] = await db
+      .insert(leads)
+      .values(lead)
+      .returning();
+    return newLead;
+  }
+
+  async updateLead(id: number, updates: Partial<Lead>): Promise<Lead | undefined> {
+    const [updated] = await db
+      .update(leads)
+      .set(updates)
+      .where(eq(leads.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  // Daily stats operations
+  async getDailyStats(date?: string, campaignId?: number): Promise<DailyStats[]> {
+    let query = db.select().from(dailyStats);
+    
+    if (date) {
+      query = query.where(eq(dailyStats.date, date)) as any;
+    }
+    if (campaignId) {
+      query = query.where(eq(dailyStats.campaignId, campaignId)) as any;
+    }
+    
+    return await query;
+  }
+
+  async createDailyStats(stats: InsertDailyStats): Promise<DailyStats> {
+    const [newStats] = await db
+      .insert(dailyStats)
+      .values(stats)
+      .returning();
+    return newStats;
+  }
+
+  // Lead notes operations
+  async getLeadNotes(leadId: number): Promise<LeadNote[]> {
+    return await db.select().from(leadNotes).where(eq(leadNotes.leadId, leadId));
+  }
+
+  async createLeadNote(note: InsertLeadNote): Promise<LeadNote> {
+    const [newNote] = await db
+      .insert(leadNotes)
+      .values(note)
+      .returning();
+    return newNote;
+  }
+
+  // Dashboard analytics - simplified implementations for database
+  async getLeadsCount(timeframe?: string): Promise<number> {
+    const result = await db.select().from(leads);
+    return result.length;
+  }
+
+  async getTotalSpend(timeframe?: string): Promise<number> {
+    const result = await db.select().from(dailyStats);
+    return result.reduce((total, stat) => total + parseFloat(stat.spend || "0"), 0);
+  }
+
+  async getConversionRate(timeframe?: string): Promise<number> {
+    const totalLeads = await this.getLeadsCount();
+    const convertedLeads = await db.select().from(leads).where(eq(leads.status, "converted"));
+    return totalLeads > 0 ? (convertedLeads.length / totalLeads) * 100 : 0;
+  }
+
+  async getCostPerLead(timeframe?: string): Promise<number> {
+    const totalSpend = await this.getTotalSpend();
+    const totalLeads = await this.getLeadsCount();
+    return totalLeads > 0 ? totalSpend / totalLeads : 0;
+  }
+
+  // CPL and manual values storage - using a simple key-value approach in database
+  async updateCpl(clienteIndex: number, cpl: number): Promise<void> {
+    // For now, we'll store this in memory since it's for manual dashboard inputs
+    // In a full implementation, you'd want a separate settings table
+  }
+
+  async getCpl(clienteIndex: number): Promise<number> {
+    return 0; // Default value
+  }
+
+  async updateVentaPorCampana(clienteIndex: number, venta: number): Promise<void> {
+    // For manual inputs, would use a separate settings table
+  }
+
+  async getVentaPorCampana(clienteIndex: number): Promise<number> {
+    return 0; // Default value
+  }
+
+  async updatePedidosPorDia(clienteIndex: number, pedidos: number): Promise<void> {
+    // For manual inputs, would use a separate settings table
+  }
+
+  async getPedidosPorDia(clienteIndex: number): Promise<number> {
+    return 0; // Default value
+  }
+
+  // Cliente operations
+  async getCliente(id: number): Promise<Cliente | undefined> {
+    const [cliente] = await db.select().from(clientes).where(eq(clientes.id, id));
+    return cliente || undefined;
+  }
+
+  async getAllClientes(): Promise<Cliente[]> {
+    return await db.select().from(clientes);
+  }
+
+  async createCliente(cliente: InsertCliente): Promise<Cliente> {
+    const [newCliente] = await db
+      .insert(clientes)
+      .values(cliente)
+      .returning();
+    return newCliente;
+  }
+
+  async updateCliente(id: number, updates: Partial<Cliente>): Promise<Cliente | undefined> {
+    const [updated] = await db
+      .update(clientes)
+      .set(updates)
+      .where(eq(clientes.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteCliente(id: number): Promise<boolean> {
+    const result = await db.delete(clientes).where(eq(clientes.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Campaña comercial operations
+  async getCampanaComercial(id: number): Promise<CampanaComercial | undefined> {
+    const [campana] = await db.select().from(campanasComerciales).where(eq(campanasComerciales.id, id));
+    return campana || undefined;
+  }
+
+  async getAllCampanasComerciales(): Promise<CampanaComercial[]> {
+    return await db.select().from(campanasComerciales);
+  }
+
+  async getCampanasPorCliente(clienteId: number): Promise<CampanaComercial[]> {
+    return await db.select().from(campanasComerciales).where(eq(campanasComerciales.clienteId, clienteId));
+  }
+
+  async createCampanaComercial(campana: InsertCampanaComercial): Promise<CampanaComercial> {
+    const [newCampana] = await db
+      .insert(campanasComerciales)
+      .values(campana)
+      .returning();
+    return newCampana;
+  }
+
+  async updateCampanaComercial(id: number, updates: Partial<CampanaComercial>): Promise<CampanaComercial | undefined> {
+    const [updated] = await db
+      .update(campanasComerciales)
+      .set(updates)
+      .where(eq(campanasComerciales.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteCampanaComercial(id: number): Promise<boolean> {
+    const result = await db.delete(campanasComerciales).where(eq(campanasComerciales.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+}
+
+// Switch to database storage for persistent data
+export const storage = new DatabaseStorage();

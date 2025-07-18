@@ -112,7 +112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       status: 'new' as const,
       source: 'google_sheets',
       cost: sheetLead.cost ? (parseFloat(sheetLead.cost.replace(/[^0-9.-]/g, '')) * 1400).toString() : '0', // Convertir USD a ARS (aprox 1400 pesos por dólar)
-      leadDate: new Date(sheetLead.timestamp).toISOString()
+      leadDate: new Date(sheetLead.timestamp)
     };
   }
 

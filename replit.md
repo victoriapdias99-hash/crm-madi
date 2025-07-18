@@ -68,7 +68,14 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Framework de Colores Moderno (Latest - January 18, 2025)
+### Implementación de Almacenamiento Persistente con PostgreSQL (Latest - January 18, 2025)
+- **DatabaseStorage**: Reemplazado MemStorage con implementación completa de PostgreSQL
+- **Persistencia de Datos**: Todos los datos ahora se almacenan permanentemente en base de datos
+- **Migraciones Aplicadas**: Creadas todas las tablas necesarias (users, campaigns, leads, clientes, etc.)
+- **Sistema Robusto**: Los datos no se pierden al reiniciar la aplicación
+- **Navegación Mejorada**: Agregado botón "Volver" en página de gestión de clientes
+
+### Framework de Colores Moderno (January 18, 2025)
 - **Sistema de Colores Empresarial**: Implementado tema azul vibrante con acentos verdes y naranjas
 - **Efectos Modernos**: Tarjetas elevadas con hover effects, transiciones suaves, gradientes en botones
 - **Componentes Mejorados**: Títulos con gradientes, badges con colores de estado, formularios modernos
