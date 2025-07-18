@@ -49,10 +49,10 @@ class ClientMatchingSystem {
       googleSheetsNames: ['peugeot albens', 'albens'],
       matchType: 'contains'
     },
-    // GRUPO QUIJADA
+    // GRUPO QUIJADA (incluyendo AVEC)
     {
-      clienteNombre: ['grupo quijada'],
-      googleSheetsNames: ['grupo quijada - peugeot', 'grupo quijada - citroen'],
+      clienteNombre: ['grupo quijada', 'avec - grupo quijada'],
+      googleSheetsNames: ['grupo quijada - peugeot', 'grupo quijada - citroen', 'avec - grupo quijada'],
       matchType: 'contains'
     },
     // Regla genérica para nombres similares
@@ -430,13 +430,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`  No matches found for '${cliente.nombreCliente}' or '${campana.marca}'`);
           console.log(`  Sample data names: ${datosDiarios.slice(0, 3).map(d => d.cliente).join(', ')}`);
           
+          // Debug específico para AVEC - GRUPO QUIJADA
+          if (cliente.nombreCliente.toLowerCase().includes('grupo quijada')) {
+            console.log(`  GRUPO QUIJADA Debug - Available data clients:`, 
+              datosDiarios.map(d => d.cliente).filter(c => c.toLowerCase().includes('grupo') || c.toLowerCase().includes('quijada') || c.toLowerCase().includes('avec'))
+            );
+          }
 
-        } else if (cliente.nombreCliente === 'GRUPO QUIJADA') {
+        } else if (cliente.nombreCliente.toLowerCase().includes('grupo quijada')) {
           console.log(`    GRUPO QUIJADA found data:`, datosParaCampana.map(d => ({
             cliente: d.cliente,
             fecha: d.fecha,
             cantidad: d.cantidad,
-            totalLeads: d.totalLeads
+            totalLeads: d.totalLeads,
+            enviados: d.enviados
           })));
         }
         

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { Loader2, Save, RefreshCw, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -392,10 +393,16 @@ export default function DatosDiariosDashboard() {
                             {updatedData.porcentajeDesvio ? updatedData.porcentajeDesvio.toFixed(2) : '0.00'}%
                           </Badge>
                         </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
-                          <Badge variant={data.porcentajeDatosEnviados >= 80 ? "default" : data.porcentajeDatosEnviados >= 50 ? "secondary" : "destructive"}>
-                            {data.porcentajeDatosEnviados ? data.porcentajeDatosEnviados.toFixed(2) : '0.00'}%
-                          </Badge>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2">
+                          <div className="flex flex-col items-center gap-1">
+                            <Progress 
+                              value={Math.min(data.porcentajeDatosEnviados || 0, 100)} 
+                              className="w-20 h-2" 
+                            />
+                            <span className="text-xs font-medium">
+                              {data.porcentajeDatosEnviados ? data.porcentajeDatosEnviados.toFixed(1) : '0.0'}%
+                            </span>
+                          </div>
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{updatedData.faltantesAEnviar}</td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
@@ -520,10 +527,16 @@ export default function DatosDiariosDashboard() {
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
                           {updatedData.porcentajeDesvio.toFixed(1)}%
                         </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
-                          <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
-                            {data.porcentajeDatosEnviados}%
-                          </Badge>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2">
+                          <div className="flex flex-col items-center gap-1">
+                            <Progress 
+                              value={Math.min(data.porcentajeDatosEnviados || 0, 100)} 
+                              className="w-20 h-2" 
+                            />
+                            <span className="text-xs font-medium text-green-600">
+                              {data.porcentajeDatosEnviados ? data.porcentajeDatosEnviados.toFixed(1) : '0.0'}%
+                            </span>
+                          </div>
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
                           <Badge variant="outline" className="bg-gray-100 text-gray-600">
