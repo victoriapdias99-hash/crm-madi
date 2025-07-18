@@ -271,28 +271,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Campañas con información de matching
+  // Campañas con información de matching y conteo real
   app.get('/api/campanas-comerciales/matching', async (req, res) => {
     try {
-      if (typeof (storage as any).getCampanasConMatching === 'function') {
-        const data = await (storage as any).getCampanasConMatching();
-        res.json(data);
-      } else {
-        // Fallback: obtener campañas normales y clientes por separado
-        const campanas = await storage.getAllCampanasComerciales();
-        const clientes = await storage.getAllClientes();
-        
-        const campanasConClientes = campanas.map(campana => {
+      // Obtener campañas y clientes
+      const campanas = await storage.getAllCampanasComerciales();
+      const clientes = await storage.getAllClientes();
+      const datosDiarios = await googleSheetsService.getDatosDiariosData();
+      
+      const campanasConMatching = await Promise.all(
+        campanas.map(async (campana) => {
           const cliente = clientes.find(c => c.id === campana.clienteId);
+          
+          // Calcular datos reales obtenidos hasta ahora
+          const fechaInicioObj = new Date(campana.fechaCampana);
+          const hoy = new Date();
+          
+          // Filtrar datos desde la fecha de inicio hasta hoy
+          const datosMatcheados = datosDiarios.filter((dato: any) => {
+            if (!dato.cliente || !dato.fecha) return false;
+            
+            const fechaDato = new Date(dato.fecha);
+            const clienteNombre = dato.cliente.toLowerCase();
+            const marcaBuscada = campana.marca.toLowerCase();
+            
+            // Debe estar en el rango de fechas de la campaña
+            const dentroRango = fechaDato >= fechaInicioObj && fechaDato <= hoy;
+            
+            // Debe coincidir la marca
+            const marcaCoincide = clienteNombre.includes(marcaBuscada) || 
+                                 (dato.marca && dato.marca.toLowerCase().includes(marcaBuscada));
+            
+            return dentroRango && marcaCoincide;
+          });
+          
+          // Contar total de leads obtenidos
+          const datosObtenidos = datosMatcheados.reduce((total, dato) => {
+            return total + (dato.totalLeads || dato.cantidad || 1);
+          }, 0);
+          
+          // Calcular progreso
+          const porcentajeCompletado = Math.min(100, (datosObtenidos / campana.cantidadDatosSolicitados) * 100);
+          const datosFaltantes = Math.max(0, campana.cantidadDatosSolicitados - datosObtenidos);
+          
+          // Estado de la campaña
+          let estadoCampana = 'En progreso';
+          if (datosObtenidos >= campana.cantidadDatosSolicitados) {
+            estadoCampana = 'Completada';
+          } else if (new Date() > new Date(campana.fechaFin || '')) {
+            estadoCampana = 'Vencida';
+          }
+          
           return {
             ...campana,
             nombreCliente: cliente?.nombreCliente || 'Cliente no encontrado',
-            nombreComercial: cliente?.nombreComercial || 'N/A'
+            nombreComercial: cliente?.nombreComercial || 'N/A',
+            datosObtenidos,
+            datosFaltantes,
+            porcentajeCompletado: Math.round(porcentajeCompletado),
+            estadoCampana,
+            datosMatcheados: datosMatcheados.length,
+            ultimaFechaConDatos: datosMatcheados.length > 0 ? 
+              datosMatcheados.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())[0].fecha : 
+              null
           };
-        });
-        
-        res.json(campanasConClientes);
-      }
+        })
+      );
+      
+      res.json(campanasConMatching);
     } catch (error) {
       console.error('Error fetching campañas with matching:', error);
       res.status(500).json({ error: 'Failed to fetch campañas with matching' });
@@ -497,6 +543,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         validatedData.cantidadDatosSolicitados,
         validatedData.marca
       );
+      
+      console.log('Calculated fecha_fin:', fechaFinCalculada);
       
       const campanaDatos = {
         ...validatedData,
@@ -866,24 +914,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Función para calcular fecha de fin automáticamente
   async function calculateFechaFin(fechaInicio: string, cantidadSolicitada: number, marca: string): Promise<string> {
     try {
+      console.log('Calculating fecha_fin for:', { fechaInicio, cantidadSolicitada, marca });
+      
       // Obtener datos diarios desde Google Sheets
       const datosDiarios = await googleSheetsService.getDatosDiariosData();
+      console.log('Total datos diarios found:', datosDiarios.length);
       
       // Filtrar datos desde fecha de inicio y por marca
       const fechaInicioObj = new Date(fechaInicio);
       let contador = 0;
       let fechaFin = fechaInicioObj;
       
+      // Filtrar por marca (más flexible para matching)
+      const datosFiltrados = datosDiarios.filter((dato: any) => {
+        if (!dato.cliente) return false;
+        const clienteNombre = dato.cliente.toLowerCase();
+        const marcaBuscada = marca.toLowerCase();
+        
+        // Buscar marca en el nombre del cliente o campaña
+        return clienteNombre.includes(marcaBuscada) || 
+               (dato.marca && dato.marca.toLowerCase().includes(marcaBuscada));
+      });
+      
+      console.log('Datos filtrados por marca:', datosFiltrados.length);
+      
       // Ordenar datos por fecha y contar desde la fecha de inicio
-      const datosOrdenados = datosDiarios
-        .filter((dato: any) => dato.marca && dato.marca.toLowerCase() === marca.toLowerCase())
+      const datosOrdenados = datosFiltrados
         .sort((a: any, b: any) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
       
       for (const dato of datosOrdenados) {
         const fechaDato = new Date(dato.fecha);
         if (fechaDato >= fechaInicioObj) {
-          contador += dato.cantidad || 1; // Sumar cantidad de leads del día
+          const cantidad = dato.totalLeads || dato.cantidad || 1;
+          contador += cantidad;
           fechaFin = fechaDato;
+          
+          console.log(`Fecha: ${dato.fecha}, Cantidad: ${cantidad}, Total acumulado: ${contador}`);
           
           if (contador >= cantidadSolicitada) {
             break;
@@ -891,7 +957,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      return fechaFin.toISOString().split('T')[0];
+      const fechaFinString = fechaFin.toISOString().split('T')[0];
+      console.log('Fecha fin calculada:', fechaFinString, 'con', contador, 'datos acumulados');
+      
+      return fechaFinString;
     } catch (error) {
       console.error('Error calculating fecha fin:', error);
       // Fallback: sumar días estimados (1 dato por día)
