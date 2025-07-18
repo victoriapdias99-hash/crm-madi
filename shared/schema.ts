@@ -162,6 +162,17 @@ export const campanasComerciales = pgTable("campanas_comerciales", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Tabla para valores manuales del dashboard (CPL, ventas, pedidos)
+export const dashboardManualValues = pgTable("dashboard_manual_values", {
+  id: serial("id").primaryKey(),
+  clienteIndex: integer("cliente_index").notNull().unique(),
+  cpl: numeric("cpl", { precision: 10, scale: 2 }).default("0"),
+  ventaPorCampana: numeric("venta_por_campana", { precision: 12, scale: 2 }).default("0"),
+  pedidosPorDia: integer("pedidos_por_dia").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Zod schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,

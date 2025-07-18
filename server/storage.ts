@@ -1,5 +1,5 @@
 import { 
-  users, campaigns, leads, dailyStats, leadNotes, clientes, campanasComerciales,
+  users, campaigns, leads, dailyStats, leadNotes, clientes, campanasComerciales, dashboardManualValues,
   type User, type InsertUser,
   type Campaign, type InsertCampaign,
   type Lead, type InsertLead,
@@ -829,30 +829,116 @@ export class DatabaseStorage implements IStorage {
     return totalLeads > 0 ? totalSpend / totalLeads : 0;
   }
 
-  // CPL and manual values storage - using a simple key-value approach in database
+  // CPL and manual values storage - usando tabla dashboardManualValues
   async updateCpl(clienteIndex: number, cpl: number): Promise<void> {
-    // For now, we'll store this in memory since it's for manual dashboard inputs
-    // In a full implementation, you'd want a separate settings table
+    try {
+      // Primero verificar si existe un registro para este clienteIndex
+      const [existing] = await db.select().from(dashboardManualValues).where(eq(dashboardManualValues.clienteIndex, clienteIndex));
+      
+      if (existing) {
+        // Actualizar registro existente
+        await db
+          .update(dashboardManualValues)
+          .set({ cpl: cpl.toString(), updatedAt: new Date() })
+          .where(eq(dashboardManualValues.clienteIndex, clienteIndex));
+      } else {
+        // Crear nuevo registro
+        await db
+          .insert(dashboardManualValues)
+          .values({ 
+            clienteIndex, 
+            cpl: cpl.toString(),
+            ventaPorCampana: "0",
+            pedidosPorDia: 0
+          });
+      }
+      console.log(`CPL updated in database for client ${clienteIndex}: ${cpl}`);
+    } catch (error) {
+      console.error('Error updating CPL in database:', error);
+      throw error;
+    }
   }
 
   async getCpl(clienteIndex: number): Promise<number> {
-    return 0; // Default value
+    try {
+      const [record] = await db.select().from(dashboardManualValues).where(eq(dashboardManualValues.clienteIndex, clienteIndex));
+      return record ? parseFloat(record.cpl || "0") : 0;
+    } catch (error) {
+      console.error('Error getting CPL from database:', error);
+      return 0;
+    }
   }
 
   async updateVentaPorCampana(clienteIndex: number, venta: number): Promise<void> {
-    // For manual inputs, would use a separate settings table
+    try {
+      const [existing] = await db.select().from(dashboardManualValues).where(eq(dashboardManualValues.clienteIndex, clienteIndex));
+      
+      if (existing) {
+        await db
+          .update(dashboardManualValues)
+          .set({ ventaPorCampana: venta.toString(), updatedAt: new Date() })
+          .where(eq(dashboardManualValues.clienteIndex, clienteIndex));
+      } else {
+        await db
+          .insert(dashboardManualValues)
+          .values({ 
+            clienteIndex, 
+            cpl: "0",
+            ventaPorCampana: venta.toString(),
+            pedidosPorDia: 0
+          });
+      }
+      console.log(`Venta por campaña updated in database for client ${clienteIndex}: ${venta}`);
+    } catch (error) {
+      console.error('Error updating venta por campaña in database:', error);
+      throw error;
+    }
   }
 
   async getVentaPorCampana(clienteIndex: number): Promise<number> {
-    return 0; // Default value
+    try {
+      const [record] = await db.select().from(dashboardManualValues).where(eq(dashboardManualValues.clienteIndex, clienteIndex));
+      return record ? parseFloat(record.ventaPorCampana || "0") : 0;
+    } catch (error) {
+      console.error('Error getting venta por campaña from database:', error);
+      return 0;
+    }
   }
 
   async updatePedidosPorDia(clienteIndex: number, pedidos: number): Promise<void> {
-    // For manual inputs, would use a separate settings table
+    try {
+      const [existing] = await db.select().from(dashboardManualValues).where(eq(dashboardManualValues.clienteIndex, clienteIndex));
+      
+      if (existing) {
+        await db
+          .update(dashboardManualValues)
+          .set({ pedidosPorDia: pedidos, updatedAt: new Date() })
+          .where(eq(dashboardManualValues.clienteIndex, clienteIndex));
+      } else {
+        await db
+          .insert(dashboardManualValues)
+          .values({ 
+            clienteIndex, 
+            cpl: "0",
+            ventaPorCampana: "0",
+            pedidosPorDia: pedidos
+          });
+      }
+      console.log(`Pedidos por día updated in database for client ${clienteIndex}: ${pedidos}`);
+    } catch (error) {
+      console.error('Error updating pedidos por día in database:', error);
+      throw error;
+    }
   }
 
   async getPedidosPorDia(clienteIndex: number): Promise<number> {
-    return 0; // Default value
+    try {
+      const [record] = await db.select().from(dashboardManualValues).where(eq(dashboardManualValues.clienteIndex, clienteIndex));
+      return record ? (record.pedidosPorDia || 0) : 0;
+    } catch (error) {
+      console.error('Error getting pedidos por día from database:', error);
+      return 0;
+    }
   }
 
   // Cliente operations

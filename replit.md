@@ -68,7 +68,16 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Sistema de Navegación Completo (Latest - January 18, 2025)
+### Arreglos Críticos de Fechas y CPL Completados (Latest - January 18, 2025)
+- **Problema de Fechas Resuelto**: Fechas ahora se guardan correctamente (18/07/2025 se guarda como 18, no 17)
+- **Error CPL Arreglado**: Campo CPL funciona perfectamente para guardar valores
+- **DatabaseStorage Mejorado**: Implementada tabla `dashboard_manual_values` para persistencia de CPL y valores manuales
+- **NOVO GROUP Funcionando**: Ahora encuentra correctamente 995/100 datos de "FIAT AUTOS DEL SOL" (Completada)
+- **RENAULT Mejorado**: Funciona con 19/40 datos (En Progreso) con cálculos correctos
+- **Sistema de Matching Robusto**: Reglas de matching optimizadas para todos los clientes
+- **Migración Database**: Nueva tabla para valores manuales aplicada exitosamente
+
+### Sistema de Navegación Completo (January 18, 2025)
 - **Navegación Universal**: Agregado componente Navigation a todas las páginas principales del dashboard
 - **Botón "Atrás"**: Implementado botón de navegación hacia atrás usando window.history.back() en todas las páginas
 - **Consistencia UI**: Todas las páginas (Datos Diarios, Dashboard, Clientes, Campañas, Meta Ads, Finanzas, Simple Dashboard, Lead Details, 404) incluyen navegación

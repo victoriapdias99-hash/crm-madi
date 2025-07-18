@@ -921,21 +921,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Endpoint temporal para debug - ver nombres exactos en datos diarios
-  app.get('/api/debug/sheet-names', async (req, res) => {
-    try {
-      const datosDiarios = await googleSheetsService.getDatosDiariosData();
-      const nombres = datosDiarios.map(d => d.cliente).filter(Boolean);
-      const uniqueNames = [...new Set(nombres)].sort();
-      res.json({
-        total: nombres.length,
-        unique: uniqueNames.length,
-        names: uniqueNames
-      });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to debug sheet names' });
-    }
-  });
+
 
   // API para gestionar el sistema de matching de clientes
   app.get('/api/client-matching/rules', async (req, res) => {
@@ -1022,8 +1008,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Arreglar problema de fecha (mantener fecha exacta sin conversión de timezone)
       if (dataWithoutCalculatedFields.fechaCampana) {
-        // Simplemente mantener la fecha como string sin conversiones
-        console.log('Fecha recibida sin conversión:', dataWithoutCalculatedFields.fechaCampana);
+        // Convertir a Date local y extraer solo YYYY-MM-DD sin conversión de timezone
+        const fechaDate = new Date(dataWithoutCalculatedFields.fechaCampana);
+        const year = fechaDate.getFullYear();
+        const month = String(fechaDate.getMonth() + 1).padStart(2, '0');
+        const day = String(fechaDate.getDate()).padStart(2, '0');
+        dataWithoutCalculatedFields.fechaCampana = `${year}-${month}-${day}`;
+        console.log('Fecha corregida para base de datos:', dataWithoutCalculatedFields.fechaCampana);
       }
       
       const validatedData = createCampanaComercialSchema.parse(dataWithoutCalculatedFields);
