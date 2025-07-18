@@ -15,6 +15,157 @@ import {
   createCampanaComercialSchema
 } from "@shared/schema";
 
+// Sistema avanzado de matching de nombres de clientes
+interface ClientMatchingRule {
+  clienteNombre: string[];
+  googleSheetsNames: string[];
+  matchType: 'exact' | 'contains' | 'startsWith' | 'endsWith' | 'includes' | 'custom';
+  customMatcher?: (clienteName: string, dataName: string) => boolean;
+}
+
+class ClientMatchingSystem {
+  private rules: ClientMatchingRule[] = [
+    // ITALY AUTOS
+    {
+      clienteNombre: ['italy autos'],
+      googleSheetsNames: ['chevrolet - italy'],
+      matchType: 'exact'
+    },
+    // NOVO GROUP
+    {
+      clienteNombre: ['novo group'],
+      googleSheetsNames: ['novo group - fiat'],
+      matchType: 'exact'
+    },
+    // RENAULT (múltiples variaciones)
+    {
+      clienteNombre: ['renault', 'renault - javier cagiao'],
+      googleSheetsNames: ['renault'],
+      matchType: 'exact'
+    },
+    // PEUGEOT ALBENS
+    {
+      clienteNombre: ['peugeot albens'],
+      googleSheetsNames: ['peugeot albens', 'albens'],
+      matchType: 'contains'
+    },
+    // GRUPO QUIJADA
+    {
+      clienteNombre: ['grupo quijada'],
+      googleSheetsNames: ['grupo quijada - peugeot', 'grupo quijada - citroen'],
+      matchType: 'contains'
+    },
+    // Regla genérica para nombres similares
+    {
+      clienteNombre: ['*'],
+      googleSheetsNames: ['*'],
+      matchType: 'custom',
+      customMatcher: (clienteName: string, dataName: string) => {
+        // Extrae palabras clave principales
+        const clienteWords = clienteName.split(/[-\s]+/).filter(word => word.length > 2);
+        const dataWords = dataName.split(/[-\s]+/).filter(word => word.length > 2);
+        
+        // Busca coincidencia de al menos 2 palabras
+        const matches = clienteWords.filter(word => 
+          dataWords.some(dWord => dWord.includes(word) || word.includes(dWord))
+        );
+        
+        return matches.length >= Math.min(2, clienteWords.length);
+      }
+    }
+  ];
+
+  isMatch(clienteName: string, dataName: string): boolean {
+    const clienteNameLower = clienteName.toLowerCase().trim();
+    const dataNameLower = dataName.toLowerCase().trim();
+
+    // Verificar reglas específicas primero
+    for (const rule of this.rules) {
+      if (rule.clienteNombre.includes('*')) continue; // Saltar regla genérica
+      
+      const matchesClientName = rule.clienteNombre.some(name => 
+        name === clienteNameLower || clienteNameLower.includes(name)
+      );
+      
+      if (!matchesClientName) continue;
+
+      // Verificar si coincide con algún nombre en Google Sheets
+      for (const sheetName of rule.googleSheetsNames) {
+        let isRuleMatch = false;
+        
+        switch (rule.matchType) {
+          case 'exact':
+            isRuleMatch = dataNameLower === sheetName;
+            break;
+          case 'contains':
+            isRuleMatch = dataNameLower.includes(sheetName) || sheetName.includes(dataNameLower);
+            break;
+          case 'startsWith':
+            isRuleMatch = dataNameLower.startsWith(sheetName);
+            break;
+          case 'endsWith':
+            isRuleMatch = dataNameLower.endsWith(sheetName);
+            break;
+          case 'includes':
+            isRuleMatch = dataNameLower.includes(sheetName);
+            break;
+        }
+        
+        if (isRuleMatch) return true;
+      }
+    }
+
+    // Aplicar regla genérica como último recurso
+    const genericRule = this.rules.find(rule => rule.clienteNombre.includes('*'));
+    if (genericRule && genericRule.customMatcher) {
+      return genericRule.customMatcher(clienteNameLower, dataNameLower);
+    }
+
+    return false;
+  }
+
+  // Método para agregar nuevas reglas dinámicamente
+  addRule(rule: ClientMatchingRule): void {
+    this.rules.unshift(rule); // Agregar al inicio para prioridad
+  }
+
+  // Método para debug - ver qué regla hizo match
+  findMatchingRule(clienteName: string, dataName: string): ClientMatchingRule | null {
+    const clienteNameLower = clienteName.toLowerCase().trim();
+    const dataNameLower = dataName.toLowerCase().trim();
+
+    for (const rule of this.rules) {
+      if (rule.clienteNombre.includes('*')) continue;
+      
+      const matchesClientName = rule.clienteNombre.some(name => 
+        name === clienteNameLower || clienteNameLower.includes(name)
+      );
+      
+      if (matchesClientName) {
+        for (const sheetName of rule.googleSheetsNames) {
+          let isRuleMatch = false;
+          
+          switch (rule.matchType) {
+            case 'exact':
+              isRuleMatch = dataNameLower === sheetName;
+              break;
+            case 'contains':
+              isRuleMatch = dataNameLower.includes(sheetName) || sheetName.includes(dataNameLower);
+              break;
+          }
+          
+          if (isRuleMatch) return rule;
+        }
+      }
+    }
+    
+    return null;
+  }
+}
+
+// Instancia global del sistema de matching
+const clientMatchingSystem = new ClientMatchingSystem();
+
 interface WebSocketWithData extends WebSocket {
   userId?: number;
   dashboardId?: string;
@@ -267,40 +418,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const clienteBajo = dato.cliente.toLowerCase();
           const nombreClienteBajo = cliente.nombreCliente.toLowerCase();
           
-          // Debug cuando busque GRUPO QUIJADA
-          if (nombreClienteBajo === 'grupo quijada' && i < 10) {
+          // Debug para clientes específicos
+          if ((nombreClienteBajo === 'grupo quijada' || nombreClienteBajo.includes('renault')) && i < 10) {
             console.log(`    Checking[${i}]: '${nombreClienteBajo}' vs '${clienteBajo}'`);
           }
           
-          let esMatch = false;
+          // Usar el sistema de matching avanzado
+          const esMatch = clientMatchingSystem.isMatch(nombreClienteBajo, clienteBajo);
           
-          // Matching válidos basados en datos reales de Google Sheets
-          if (nombreClienteBajo === 'italy autos' && clienteBajo === 'chevrolet - italy') {
-            esMatch = true;
-            console.log(`    ✓ MATCH: ${nombreClienteBajo} -> ${clienteBajo}`);
+          if (esMatch) {
+            const matchingRule = clientMatchingSystem.findMatchingRule(nombreClienteBajo, clienteBajo);
+            console.log(`    ✓ MATCH (${matchingRule?.matchType || 'custom'}): ${nombreClienteBajo} -> ${clienteBajo}`);
           }
-          // GRUPO QUIJADA puede hacer match con sus datos en Google Sheets
-          else if (nombreClienteBajo === 'grupo quijada' && 
-                   (clienteBajo === 'grupo quijada - peugeot' || clienteBajo === 'grupo quijada - citroen')) {
-            esMatch = true;
-            console.log(`    ✓ MATCH: ${nombreClienteBajo} -> ${clienteBajo}`);
-          }
-          // NOVO GROUP puede hacer match con NOVO GROUP - FIAT
-          else if (nombreClienteBajo === 'novo group' && clienteBajo === 'novo group - fiat') {
-            esMatch = true;
-            console.log(`    ✓ MATCH: ${nombreClienteBajo} -> ${clienteBajo}`);
-          }
-          // RENAULT puede hacer match directo
-          else if (nombreClienteBajo === 'renault' && clienteBajo === 'renault') {
-            esMatch = true;
-            console.log(`    ✓ MATCH: ${nombreClienteBajo} -> ${clienteBajo}`);
-          }
-          // PEUGEOT ALBENS puede hacer match con datos que contengan "albens"
-          else if (nombreClienteBajo === 'peugeot albens' && clienteBajo.includes('albens')) {
-            esMatch = true;
-            console.log(`    ✓ MATCH: ${nombreClienteBajo} -> ${clienteBajo}`);
-          }
-          // NO hacer matching entre PEUGEOT ALBENS y GRUPO QUIJADA - son clientes diferentes
           
           if (esMatch) {
             datosParaCampana.push(dato);
@@ -796,6 +925,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(clientesData);
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch clientes from Google Sheets' });
+    }
+  });
+
+  // API para gestionar el sistema de matching de clientes
+  app.get('/api/client-matching/rules', async (req, res) => {
+    try {
+      const rules = (clientMatchingSystem as any).rules || [];
+      res.json(rules);
+    } catch (error) {
+      console.error('Error getting matching rules:', error);
+      res.status(500).json({ error: 'Failed to get matching rules' });
+    }
+  });
+
+  app.post('/api/client-matching/test', async (req, res) => {
+    try {
+      const { clienteName, dataName } = req.body;
+      
+      if (!clienteName || !dataName) {
+        return res.status(400).json({ error: 'clienteName and dataName are required' });
+      }
+      
+      const isMatch = clientMatchingSystem.isMatch(clienteName, dataName);
+      const matchingRule = clientMatchingSystem.findMatchingRule(clienteName, dataName);
+      
+      res.json({
+        isMatch,
+        matchingRule,
+        debugInfo: {
+          clienteNameLower: clienteName.toLowerCase().trim(),
+          dataNameLower: dataName.toLowerCase().trim()
+        }
+      });
+    } catch (error) {
+      console.error('Error testing client matching:', error);
+      res.status(500).json({ error: 'Failed to test client matching' });
+    }
+  });
+
+  app.post('/api/client-matching/add-rule', async (req, res) => {
+    try {
+      const rule = req.body;
+      
+      if (!rule.clienteNombre || !rule.googleSheetsNames || !rule.matchType) {
+        return res.status(400).json({ error: 'Invalid rule format' });
+      }
+      
+      clientMatchingSystem.addRule(rule);
+      
+      res.json({ success: true, message: 'Rule added successfully' });
+    } catch (error) {
+      console.error('Error adding matching rule:', error);
+      res.status(500).json({ error: 'Failed to add matching rule' });
     }
   });
 
