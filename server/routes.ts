@@ -500,7 +500,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Limitar datos acumulados a la cantidad solicitada para esta campaña específica
         const datosFinales = Math.min(datosAcumulados, campana.cantidadDatosSolicitados);
         const porcentajeDatosEnviados = Math.min(100, (datosFinales / campana.cantidadDatosSolicitados) * 100);
-        const faltantesAEnviar = Math.max(0, campana.cantidadDatosSolicitados - datosFinales);
+        const faltantesAEnviar = Math.max(0, campana.cantidadDatosSolicitados - datosFinales); // Pedidos Total - Enviados
         const entregadosPorDiaPromedio = diasConDatos > 0 ? Math.round(entregadosPorDiaTotal / diasConDatos) : 0;
         
         // Obtener valores almacenados en memoria para esta campaña específica
@@ -512,6 +512,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Corregir el cálculo de pedidos total y % desvío
         const pedidosTotal = campana.cantidadDatosSolicitados; // Cantidad total pedida de la campaña
         const porcentajeDesvio = datosFinales > 0 ? ((pedidosTotal - datosFinales) / datosFinales * 100) : 0;
+        const faltantesCorregidos = Math.max(0, pedidosTotal - datosFinales); // Pedidos Total - Enviados
         
         mappedData.push({
           cliente: `${cliente.nombreCliente} - ${campana.marca}`,
@@ -524,11 +525,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pedidosTotal: pedidosTotal,
           porcentajeDesvio: Math.round(porcentajeDesvio),
           porcentajeDatosEnviados: Math.round(porcentajeDatosEnviados),
-          faltantesAEnviar: faltantesAEnviar,
+          faltantesAEnviar: faltantesCorregidos,
           cpl: storedCpl || 0,
           ventaPorCampana: storedVenta || 0,
           inversionRealizada: datosFinales * (storedCpl || 0) * 1.02, // 2% impuestos
-          inversionPendiente: faltantesAEnviar * (storedCpl || 0) * 1.02,
+          inversionPendiente: faltantesCorregidos * (storedCpl || 0) * 1.02,
           inversionTotal: campana.cantidadDatosSolicitados * (storedCpl || 0) * 1.02,
           fechaCampana: campana.fechaCampana,
           fechaFinReal: fechaFinReal,

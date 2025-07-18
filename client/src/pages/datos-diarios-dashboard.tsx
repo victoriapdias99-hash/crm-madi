@@ -251,7 +251,7 @@ export default function DatosDiariosDashboard() {
         </div>
 
         {/* Panel de Pruebas Funcionales */}
-        <TestPanel />
+        {/* <TestPanel /> */}
 
         <Card>
           <CardHeader>
@@ -289,7 +289,7 @@ export default function DatosDiariosDashboard() {
                     const updatedData = {
                       ...data,
                       pedidosPorDia: currentPedidosPorDia,
-                      faltantesAEnviar: Math.max(0, currentPedidosPorDia - data.enviados),
+                      faltantesAEnviar: Math.max(0, data.pedidosTotal - data.enviados), // Pedidos Total - Enviados
                       porcentajeDesvio: (currentPedidosPorDia > 0 && data.entregadosPorDia > 0) ? 
                         ((data.entregadosPorDia - currentPedidosPorDia) / currentPedidosPorDia * 100) : 0
                     };
