@@ -121,6 +121,7 @@ export default function CampanasManagement() {
         marca: campana.marca,
         zona: campana.zona,
         fechaCampana: campana.fechaCampana || "",
+        fechaFin: campana.fechaFin || "",
       });
     } else {
       setEditingCampana(null);
@@ -131,6 +132,7 @@ export default function CampanasManagement() {
         marca: "",
         zona: "",
         fechaCampana: "",
+        fechaFin: "",
       });
     }
     setIsDialogOpen(true);
@@ -145,6 +147,7 @@ export default function CampanasManagement() {
       marca: campana.marca,
       zona: campana.zona,
       fechaCampana: "", // Clear date for new campaign
+      fechaFin: "",
     });
     setIsDialogOpen(true);
   };
@@ -264,14 +267,31 @@ export default function CampanasManagement() {
                   />
                 </div>
 
-                {/* Fecha de Campaña */}
-                <div className="grid grid-cols-1 gap-4">
+                {/* Fechas de Campaña */}
+                <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="fechaCampana"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Fecha de Campaña</FormLabel>
+                        <FormLabel>Fecha de Inicio</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="date"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="fechaFin"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Fecha de Fin</FormLabel>
                         <FormControl>
                           <Input 
                             type="date"
@@ -400,7 +420,7 @@ export default function CampanasManagement() {
               </div>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                 {/* Marca */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
@@ -432,14 +452,25 @@ export default function CampanasManagement() {
                   <p className="text-sm font-semibold">{campana.cantidadDatosSolicitados.toLocaleString()}</p>
                 </div>
 
-                {/* Fecha de Campaña */}
+                {/* Fecha de Inicio */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-teal-500" />
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Fecha Campaña</h4>
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Fecha Inicio</h4>
                   </div>
                   <p className="text-sm">
                     {campana.fechaCampana ? new Date(campana.fechaCampana).toLocaleDateString('es-AR') : 'No especificada'}
+                  </p>
+                </div>
+
+                {/* Fecha de Fin */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-red-500" />
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Fecha Fin</h4>
+                  </div>
+                  <p className="text-sm">
+                    {campana.fechaFin ? new Date(campana.fechaFin).toLocaleDateString('es-AR') : 'No especificada'}
                   </p>
                 </div>
 

@@ -154,6 +154,7 @@ export const campanasComerciales = pgTable("campanas_comerciales", {
   marca: text("marca").notNull(), // Una de las marcas disponibles
   zona: text("zona").notNull(), // AMBA, NACIONAL, LOCALIZADO
   fechaCampana: date("fecha_campana"), // Campo fecha cuando se da de alta la campaña
+  fechaFin: date("fecha_fin"), // Fecha de finalización para rangos de matching
   fechaCreacion: timestamp("fecha_creacion").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -277,6 +278,7 @@ export const insertCampanaComercialSchema = createInsertSchema(campanasComercial
   marca: true,
   zona: true,
   fechaCampana: true,
+  fechaFin: true,
 });
 
 export type CampanaComercial = typeof campanasComerciales.$inferSelect;

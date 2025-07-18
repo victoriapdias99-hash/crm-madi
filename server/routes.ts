@@ -254,6 +254,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Datos diarios con matching de campañas
+  app.get('/api/dashboard/datos-diarios-matching', async (req, res) => {
+    try {
+      if (typeof (storage as any).getDatosDiariosConMatching === 'function') {
+        const data = await (storage as any).getDatosDiariosConMatching();
+        res.json(data);
+      } else {
+        // Fallback para storage que no tenga esta función
+        const datosDiarios = await storage.getDashboardCampaigns();
+        res.json(datosDiarios.map(dato => ({ ...dato, hasMatch: false, campanaMatched: null })));
+      }
+    } catch (error) {
+      console.error('Error fetching datos diarios with matching:', error);
+      res.status(500).json({ error: 'Failed to fetch datos diarios with matching' });
+    }
+  });
+
+  // Campañas con información de matching
+  app.get('/api/campanas-comerciales/matching', async (req, res) => {
+    try {
+      if (typeof (storage as any).getCampanasConMatching === 'function') {
+        const data = await (storage as any).getCampanasConMatching();
+        res.json(data);
+      } else {
+        // Fallback: obtener campañas normales y clientes por separado
+        const campanas = await storage.getAllCampanasComerciales();
+        const clientes = await storage.getAllClientes();
+        
+        const campanasConClientes = campanas.map(campana => {
+          const cliente = clientes.find(c => c.id === campana.clienteId);
+          return {
+            ...campana,
+            nombreCliente: cliente?.nombreCliente || 'Cliente no encontrado',
+            nombreComercial: cliente?.nombreComercial || 'N/A'
+          };
+        });
+        
+        res.json(campanasConClientes);
+      }
+    } catch (error) {
+      console.error('Error fetching campañas with matching:', error);
+      res.status(500).json({ error: 'Failed to fetch campañas with matching' });
+    }
+  });
+
   app.post('/api/dashboard/update-cpl', async (req, res) => {
     try {
       const { clienteIndex, cpl } = req.body;

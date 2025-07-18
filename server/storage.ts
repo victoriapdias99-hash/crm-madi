@@ -922,6 +922,62 @@ export class DatabaseStorage implements IStorage {
     const result = await db.delete(campanasComerciales).where(eq(campanasComerciales.id, id));
     return (result.rowCount || 0) > 0;
   }
+
+  // Matching de campañas con datos de Google Sheets
+  async getCampanasConMatching(): Promise<any[]> {
+    // Obtener todas las campañas con información del cliente
+    const campanas = await db
+      .select({
+        id: campanasComerciales.id,
+        numeroCampana: campanasComerciales.numeroCampana,
+        clienteId: campanasComerciales.clienteId,
+        marca: campanasComerciales.marca,
+        zona: campanasComerciales.zona,
+        cantidadDatosSolicitados: campanasComerciales.cantidadDatosSolicitados,
+        fechaCampana: campanasComerciales.fechaCampana,
+        fechaFin: campanasComerciales.fechaFin,
+        nombreCliente: clientes.nombreCliente,
+        nombreComercial: clientes.nombreComercial,
+      })
+      .from(campanasComerciales)
+      .leftJoin(clientes, eq(campanasComerciales.clienteId, clientes.id));
+
+    return campanas;
+  }
+
+  // Obtener datos diarios con matching de campaña
+  async getDatosDiariosConMatching(): Promise<any[]> {
+    // Obtener datos de Google Sheets
+    const datosDiarios = await this.getDashboardCampaigns();
+    
+    // Obtener todas las campañas para matching
+    const campanasMatching = await this.getCampanasConMatching();
+    
+    // Agregar información de matching a cada registro
+    const datosConMatching = datosDiarios.map(dato => {
+      // Buscar campaña que coincida por marca, cliente y fechas
+      const campanaMatched = campanasMatching.find(campana => {
+        // Normalizar nombres para comparación
+        const clienteNormalizado = dato.cliente.toLowerCase().replace(/\s+/g, '').replace('-', '');
+        const campanaClienteNormalizado = campana.nombreCliente.toLowerCase().replace(/\s+/g, '').replace('-', '');
+        
+        // Verificar si coincide marca y cliente
+        const marcaCoincide = campana.marca.toLowerCase() === dato.cliente.split(' - ')[1]?.toLowerCase();
+        const clienteCoincide = clienteNormalizado.includes(campanaClienteNormalizado) || 
+                               campanaClienteNormalizado.includes(clienteNormalizado);
+        
+        return marcaCoincide && clienteCoincide;
+      });
+
+      return {
+        ...dato,
+        campanaMatched: campanaMatched || null,
+        hasMatch: !!campanaMatched
+      };
+    });
+
+    return datosConMatching;
+  }
 }
 
 // Switch to database storage for persistent data

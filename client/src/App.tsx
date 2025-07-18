@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import CampaignDashboard from "@/pages/campaign-dashboard";
 import DatosDiariosDashboard from "@/pages/datos-diarios-dashboard";
+import DatosDiariosMatching from "@/pages/datos-diarios-matching";
 import Login from "@/pages/login";
 import LeadDetails from "@/pages/lead-details";
 import ClientesManagement from "@/pages/clientes-management";
@@ -18,6 +19,7 @@ function Router() {
     <Switch>
       <Route path="/" component={DatosDiariosDashboard} />
       <Route path="/dashboard" component={CampaignDashboard} />
+      <Route path="/matching" component={DatosDiariosMatching} />
       <Route path="/clientes" component={ClientesManagement} />
       <Route path="/campanas" component={CampanasManagement} />
       <Route path="/meta-ads" component={MetaAdsDashboard} />
