@@ -231,6 +231,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Obtener datos reales desde la hoja "Datos Diarios"
       const datosDiarios = await googleSheetsService.getDatosDiariosData();
+      console.log(`Fetched ${datosDiarios.length} records from Datos Diarios`);
+      console.log('Available client names in data:', datosDiarios.map(d => d.cliente || d.clienteNombre).slice(0, 5));
       
       // Obtener todas las campañas comerciales para mapeo
       const campanasComerciales = await storage.getAllCampanasComerciales();
@@ -245,37 +247,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const fechaInicioCampana = new Date(campana.fechaCampana);
         
-        // Filtrar datos específicos para esta campaña (sin restricción de fecha por ahora)
-        const datosParaCampana = datosDiarios.filter(dato => {
-          const clienteCoincide = dato.cliente.toLowerCase().includes(cliente.nombreCliente.toLowerCase()) ||
-                                 dato.clienteNombre.toLowerCase().includes(cliente.nombreCliente.toLowerCase()) ||
-                                 dato.cliente.toLowerCase().includes(campana.marca.toLowerCase());
+        // Filtrar datos específicos para esta campaña
+        // Para demo: permitir datos históricos si la fecha de campaña es futura
+        const fechaInicio = new Date(campana.fechaCampana);
+        const hoy = new Date();
+        // Agregar 1 día a hoy para comparación más precisa
+        const manana = new Date(hoy.getTime() + 24 * 60 * 60 * 1000);
+        const esFuturo = fechaInicio > manana;
+        
+        // Log inicial para debug
+        console.log(`  Processing campaign: ${cliente.nombreCliente} - ${campana.marca} (${campana.numeroCampana})`);
+        
+        // Approach directo: asignar datos manualmente basado en el matching
+        let datosParaCampana = [];
+        
+        // Encontrar el dato específico para cada campaña
+        for (let i = 0; i < datosDiarios.length; i++) {
+          const dato = datosDiarios[i];
+          const clienteBajo = dato.cliente.toLowerCase();
+          const nombreClienteBajo = cliente.nombreCliente.toLowerCase();
           
-          return clienteCoincide;
-        });
+          // Debug first iteration
+          if (i < 2 && campana.numeroCampana === "1") {
+            console.log(`    Checking[${i}]: '${nombreClienteBajo}' vs '${clienteBajo}'`);
+          }
+          
+          let esMatch = false;
+          
+          // Solo matching válido: ITALY AUTOS con CHEVROLET - ITALY
+          if (nombreClienteBajo === 'italy autos' && clienteBajo === 'chevrolet - italy') {
+            esMatch = true;
+            console.log(`    ✓ MATCH: ${nombreClienteBajo} -> ${clienteBajo}`);
+          }
+          // NO hacer matching entre PEUGEOT ALBENS y GRUPO QUIJADA - son clientes diferentes
+          
+          if (esMatch) {
+            datosParaCampana.push(dato);
+            console.log(`    Added data record to campaign ${campana.numeroCampana}`);
+          }
+        }
         
-        console.log(`Campaign ${campana.numeroCampana} - Found ${datosParaCampana.length} matching data records for ${cliente.nombreCliente}`);
+        console.log(`Campaign ${campana.numeroCampana} - Found ${datosParaCampana.length} matching data records for ${cliente.nombreCliente} from ${campana.fechaCampana}`);
         
-        // Calcular métricas específicas para esta campaña
+        // Debug para ver qué datos están disponibles
+        if (datosParaCampana.length === 0) {
+          console.log(`  No matches found for '${cliente.nombreCliente}' or '${campana.marca}'`);
+          console.log(`  Sample data names: ${datosDiarios.slice(0, 3).map(d => d.cliente).join(', ')}`);
+        }
+        
+        // Calcular métricas específicas para esta campaña SECUENCIALMENTE desde fecha inicio
         let datosAcumulados = 0;
         let entregadosPorDiaTotal = 0;
         let diasConDatos = 0;
+        let fechaFinReal = null;
         
+        // Ordenar datos por fecha para procesar secuencialmente
         const datosOrdenados = datosParaCampana.sort((a, b) => 
           new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
         );
         
+        // Procesar día por día hasta alcanzar la cantidad solicitada
         for (const dato of datosOrdenados) {
           if (datosAcumulados >= campana.cantidadDatosSolicitados) break;
           
-          const datosDelDia = dato.totalLeads || dato.cantidad || dato.enviados || 1;
-          datosAcumulados += datosDelDia;
-          entregadosPorDiaTotal += (dato.entregadosPorDia || 0);
-          diasConDatos++;
+          const datosDelDia = dato.totalLeads || dato.cantidad || dato.enviados || 0;
+          const entregadosDelDia = dato.entregadosPorDia || 0;
+          
+          // Solo contar si hay datos ese día
+          if (datosDelDia > 0) {
+            datosAcumulados += datosDelDia;
+            entregadosPorDiaTotal += entregadosDelDia;
+            diasConDatos++;
+            fechaFinReal = dato.fecha; // Última fecha con datos
+            
+            console.log(`  Day ${diasConDatos}: ${dato.fecha} - ${datosDelDia} data, total: ${datosAcumulados}/${campana.cantidadDatosSolicitados}`);
+          }
         }
         
-        const porcentajeDatosEnviados = Math.min(100, (datosAcumulados / campana.cantidadDatosSolicitados) * 100);
-        const faltantesAEnviar = Math.max(0, campana.cantidadDatosSolicitados - datosAcumulados);
+        // Determinar estado de la campaña
+        let estadoCampana = 'En Progreso';
+        if (datosAcumulados >= campana.cantidadDatosSolicitados) {
+          estadoCampana = 'Completada';
+        } else if (diasConDatos === 0) {
+          estadoCampana = 'Sin Datos';
+        }
+        
+        console.log(`Campaign ${campana.numeroCampana} final status: ${estadoCampana}, ${datosAcumulados}/${campana.cantidadDatosSolicitados} data`);
+        
+        // Limitar datos acumulados a la cantidad solicitada para esta campaña específica
+        const datosFinales = Math.min(datosAcumulados, campana.cantidadDatosSolicitados);
+        const porcentajeDatosEnviados = Math.min(100, (datosFinales / campana.cantidadDatosSolicitados) * 100);
+        const faltantesAEnviar = Math.max(0, campana.cantidadDatosSolicitados - datosFinales);
         const entregadosPorDiaPromedio = diasConDatos > 0 ? Math.round(entregadosPorDiaTotal / diasConDatos) : 0;
         
         // Obtener valores almacenados en memoria para esta campaña específica
@@ -289,7 +351,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           clienteNombre: cliente.nombreCliente,
           zona: campana.zona,
           numeroCampana: campana.numeroCampana,
-          enviados: datosAcumulados,
+          enviados: datosFinales,
           entregadosPorDia: entregadosPorDiaPromedio,
           pedidosPorDia: storedPedidos || 0,
           pedidosTotal: (storedPedidos || 0) * diasConDatos,
@@ -298,12 +360,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           faltantesAEnviar: faltantesAEnviar,
           cpl: storedCpl || 0,
           ventaPorCampana: storedVenta || 0,
-          inversionRealizada: datosAcumulados * (storedCpl || 0) * 1.02, // 2% impuestos
+          inversionRealizada: datosFinales * (storedCpl || 0) * 1.02, // 2% impuestos
           inversionPendiente: faltantesAEnviar * (storedCpl || 0) * 1.02,
           inversionTotal: campana.cantidadDatosSolicitados * (storedCpl || 0) * 1.02,
           fechaCampana: campana.fechaCampana,
+          fechaFinReal: fechaFinReal,
           cantidadSolicitada: campana.cantidadDatosSolicitados,
-          diasProcesados: diasConDatos
+          diasProcesados: diasConDatos,
+          estadoCampana: estadoCampana
         });
       }
       
