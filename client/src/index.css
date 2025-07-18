@@ -2,60 +2,76 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: hsl(0, 0%, 100%);
-  --foreground: hsl(20, 14.3%, 4.1%);
-  --muted: hsl(60, 4.8%, 95.9%);
-  --muted-foreground: hsl(25, 5.3%, 44.7%);
-  --popover: hsl(0, 0%, 100%);
-  --popover-foreground: hsl(20, 14.3%, 4.1%);
-  --card: hsl(0, 0%, 100%);
-  --card-foreground: hsl(20, 14.3%, 4.1%);
-  --border: hsl(20, 5.9%, 90%);
-  --input: hsl(20, 5.9%, 90%);
-  --primary: hsl(207, 90%, 54%);
-  --primary-foreground: hsl(211, 100%, 99%);
-  --secondary: hsl(60, 4.8%, 95.9%);
-  --secondary-foreground: hsl(24, 9.8%, 10%);
-  --accent: hsl(60, 4.8%, 95.9%);
-  --accent-foreground: hsl(24, 9.8%, 10%);
-  --destructive: hsl(0, 84.2%, 60.2%);
-  --destructive-foreground: hsl(60, 9.1%, 97.8%);
-  --ring: hsl(20, 14.3%, 4.1%);
-  --radius: 0.5rem;
-  
-  /* Game-specific colors */
-  --mystery: hsl(210, 40%, 16%);
-  --detective: hsl(37, 91%, 55%);
-  --progress: hsl(142, 71%, 45%);
-  --hint: hsl(217, 91%, 60%);
-  --danger: hsl(0, 84%, 60%);
-}
-
-.dark {
-  --background: hsl(240, 10%, 3.9%);
-  --foreground: hsl(0, 0%, 98%);
-  --muted: hsl(240, 3.7%, 15.9%);
-  --muted-foreground: hsl(240, 5%, 64.9%);
-  --popover: hsl(240, 10%, 3.9%);
-  --popover-foreground: hsl(0, 0%, 98%);
-  --card: hsl(240, 10%, 3.9%);
-  --card-foreground: hsl(0, 0%, 98%);
-  --border: hsl(240, 3.7%, 15.9%);
-  --input: hsl(240, 3.7%, 15.9%);
-  --primary: hsl(207, 90%, 54%);
-  --primary-foreground: hsl(211, 100%, 99%);
-  --secondary: hsl(240, 3.7%, 15.9%);
-  --secondary-foreground: hsl(0, 0%, 98%);
-  --accent: hsl(240, 3.7%, 15.9%);
-  --accent-foreground: hsl(0, 0%, 98%);
-  --destructive: hsl(0, 62.8%, 30.6%);
-  --destructive-foreground: hsl(0, 0%, 98%);
-  --ring: hsl(240, 4.9%, 83.9%);
-  --radius: 0.5rem;
-}
-
 @layer base {
+  :root {
+    /* Modern Business Dashboard Theme - Light */
+    --background: 0 0% 100%;
+    --foreground: 215 25% 17%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 17%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 17%;
+    --primary: 214 84% 56%; /* Modern vibrant blue */
+    --primary-foreground: 0 0% 98%;
+    --secondary: 215 16% 95%;
+    --secondary-foreground: 215 25% 17%;
+    --muted: 215 16% 97%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 142 76% 36%; /* Success green */
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 215 16% 92%;
+    --input: 215 16% 95%;
+    --ring: 214 84% 56%;
+    --radius: 0.75rem;
+    
+    /* Business-specific colors */
+    --success: 142 76% 36%;
+    --warning: 45 93% 47%;
+    --info: 214 84% 56%;
+    --chart-1: 214 84% 56%; /* Primary blue */
+    --chart-2: 142 76% 36%; /* Green */
+    --chart-3: 45 93% 47%; /* Orange */
+    --chart-4: 262 83% 58%; /* Purple */
+    --chart-5: 346 87% 43%; /* Red */
+    --chart-6: 189 85% 31%; /* Teal */
+  }
+
+  .dark {
+    /* Modern Business Dashboard Theme - Dark */
+    --background: 215 28% 7%;
+    --foreground: 215 16% 94%;
+    --card: 215 28% 10%;
+    --card-foreground: 215 16% 94%;
+    --popover: 215 28% 10%;
+    --popover-foreground: 215 16% 94%;
+    --primary: 214 84% 56%;
+    --primary-foreground: 215 28% 7%;
+    --secondary: 215 28% 14%;
+    --secondary-foreground: 215 16% 94%;
+    --muted: 215 28% 14%;
+    --muted-foreground: 215 16% 65%;
+    --accent: 142 76% 36%;
+    --accent-foreground: 215 28% 7%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 215 16% 94%;
+    --border: 215 28% 18%;
+    --input: 215 28% 18%;
+    --ring: 214 84% 56%;
+    
+    /* Business-specific colors - Dark mode */
+    --success: 142 76% 36%;
+    --warning: 45 93% 47%;
+    --info: 214 84% 56%;
+    --chart-1: 214 84% 56%;
+    --chart-2: 142 76% 36%;
+    --chart-3: 45 93% 47%;
+    --chart-4: 262 83% 58%;
+    --chart-5: 346 87% 43%;
+    --chart-6: 189 85% 31%;
+  }
+
   * {
     @apply border-border;
   }
@@ -66,40 +82,117 @@
 }
 
 @layer utilities {
-  .mystery-bg {
-    background-color: var(--mystery);
+  /* Modern gradient backgrounds */
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary)) 50%, hsl(var(--info)));
   }
   
-  .detective-bg {
-    background-color: var(--detective);
+  .gradient-success {
+    background: linear-gradient(135deg, hsl(var(--success)), hsl(142 76% 31%));
   }
   
-  .progress-bg {
-    background-color: var(--progress);
+  .gradient-warning {
+    background: linear-gradient(135deg, hsl(var(--warning)), hsl(45 93% 42%));
   }
   
-  .hint-bg {
-    background-color: var(--hint);
-  }
-  
-  .mystery-text {
-    color: var(--mystery);
-  }
-  
-  .detective-text {
-    color: var(--detective);
-  }
-  
-  .progress-text {
-    color: var(--progress);
-  }
-  
-  .hint-text {
-    color: var(--hint);
-  }
-  
+  /* Glass effect for modern look */
   .glass-effect {
-    backdrop-filter: blur(8px);
-    background-color: rgba(30, 41, 59, 0.5);
+    backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
   }
+  
+  /* Modern card effects */
+  .card-elevated {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+  
+  .card-hover {
+    transition: all 0.3s ease;
+  }
+  
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+  
+  /* Status colors */
+  .status-success {
+    color: hsl(var(--success));
+    background-color: hsl(var(--success) / 0.1);
+  }
+  
+  .status-warning {
+    color: hsl(var(--warning));
+    background-color: hsl(var(--warning) / 0.1);
+  }
+  
+  .status-danger {
+    color: hsl(var(--destructive));
+    background-color: hsl(var(--destructive) / 0.1);
+  }
+  
+  .status-info {
+    color: hsl(var(--info));
+    background-color: hsl(var(--info) / 0.1);
+  }
+  
+  /* Modern button variants */
+  .btn-gradient {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--info)));
+    color: hsl(var(--primary-foreground));
+    border: none;
+    transition: all 0.3s ease;
+  }
+  
+  .btn-gradient:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+}
+
+/* Dashboard-specific styles */
+.dashboard-nav {
+  background: linear-gradient(135deg, hsl(var(--card)), hsl(var(--muted)));
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.dashboard-card {
+  @apply card-elevated card-hover;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+}
+
+.metric-card {
+  @apply dashboard-card;
+  background: linear-gradient(135deg, hsl(var(--card)), hsl(var(--muted) / 0.3));
+}
+
+/* Form improvements */
+.form-modern input, .form-modern select {
+  transition: all 0.2s ease;
+  border: 2px solid hsl(var(--border));
+}
+
+.form-modern input:focus, .form-modern select:focus {
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1);
+}
+
+/* Table improvements */
+.table-modern {
+  background: hsl(var(--card));
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.table-modern th {
+  background: hsl(var(--muted));
+  font-weight: 600;
+  color: hsl(var(--muted-foreground));
+}
+
+.table-modern tbody tr:hover {
+  background: hsl(var(--muted) / 0.5);
 }

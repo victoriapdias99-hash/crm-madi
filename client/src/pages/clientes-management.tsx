@@ -95,6 +95,7 @@ export default function ClientesManagement() {
       tipoFacturacion: "C",
       marcasSolicitadas: [],
       zonas: [],
+      zonasExcluyentes: "",
       exclusionesGeograficas: [],
       integracion: "",
       tipoCliente: "",
@@ -113,6 +114,7 @@ export default function ClientesManagement() {
         tipoFacturacion: cliente.tipoFacturacion,
         marcasSolicitadas: cliente.marcasSolicitadas || [],
         zonas: cliente.zonas || [],
+        zonasExcluyentes: cliente.zonasExcluyentes || "",
         exclusionesGeograficas: cliente.exclusionesGeograficas || [],
         integracion: cliente.integracion || "",
         tipoCliente: cliente.tipoCliente || "",
@@ -128,6 +130,7 @@ export default function ClientesManagement() {
         tipoFacturacion: "C",
         marcasSolicitadas: [],
         zonas: [],
+        zonasExcluyentes: "",
         provinciaBuenosAires: "",
         exclusionesGeograficas: [],
         integracion: "",
@@ -171,14 +174,16 @@ export default function ClientesManagement() {
     <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Gestión de Clientes</h1>
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            Gestión de Clientes
+          </h1>
           <p className="text-muted-foreground">
             Administra la información comercial y datos de targeting de tus clientes
           </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => openDialog()}>
+            <Button onClick={() => openDialog()} className="btn-gradient">
               <Plus className="w-4 h-4 mr-2" />
               Nuevo Cliente
             </Button>
@@ -190,7 +195,7 @@ export default function ClientesManagement() {
               </DialogTitle>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 form-modern">
                 {/* Información Básica */}
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
@@ -416,13 +421,32 @@ export default function ClientesManagement() {
                   )}
                 />
 
+                {/* Zonas Excluyentes */}
+                <FormField
+                  control={form.control}
+                  name="zonasExcluyentes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Zonas Excluyentes</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="Ej: Villa Carlos Paz, La Falda, Capilla del Monte..."
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <div className="flex justify-end gap-2 pt-4">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="hover:bg-secondary transition-colors">
                     Cancelar
                   </Button>
                   <Button 
                     type="submit" 
                     disabled={createMutation.isPending || updateMutation.isPending}
+                    className="btn-gradient"
                   >
                     {editingCliente ? "Actualizar" : "Crear"} Cliente
                   </Button>
@@ -435,7 +459,7 @@ export default function ClientesManagement() {
 
       <div className="grid gap-4">
         {clientes.map((cliente: Cliente) => (
-          <Card key={cliente.id} className="hover:shadow-md transition-shadow">
+          <Card key={cliente.id} className="dashboard-card">
             <CardHeader className="pb-3">
               <div className="flex justify-between items-start">
                 <div className="space-y-1">
@@ -445,13 +469,13 @@ export default function ClientesManagement() {
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">{cliente.nombreComercial}</p>
                   {cliente.tipoCliente && (
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="text-xs status-info">
                       {cliente.tipoCliente}
                     </Badge>
                   )}
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => openDialog(cliente)}>
+                  <Button size="sm" variant="outline" onClick={() => openDialog(cliente)} className="hover:bg-primary hover:text-primary-foreground transition-colors">
                     <Edit className="w-4 h-4" />
                   </Button>
                   <Button 
@@ -459,6 +483,7 @@ export default function ClientesManagement() {
                     variant="outline" 
                     onClick={() => handleDelete(cliente.id)}
                     disabled={deleteMutation.isPending}
+                    className="hover:bg-destructive hover:text-destructive-foreground transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
@@ -496,7 +521,7 @@ export default function ClientesManagement() {
                   <div className="flex flex-wrap gap-1">
                     {cliente.marcasSolicitadas?.length ? 
                       cliente.marcasSolicitadas.slice(0, 4).map(marca => (
-                        <Badge key={marca} variant="secondary" className="text-xs">{marca}</Badge>
+                        <Badge key={marca} variant="secondary" className="text-xs status-success">{marca}</Badge>
                       )) : 
                       <span className="text-xs text-muted-foreground">Sin marcas</span>
                     }
@@ -514,7 +539,7 @@ export default function ClientesManagement() {
                   <div className="flex flex-wrap gap-1 mb-2">
                     {cliente.zonas?.length ? 
                       cliente.zonas.map(zona => (
-                        <Badge key={zona} variant="outline" className="text-xs">{zona}</Badge>
+                        <Badge key={zona} variant="outline" className="text-xs status-warning">{zona}</Badge>
                       )) : 
                       <span className="text-xs text-muted-foreground">Sin zonas</span>
                     }
@@ -556,7 +581,7 @@ export default function ClientesManagement() {
             <p className="text-muted-foreground mb-4">
               Comienza agregando tu primer cliente para gestionar sus datos comerciales.
             </p>
-            <Button onClick={() => openDialog()}>
+            <Button onClick={() => openDialog()} className="btn-gradient">
               <Plus className="w-4 h-4 mr-2" />
               Crear Primer Cliente
             </Button>

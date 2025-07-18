@@ -135,6 +135,7 @@ export const clientes = pgTable("clientes", {
   tipoFacturacion: text("tipo_facturacion").notNull(), // "C" o "A"
   marcasSolicitadas: text("marcas_solicitadas").array(), // Array de marcas: Fiat, Peugeot, Toyota, Chevrolet, Renault, Citroen, VW, Mercedes, Ford, Jeep, China, Otra
   zonas: text("zonas").array(), // Array de zonas: AMBA, NACIONAL, LOCALIZADO
+  zonasExcluyentes: text("zonas_excluyentes"), // Zonas a excluir (input de texto)
   provinciaBuenosAires: text("provincia_buenos_aires"), // Provincia específica de Buenos Aires
   exclusionesGeograficas: jsonb("exclusiones_geograficas"), // Exclusiones tipo Google Maps
   integracion: text("integracion"), // Pilot, Tecnom, Asofix, Otro
@@ -243,6 +244,7 @@ export const insertClienteSchema = createInsertSchema(clientes).pick({
   tipoFacturacion: true,
   marcasSolicitadas: true,
   zonas: true,
+  zonasExcluyentes: true,
   provinciaBuenosAires: true,
   exclusionesGeograficas: true,
   integracion: true,
@@ -316,7 +318,7 @@ export const PROVINCIAS_BUENOS_AIRES = [
 ] as const;
 
 export const TIPOS_INTEGRACION = [
-  'Pilot', 'Tecnom', 'Asofix', 'Otro'
+  'Pilot', 'Tecnom', 'Asofix', 'Google Sheets', 'Otro'
 ] as const;
 
 export const TIPOS_CLIENTE = [

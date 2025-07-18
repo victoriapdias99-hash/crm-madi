@@ -4,6 +4,8 @@
 
 This is a real-time dashboard for Meta Ads lead management with integrated Google Sheets synchronization and direct Meta Ads API integration. The system displays lead generation data from Meta Ads campaigns organized by car brands (Fiat, Peugeot, Toyota, Chevrolet, Renault, Citroen). Features include real-time statistics, automated data synchronization, comprehensive lead tracking, full client management system (ABM), and direct Meta Ads API integration for real-time campaign spending metrics.
 
+This is NOT a language learning platform - it's a business dashboard for automotive lead management in the Spanish market.
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
@@ -66,14 +68,22 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Expansión Sistema Clientes con Targeting Geográfico (Latest - January 17, 2025)
+### Framework de Colores Moderno (Latest - January 18, 2025)
+- **Sistema de Colores Empresarial**: Implementado tema azul vibrante con acentos verdes y naranjas
+- **Efectos Modernos**: Tarjetas elevadas con hover effects, transiciones suaves, gradientes en botones
+- **Componentes Mejorados**: Títulos con gradientes, badges con colores de estado, formularios modernos
+- **Campo Zonas Excluyentes**: Agregado input de texto para exclusiones geográficas en gestión de clientes
+- **Esquema Actualizado**: Campo `zonasExcluyentes` agregado a tabla clientes y formularios
+
+### Expansión Sistema Clientes con Targeting Geográfico (January 17, 2025)
 - **Nuevas Marcas**: Expandido de 6 a 12 marcas disponibles (VW, Mercedes, Ford, Jeep, China, Otra)
-- **Provincias Buenos Aires**: Dropdown completo con todas las provincias de Buenos Aires para targeting localizado
+- **Provincias Buenos Aires**: Dropdown completo con todas las provincias de Buenos Aires para targeting localizado (removido posteriormente)
 - **Exclusiones Geográficas**: Sistema tipo Google Maps para excluir áreas específicas (ciudades, regiones, radios)
 - **Tipo de Cliente**: Categorización comercial (AGENCIA, GRUPO COMERCIAL, COMERCIALIZADORA, VENDEDOR)
-- **Integración**: Campo para tipo de integración (Pilot, Tecnom, Asofix, Otro)
+- **Integración**: Campo para tipo de integración (Pilot, Tecnom, Asofix, Google Sheets, Otro)
 - **Formulario Expandido**: Interface mejorada con componentes modulares y mejor organización visual
 - **Schema Actualizado**: Base de datos extendida con nuevos campos de targeting y comerciales
+- **Corrección Formulario**: Solucionado problema de importación `insertClienteSchema` que impedía crear clientes
 
 ### Sistema de Pruebas Funcionales Automatizadas (January 17, 2025)
 - **Analista Funcional Automatizado**: Implementado sistema de testing completo que verifica cada cambio
