@@ -31,11 +31,11 @@ class ClientMatchingSystem {
       googleSheetsNames: ['chevrolet - italy'],
       matchType: 'exact'
     },
-    // NOVO GROUP
+    // NOVO GROUP (buscar en datos de Fiat)
     {
       clienteNombre: ['novo group'],
-      googleSheetsNames: ['novo group - fiat'],
-      matchType: 'exact'
+      googleSheetsNames: ['fiat autos del sol', 'novo', 'pamela'],
+      matchType: 'contains'
     },
     // RENAULT (múltiples variaciones)
     {
@@ -454,44 +454,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           })));
         }
         
-        // Calcular métricas específicas para esta campaña SECUENCIALMENTE desde fecha inicio
+        // Calcular métricas específicas para esta campaña
         let datosAcumulados = 0;
         let entregadosPorDiaTotal = 0;
         let diasConDatos = 0;
         let fechaFinReal = null;
         
-        // Ordenar datos por fecha para procesar secuencialmente
-        const datosOrdenados = datosParaCampana.sort((a, b) => 
-          new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
-        );
-        
-        // Debug antes del loop
-        if (cliente.nombreCliente === 'GRUPO QUIJADA') {
-          console.log(`    GRUPO QUIJADA processing ${datosOrdenados.length} records...`);
-        }
-        
-        // Procesar día por día hasta alcanzar la cantidad solicitada
-        for (const dato of datosOrdenados) {
-          if (datosAcumulados >= campana.cantidadDatosSolicitados) break;
-          
-          // Debug para ver estructura de datos
-          if (cliente.nombreCliente === 'GRUPO QUIJADA' && diasConDatos === 0) {
-            console.log(`    GRUPO QUIJADA data structure:`, Object.keys(dato));
-            console.log(`    Values: totalLeads=${dato.totalLeads}, cantidad=${dato.cantidad}, enviados=${dato.enviados}, totalLeads=${dato.totalLeads}`);
+        // Los datos de Google Sheets no están organizados por fecha individual
+        // sino que son registros de resumen por campaña/cliente
+        for (const dato of datosParaCampana) {
+          // Debug para clientes específicos
+          if (cliente.nombreCliente.includes('NOVO') || cliente.nombreCliente.includes('RENAULT')) {
+            console.log(`    Processing data for ${cliente.nombreCliente}:`, {
+              cliente: dato.cliente,
+              enviados: dato.enviados,
+              entregadosPorDia: dato.entregadosPorDia
+            });
           }
           
           // Usar la estructura correcta de datos de Google Sheets
           const datosDelDia = dato.enviados || 0;  // Campo principal de datos enviados
           const entregadosDelDia = dato.entregadosPorDia || 0;
           
-          // Solo contar si hay datos ese día
+          // Acumular datos (no es por día sino por registro de campaña)
           if (datosDelDia > 0) {
             datosAcumulados += datosDelDia;
             entregadosPorDiaTotal += entregadosDelDia;
             diasConDatos++;
-            fechaFinReal = dato.fecha; // Última fecha con datos
+            fechaFinReal = new Date().toISOString().split('T')[0]; // Fecha actual como fecha real
             
-            console.log(`  Day ${diasConDatos}: ${dato.fecha} - ${datosDelDia} data, total: ${datosAcumulados}/${campana.cantidadDatosSolicitados}`);
+            console.log(`  Registro ${diasConDatos}: ${datosDelDia} datos enviados, ${entregadosDelDia} entregados/día`);
           }
         }
         
@@ -926,6 +918,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(clientesData);
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch clientes from Google Sheets' });
+    }
+  });
+
+  // Endpoint temporal para debug - ver nombres exactos en datos diarios
+  app.get('/api/debug/sheet-names', async (req, res) => {
+    try {
+      const datosDiarios = await googleSheetsService.getDatosDiariosData();
+      const nombres = datosDiarios.map(d => d.cliente).filter(Boolean);
+      const uniqueNames = [...new Set(nombres)].sort();
+      res.json({
+        total: nombres.length,
+        unique: uniqueNames.length,
+        names: uniqueNames
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to debug sheet names' });
     }
   });
 

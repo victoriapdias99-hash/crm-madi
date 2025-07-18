@@ -255,8 +255,10 @@ export default function CampanasManagement() {
                           type="date"
                           value={field.value}
                           onChange={(e) => {
-                            // Asegurar que la fecha se mantenga exacta sin conversión de timezone
-                            field.onChange(e.target.value);
+                            // Asegurar que la fecha se mantenga exacta
+                            const dateValue = e.target.value;
+                            console.log('Date input value:', dateValue);
+                            field.onChange(dateValue);
                           }}
                         />
                       </FormControl>
