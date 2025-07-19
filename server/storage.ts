@@ -1192,19 +1192,30 @@ export class DatabaseStorage implements IStorage {
 
   async updateVentaPorCampanaByClienteAndCampana(clienteNombre: string, numeroCampana: string, venta: number): Promise<void> {
     const uniqueKey = `${clienteNombre}-${numeroCampana}`;
+    const hashedKey = this.hashString(uniqueKey);
     
-    await db
-      .insert(dashboardManualValues)
-      .values({
-        clienteIndex: this.hashString(uniqueKey),
-        ventaPorCampana: venta
-      })
-      .onConflictDoUpdate({
-        target: dashboardManualValues.clienteIndex,
-        set: { ventaPorCampana: venta }
-      });
-    
-    console.log(`💰 Database: Venta updated for ${clienteNombre} #${numeroCampana}: $${venta}`);
+    try {
+      await db
+        .insert(dashboardManualValues)
+        .values({
+          clienteIndex: hashedKey,
+          ventaPorCampana: venta,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .onConflictDoUpdate({
+          target: dashboardManualValues.clienteIndex,
+          set: { 
+            ventaPorCampana: venta,
+            updatedAt: new Date()
+          }
+        });
+      
+      console.log(`✅ Database: Venta saved for ${clienteNombre} #${numeroCampana}: $${venta} (hash: ${hashedKey})`);
+    } catch (error) {
+      console.error(`❌ Database error saving venta:`, error);
+      throw error;
+    }
   }
 
   async getVentaPorCampanaByClienteAndCampana(clienteNombre: string, numeroCampana: string): Promise<number> {
