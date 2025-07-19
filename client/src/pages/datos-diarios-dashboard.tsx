@@ -43,18 +43,49 @@ export default function DatosDiariosDashboard() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc'); // Por defecto ascendente (menos faltantes primero)
   const [forceShowContent, setForceShowContent] = useState(false);
 
+  const [isManualLoading, setIsManualLoading] = useState(false);
+  const [manualData, setManualData] = useState<DatosDiariosData[] | null>(null);
+  
   const { data: datosDiarios, isLoading, error } = useQuery({
     queryKey: ['/api/dashboard/datos-diarios'],
-    refetchInterval: false,
-    staleTime: 0,
-    retry: 2,
-    refetchOnWindowFocus: false,
-    enabled: true,
+    enabled: !manualData, // Disable if we have manual data
+    retry: 3,
+    retryDelay: 1000,
     refetchOnMount: true,
   });
 
-  console.log('Dashboard loading state:', { isLoading, error, dataLength: datosDiarios?.length });
-  console.log('Query details:', { queryKey: '/api/dashboard/datos-diarios', error: error?.message });
+  // Manual data fetching as fallback
+  const fetchDataManually = async () => {
+    try {
+      setIsManualLoading(true);
+      const response = await fetch('/api/dashboard/datos-diarios', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Manual fetch successful:', data.length, 'records');
+      setManualData(data);
+    } catch (err) {
+      console.error('Manual fetch failed:', err);
+    } finally {
+      setIsManualLoading(false);
+    }
+  };
+
+  // Use manual data if available, otherwise use query data
+  const finalData = manualData || datosDiarios;
+  const finalIsLoading = isManualLoading || (isLoading && !manualData);
+
+  console.log('Dashboard loading state:', { isLoading, error, dataLength: finalData?.length });
+  console.log('Manual data state:', { hasManualData: !!manualData, manualLength: manualData?.length });
   
   // Debug para verificar estado del query
   useEffect(() => {
@@ -283,12 +314,30 @@ export default function DatosDiariosDashboard() {
     });
   };
 
-  if (isLoading && !forceShowContent && !datosDiarios) {
+  // Auto-fetch data on mount if no data is available
+  useEffect(() => {
+    if (!finalData && !finalIsLoading) {
+      fetchDataManually();
+    }
+  }, []);
+
+  if (finalIsLoading && !forceShowContent && !finalData) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <span className="ml-2">Cargando datos diarios... ({datosDiarios?.length || 0} registros)</span>
+        <div className="flex items-center justify-center h-64 space-y-4">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+            <span className="block">Cargando datos diarios... ({finalData?.length || 0} registros)</span>
+            {!finalData && (
+              <button 
+                onClick={fetchDataManually}
+                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                disabled={finalIsLoading}
+              >
+                Cargar datos manualmente
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -358,7 +407,7 @@ export default function DatosDiariosDashboard() {
               </div>
               <span className="text-xl font-bold">Campañas en Proceso</span>
               <Badge variant="secondary" className="bg-white/20 text-white border-white/30 font-bold">
-                {datosDiarios?.filter(data => data.porcentajeDatosEnviados < 100).length || 0} activas
+                {finalData?.filter(data => data.porcentajeDatosEnviados < 100).length || 0} activas
               </Badge>
               <Button
                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
@@ -390,11 +439,11 @@ export default function DatosDiariosDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {datosDiarios?.filter(data => data.porcentajeDatosEnviados < 100)
+                  {finalData?.filter(data => data.porcentajeDatosEnviados < 100)
                     .sort((a, b) => sortOrder === 'asc' ? a.faltantesAEnviar - b.faltantesAEnviar : b.faltantesAEnviar - a.faltantesAEnviar)
                     .map((data: DatosDiariosData, index: number) => {
                     // Usar el índice original de la lista completa para identificar correctamente el registro
-                    const originalIndex = datosDiarios?.findIndex(d => d.cliente === data.cliente && d.numeroCampana === data.numeroCampana) || 0;
+                    const originalIndex = finalData?.findIndex(d => d.cliente === data.cliente && d.numeroCampana === data.numeroCampana) || 0;
                     const uniqueKey = `${data.cliente}-${data.numeroCampana}`;
                     
                     const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0; // Use CPL from storage or server
@@ -547,7 +596,7 @@ export default function DatosDiariosDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {datosDiarios?.filter(data => data.porcentajeDatosEnviados >= 100)
+                  {finalData?.filter(data => data.porcentajeDatosEnviados >= 100)
                     .sort((a, b) => sortOrder === 'asc' ? a.faltantesAEnviar - b.faltantesAEnviar : b.faltantesAEnviar - a.faltantesAEnviar)
                     .map((data: DatosDiariosData, index: number) => {
                     const originalIndex = datosDiarios?.findIndex(d => d.cliente === data.cliente && d.numeroCampana === data.numeroCampana) || 0;
