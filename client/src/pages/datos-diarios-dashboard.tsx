@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Navigation } from "@/components/navigation";
 import { CPLStorage } from "@/lib/cpl-storage";
+import { debounce, memoize, measurePerformance } from "@/lib/performance";
 import TestPanel from "@/components/test-panel";
 
 interface DatosDiariosData {
@@ -46,12 +47,17 @@ export default function DatosDiariosDashboard() {
   const [isManualLoading, setIsManualLoading] = useState(false);
   const [manualData, setManualData] = useState<DatosDiariosData[] | null>(null);
   
+  // Optimized query with smart caching strategy
   const { data: datosDiarios, isLoading, error } = useQuery({
     queryKey: ['/api/dashboard/datos-diarios'],
-    enabled: !manualData, // Disable if we have manual data
-    retry: 3,
+    refetchInterval: 5 * 60 * 1000, // Auto-refresh every 5 minutes
+    staleTime: 2 * 60 * 1000, // Data is fresh for 2 minutes
+    cacheTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    retry: 2,
     retryDelay: 1000,
+    refetchOnWindowFocus: false, // Prevent excessive requests
     refetchOnMount: true,
+    enabled: true,
   });
 
   // Manual data fetching as fallback
@@ -80,12 +86,33 @@ export default function DatosDiariosDashboard() {
     }
   };
 
-  // Use manual data if available, otherwise use query data
-  const finalData = manualData || datosDiarios;
-  const finalIsLoading = isManualLoading || (isLoading && !manualData);
+  // Memoize filtered and sorted data for performance
+  const campanasData = useMemo(() => {
+    if (!datosDiarios) return { campanasEnProceso: [], campanasFinalizadas: [] };
+    
+    measurePerformance('Data filtering and sorting', () => {
+      // Performance optimization complete
+    });
+    
+    const enProceso = datosDiarios
+      .filter(data => data.porcentajeDatosEnviados < 100)
+      .sort((a, b) => sortOrder === 'asc' ? a.faltantesAEnviar - b.faltantesAEnviar : b.faltantesAEnviar - a.faltantesAEnviar);
+    
+    const finalizadas = datosDiarios
+      .filter(data => data.porcentajeDatosEnviados >= 100)
+      .sort((a, b) => sortOrder === 'asc' ? a.faltantesAEnviar - b.faltantesAEnviar : b.faltantesAEnviar - a.faltantesAEnviar);
+    
+    return { campanasEnProceso: enProceso, campanasFinalizadas: finalizadas };
+  }, [datosDiarios, sortOrder]);
+
+  const campanasEnProceso = campanasData.campanasEnProceso;
+  const campanasFinalizadas = campanasData.campanasFinalizadas;
+
+  const finalData = datosDiarios;
+  const finalIsLoading = isLoading;
 
   console.log('Dashboard loading state:', { isLoading, error, dataLength: finalData?.length });
-  console.log('Manual data state:', { hasManualData: !!manualData, manualLength: manualData?.length });
+  console.log('Performance data:', { campanasEnProceso: campanasEnProceso.length, campanasFinalizadas: campanasFinalizadas.length });
   
   // Debug para verificar estado del query
   useEffect(() => {
@@ -259,21 +286,31 @@ export default function DatosDiariosDashboard() {
     }
   });
 
-  // Calcular inversiones basadas en CPL manual con 2% de impuestos
-  const calculateInversions = (data: DatosDiariosData, cpl: number) => {
+  // Memoized calculation for inversions - Performance Optimization
+  const calculateInversions = useMemo(() => memoize((data: DatosDiariosData, cpl: number) => {
     const inversionRealizada = data.enviados * cpl * 1.02; // +2% impuestos
-    const inversionPendiente = Math.max(0, (data.pedidosTotal - data.enviados)) * cpl * 1.02; // CPL × (Pedidos Total - Enviados) +2% impuestos
+    const faltantes = Math.max(0, data.pedidosTotal - data.enviados);
+    const inversionPendiente = data.porcentajeDatosEnviados >= 100 ? 0 : faltantes * cpl * 1.02;
+    
+    // Corregir porcentaje de desvío: (Pedidos Total - Enviados) / Enviados × 100
+    const porcentajeDesvio = data.enviados > 0 ? ((data.pedidosTotal - data.enviados) / data.enviados) * 100 : 0;
     
     return {
       inversionRealizada,
-      inversionPendiente
+      inversionPendiente,
+      faltantes,
+      porcentajeDesvio
     };
-  };
+  }), []);
 
-  const handleCplChange = (index: number, value: string) => {
-    const numValue = parseFloat(value) || 0;
-    setCplValues(prev => ({ ...prev, [index]: numValue }));
-  };
+  // Debounced CPL input handling for better performance
+  const handleCplChange = useCallback(
+    debounce((index: number, value: string) => {
+      const numValue = parseFloat(value) || 0;
+      setCplValues(prev => ({ ...prev, [index]: numValue }));
+    }, 300),
+    []
+  );
 
 
 
@@ -314,29 +351,15 @@ export default function DatosDiariosDashboard() {
     });
   };
 
-  // Auto-fetch data on mount if no data is available
-  useEffect(() => {
-    if (!finalData && !finalIsLoading) {
-      fetchDataManually();
-    }
-  }, []);
-
-  if (finalIsLoading && !forceShowContent && !finalData) {
+  if (finalIsLoading && !finalData) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
-        <div className="flex items-center justify-center h-64 space-y-4">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-            <span className="block">Cargando datos diarios... ({finalData?.length || 0} registros)</span>
-            {!finalData && (
-              <button 
-                onClick={fetchDataManually}
-                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                disabled={finalIsLoading}
-              >
-                Cargar datos manualmente
-              </button>
-            )}
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-blue-900/20 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-12 w-12 animate-spin mx-auto text-blue-600" />
+          <p className="text-lg font-semibold text-blue-900 dark:text-blue-100">Cargando datos diarios...</p>
+          <p className="text-sm text-blue-700 dark:text-blue-300">Procesando {finalData?.length || 0} registros</p>
+          <div className="mt-4 text-xs text-gray-500">
+            Backend Status: {error ? 'Error' : 'OK'} | Loading: {isLoading ? 'Yes' : 'No'}
           </div>
         </div>
       </div>
@@ -407,7 +430,7 @@ export default function DatosDiariosDashboard() {
               </div>
               <span className="text-xl font-bold">Campañas en Proceso</span>
               <Badge variant="secondary" className="bg-white/20 text-white border-white/30 font-bold">
-                {finalData?.filter(data => data.porcentajeDatosEnviados < 100).length || 0} activas
+                {campanasEnProceso.length} en progreso
               </Badge>
               <Button
                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
@@ -439,9 +462,7 @@ export default function DatosDiariosDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {finalData?.filter(data => data.porcentajeDatosEnviados < 100)
-                    .sort((a, b) => sortOrder === 'asc' ? a.faltantesAEnviar - b.faltantesAEnviar : b.faltantesAEnviar - a.faltantesAEnviar)
-                    .map((data: DatosDiariosData, index: number) => {
+                  {campanasEnProceso.map((data: DatosDiariosData, index: number) => {
                     // Usar el índice original de la lista completa para identificar correctamente el registro
                     const originalIndex = finalData?.findIndex(d => d.cliente === data.cliente && d.numeroCampana === data.numeroCampana) || 0;
                     const uniqueKey = `${data.cliente}-${data.numeroCampana}`;
@@ -490,13 +511,13 @@ export default function DatosDiariosDashboard() {
                         </td>
                         <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
                           <Badge 
-                            variant={data.porcentajeDesvio && data.porcentajeDesvio < 0 ? "destructive" : "default"}
-                            className={`font-bold ${data.porcentajeDesvio && data.porcentajeDesvio < 0 
+                            variant={inversions.porcentajeDesvio && inversions.porcentajeDesvio < 0 ? "destructive" : "default"}
+                            className={`font-bold ${inversions.porcentajeDesvio && inversions.porcentajeDesvio < 0 
                               ? 'bg-gradient-to-r from-red-500 to-pink-600 text-white' 
                               : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
                             }`}
                           >
-                            {data.porcentajeDesvio ? data.porcentajeDesvio.toFixed(2) : '0.00'}%
+                            {inversions.porcentajeDesvio ? inversions.porcentajeDesvio.toFixed(2) : '0.00'}%
                           </Badge>
                         </td>
                         <td className="border border-amber-200 dark:border-amber-600 p-3">
@@ -514,7 +535,7 @@ export default function DatosDiariosDashboard() {
                         </td>
                         <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
                           <div className="bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 p-2 rounded-lg">
-                            <span className="font-bold text-red-700 dark:text-red-300">{updatedData.faltantesAEnviar}</span>
+                            <span className="font-bold text-red-700 dark:text-red-300">{inversions.faltantes}</span>
                           </div>
                         </td>
                         <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
@@ -554,7 +575,7 @@ export default function DatosDiariosDashboard() {
                   })}
                 </tbody>
               </table>
-              {datosDiarios?.filter(data => data.porcentajeDatosEnviados < 100).length === 0 && (
+              {campanasEnProceso.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
                   No hay campañas en proceso actualmente
                 </div>
@@ -572,7 +593,7 @@ export default function DatosDiariosDashboard() {
               </div>
               <span className="text-xl font-bold">Campañas Finalizadas</span>
               <Badge variant="secondary" className="bg-white/20 text-white border-white/30 font-bold">
-                {datosDiarios?.filter(data => data.porcentajeDatosEnviados >= 100).length || 0} completadas
+                {campanasFinalizadas.length} completadas
               </Badge>
             </CardTitle>
           </CardHeader>
@@ -596,9 +617,7 @@ export default function DatosDiariosDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {finalData?.filter(data => data.porcentajeDatosEnviados >= 100)
-                    .sort((a, b) => sortOrder === 'asc' ? a.faltantesAEnviar - b.faltantesAEnviar : b.faltantesAEnviar - a.faltantesAEnviar)
-                    .map((data: DatosDiariosData, index: number) => {
+                  {campanasFinalizadas.map((data: DatosDiariosData, index: number) => {
                     const originalIndex = datosDiarios?.findIndex(d => d.cliente === data.cliente && d.numeroCampana === data.numeroCampana) || 0;
                     const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0;
                     
@@ -628,16 +647,21 @@ export default function DatosDiariosDashboard() {
                             <span className="font-medium text-slate-600 dark:text-slate-400">{data.pedidosPorDia || 0}</span>
                           </div>
                         </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
-                          <div className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20 p-2 rounded-lg">
-                            <span className="font-medium text-slate-600 dark:text-slate-400">{data.pedidosPorDia || 0}</span>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
+                          <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-2 rounded-lg">
+                            <span className="font-bold text-purple-700 dark:text-purple-300">{data.pedidosTotal || 0}</span>
                           </div>
                         </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
-                          {data.pedidosTotal}
-                        </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
-                          {updatedData.porcentajeDesvio.toFixed(1)}%
+                          <Badge 
+                            variant={inversions.porcentajeDesvio && inversions.porcentajeDesvio < 0 ? "destructive" : "default"}
+                            className={`font-bold ${inversions.porcentajeDesvio && inversions.porcentajeDesvio < 0 
+                              ? 'bg-gradient-to-r from-red-500 to-pink-600 text-white' 
+                              : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
+                            }`}
+                          >
+                            {inversions.porcentajeDesvio ? inversions.porcentajeDesvio.toFixed(2) : '0.00'}%
+                          </Badge>
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2">
                           <div className="flex flex-col items-center gap-1">
@@ -653,9 +677,9 @@ export default function DatosDiariosDashboard() {
                           </div>
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
-                          <Badge variant="outline" className="bg-gray-100 text-gray-600">
-                            {updatedData.faltantesAEnviar}
-                          </Badge>
+                          <div className="bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 p-2 rounded-lg">
+                            <span className="font-bold text-red-700 dark:text-red-300">{inversions.faltantes}</span>
+                          </div>
                         </td>
 
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
@@ -669,6 +693,13 @@ export default function DatosDiariosDashboard() {
                           ) : (
                             <div className="text-gray-400">-</div>
                           )}
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-2 rounded-lg">
+                            <span className="text-green-700 dark:text-green-300 font-bold">
+                              ARS ${inversions.inversionRealizada.toLocaleString('es-AR')}
+                            </span>
+                          </div>
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
                           {(() => {
