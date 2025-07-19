@@ -843,39 +843,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { clienteIndex, venta, clienteNombre, numeroCampana } = req.body;
       
-      // Validar entrada: necesitamos venta y al menos uno de los identificadores
-      if (typeof venta !== 'number') {
-        return res.status(400).json({ error: 'Invalid venta value' });
+      console.log('💰 Update venta request:', { clienteIndex, venta, clienteNombre, numeroCampana, ventaType: typeof venta });
+      
+      // Validación robusta de venta
+      const ventaNum = parseFloat(venta);
+      if (isNaN(ventaNum) || ventaNum <= 0) {
+        console.error('❌ Invalid venta value:', venta);
+        return res.status(400).json({ error: 'Venta must be a positive number' });
       }
 
       // Priorizar identificación por clienteNombre y numeroCampana (más preciso)
       if (clienteNombre && numeroCampana) {
-        await storage.updateVentaPorCampanaByClienteAndCampana(clienteNombre, numeroCampana, venta);
-        console.log(`💰 Venta actualizada: ${clienteNombre} campaña ${numeroCampana} = $${venta}`);
-        
-        res.json({ 
-          success: true, 
-          message: `Venta por campaña actualizada para ${clienteNombre} campaña ${numeroCampana}`,
-          venta: parseFloat(venta),
-          clienteNombre,
-          numeroCampana
-        });
+        try {
+          await storage.updateVentaPorCampanaByClienteAndCampana(
+            clienteNombre.toString(), 
+            numeroCampana.toString(), 
+            ventaNum
+          );
+          console.log(`✅ Venta actualizada: ${clienteNombre} campaña ${numeroCampana} = $${ventaNum}`);
+          
+          res.json({ 
+            success: true, 
+            message: `Venta actualizada: $${ventaNum.toLocaleString('es-AR')}`,
+            venta: ventaNum,
+            clienteNombre,
+            numeroCampana
+          });
+        } catch (storageError) {
+          console.error('❌ Storage error:', storageError);
+          throw storageError;
+        }
       } else if (typeof clienteIndex === 'number') {
         // Fallback al método anterior si solo se envía índice
-        await storage.updateVentaPorCampana(clienteIndex, venta);
-        console.log(`💰 Venta actualizada por índice ${clienteIndex} = $${venta}`);
+        await storage.updateVentaPorCampana(clienteIndex, ventaNum);
+        console.log(`✅ Venta actualizada por índice ${clienteIndex} = $${ventaNum}`);
         
         res.json({ 
           success: true, 
-          message: `Venta por campaña actualizada para cliente ${clienteIndex}`,
-          venta: parseFloat(venta)
+          message: `Venta actualizada: $${ventaNum.toLocaleString('es-AR')}`,
+          venta: ventaNum
         });
       } else {
-        res.status(400).json({ error: 'Must provide either clienteIndex or clienteNombre+numeroCampana' });
+        console.error('❌ Missing required parameters');
+        res.status(400).json({ error: 'Debe proporcionar clienteNombre+numeroCampana o clienteIndex' });
       }
     } catch (error) {
-      console.error('Error updating venta por campaña:', error);
-      res.status(500).json({ error: 'Failed to update venta por campaña' });
+      console.error('❌ Error updating venta por campaña:', error);
+      res.status(500).json({ 
+        error: 'Error al actualizar venta por campaña', 
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 

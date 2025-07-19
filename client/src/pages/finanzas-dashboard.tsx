@@ -92,23 +92,34 @@ export default function FinanzasDashboard() {
 
   const handleSaveVenta = (index: number, clienteNombre?: string, numeroCampana?: number) => {
     const venta = ventaValues[index];
-    if (venta && venta > 0) {
-      // Guardar inmediatamente sin validaciones adicionales
-      console.log(`💰 Guardando venta: ${clienteNombre} #${numeroCampana} = $${venta}`);
-      
-      updateVentaMutation.mutate({ 
-        clienteIndex: index, 
-        venta, 
-        clienteNombre, 
-        numeroCampana 
-      });
-    } else {
+    
+    // Validación más robusta
+    if (!venta || isNaN(venta) || venta <= 0) {
       toast({
         title: "Valor Inválido",
-        description: "Ingrese un valor de venta mayor a 0",
+        description: "Ingrese un valor de venta numérico mayor a 0",
         variant: "destructive",
       });
+      return;
     }
+
+    if (!clienteNombre || !numeroCampana) {
+      toast({
+        title: "Error de Datos",
+        description: "Faltan datos de cliente o campaña",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log(`💰 Guardando venta: ${clienteNombre} #${numeroCampana} = $${venta}`);
+    
+    updateVentaMutation.mutate({ 
+      clienteIndex: index, 
+      venta: parseFloat(venta.toString()), 
+      clienteNombre, 
+      numeroCampana: numeroCampana.toString()
+    });
   };
 
   // Calcular métricas financieras
