@@ -38,17 +38,22 @@ export default function DatosDiariosDashboard() {
   const [cplValues, setCplValues] = useState<Record<number, number>>({});
   const [pedidosPorDiaValues, setPedidosPorDiaValues] = useState<Record<number, number>>({});
 
-  const { data: datosDiarios, isLoading } = useQuery({
+  const { data: datosDiarios, isLoading, error } = useQuery({
     queryKey: ['/api/dashboard/datos-diarios'],
     refetchInterval: 300000, // Refrescar cada 5 minutos
     staleTime: 60000, // Data remains fresh for 1 minute
     retry: 2, // Retry failed requests up to 2 times
+    refetchOnWindowFocus: false, // Disable refetch on window focus
   });
 
-  // Obtener datos de Meta Ads para CPL Real
+  console.log('Dashboard loading state:', { isLoading, error, dataLength: datosDiarios?.length });
+
+  // Obtener datos de Meta Ads para CPL Real (con manejo de errores)
   const { data: metaCampaigns } = useQuery({
     queryKey: ['/api/meta-ads/campaigns'],
     refetchInterval: 300000, // Refetch every 5 minutes
+    retry: false, // No retry Meta Ads if it fails
+    enabled: false, // Disable Meta Ads query temporarily
   });
 
   const updateCplMutation = useMutation({
