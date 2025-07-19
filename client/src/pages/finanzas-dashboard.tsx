@@ -46,8 +46,18 @@ export default function FinanzasDashboard() {
   });
 
   const updateVentaMutation = useMutation({
-    mutationFn: async ({ clienteIndex, venta }: { clienteIndex: number; venta: number }) => {
-      await apiRequest('POST', '/api/dashboard/update-venta', { clienteIndex, venta });
+    mutationFn: async ({ clienteIndex, venta, clienteNombre, numeroCampana }: { 
+      clienteIndex?: number; 
+      venta: number; 
+      clienteNombre?: string; 
+      numeroCampana?: number; 
+    }) => {
+      await apiRequest('POST', '/api/dashboard/update-venta', { 
+        clienteIndex, 
+        venta, 
+        clienteNombre, 
+        numeroCampana 
+      });
     },
     onSuccess: () => {
       toast({
@@ -70,10 +80,15 @@ export default function FinanzasDashboard() {
     setVentaValues(prev => ({ ...prev, [index]: numValue }));
   };
 
-  const handleSaveVenta = (index: number) => {
+  const handleSaveVenta = (index: number, clienteNombre?: string, numeroCampana?: number) => {
     const venta = ventaValues[index];
     if (venta && venta > 0) {
-      updateVentaMutation.mutate({ clienteIndex: index, venta });
+      updateVentaMutation.mutate({ 
+        clienteIndex: index, 
+        venta, 
+        clienteNombre, 
+        numeroCampana 
+      });
       setVentaValues(prev => {
         const newValues = { ...prev };
         delete newValues[index];
@@ -292,7 +307,7 @@ export default function FinanzasDashboard() {
                           />
                           <Button
                             size="sm"
-                            onClick={() => handleSaveVenta(index)}
+                            onClick={() => handleSaveVenta(index, data.clienteNombre, data.numeroCampana)}
                             disabled={!ventaValues[index] || updateVentaMutation.isPending}
                             variant="outline"
                           >
