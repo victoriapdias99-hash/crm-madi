@@ -47,10 +47,13 @@ export interface IStorage {
   updateCpl(clienteIndex: number, cpl: number): Promise<void>;
   getCpl(clienteIndex: number): Promise<number>;
   updateCplByClienteAndCampana(clienteNombre: string, numeroCampana: string, cpl: number): Promise<void>;
+  getCplByClienteAndCampana(clienteNombre: string, numeroCampana: string): Promise<number>;
   updateVentaPorCampana(clienteIndex: number, venta: number): Promise<void>;
   getVentaPorCampana(clienteIndex: number): Promise<number>;
+  getVentaPorCampanaByClienteAndCampana(clienteNombre: string, numeroCampana: string): Promise<number>;
   updatePedidosPorDia(clienteIndex: number, pedidos: number): Promise<void>;
   getPedidosPorDia(clienteIndex: number): Promise<number>;
+  getPedidosPorDiaByClienteAndCampana(clienteNombre: string, numeroCampana: string): Promise<number>;
 
   // Cliente operations
   getCliente(id: number): Promise<Cliente | undefined>;
@@ -81,7 +84,9 @@ export class MemStorage implements IStorage {
   private cplValues: Map<number, number>;
   private cplValuesByClienteCampana: Map<string, number>;
   private ventaPorCampanaValues: Map<number, number>;
+  private ventaValuesByClienteCampana: Map<string, number>;
   private pedidosPorDiaValues: Map<number, number>;
+  private pedidosValuesByClienteCampana: Map<string, number>;
   
   private currentUserId: number;
   private currentCampaignId: number;
@@ -104,7 +109,9 @@ export class MemStorage implements IStorage {
     this.cplValues = new Map();
     this.cplValuesByClienteCampana = new Map();
     this.ventaPorCampanaValues = new Map();
+    this.ventaValuesByClienteCampana = new Map();
     this.pedidosPorDiaValues = new Map();
+    this.pedidosValuesByClienteCampana = new Map();
     
     this.currentUserId = 1;
     this.currentCampaignId = 1;
@@ -623,12 +630,38 @@ export class MemStorage implements IStorage {
     
     // Usar un mapa específico para claves de cliente-campaña
     if (!this.cplValuesByClienteCampana) {
-      this.cplValuesByClienteCampana = new Map<string, number>();
+      this.cplValuesByClienteCampana = new Map();
     }
     
     this.cplValuesByClienteCampana.set(uniqueKey, cpl);
-    
     console.log(`CPL updated for client ${clienteNombre} campaign ${numeroCampana}: ${cpl}`);
+  }
+
+  async getCplByClienteAndCampana(clienteNombre: string, numeroCampana: string): Promise<number> {
+    if (!this.cplValuesByClienteCampana) {
+      this.cplValuesByClienteCampana = new Map();
+    }
+    
+    const uniqueKey = `${clienteNombre}-${numeroCampana}`;
+    return this.cplValuesByClienteCampana.get(uniqueKey) || 0;
+  }
+
+  async getVentaPorCampanaByClienteAndCampana(clienteNombre: string, numeroCampana: string): Promise<number> {
+    if (!this.ventaValuesByClienteCampana) {
+      this.ventaValuesByClienteCampana = new Map();
+    }
+    
+    const uniqueKey = `${clienteNombre}-${numeroCampana}`;
+    return this.ventaValuesByClienteCampana.get(uniqueKey) || 0;
+  }
+
+  async getPedidosPorDiaByClienteAndCampana(clienteNombre: string, numeroCampana: string): Promise<number> {
+    if (!this.pedidosValuesByClienteCampana) {
+      this.pedidosValuesByClienteCampana = new Map();
+    }
+    
+    const uniqueKey = `${clienteNombre}-${numeroCampana}`;
+    return this.pedidosValuesByClienteCampana.get(uniqueKey) || 0;
   }
 
 
@@ -1134,6 +1167,33 @@ export class DatabaseStorage implements IStorage {
       .select({ pedidosPorDia: dashboardManualValues.pedidosPorDia })
       .from(dashboardManualValues)
       .where(eq(dashboardManualValues.clienteIndex, clienteIndex));
+    return result?.pedidosPorDia || 0;
+  }
+
+  async getCplByClienteAndCampana(clienteNombre: string, numeroCampana: string): Promise<number> {
+    const uniqueKey = `${clienteNombre}-${numeroCampana}`;
+    const [result] = await db
+      .select({ cpl: dashboardManualValues.cpl })
+      .from(dashboardManualValues)
+      .where(eq(dashboardManualValues.clienteIndex, this.hashString(uniqueKey)));
+    return result?.cpl || 0;
+  }
+
+  async getVentaPorCampanaByClienteAndCampana(clienteNombre: string, numeroCampana: string): Promise<number> {
+    const uniqueKey = `${clienteNombre}-${numeroCampana}`;
+    const [result] = await db
+      .select({ ventaPorCampana: dashboardManualValues.ventaPorCampana })
+      .from(dashboardManualValues)
+      .where(eq(dashboardManualValues.clienteIndex, this.hashString(uniqueKey)));
+    return result?.ventaPorCampana || 0;
+  }
+
+  async getPedidosPorDiaByClienteAndCampana(clienteNombre: string, numeroCampana: string): Promise<number> {
+    const uniqueKey = `${clienteNombre}-${numeroCampana}`;
+    const [result] = await db
+      .select({ pedidosPorDia: dashboardManualValues.pedidosPorDia })
+      .from(dashboardManualValues)
+      .where(eq(dashboardManualValues.clienteIndex, this.hashString(uniqueKey)));
     return result?.pedidosPorDia || 0;
   }
 

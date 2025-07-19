@@ -501,11 +501,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const faltantesAEnviar = Math.max(0, campana.cantidadDatosSolicitados - datosFinales); // Pedidos Total - Enviados
         const entregadosPorDiaPromedio = diasConDatos > 0 ? Math.round(entregadosPorDiaTotal / diasConDatos) : 0;
         
-        // Obtener valores almacenados en memoria para esta campaña específica
-        const campanIndex = campanasComerciales.findIndex(c => c.id === campana.id);
-        const storedCpl = await storage.getCpl(campanIndex);
-        const storedVenta = await storage.getVentaPorCampana(campanIndex);
-        const storedPedidos = await storage.getPedidosPorDia(campanIndex);
+        // Obtener valores almacenados para esta campaña específica usando clienteNombre y numeroCampana
+        const storedCpl = await storage.getCplByClienteAndCampana(cliente.nombreCliente, campana.numeroCampana);
+        const storedVenta = await storage.getVentaPorCampanaByClienteAndCampana(cliente.nombreCliente, campana.numeroCampana);
+        const storedPedidos = await storage.getPedidosPorDiaByClienteAndCampana(cliente.nombreCliente, campana.numeroCampana);
         
         // Corregir el cálculo de pedidos total y % desvío
         const pedidosTotal = campana.cantidadDatosSolicitados; // Cantidad total pedida de la campaña

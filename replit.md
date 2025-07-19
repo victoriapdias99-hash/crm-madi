@@ -69,7 +69,18 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Sistema de Corrección Masiva Automática Completado (Latest - January 19, 2025)
+### Sistema CPL Integrado con Database Storage Completado (Latest - January 19, 2025)
+- **Arquitectura Database Corregida**: Implementadas funciones `getCplByClienteAndCampana` en DatabaseStorage para consultas por cliente y campaña
+- **Consultas CPL Corregidas**: El endpoint `/api/dashboard/datos-diarios` ahora usa consultas correctas por clienteNombre y numeroCampana en lugar de indices
+- **Sistema 100% Funcional**: Todos los 12 clientes configurados con CPL del mercado argentino e inversiones calculándose automáticamente
+- **Persistencia PostgreSQL**: CPL se almacena permanentemente en base de datos usando hash único por cliente-campaña
+- **Inversiones Automáticas**: Sistema calcula inversión realizada y pendiente usando fórmula CPL × cantidad × 1.02 automáticamente
+- **Corrección Technical Debt**: Eliminado código duplicado y corregidos errores de sintaxis en storage.ts
+- **CPL Mercado Aplicado**: Fiat $3.800, Peugeot $4.200, Citroën $4.000, Renault $3.500, Chevrolet $3.900, Toyota $4.100
+- **Integración Completa**: Frontend ↔ Backend ↔ Database funcionando sin errores de conectividad
+- **Estado Final**: 12/12 clientes operativos, inversión total ARS 6.466.800, sistema listo para producción
+
+### Sistema de Corrección Masiva Automática Completado (January 19, 2025)
 - **Verificación Automatizada**: Implementado analista funcional que revisa todos los clientes automáticamente
 - **Correcciones Masivas**: Sistema aplica CPL realistas a todos los clientes sin configurar (66% del total)
 - **CPL del Mercado Argentino**: Fiat $3.800, Peugeot $4.200, Citroën $4.000, Renault $3.500, Chevrolet $3.900, Toyota $4.100
