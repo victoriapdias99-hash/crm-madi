@@ -86,15 +86,33 @@ export default function FinanzasDashboard() {
   });
 
   const handleVentaChange = (index: number, value: string) => {
-    const numValue = parseFloat(value) || 0;
-    setVentaValues(prev => ({ ...prev, [index]: numValue }));
+    // Permitir valores vacíos y números válidos
+    if (value === '') {
+      setVentaValues(prev => ({ ...prev, [index]: '' as any }));
+    } else {
+      const numValue = parseFloat(value);
+      if (!isNaN(numValue) && numValue >= 0) {
+        setVentaValues(prev => ({ ...prev, [index]: numValue }));
+      }
+    }
   };
 
   const handleSaveVenta = (index: number, clienteNombre?: string, numeroCampana?: number) => {
     const venta = ventaValues[index];
     
     // Validación más robusta
-    if (!venta || isNaN(venta) || venta <= 0) {
+    if (venta === '' || venta === undefined || venta === null) {
+      toast({
+        title: "Campo Vacío",
+        description: "Ingrese un valor de venta antes de guardar",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const ventaNum = typeof venta === 'string' ? parseFloat(venta) : venta;
+    
+    if (isNaN(ventaNum) || ventaNum <= 0) {
       toast({
         title: "Valor Inválido",
         description: "Ingrese un valor de venta numérico mayor a 0",
@@ -112,11 +130,11 @@ export default function FinanzasDashboard() {
       return;
     }
 
-    console.log(`💰 Guardando venta: ${clienteNombre} #${numeroCampana} = $${venta}`);
+    console.log(`💰 Guardando venta: ${clienteNombre} #${numeroCampana} = $${ventaNum}`);
     
     updateVentaMutation.mutate({ 
       clienteIndex: index, 
-      venta: parseFloat(venta.toString()), 
+      venta: ventaNum, 
       clienteNombre, 
       numeroCampana: numeroCampana.toString()
     });
@@ -323,12 +341,12 @@ export default function FinanzasDashboard() {
                         <div className="flex gap-2 items-center justify-center">
                           <Input
                             type="number"
-                            placeholder="Venta"
-                            value={ventaValues[index] || data.ventaPorCampana || ''}
+                            placeholder="0"
+                            value={ventaValues[index] !== undefined ? ventaValues[index] : (data.ventaPorCampana > 0 ? data.ventaPorCampana : "")}
                             onChange={(e) => handleVentaChange(index, e.target.value)}
                             className="w-24 text-center"
                             min="0"
-                            step="0.01"
+                            step="1000"
                           />
                           <Button
                             size="sm"
