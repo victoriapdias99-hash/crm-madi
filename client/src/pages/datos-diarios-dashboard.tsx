@@ -389,7 +389,6 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Real (Meta Ads)</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Realizada (con impuestos)</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Pendiente (con impuestos)</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Total (con impuestos)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -541,7 +540,6 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Real (Meta Ads)</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Realizada (con impuestos)</th>
                     <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Pendiente (con impuestos)</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Total (con impuestos)</th>
                   </tr>
                 </thead>
                 <tbody>

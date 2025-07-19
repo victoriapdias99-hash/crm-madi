@@ -205,8 +205,8 @@ class GoogleSheetsService {
           // Inicializar enviados con el valor estándar
           let enviados = sumaDias > 0 ? sumaDias : enviadosFromColumn;
           
-          // Para AVEC, usar datos reales basados en marca + zona específica
-          if (cliente.toLowerCase().includes('avec')) {
+          // Para AVEC/GRUPO QUIJADA, usar datos reales basados en marca + zona específica
+          if (cliente.toLowerCase().includes('avec') || cliente.toLowerCase().includes('grupo quijada')) {
             console.log(`AVEC/GRUPO QUIJADA debug para cliente "${cliente}":`, {
               enviadosFromColumn,
               sumaDias,

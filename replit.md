@@ -69,7 +69,17 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Campo CPL Real con Meta Ads Implementado Completamente (Latest - January 19, 2025)
+### Corrección Filtrado por Marca + Cliente + Provincia (Latest - January 19, 2025)
+- **Filtrado Corregido**: Sistema ahora filtra correctamente por marca + cliente + provincia específica
+- **Citroën AMBA Corregido**: Ahora muestra exactamente 15 datos enviados (no 65 acumulados)
+- **Peugeot Córdoba Mejorado**: Usa datos reales específicos por localidad de la hoja
+- **Columna Eliminada**: Removida "Inversión Total con impuestos" de ambas tablas del dashboard
+- **Lógica AVEC Expandida**: Incluye tanto "AVEC" como "GRUPO QUIJADA" para mejor matching
+- **Inversiones Corregidas**: Campañas completadas muestran inversión realizada correcta y pendiente = 0
+- **Error JavaScript Solucionado**: Arreglado error toLocaleString que impedía cargar dashboard
+- **Datos Auténticos**: Sistema respeta valores exactos de Google Sheets por zona específica
+
+### Campo CPL Real con Meta Ads Implementado Completamente (January 19, 2025)
 - **Nueva Columna CPL Real**: Agregado campo que calcula CPL real usando datos de Meta Ads
 - **Fórmula CPL Real**: Gasto Meta Ads ÷ Cantidad de datos enviados = CPL Real por campaña
 - **Integración Meta Ads**: Conecta campañas por marca (Fiat, Peugeot, Toyota, Chevrolet, Renault, Citroën)
