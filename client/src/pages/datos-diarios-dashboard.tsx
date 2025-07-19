@@ -45,14 +45,16 @@ export default function DatosDiariosDashboard() {
 
   const { data: datosDiarios, isLoading, error } = useQuery({
     queryKey: ['/api/dashboard/datos-diarios'],
-    refetchInterval: 300000, // Refrescar cada 5 minutos
-    staleTime: 10000, // Data remains fresh for 10 seconds
-    retry: 1, // Retry failed requests up to 1 time
-    refetchOnWindowFocus: false, // Disable refetch on window focus
-    gcTime: 5 * 60 * 1000, // Cache for 5 minutes
+    refetchInterval: false,
+    staleTime: 0,
+    retry: 2,
+    refetchOnWindowFocus: false,
+    enabled: true,
+    refetchOnMount: true,
   });
 
   console.log('Dashboard loading state:', { isLoading, error, dataLength: datosDiarios?.length });
+  console.log('Query details:', { queryKey: '/api/dashboard/datos-diarios', error: error?.message });
   
   // Debug para verificar estado del query
   useEffect(() => {
