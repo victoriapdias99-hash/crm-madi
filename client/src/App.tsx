@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 
 import DatosDiariosDashboard from "@/pages/datos-diarios-dashboard";
+import DashboardSimple from "@/pages/dashboard-simple";
 import DatosDiariosMatching from "@/pages/datos-diarios-matching";
 import Login from "@/pages/login";
 import LeadDetails from "@/pages/lead-details";
@@ -22,9 +23,10 @@ import CPLDirecto from "@/pages/cpl-directo";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={DatosDiariosDashboard} />
-      <Route path="/datos-diarios" component={DatosDiariosDashboard} />
+      <Route path="/" component={DashboardSimple} />
+      <Route path="/datos-diarios" component={DashboardSimple} />
       <Route path="/datos-diarios-dashboard" component={DatosDiariosDashboard} />
+      <Route path="/simple" component={DashboardSimple} />
 
       <Route path="/matching" component={DatosDiariosMatching} />
       <Route path="/clientes" component={ClientesManagement} />
