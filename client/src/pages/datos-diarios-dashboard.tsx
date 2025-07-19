@@ -41,6 +41,7 @@ export default function DatosDiariosDashboard() {
   const queryClient = useQueryClient();
   const [cplValues, setCplValues] = useState<Record<number, number>>({});
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc'); // Por defecto ascendente (menos faltantes primero)
+  const [forceShowContent, setForceShowContent] = useState(false);
 
   const { data: datosDiarios, isLoading, error } = useQuery({
     queryKey: ['/api/dashboard/datos-diarios'],
@@ -62,6 +63,15 @@ export default function DatosDiariosDashboard() {
       errorMessage: error?.message 
     });
   }, [isLoading, datosDiarios, error]);
+
+  // Forzar mostrar contenido después de 8 segundos
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setForceShowContent(true);
+    }, 8000);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   // Obtener datos de Meta Ads para CPL Real (con manejo de errores)
   const { data: metaCampaigns } = useQuery({
@@ -236,7 +246,7 @@ export default function DatosDiariosDashboard() {
 
   const handleSaveCpl = (index: number) => {
     const cpl = cplValues[index];
-    const data = datosDiarios?.data?.[index];
+    const data = datosDiarios?.[index];
     
     console.log('Attempting to save CPL:', { index, cpl, data });
     if (cpl && cpl > 0 && data) {
@@ -271,12 +281,12 @@ export default function DatosDiariosDashboard() {
     });
   };
 
-  if (isLoading) {
+  if (isLoading && !forceShowContent && !datosDiarios) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
         <div className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin" />
-          <span className="ml-2">Cargando datos diarios...</span>
+          <span className="ml-2">Cargando datos diarios... ({datosDiarios?.length || 0} registros)</span>
         </div>
       </div>
     );
