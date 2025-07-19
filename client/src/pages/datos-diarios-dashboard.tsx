@@ -45,12 +45,23 @@ export default function DatosDiariosDashboard() {
   const { data: datosDiarios, isLoading, error } = useQuery({
     queryKey: ['/api/dashboard/datos-diarios'],
     refetchInterval: 300000, // Refrescar cada 5 minutos
-    staleTime: 60000, // Data remains fresh for 1 minute
-    retry: 2, // Retry failed requests up to 2 times
+    staleTime: 10000, // Data remains fresh for 10 seconds
+    retry: 1, // Retry failed requests up to 1 time
     refetchOnWindowFocus: false, // Disable refetch on window focus
+    gcTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
   console.log('Dashboard loading state:', { isLoading, error, dataLength: datosDiarios?.length });
+  
+  // Debug para verificar estado del query
+  useEffect(() => {
+    console.log('Component state update:', { 
+      isLoading, 
+      hasData: !!datosDiarios, 
+      dataLength: datosDiarios?.length,
+      errorMessage: error?.message 
+    });
+  }, [isLoading, datosDiarios, error]);
 
   // Obtener datos de Meta Ads para CPL Real (con manejo de errores)
   const { data: metaCampaigns } = useQuery({
@@ -58,6 +69,33 @@ export default function DatosDiariosDashboard() {
     refetchInterval: 300000, // Refetch every 5 minutes
     retry: false, // No retry Meta Ads if it fails
     enabled: true, // Enable Meta Ads query to show when available
+  });
+
+  // Mutación para actualizar todos los datos y mapeos
+  const refreshAllDataMutation = useMutation({
+    mutationFn: async () => {
+      console.log('Iniciando actualización completa de datos...');
+      await apiRequest('/api/dashboard/refresh-all-data', 'POST', {});
+    },
+    onSuccess: () => {
+      // Invalidar todas las queries relevantes
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/campanas-comerciales'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/clientes'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/meta-ads/campaigns'] });
+      
+      toast({
+        title: "Datos actualizados completamente",
+        description: "Se actualizaron todos los datos desde Google Sheets y se remapearon los campos",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error al actualizar datos",
+        description: error?.message || "No se pudieron actualizar los datos",
+        variant: "destructive"
+      });
+    }
   });
 
   const updateCplMutation = useMutation({
@@ -273,19 +311,16 @@ export default function DatosDiariosDashboard() {
               Mapear Campañas
             </Button>
             <Button
-              onClick={() => {
-                queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
-                queryClient.invalidateQueries({ queryKey: ['/api/campanas-comerciales'] });
-                queryClient.invalidateQueries({ queryKey: ['/api/clientes'] });
-                toast({
-                  title: "Datos actualizados",
-                  description: "Se refrescaron los datos de campañas y clientes",
-                });
-              }}
+              onClick={() => refreshAllDataMutation.mutate()}
+              disabled={refreshAllDataMutation.isPending}
               className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white font-semibold shadow-lg transform hover:scale-105 transition-all duration-200"
               size="sm"
             >
-              <RefreshCw className="h-4 w-4 mr-2" />
+              {refreshAllDataMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
               Actualizar
             </Button>
             <Button

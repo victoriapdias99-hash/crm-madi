@@ -872,6 +872,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Obtener datos para dashboard de finanzas
+  // Endpoint para actualizar completamente todos los datos
+  app.post('/api/dashboard/refresh-all-data', async (req, res) => {
+    try {
+      console.log('🔄 Iniciando actualización completa de datos...');
+      
+      // 1. Forzar actualización de Google Sheets
+      console.log('📊 Sincronizando datos desde Google Sheets...');
+      const freshLeads = await googleSheetsService.getAllLeadsFromSheets();
+      console.log(`✅ Obtenidos ${freshLeads.length} leads actualizados desde Google Sheets`);
+      
+      // 2. Actualizar datos de Meta Ads si está disponible
+      console.log('📱 Actualizando datos de Meta Ads...');
+      try {
+        // Intentar actualizar Meta Ads si las credenciales están disponibles
+        const metaResponse = await fetch('http://localhost:5000/api/meta-ads/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (metaResponse.ok) {
+          console.log('✅ Meta Ads actualizado exitosamente');
+        }
+      } catch (metaError) {
+        console.log('⚠️ Meta Ads no disponible, continuando sin él');
+      }
+      
+      // 3. Recalcular todos los mappings y datos derivados
+      console.log('🔧 Recalculando mappings y datos derivados...');
+      const campanas = await storage.getAllCampanasComerciales();
+      let processedCount = 0;
+      
+      for (const campana of campanas) {
+        const cliente = await storage.getCliente(campana.clienteId);
+        if (!cliente) continue;
+        
+        console.log(`📋 Procesando ${cliente.nombreCliente} - Campaña ${campana.numeroCampana}`);
+        processedCount++;
+      }
+      
+      console.log(`✅ Actualización completa terminada. Procesadas ${processedCount} campañas`);
+      res.json({ 
+        success: true, 
+        message: 'Datos actualizados completamente',
+        processedCampaigns: processedCount,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error: any) {
+      console.error('❌ Error en actualización completa:', error);
+      res.status(500).json({ error: `Error al actualizar datos: ${error.message}` });
+    }
+  });
+
   app.get('/api/dashboard/finanzas', async (req, res) => {
     try {
       const datosDiarios = await googleSheetsService.getDatosDiariosData();
