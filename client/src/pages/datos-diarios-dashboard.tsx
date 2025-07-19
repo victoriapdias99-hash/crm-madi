@@ -47,15 +47,15 @@ export default function DatosDiariosDashboard() {
   const [isManualLoading, setIsManualLoading] = useState(false);
   const [manualData, setManualData] = useState<DatosDiariosData[] | null>(null);
   
-  // Optimized query with smart caching strategy
+  // Real-time optimized query for live data updates
   const { data: datosDiarios, isLoading, error } = useQuery({
     queryKey: ['/api/dashboard/datos-diarios'],
-    refetchInterval: 5 * 60 * 1000, // Auto-refresh every 5 minutes
-    staleTime: 2 * 60 * 1000, // Data is fresh for 2 minutes
-    cacheTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds for real-time data
+    staleTime: 0, // Always get fresh data for real-time updates
+    cacheTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
     retry: 2,
     retryDelay: 1000,
-    refetchOnWindowFocus: false, // Prevent excessive requests
+    refetchOnWindowFocus: true, // Refresh when window gets focus
     refetchOnMount: true,
     enabled: true,
   });
@@ -378,9 +378,27 @@ export default function DatosDiariosDashboard() {
             <p className="text-slate-600 dark:text-slate-400 mt-2 text-lg font-medium">
               🚀 Gestión de campañas Meta Ads con datos reales de Google Sheets
             </p>
+            <div className="mt-2 flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-sm text-green-600 font-medium">Datos actualizándose cada 30 segundos</span>
+            </div>
             <div className="absolute -top-2 -left-2 w-24 h-24 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full opacity-10 animate-pulse"></div>
           </div>
           <div className="flex gap-3">
+            <Button
+              onClick={() => {
+                queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+                toast({
+                  title: "🔄 Actualizando datos en tiempo real",
+                  description: "Refrescando datos enviados desde Google Sheets"
+                });
+              }}
+              className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold shadow-lg transform hover:scale-105 transition-all duration-200"
+              size="sm"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Datos en Tiempo Real
+            </Button>
             <Button
               onClick={() => mapearCampanasMutation.mutate()}
               disabled={mapearCampanasMutation.isPending}
@@ -500,8 +518,9 @@ export default function DatosDiariosDashboard() {
                           </span>
                         </td>
                         <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
-                          <div className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20 p-2 rounded-lg">
-                            <span className="font-medium text-slate-600 dark:text-slate-400">{data.pedidosPorDia || 0}</span>
+                          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-2 rounded-lg">
+                            <span className="font-medium text-blue-600 dark:text-blue-300">{data.pedidosPorDia?.toFixed(2) || '0.00'}</span>
+                            <div className="text-xs text-blue-500 mt-1">De campaña</div>
                           </div>
                         </td>
                         <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
@@ -643,8 +662,9 @@ export default function DatosDiariosDashboard() {
                           {data.entregadosPorDia ? data.entregadosPorDia.toFixed(2) : '0.00'}
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
-                          <div className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20 p-2 rounded-lg">
-                            <span className="font-medium text-slate-600 dark:text-slate-400">{data.pedidosPorDia || 0}</span>
+                          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-2 rounded-lg">
+                            <span className="font-medium text-blue-600 dark:text-blue-300">{data.pedidosPorDia?.toFixed(2) || '0.00'}</span>
+                            <div className="text-xs text-blue-500 mt-1">De campaña</div>
                           </div>
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">

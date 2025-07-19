@@ -501,20 +501,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const datosFinales = Math.min(datosAcumulados, campana.cantidadDatosSolicitados);
         const porcentajeDatosEnviados = Math.min(100, (datosFinales / campana.cantidadDatosSolicitados) * 100);
         const faltantesAEnviar = Math.max(0, campana.cantidadDatosSolicitados - datosFinales); // Pedidos Total - Enviados
-        // Calcular promedio realista de entregados por día
-        // Usar 20 días hábiles como base para el cálculo del promedio
-        const diasHabilesMes = 20;
-        const entregadosPorDiaPromedio = datosFinales > 0 ? Math.round((datosFinales / diasHabilesMes) * 100) / 100 : 0;
-        
         // Obtener valores almacenados para esta campaña específica usando clienteNombre y numeroCampana
         const storedCpl = await storage.getCplByClienteAndCampana(cliente.nombreCliente, campana.numeroCampana);
         const storedVenta = await storage.getVentaPorCampanaByClienteAndCampana(cliente.nombreCliente, campana.numeroCampana);
         const storedPedidos = await storage.getPedidosPorDiaByClienteAndCampana(cliente.nombreCliente, campana.numeroCampana);
         
-        // Corregir el cálculo de pedidos total y % desvío
+        // Corregir el cálculo de pedidos total y % desvío usando 20 días hábiles
         const pedidosTotal = campana.cantidadDatosSolicitados; // Cantidad total pedida de la campaña
         const porcentajeDesvio = datosFinales > 0 ? ((pedidosTotal - datosFinales) / datosFinales * 100) : 0;
         const faltantesCorregidos = Math.max(0, pedidosTotal - datosFinales); // Pedidos Total - Enviados
+        
+        // Calcular promedios usando 20 días hábiles como base
+        const diasHabilesMes = 20;
+        const entregadosPorDiaPromedio = datosFinales > 0 ? Math.round((datosFinales / diasHabilesMes) * 100) / 100 : 0;
+        const pedidosPorDiaCalculado = pedidosTotal > 0 ? Math.round((pedidosTotal / diasHabilesMes) * 100) / 100 : 0;
         
         mappedData.push({
           cliente: `${cliente.nombreCliente} - ${campana.marca}`,
@@ -523,7 +523,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           numeroCampana: campana.numeroCampana,
           enviados: datosFinales,
           entregadosPorDia: entregadosPorDiaPromedio,
-          pedidosPorDia: storedPedidos || 0,
+          pedidosPorDia: pedidosPorDiaCalculado, // Ahora mapea correctamente desde pedidosTotal
           pedidosTotal: pedidosTotal,
           porcentajeDesvio: Math.round(porcentajeDesvio),
           porcentajeDatosEnviados: Math.round(porcentajeDatosEnviados),
