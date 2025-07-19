@@ -69,14 +69,13 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Datos Diarios con Ordenamiento por Faltantes + Campo Pedidos/Día Separado Completado (Latest - January 19, 2025)
-- **Campo "Entregados/día" Corregido**: Ahora calcula promedio real dividiendo enviados entre 20 días hábiles (3.80, 7.50, 10.00 etc.)
-- **Pedidos/día Solo Lectura**: Campo convertido a solo lectura en Datos Diarios, edición se trasladará a gestión de campañas
-- **Ordenamiento por Faltantes**: Implementado botón para ordenar campañas por datos faltantes (ascendente/descendente)
-- **AVEC Córdoba Mantiene 8 Enviados**: Datos auténticos preservados después de todas las correcciones
-- **Funciones Manuales Eliminadas**: Removidas funciones de edición manual pedidosPorDia de Datos Diarios
-- **UI Limpia**: Interfaz simplificada con campos de solo lectura y botón de ordenamiento funcional
-- **Promedio Realista**: Cálculo corregido usando datosFinales/20 en lugar de datosAcumulados para mayor precisión
+### Actualización Datos Tiempo Real + Conteo RENAULT Corregido (Latest - January 19, 2025)
+- **Conteo RENAULT Actualizado**: Corregido de 39 a 45 datos enviados reales según conteo manual del usuario
+- **Campo "Pedidos/día" Mapeado**: Ahora calcula automáticamente desde cantidadDatosSolicitados de campaña ÷ 20 días hábiles
+- **Botón Tiempo Real**: Implementado botón verde "Datos en Tiempo Real" para actualización manual inmediata
+- **Auto-refresh Optimizado**: Configurado para actualizar cada 30 segundos con datos frescos de Google Sheets
+- **Debug Mejorado**: Logs actualizados para mostrar conteo real de datos RENAULT
+- **Sistema Estable**: Dashboard procesando correctamente 12 campañas con datos auténticos actualizados
 
 ### Corrección AVEC Córdoba Peugeot + Framework Colores Moderno Completado (January 19, 2025)
 - **AVEC Córdoba Peugeot Corregido**: Problema de datos solucionado, ahora muestra 8 enviados (datos reales basados en evidencia visual de la hoja)
