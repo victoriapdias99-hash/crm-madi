@@ -502,8 +502,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const porcentajeDatosEnviados = Math.min(100, (datosFinales / campana.cantidadDatosSolicitados) * 100);
         const faltantesAEnviar = Math.max(0, campana.cantidadDatosSolicitados - datosFinales); // Pedidos Total - Enviados
         // Calcular promedio realista de entregados por día
-        const diasRealesTranscurridos = Math.max(1, diasConDatos || 1);
-        const entregadosPorDiaPromedio = datosAcumulados > 0 ? Math.round((datosAcumulados / diasRealesTranscurridos) * 100) / 100 : 0;
+        // Usar 20 días hábiles como base para el cálculo del promedio
+        const diasHabilesMes = 20;
+        const entregadosPorDiaPromedio = datosFinales > 0 ? Math.round((datosFinales / diasHabilesMes) * 100) / 100 : 0;
         
         // Obtener valores almacenados para esta campaña específica usando clienteNombre y numeroCampana
         const storedCpl = await storage.getCplByClienteAndCampana(cliente.nombreCliente, campana.numeroCampana);

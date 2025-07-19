@@ -40,7 +40,7 @@ export default function DatosDiariosDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [cplValues, setCplValues] = useState<Record<number, number>>({});
-  const [pedidosPorDiaValues, setPedidosPorDiaValues] = useState<Record<number, number>>({});
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc'); // Por defecto ascendente (menos faltantes primero)
 
   const { data: datosDiarios, isLoading, error } = useQuery({
     queryKey: ['/api/dashboard/datos-diarios'],
@@ -109,44 +109,7 @@ export default function DatosDiariosDashboard() {
     }
   });
 
-  const updatePedidosPorDiaMutation = useMutation({
-    mutationFn: async ({ clienteIndex, pedidos }: { clienteIndex: number; pedidos: number }) => {
-      console.log('Updating Pedidos por Día:', { clienteIndex, pedidos });
-      const response = await apiRequest('/api/dashboard/update-pedidos-por-dia', 'POST', { clienteIndex, pedidos });
-      console.log('Pedidos por día update response:', response);
-      return { ...response, clienteIndex, pedidos };
-    },
-    onSuccess: (data) => {
-      console.log('Pedidos por día update successful:', data);
-      
-      // Actualizar cache localmente para respuesta inmediata
-      queryClient.setQueryData(['/api/dashboard/datos-diarios'], (oldData: any) => {
-        if (!oldData) return oldData;
-        return oldData.map((item: any, index: number) => {
-          if (index === data.clienteIndex) {
-            return { ...item, pedidosPorDia: data.pedidos };
-          }
-          return item;
-        });
-      });
-      
-      toast({
-        title: "Pedidos por Día Actualizado",
-        description: `Pedidos por día actualizado a ${data.pedidos}`,
-      });
-      
-      // Invalidar queries para sincronización completa
-      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
-    },
-    onError: (error) => {
-      console.error('Pedidos por día update error:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo actualizar los pedidos por día",
-        variant: "destructive",
-      });
-    }
-  });
+
 
   // Función para calcular CPL Real basado en Meta Ads
   const calculateCPLReal = (data: DatosDiariosData) => {
@@ -231,10 +194,7 @@ export default function DatosDiariosDashboard() {
     setCplValues(prev => ({ ...prev, [index]: numValue }));
   };
 
-  const handlePedidosPorDiaChange = (index: number, value: string) => {
-    const numValue = parseFloat(value) || 0;
-    setPedidosPorDiaValues(prev => ({ ...prev, [index]: numValue }));
-  };
+
 
   const handleSaveCpl = (index: number) => {
     const cpl = cplValues[index];
@@ -263,29 +223,10 @@ export default function DatosDiariosDashboard() {
     }
   };
 
-  const handleSavePedidosPorDia = (index: number) => {
-    const pedidos = pedidosPorDiaValues[index];
-    console.log('Attempting to save Pedidos por Día:', { index, pedidos });
-    if (pedidos && pedidos > 0) {
-      updatePedidosPorDiaMutation.mutate({ clienteIndex: index, pedidos });
-      // Clear the input after saving
-      setPedidosPorDiaValues(prev => {
-        const newValues = { ...prev };
-        delete newValues[index];
-        return newValues;
-      });
-    } else {
-      toast({
-        title: "Error",
-        description: "Por favor ingrese un valor válido de pedidos por día",
-        variant: "destructive",
-      });
-    }
-  };
+
 
   const clearAllManualValues = () => {
     setCplValues({});
-    setPedidosPorDiaValues({});
     toast({
       title: "Valores restablecidos",
       description: "Todos los valores manuales han sido eliminados",
@@ -372,6 +313,14 @@ export default function DatosDiariosDashboard() {
               <Badge variant="secondary" className="bg-white/20 text-white border-white/30 font-bold">
                 {datosDiarios?.filter(data => data.porcentajeDatosEnviados < 100).length || 0} activas
               </Badge>
+              <Button
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                variant="secondary"
+                size="sm"
+                className="bg-white/20 text-white border-white/30 hover:bg-white/30"
+              >
+                {sortOrder === 'asc' ? '↑' : '↓'} Ordenar por Faltantes
+              </Button>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -383,7 +332,7 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-left font-semibold text-amber-900 dark:text-amber-100">Zona</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Enviados</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Entregados/día</th>
-                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Pedidos/día (Manual)</th>
+                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Pedidos/día</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Pedidos Total</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">% Desvío</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">% Datos Enviados</th>
@@ -394,21 +343,19 @@ export default function DatosDiariosDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {datosDiarios?.filter(data => data.porcentajeDatosEnviados < 100).map((data: DatosDiariosData, index: number) => {
+                  {datosDiarios?.filter(data => data.porcentajeDatosEnviados < 100)
+                    .sort((a, b) => sortOrder === 'asc' ? a.faltantesAEnviar - b.faltantesAEnviar : b.faltantesAEnviar - a.faltantesAEnviar)
+                    .map((data: DatosDiariosData, index: number) => {
                     // Usar el índice original de la lista completa para identificar correctamente el registro
                     const originalIndex = datosDiarios?.findIndex(d => d.cliente === data.cliente && d.numeroCampana === data.numeroCampana) || 0;
                     const uniqueKey = `${data.cliente}-${data.numeroCampana}`;
                     
                     const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0; // Use CPL from storage or server
-                    const currentPedidosPorDia = pedidosPorDiaValues[originalIndex] || data.pedidosPorDia || 0;
                     
-                    // Crear objeto actualizado con valores manuales
+                    // Crear objeto actualizado 
                     const updatedData = {
                       ...data,
-                      pedidosPorDia: currentPedidosPorDia,
                       faltantesAEnviar: Math.max(0, data.pedidosTotal - data.enviados), // Pedidos Total - Enviados
-                      porcentajeDesvio: (currentPedidosPorDia > 0 && data.entregadosPorDia > 0) ? 
-                        ((data.entregadosPorDia - currentPedidosPorDia) / currentPedidosPorDia * 100) : 0
                     };
                     
                     const inversions = calculateInversions(updatedData, currentCpl);
@@ -435,23 +382,9 @@ export default function DatosDiariosDashboard() {
                             {data.entregadosPorDia ? data.entregadosPorDia.toFixed(2) : '0.00'}
                           </span>
                         </td>
-                        <td className="border border-amber-200 dark:border-amber-600 p-3">
-                          <div className="flex gap-2 items-center justify-center">
-                            <Input
-                              type="number"
-                              placeholder="Pedidos"
-                              value={pedidosPorDiaValues[originalIndex] || data.pedidosPorDia || ''}
-                              onChange={(e) => handlePedidosPorDiaChange(originalIndex, e.target.value)}
-                              className="w-20 bg-white dark:bg-slate-800 border-2 border-blue-200 dark:border-blue-600 focus:border-blue-500"
-                            />
-                            <Button
-                              onClick={() => handleSavePedidosPorDia(originalIndex)}
-                              size="sm"
-                              disabled={updatePedidosPorDiaMutation.isPending}
-                              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg"
-                            >
-                              <Save className="h-4 w-4" />
-                            </Button>
+                        <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
+                          <div className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20 p-2 rounded-lg">
+                            <span className="font-medium text-slate-600 dark:text-slate-400">{data.pedidosPorDia || 0}</span>
                           </div>
                         </td>
                         <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
@@ -461,13 +394,13 @@ export default function DatosDiariosDashboard() {
                         </td>
                         <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
                           <Badge 
-                            variant={updatedData.porcentajeDesvio && updatedData.porcentajeDesvio < 0 ? "destructive" : "default"}
-                            className={`font-bold ${updatedData.porcentajeDesvio && updatedData.porcentajeDesvio < 0 
+                            variant={data.porcentajeDesvio && data.porcentajeDesvio < 0 ? "destructive" : "default"}
+                            className={`font-bold ${data.porcentajeDesvio && data.porcentajeDesvio < 0 
                               ? 'bg-gradient-to-r from-red-500 to-pink-600 text-white' 
                               : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
                             }`}
                           >
-                            {updatedData.porcentajeDesvio ? updatedData.porcentajeDesvio.toFixed(2) : '0.00'}%
+                            {data.porcentajeDesvio ? data.porcentajeDesvio.toFixed(2) : '0.00'}%
                           </Badge>
                         </td>
                         <td className="border border-amber-200 dark:border-amber-600 p-3">
@@ -556,7 +489,7 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-left font-semibold text-emerald-900 dark:text-emerald-100">Zona</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Enviados</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Entregados/día</th>
-                    <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Pedidos/día (Manual)</th>
+                    <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Pedidos/día</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Pedidos Total</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">% Desvío</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">% Datos Enviados</th>
@@ -567,17 +500,15 @@ export default function DatosDiariosDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {datosDiarios?.filter(data => data.porcentajeDatosEnviados >= 100).map((data: DatosDiariosData, index: number) => {
+                  {datosDiarios?.filter(data => data.porcentajeDatosEnviados >= 100)
+                    .sort((a, b) => sortOrder === 'asc' ? a.faltantesAEnviar - b.faltantesAEnviar : b.faltantesAEnviar - a.faltantesAEnviar)
+                    .map((data: DatosDiariosData, index: number) => {
                     const originalIndex = datosDiarios?.findIndex(d => d.cliente === data.cliente && d.numeroCampana === data.numeroCampana) || 0;
                     const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0;
-                    const currentPedidosPorDia = pedidosPorDiaValues[originalIndex] || data.pedidosPorDia || 0;
                     
                     const updatedData = {
                       ...data,
-                      pedidosPorDia: currentPedidosPorDia,
                       faltantesAEnviar: Math.max(0, data.pedidosTotal - data.enviados),
-                      porcentajeDesvio: (currentPedidosPorDia > 0 && data.entregadosPorDia > 0) ? 
-                        ((data.entregadosPorDia - currentPedidosPorDia) / currentPedidosPorDia * 100) : 0
                     };
                     
                     const inversions = calculateInversions(updatedData, currentCpl);
@@ -596,27 +527,14 @@ export default function DatosDiariosDashboard() {
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
                           {data.entregadosPorDia ? data.entregadosPorDia.toFixed(2) : '0.00'}
                         </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2">
-                          <div className="flex gap-2 items-center justify-center">
-                            <Input
-                              type="number"
-                              placeholder="Pedidos"
-                              value={pedidosPorDiaValues[originalIndex] || data.pedidosPorDia || ''}
-                              onChange={(e) => handlePedidosPorDiaChange(originalIndex, e.target.value)}
-                              className="w-20"
-                            />
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleSavePedidosPorDia(originalIndex)}
-                              disabled={updatePedidosPorDiaMutation.isPending}
-                            >
-                              {updatePedidosPorDiaMutation.isPending ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
-                                <Save className="h-3 w-3" />
-                              )}
-                            </Button>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          <div className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20 p-2 rounded-lg">
+                            <span className="font-medium text-slate-600 dark:text-slate-400">{data.pedidosPorDia || 0}</span>
+                          </div>
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          <div className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20 p-2 rounded-lg">
+                            <span className="font-medium text-slate-600 dark:text-slate-400">{data.pedidosPorDia || 0}</span>
                           </div>
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
