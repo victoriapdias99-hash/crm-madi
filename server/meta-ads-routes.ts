@@ -2,6 +2,17 @@ import type { Express } from "express";
 import { MetaAdsService, type CampaignSpendData } from "./meta-ads-service";
 
 let metaAdsService: MetaAdsService | null = null;
+
+// Función para obtener la instancia configurada globalmente o crear una nueva
+function getMetaAdsService(): MetaAdsService | null {
+  // Si hay una instancia global configurada, usarla
+  if (global.metaAdsService) {
+    return global.metaAdsService;
+  }
+  
+  // Si no, usar la instancia local
+  return metaAdsService;
+}
 let autoSyncInterval: NodeJS.Timeout | null = null;
 
 export function registerMetaAdsRoutes(app: Express) {
@@ -55,7 +66,8 @@ export function registerMetaAdsRoutes(app: Express) {
   // Obtener métricas de campañas
   app.get('/api/meta-ads/campaigns', async (req, res) => {
     try {
-      if (!metaAdsService) {
+      const service = getMetaAdsService();
+      if (!service) {
         return res.status(400).json({ 
           error: 'Meta Ads service not configured. Please configure first.' 
         });
@@ -74,7 +86,7 @@ export function registerMetaAdsRoutes(app: Express) {
         }
       }
 
-      const campaigns = await metaAdsService.getCampaignSpendData(parsedTimeRange);
+      const campaigns = await service.getCampaignSpendData(parsedTimeRange);
       res.json(campaigns);
     } catch (error) {
       res.status(500).json({ 
@@ -86,13 +98,14 @@ export function registerMetaAdsRoutes(app: Express) {
   // Obtener métricas en tiempo real (últimas 24h)
   app.get('/api/meta-ads/realtime', async (req, res) => {
     try {
-      if (!metaAdsService) {
+      const service = getMetaAdsService();
+      if (!service) {
         return res.status(400).json({ 
           error: 'Meta Ads service not configured' 
         });
       }
 
-      const metrics = await metaAdsService.getRealTimeMetrics();
+      const metrics = await service.getRealTimeMetrics();
       res.json(metrics);
     } catch (error) {
       res.status(500).json({ 
@@ -104,7 +117,8 @@ export function registerMetaAdsRoutes(app: Express) {
   // Obtener presupuestos de campañas
   app.get('/api/meta-ads/budgets', async (req, res) => {
     try {
-      if (!metaAdsService) {
+      const service = getMetaAdsService();
+      if (!service) {
         return res.status(400).json({ 
           error: 'Meta Ads service not configured' 
         });
@@ -117,7 +131,7 @@ export function registerMetaAdsRoutes(app: Express) {
         ids = campaignIds.split(',');
       }
 
-      const budgets = await metaAdsService.getCampaignBudgets(ids);
+      const budgets = await service.getCampaignBudgets(ids);
       res.json(budgets);
     } catch (error) {
       res.status(500).json({ 
@@ -129,7 +143,8 @@ export function registerMetaAdsRoutes(app: Express) {
   // Obtener resumen de gasto de cuenta
   app.get('/api/meta-ads/account-summary', async (req, res) => {
     try {
-      if (!metaAdsService) {
+      const service = getMetaAdsService();
+      if (!service) {
         return res.status(400).json({ 
           error: 'Meta Ads service not configured' 
         });
@@ -148,7 +163,7 @@ export function registerMetaAdsRoutes(app: Express) {
         }
       }
 
-      const summary = await metaAdsService.getAccountSpendSummary(parsedTimeRange);
+      const summary = await service.getAccountSpendSummary(parsedTimeRange);
       res.json(summary);
     } catch (error) {
       res.status(500).json({ 
@@ -160,7 +175,8 @@ export function registerMetaAdsRoutes(app: Express) {
   // Obtener estado del servicio
   app.get('/api/meta-ads/status', async (req, res) => {
     try {
-      if (!metaAdsService) {
+      const service = getMetaAdsService();
+      if (!service) {
         return res.json({ 
           configured: false,
           autoSyncEnabled: false,
@@ -168,8 +184,8 @@ export function registerMetaAdsRoutes(app: Express) {
         });
       }
 
-      const isValid = await metaAdsService.validateToken();
-      const cacheStats = metaAdsService.getCacheStats();
+      const isValid = await service.validateToken();
+      const cacheStats = service.getCacheStats();
 
       res.json({
         configured: true,
@@ -187,13 +203,14 @@ export function registerMetaAdsRoutes(app: Express) {
   // Forzar sincronización manual
   app.post('/api/meta-ads/sync', async (req, res) => {
     try {
-      if (!metaAdsService) {
+      const service = getMetaAdsService();
+      if (!service) {
         return res.status(400).json({ 
           error: 'Meta Ads service not configured' 
         });
       }
 
-      const data = await metaAdsService.getRealTimeMetrics();
+      const data = await service.getRealTimeMetrics();
       res.json({
         success: true,
         message: `Synced ${data.length} campaigns`,

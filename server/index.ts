@@ -2,6 +2,11 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
+// Declaración global para TypeScript
+declare global {
+  var metaAdsService: any;
+}
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -38,6 +43,33 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app);
+
+  // Configuración automática de Meta Ads al arrancar si las credenciales están disponibles
+  if (process.env.META_ACCESS_TOKEN && process.env.META_AD_ACCOUNT_ID && 
+      process.env.META_APP_ID && process.env.META_APP_SECRET) {
+    console.log('Auto-configuring Meta Ads with environment credentials...');
+    
+    setTimeout(async () => {
+      try {
+        const { MetaAdsService } = await import("./meta-ads-service");
+        const metaService = new MetaAdsService({
+          accessToken: process.env.META_ACCESS_TOKEN!,
+          accountId: process.env.META_AD_ACCOUNT_ID!,
+          appSecret: process.env.META_APP_SECRET
+        });
+
+        console.log('✅ Meta Ads configured successfully at startup');
+        
+        // Exportar instancia configurada para uso en rutas
+        global.metaAdsService = metaService;
+        
+      } catch (error) {
+        console.log('❌ Meta Ads auto-configuration failed:', error instanceof Error ? error.message : 'Unknown error');
+      }
+    }, 2000); // Delay para permitir que el servidor termine de arrancar
+  } else {
+    console.log('Meta Ads credentials not found, skipping auto-configuration');
+  }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

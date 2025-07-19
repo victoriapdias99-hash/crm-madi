@@ -23,15 +23,10 @@ export function useWebSocket(roomId: number, playerId: number) {
   const wsRef = useRef<WebSocket | null>(null);
 
   const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      return;
-    }
-
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-    
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
+    // Completely disable WebSocket for dashboard application
+    console.log('WebSocket disabled for dashboard application');
+    setIsConnected(false);
+    return;
 
     ws.onopen = () => {
       setIsConnected(true);
@@ -83,12 +78,10 @@ export function useWebSocket(roomId: number, playerId: number) {
   }, [roomId, playerId]);
 
   useEffect(() => {
-    connect();
-    
+    // No WebSocket connection needed for dashboard
+    console.log('useWebSocket hook disabled for dashboard application');
     return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
+      // No cleanup needed
     };
   }, [connect]);
 
