@@ -157,6 +157,7 @@ export const campanasComerciales = pgTable("campanas_comerciales", {
   localizado: text("localizado"), // Campo para targeting específico o localización
   fechaCampana: date("fecha_campana"), // Campo fecha cuando se da de alta la campaña
   fechaFin: date("fecha_fin"), // Fecha de finalización para rangos de matching
+  pedidosPorDia: integer("pedidos_por_dia").default(0), // Pedidos por día editables
   fechaCreacion: timestamp("fecha_creacion").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

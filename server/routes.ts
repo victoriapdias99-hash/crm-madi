@@ -1152,6 +1152,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint específico para actualizar pedidos por día
+  app.put('/api/campanas-comerciales/:id/pedidos-por-dia', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { pedidosPorDia } = req.body;
+      
+      if (typeof pedidosPorDia !== 'number' || pedidosPorDia < 0) {
+        return res.status(400).json({ error: 'pedidosPorDia debe ser un número mayor o igual a 0' });
+      }
+      
+      const campana = await storage.updateCampanaComercial(id, { pedidosPorDia });
+      
+      if (!campana) {
+        return res.status(404).json({ error: 'Campaña comercial not found' });
+      }
+      
+      console.log(`Pedidos por día actualizado para campaña ${id}: ${pedidosPorDia}`);
+      res.json(campana);
+    } catch (error: any) {
+      console.error('Error updating pedidos por día:', error);
+      res.status(500).json({ error: 'Failed to update pedidos por día' });
+    }
+  });
+
   app.delete('/api/campanas-comerciales/:id', async (req, res) => {
     try {
       const id = parseInt(req.params.id);

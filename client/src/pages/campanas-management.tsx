@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Building2, Calendar, Target, Package, Copy } from "lucide-react";
+import { Plus, Building2, Calendar, Target, Package, Copy, Clock, Edit2, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -22,6 +22,86 @@ import {
   ZONAS_DISPONIBLES
 } from "@shared/schema";
 
+// Componente para editar pedidos por día inline
+function EditablePedidosPorDia({ campana }: { campana: CampanaComercial }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [value, setValue] = useState(campana.pedidosPorDia || 0);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const updatePedidosPorDia = useMutation({
+    mutationFn: async (newValue: number) => {
+      await apiRequest(`/api/campanas-comerciales/${campana.id}/pedidos-por-dia`, 'PUT', { pedidosPorDia: newValue });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/campanas-comerciales'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+      setIsEditing(false);
+      toast({ title: "Pedidos por día actualizado correctamente" });
+    },
+    onError: () => {
+      toast({ title: "Error al actualizar pedidos por día", variant: "destructive" });
+      setValue(campana.pedidosPorDia || 0); // Revertir valor
+    }
+  });
+
+  const handleSave = () => {
+    updatePedidosPorDia.mutate(value);
+  };
+
+  const handleCancel = () => {
+    setValue(campana.pedidosPorDia || 0);
+    setIsEditing(false);
+  };
+
+  if (isEditing) {
+    return (
+      <div className="flex items-center gap-2">
+        <Input
+          type="number"
+          value={value}
+          onChange={(e) => setValue(parseInt(e.target.value) || 0)}
+          className="w-20 h-8 text-sm"
+          min="0"
+        />
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={handleSave}
+          disabled={updatePedidosPorDia.isPending}
+          className="h-8 w-8 p-0"
+        >
+          <Check className="w-4 h-4 text-green-600" />
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={handleCancel}
+          className="h-8 w-8 p-0"
+        >
+          <X className="w-4 h-4 text-red-600" />
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <Badge variant="outline" className="status-warning">
+        {campana.pedidosPorDia || 0}
+      </Badge>
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={() => setIsEditing(true)}
+        className="h-8 w-8 p-0"
+      >
+        <Edit2 className="w-3 h-3" />
+      </Button>
+    </div>
+  );
+}
+
 export default function CampanasManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCampana, setEditingCampana] = useState<CampanaComercial | null>(null);
@@ -36,6 +116,7 @@ export default function CampanasManagement() {
       marca: "",
       zona: "",
       fechaCampana: "",
+      pedidosPorDia: 0,
     },
   });
 
@@ -119,6 +200,7 @@ export default function CampanasManagement() {
         marca: campana.marca,
         zona: campana.zona,
         fechaCampana: campana.fechaCampana || "",
+        pedidosPorDia: campana.pedidosPorDia || 0,
       });
     } else {
       setEditingCampana(null);
@@ -128,6 +210,7 @@ export default function CampanasManagement() {
         marca: "",
         zona: "",
         fechaCampana: "",
+        pedidosPorDia: 0,
       });
     }
     setIsDialogOpen(true);
@@ -141,6 +224,7 @@ export default function CampanasManagement() {
       marca: campana.marca,
       zona: campana.zona,
       fechaCampana: "", // Clear date for new campaign
+      pedidosPorDia: campana.pedidosPorDia || 0,
     });
     setIsDialogOpen(true);
   };
@@ -348,6 +432,30 @@ export default function CampanasManagement() {
                   )}
                 />
 
+                {/* Pedidos por Día */}
+                <FormField
+                  control={form.control}
+                  name="pedidosPorDia"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pedidos por Día</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min="0"
+                          placeholder="Ej: 20" 
+                          {...field} 
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                      <p className="text-sm text-muted-foreground">
+                        Cantidad de datos que se entregan por día
+                      </p>
+                    </FormItem>
+                  )}
+                />
+
                 <div className="flex justify-end space-x-2 pt-4">
                   <Button 
                     type="button" 
@@ -410,7 +518,7 @@ export default function CampanasManagement() {
               </div>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-7 gap-4">
                 {/* Marca */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
@@ -440,6 +548,15 @@ export default function CampanasManagement() {
                     <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Datos Solicitados</h4>
                   </div>
                   <p className="text-sm font-semibold">{campana.cantidadDatosSolicitados.toLocaleString()}</p>
+                </div>
+
+                {/* Pedidos por Día - EDITABLE */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-amber-500" />
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Pedidos/día</h4>
+                  </div>
+                  <EditablePedidosPorDia campana={campana} />
                 </div>
 
                 {/* Fecha de Inicio */}
