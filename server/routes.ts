@@ -459,7 +459,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         for (const dato of datosParaCampana) {
           // Usar la estructura correcta de datos de Google Sheets
           const datosDelDia = dato.enviados || 0;  // Campo principal de datos enviados
-          const entregadosDelDia = dato.entregadosPorDia || 0;
+          // Calcular promedio por día basado en los datos reales
+          const diasTranscurridos = diasConDatos + 1; // Incluir el día actual
+          const entregadosDelDia = datosDelDia > 0 ? datosDelDia / Math.max(1, diasTranscurridos) : 0;
           
           // Para AVEC/GRUPO QUIJADA, usar solo el dato específico de la marca de esta campaña
           if (cliente.nombreCliente.toLowerCase().includes('grupo quijada')) {
@@ -499,7 +501,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const datosFinales = Math.min(datosAcumulados, campana.cantidadDatosSolicitados);
         const porcentajeDatosEnviados = Math.min(100, (datosFinales / campana.cantidadDatosSolicitados) * 100);
         const faltantesAEnviar = Math.max(0, campana.cantidadDatosSolicitados - datosFinales); // Pedidos Total - Enviados
-        const entregadosPorDiaPromedio = diasConDatos > 0 ? Math.round(entregadosPorDiaTotal / diasConDatos) : 0;
+        // Calcular promedio realista de entregados por día
+        const diasRealesTranscurridos = Math.max(1, diasConDatos || 1);
+        const entregadosPorDiaPromedio = datosAcumulados > 0 ? Math.round((datosAcumulados / diasRealesTranscurridos) * 100) / 100 : 0;
         
         // Obtener valores almacenados para esta campaña específica usando clienteNombre y numeroCampana
         const storedCpl = await storage.getCplByClienteAndCampana(cliente.nombreCliente, campana.numeroCampana);

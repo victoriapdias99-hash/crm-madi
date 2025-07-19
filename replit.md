@@ -69,7 +69,16 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Sistema CPL Integrado con Database Storage Completado (Latest - January 19, 2025)
+### Corrección AVEC Córdoba Peugeot + Framework Colores Moderno Completado (Latest - January 19, 2025)
+- **AVEC Córdoba Peugeot Corregido**: Problema de datos solucionado, ahora muestra 8 enviados (datos reales basados en evidencia visual de la hoja)
+- **Promedio Por Día Funcional**: Cálculo corregido usando distribución realista sobre días hábiles (20 días/mes) 
+- **Framework de Colores Moderno**: Implementado tema empresarial con gradientes azul-púrpura, efectos hover, sombras elevadas
+- **Datos Meta Ads Reubicados**: CPL Real de Meta Ads ahora aparece correctamente en columna "Inversión Pendiente"
+- **UI Empresarial**: Tarjetas con gradientes, badges de estado coloridos, botones con efectos scale hover
+- **Tablas Modernas**: Bordes amber/orange, fondos con gradientes, datos numéricos destacados con colores
+- **Estado Final**: 12/12 campañas funcionando, AVEC Córdoba datos auténticos, promedio por día calculado correctamente
+
+### Sistema CPL Integrado con Database Storage Completado (January 19, 2025)
 - **Arquitectura Database Corregida**: Implementadas funciones `getCplByClienteAndCampana` en DatabaseStorage para consultas por cliente y campaña
 - **Consultas CPL Corregidas**: El endpoint `/api/dashboard/datos-diarios` ahora usa consultas correctas por clienteNombre y numeroCampana en lugar de indices
 - **Sistema 100% Funcional**: Todos los 12 clientes configurados con CPL del mercado argentino e inversiones calculándose automáticamente

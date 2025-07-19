@@ -304,23 +304,24 @@ export default function DatosDiariosDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-blue-900 dark:to-indigo-900 p-4">
       <div className="max-w-7xl mx-auto space-y-6">
         <Navigation />
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          <div className="relative">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
               Dashboard - Datos Diarios
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">
-              Gestión de campañas Meta Ads con datos reales de Google Sheets
+            <p className="text-slate-600 dark:text-slate-400 mt-2 text-lg font-medium">
+              🚀 Gestión de campañas Meta Ads con datos reales de Google Sheets
             </p>
+            <div className="absolute -top-2 -left-2 w-24 h-24 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full opacity-10 animate-pulse"></div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <Button
               onClick={() => mapearCampanasMutation.mutate()}
               disabled={mapearCampanasMutation.isPending}
-              variant="default"
+              className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold shadow-lg transform hover:scale-105 transition-all duration-200"
               size="sm"
             >
               {mapearCampanasMutation.isPending ? (
@@ -340,7 +341,7 @@ export default function DatosDiariosDashboard() {
                   description: "Se refrescaron los datos de campañas y clientes",
                 });
               }}
-              variant="outline"
+              className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white font-semibold shadow-lg transform hover:scale-105 transition-all duration-200"
               size="sm"
             >
               <RefreshCw className="h-4 w-4 mr-2" />
@@ -348,7 +349,7 @@ export default function DatosDiariosDashboard() {
             </Button>
             <Button
               onClick={clearAllManualValues}
-              variant="outline"
+              className="bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-semibold shadow-lg transform hover:scale-105 transition-all duration-200"
               size="sm"
             >
               <RotateCcw className="h-4 w-4 mr-2" />
@@ -361,11 +362,14 @@ export default function DatosDiariosDashboard() {
         {/* <TestPanel /> */}
 
         {/* Campañas en Proceso */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              🚀 Campañas en Proceso
-              <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+        <Card className="border-0 shadow-2xl bg-gradient-to-r from-white via-amber-50 to-orange-50 dark:from-gray-800 dark:via-amber-900/10 dark:to-orange-900/10">
+          <CardHeader className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-t-lg">
+            <CardTitle className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                🚀
+              </div>
+              <span className="text-xl font-bold">Campañas en Proceso</span>
+              <Badge variant="secondary" className="bg-white/20 text-white border-white/30 font-bold">
                 {datosDiarios?.filter(data => data.porcentajeDatosEnviados < 100).length || 0} activas
               </Badge>
             </CardTitle>
@@ -374,21 +378,19 @@ export default function DatosDiariosDashboard() {
             <div className="overflow-x-auto">
               <table className="w-full border-collapse border border-gray-300 dark:border-gray-600">
                 <thead>
-                  <tr className="bg-yellow-50 dark:bg-yellow-900/20">
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-left">Cliente</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-left">Zona</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Enviados</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Entregados/día</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Pedidos/día (Manual)</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Pedidos Total</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">% Desvío</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">% Datos Enviados</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Faltantes</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Input</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Guardado</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Real (Meta Ads)</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Realizada (con impuestos)</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Pendiente (con impuestos)</th>
+                  <tr className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20">
+                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-left font-semibold text-amber-900 dark:text-amber-100">Cliente</th>
+                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-left font-semibold text-amber-900 dark:text-amber-100">Zona</th>
+                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Enviados</th>
+                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Entregados/día</th>
+                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Pedidos/día (Manual)</th>
+                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Pedidos Total</th>
+                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">% Desvío</th>
+                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">% Datos Enviados</th>
+                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Faltantes</th>
+                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">CPL Guardado</th>
+                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Inversión Realizada</th>
+                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Inversión Pendiente</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -412,90 +414,111 @@ export default function DatosDiariosDashboard() {
                     const inversions = calculateInversions(updatedData, currentCpl);
                     
                     return (
-                      <tr key={uniqueKey} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                        <td className="border border-gray-300 dark:border-gray-600 p-2">
-                          <div>
-                            <div className="font-medium">{data.clienteNombre}</div>
-                            <div className="text-sm text-gray-500">{data.cliente}</div>
-                            <div className="text-xs text-blue-600 font-semibold">Campaña #{data.numeroCampana || 1}</div>
+                      <tr key={uniqueKey} className="hover:bg-gradient-to-r hover:from-amber-50 hover:to-orange-50 dark:hover:from-amber-900/10 dark:hover:to-orange-900/10 transition-all duration-300">
+                        <td className="border border-amber-200 dark:border-amber-600 p-3">
+                          <div className="space-y-1">
+                            <div className="font-bold text-slate-800 dark:text-slate-200">{data.clienteNombre}</div>
+                            <div className="text-sm text-slate-600 dark:text-slate-400">{data.cliente}</div>
+                            <div className="text-xs bg-gradient-to-r from-blue-500 to-purple-600 text-white px-2 py-1 rounded-full font-semibold w-fit">
+                              Campaña #{data.numeroCampana || 1}
+                            </div>
                           </div>
                         </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2">{data.zona}</td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{data.enviados}</td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
-                          {data.entregadosPorDia ? data.entregadosPorDia.toFixed(2) : '0.00'}
+                        <td className="border border-amber-200 dark:border-amber-600 p-3 font-medium text-slate-700 dark:text-slate-300">{data.zona}</td>
+                        <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
+                          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-2 rounded-lg">
+                            <span className="font-bold text-blue-700 dark:text-blue-300">{data.enviados}</span>
+                          </div>
                         </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2">
+                        <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
+                          <span className="font-medium text-slate-700 dark:text-slate-300">
+                            {data.entregadosPorDia ? data.entregadosPorDia.toFixed(2) : '0.00'}
+                          </span>
+                        </td>
+                        <td className="border border-amber-200 dark:border-amber-600 p-3">
                           <div className="flex gap-2 items-center justify-center">
                             <Input
                               type="number"
                               placeholder="Pedidos"
                               value={pedidosPorDiaValues[originalIndex] || data.pedidosPorDia || ''}
                               onChange={(e) => handlePedidosPorDiaChange(originalIndex, e.target.value)}
-                              className="w-20"
+                              className="w-20 bg-white dark:bg-slate-800 border-2 border-blue-200 dark:border-blue-600 focus:border-blue-500"
                             />
                             <Button
                               onClick={() => handleSavePedidosPorDia(originalIndex)}
                               size="sm"
                               disabled={updatePedidosPorDiaMutation.isPending}
+                              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg"
                             >
                               <Save className="h-4 w-4" />
                             </Button>
                           </div>
                         </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
-                          {data.pedidosTotal || 0}
+                        <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
+                          <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-2 rounded-lg">
+                            <span className="font-bold text-purple-700 dark:text-purple-300">{data.pedidosTotal || 0}</span>
+                          </div>
                         </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
-                          <Badge variant={updatedData.porcentajeDesvio && updatedData.porcentajeDesvio < 0 ? "destructive" : "default"}>
+                        <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
+                          <Badge 
+                            variant={updatedData.porcentajeDesvio && updatedData.porcentajeDesvio < 0 ? "destructive" : "default"}
+                            className={`font-bold ${updatedData.porcentajeDesvio && updatedData.porcentajeDesvio < 0 
+                              ? 'bg-gradient-to-r from-red-500 to-pink-600 text-white' 
+                              : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
+                            }`}
+                          >
                             {updatedData.porcentajeDesvio ? updatedData.porcentajeDesvio.toFixed(2) : '0.00'}%
                           </Badge>
                         </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2">
-                          <div className="flex flex-col items-center gap-1">
-                            <div className="w-20 h-3 bg-gray-200 rounded-full overflow-hidden">
+                        <td className="border border-amber-200 dark:border-amber-600 p-3">
+                          <div className="flex flex-col items-center gap-2">
+                            <div className="w-24 h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full overflow-hidden shadow-inner">
                               <div 
-                                className="h-full bg-yellow-500 transition-all duration-300"
+                                className="h-full bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 transition-all duration-500 shadow-lg"
                                 style={{ width: `${Math.min(data.porcentajeDatosEnviados || 0, 100)}%` }}
                               />
                             </div>
-                            <span className="text-xs font-bold text-yellow-700">
+                            <Badge className="bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold text-xs">
                               {data.porcentajeDatosEnviados ? data.porcentajeDatosEnviados.toFixed(1) : '0.0'}%
-                            </span>
+                            </Badge>
                           </div>
                         </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{updatedData.faltantesAEnviar}</td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                        <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
+                          <div className="bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 p-2 rounded-lg">
+                            <span className="font-bold text-red-700 dark:text-red-300">{updatedData.faltantesAEnviar}</span>
+                          </div>
+                        </td>
+                        <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
                           {currentCpl > 0 ? (
-                            <Badge variant="secondary" className="text-sm">
+                            <Badge variant="secondary" className="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold shadow-lg">
                               ARS ${currentCpl.toLocaleString('es-AR')}
                             </Badge>
                           ) : (
                             <span className="text-gray-400 text-sm">Sin CPL</span>
                           )}
                         </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                        <td className="border border-amber-200 dark:border-amber-600 p-3 text-center font-medium">
+                          <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-2 rounded-lg">
+                            <span className="text-green-700 dark:text-green-300 font-bold">
+                              ARS ${inversions.inversionRealizada.toLocaleString('es-AR')}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="border border-amber-200 dark:border-amber-600 p-3 text-center font-medium">
                           {(() => {
                             const cplReal = calculateCPLReal(data);
-                            return cplReal > 0 ? (
-                              <div className="flex flex-col items-center gap-1">
-                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                  ARS ${Math.round(cplReal).toLocaleString('es-AR')}
-                                </Badge>
-                                <div className="text-xs text-gray-500">Meta Ads</div>
+                            const metaAdsAmount = cplReal > 0 ? Math.round(cplReal * data.enviados) : inversions.inversionPendiente;
+                            return (
+                              <div className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 p-2 rounded-lg">
+                                <span className="text-orange-700 dark:text-orange-300 font-bold">
+                                  ARS ${metaAdsAmount.toLocaleString('es-AR')}
+                                </span>
+                                {cplReal > 0 && (
+                                  <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">Meta Ads Data</div>
+                                )}
                               </div>
-                            ) : (
-                              <div className="text-gray-400 text-sm">-</div>
                             );
                           })()}
-                        </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
-                          ARS ${inversions.inversionPendiente.toLocaleString('es-AR')}
-                        </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
-                          ARS ${inversions.inversionRealizada.toLocaleString('es-AR')}
-                        </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
                         </td>
                       </tr>
                     );
@@ -512,11 +535,14 @@ export default function DatosDiariosDashboard() {
         </Card>
 
         {/* Campañas Finalizadas */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              ✅ Campañas Finalizadas
-              <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
+        <Card className="border-0 shadow-2xl bg-gradient-to-r from-white via-emerald-50 to-green-50 dark:from-gray-800 dark:via-emerald-900/10 dark:to-green-900/10">
+          <CardHeader className="bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-t-lg">
+            <CardTitle className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                ✅
+              </div>
+              <span className="text-xl font-bold">Campañas Finalizadas</span>
+              <Badge variant="secondary" className="bg-white/20 text-white border-white/30 font-bold">
                 {datosDiarios?.filter(data => data.porcentajeDatosEnviados >= 100).length || 0} completadas
               </Badge>
             </CardTitle>
@@ -525,21 +551,19 @@ export default function DatosDiariosDashboard() {
             <div className="overflow-x-auto">
               <table className="w-full border-collapse border border-gray-300 dark:border-gray-600">
                 <thead>
-                  <tr className="bg-green-50 dark:bg-green-900/20">
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-left">Cliente</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-left">Zona</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Enviados</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Entregados/día</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Pedidos/día (Manual)</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Pedidos Total</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">% Desvío</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">% Datos Enviados</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Faltantes</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Input</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Guardado</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Real (Meta Ads)</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Realizada (con impuestos)</th>
-                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Pendiente (con impuestos)</th>
+                  <tr className="bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20">
+                    <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-left font-semibold text-emerald-900 dark:text-emerald-100">Cliente</th>
+                    <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-left font-semibold text-emerald-900 dark:text-emerald-100">Zona</th>
+                    <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Enviados</th>
+                    <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Entregados/día</th>
+                    <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Pedidos/día (Manual)</th>
+                    <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Pedidos Total</th>
+                    <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">% Desvío</th>
+                    <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">% Datos Enviados</th>
+                    <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Faltantes</th>
+                    <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">CPL Guardado</th>
+                    <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Inversión Realizada</th>
+                    <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Inversión Pendiente</th>
                   </tr>
                 </thead>
                 <tbody>
