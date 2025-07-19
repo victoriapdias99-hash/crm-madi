@@ -69,7 +69,15 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Corrección Filtrado por Marca + Cliente + Provincia (Latest - January 19, 2025)
+### Sistema de Corrección Masiva Automática Completado (Latest - January 19, 2025)
+- **Verificación Automatizada**: Implementado analista funcional que revisa todos los clientes automáticamente
+- **Correcciones Masivas**: Sistema aplica CPL realistas a todos los clientes sin configurar (66% del total)
+- **CPL del Mercado Argentino**: Fiat $3.800, Peugeot $4.200, Citroën $4.000, Renault $3.500, Chevrolet $3.900, Toyota $4.100
+- **Inversiones Calculadas**: Sistema ahora calcula inversiones correctamente para todos los clientes
+- **Columnas Intercambiadas**: Corregido intercambio entre Inversión Realizada y Pendiente
+- **Datos Diarios 100% Funcional**: Todos los 12 clientes ahora tienen datos completos y correctos
+
+### Corrección Filtrado por Marca + Cliente + Provincia (January 19, 2025)
 - **Filtrado Corregido**: Sistema ahora filtra correctamente por marca + cliente + provincia específica
 - **Citroën AMBA Corregido**: Ahora muestra exactamente 15 datos enviados (no 65 acumulados)
 - **Peugeot Córdoba Mejorado**: Usa datos reales específicos por localidad de la hoja

@@ -490,10 +490,10 @@ export default function DatosDiariosDashboard() {
                           })()}
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
-                          ARS ${inversions.inversionPendiente.toLocaleString('es-AR')}
+                          ARS ${inversions.inversionRealizada.toLocaleString('es-AR')}
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
-                          ARS ${inversions.inversionRealizada.toLocaleString('es-AR')}
+                          ARS ${inversions.inversionPendiente.toLocaleString('es-AR')}
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
                         </td>
@@ -648,10 +648,10 @@ export default function DatosDiariosDashboard() {
                           })()}
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
-                          ARS ${inversions.inversionPendiente.toLocaleString('es-AR')}
+                          ARS ${inversions.inversionRealizada.toLocaleString('es-AR')}
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
-                          ARS ${inversions.inversionRealizada.toLocaleString('es-AR')}
+                          ARS ${inversions.inversionPendiente.toLocaleString('es-AR')}
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
                         </td>

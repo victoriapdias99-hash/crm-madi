@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { googleSheetsService, type SheetLead } from "./google-sheets";
+import { AnalistaFuncional } from "./analista-funcional";
 import { registerMetaAdsRoutes } from "./meta-ads-routes";
 import { 
   insertLeadSchema, 
@@ -1525,3 +1526,4 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   return httpServer;
 }
+
