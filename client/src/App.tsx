@@ -15,7 +15,7 @@ import CampanasManagement from "@/pages/campanas-management";
 import MetaAdsDashboard from "@/pages/meta-ads-dashboard";
 import MetaAdsConfig from "@/pages/meta-ads-config";
 import FinanzasDashboard from "@/pages/finanzas-dashboard";
-import ReportesDashboard from "@/pages/reportes-dashboard";
+import ReportesDashboard from "@/pages/reportes-dashboard-simple";
 import ReportesGraficos from "@/pages/reportes-graficos";
 import FunctionalAnalyst from "@/pages/functional-analyst";
 import CPLSimple from "@/pages/cpl-simple";
