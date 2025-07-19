@@ -460,12 +460,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const datosDelDia = dato.enviados || 0;  // Campo principal de datos enviados
           const entregadosDelDia = dato.entregadosPorDia || 0;
           
-          // Acumular datos (no es por día sino por registro de campaña)
-          if (datosDelDia > 0) {
-            datosAcumulados += datosDelDia;
-            entregadosPorDiaTotal += entregadosDelDia;
-            diasConDatos++;
-            fechaFinReal = new Date().toISOString().split('T')[0]; // Fecha actual como fecha real
+          // Para AVEC/GRUPO QUIJADA, usar solo el dato específico de la marca de esta campaña
+          if (cliente.nombreCliente.toLowerCase().includes('grupo quijada')) {
+            const marcaCampana = campana.marca.toLowerCase();
+            const clienteDato = dato.cliente.toLowerCase();
+            
+            // Solo usar el dato que corresponde a la marca específica de esta campaña
+            if (clienteDato.includes(marcaCampana)) {
+              datosAcumulados = datosDelDia;  // No acumular, usar valor específico
+              entregadosPorDiaTotal = entregadosDelDia;
+              diasConDatos = datosDelDia > 0 ? 1 : 0;
+              fechaFinReal = new Date().toISOString().split('T')[0];
+              break; // Solo usar el primer match específico
+            }
+          } else {
+            // Comportamiento normal para otros clientes
+            if (datosDelDia > 0) {
+              datosAcumulados += datosDelDia;
+              entregadosPorDiaTotal += entregadosDelDia;
+              diasConDatos++;
+              fechaFinReal = new Date().toISOString().split('T')[0]; // Fecha actual como fecha real
+            }
           }
         }
         
@@ -511,8 +526,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           cpl: storedCpl || 0,
           ventaPorCampana: storedVenta || 0,
           inversionRealizada: datosFinales * (storedCpl || 0) * 1.02, // 2% impuestos
-          inversionPendiente: faltantesCorregidos * (storedCpl || 0) * 1.02,
-          inversionTotal: campana.cantidadDatosSolicitados * (storedCpl || 0) * 1.02,
+          inversionPendiente: faltantesCorregidos * (storedCpl || 0) * 1.02, // Solo lo que falta por enviar
           fechaCampana: campana.fechaCampana,
           fechaFinReal: fechaFinReal,
           cantidadSolicitada: campana.cantidadDatosSolicitados,
