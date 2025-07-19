@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, BarChart3, Filter, Calendar, TrendingUp, PieChart, Target } from "lucide-react";
 import { Navigation } from "@/components/navigation";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPieChart, Cell, LineChart, Line, Area, AreaChart } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPieChart, Cell, Pie, LineChart, Line, Area, AreaChart } from 'recharts';
 
 interface CampanaData {
   cliente: string;
@@ -429,12 +429,20 @@ export default function ReportesDashboard() {
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <RechartsPieChart>
-                  <Tooltip formatter={(value, name) => [`${Number(value).toFixed(1)}%`, 'Porcentaje']} />
-                  <RechartsPieChart data={datosPieMarcas}>
+                  <Pie
+                    data={datosPieMarcas}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="porcentaje"
+                    label={({ marca, porcentaje }) => `${marca}: ${porcentaje.toFixed(1)}%`}
+                  >
                     {datosPieMarcas.map((entry: any, index: number) => (
                       <Cell key={`cell-${index}`} fill={COLORES_MARCAS[entry.marca as keyof typeof COLORES_MARCAS] || COLORES_MARCAS.Otros} />
                     ))}
-                  </RechartsPieChart>
+                  </Pie>
+                  <Tooltip formatter={(value, name) => [`${Number(value).toFixed(1)}%`, 'Porcentaje']} />
                 </RechartsPieChart>
               </ResponsiveContainer>
             </div>

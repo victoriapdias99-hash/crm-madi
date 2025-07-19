@@ -59,19 +59,29 @@ export default function FinanzasDashboard() {
         numeroCampana 
       });
     },
-    onSuccess: () => {
-      toast({
-        title: "Venta Actualizada",
-        description: "La venta por campaña se ha actualizado correctamente",
+    onSuccess: (_, variables) => {
+      // Actualizar inmediatamente el estado local para respuesta instantánea
+      setVentaValues(prev => {
+        const newValues = { ...prev };
+        delete newValues[variables.clienteIndex || 0];
+        return newValues;
       });
+      
+      toast({
+        title: "✓ Venta Guardada",
+        description: `Venta actualizada: $${variables.venta}`,
+      });
+      
+      // Refrescar datos para recalcular métricas
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/finanzas'] });
     },
-    onError: () => {
+    onError: (error) => {
       toast({
-        title: "Error",
+        title: "Error al Guardar",
         description: "No se pudo actualizar la venta por campaña",
         variant: "destructive",
       });
+      console.error('Error updating venta:', error);
     }
   });
 
@@ -83,16 +93,20 @@ export default function FinanzasDashboard() {
   const handleSaveVenta = (index: number, clienteNombre?: string, numeroCampana?: number) => {
     const venta = ventaValues[index];
     if (venta && venta > 0) {
+      // Guardar inmediatamente sin validaciones adicionales
+      console.log(`💰 Guardando venta: ${clienteNombre} #${numeroCampana} = $${venta}`);
+      
       updateVentaMutation.mutate({ 
         clienteIndex: index, 
         venta, 
         clienteNombre, 
         numeroCampana 
       });
-      setVentaValues(prev => {
-        const newValues = { ...prev };
-        delete newValues[index];
-        return newValues;
+    } else {
+      toast({
+        title: "Valor Inválido",
+        description: "Ingrese un valor de venta mayor a 0",
+        variant: "destructive",
       });
     }
   };
@@ -308,8 +322,9 @@ export default function FinanzasDashboard() {
                           <Button
                             size="sm"
                             onClick={() => handleSaveVenta(index, data.clienteNombre, data.numeroCampana)}
-                            disabled={!ventaValues[index] || updateVentaMutation.isPending}
-                            variant="outline"
+                            disabled={updateVentaMutation.isPending}
+                            variant={ventaValues[index] ? "default" : "outline"}
+                            className={ventaValues[index] ? "bg-green-600 hover:bg-green-700" : ""}
                           >
                             {updateVentaMutation.isPending ? (
                               <Loader2 className="h-3 w-3 animate-spin" />

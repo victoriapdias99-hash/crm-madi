@@ -50,6 +50,7 @@ export interface IStorage {
   getCplByClienteAndCampana(clienteNombre: string, numeroCampana: string): Promise<number>;
   updateVentaPorCampana(clienteIndex: number, venta: number): Promise<void>;
   getVentaPorCampana(clienteIndex: number): Promise<number>;
+  updateVentaPorCampanaByClienteAndCampana(clienteNombre: string, numeroCampana: string, venta: number): Promise<void>;
   getVentaPorCampanaByClienteAndCampana(clienteNombre: string, numeroCampana: string): Promise<number>;
   updatePedidosPorDia(clienteIndex: number, pedidos: number): Promise<void>;
   getPedidosPorDia(clienteIndex: number): Promise<number>;
@@ -646,6 +647,16 @@ export class MemStorage implements IStorage {
     return this.cplValuesByClienteCampana.get(uniqueKey) || 0;
   }
 
+  async updateVentaPorCampanaByClienteAndCampana(clienteNombre: string, numeroCampana: string, venta: number): Promise<void> {
+    if (!this.ventaValuesByClienteCampana) {
+      this.ventaValuesByClienteCampana = new Map();
+    }
+    
+    const uniqueKey = `${clienteNombre}-${numeroCampana}`;
+    this.ventaValuesByClienteCampana.set(uniqueKey, venta);
+    console.log(`💰 Venta updated for client ${clienteNombre} campaign ${numeroCampana}: $${venta}`);
+  }
+
   async getVentaPorCampanaByClienteAndCampana(clienteNombre: string, numeroCampana: string): Promise<number> {
     if (!this.ventaValuesByClienteCampana) {
       this.ventaValuesByClienteCampana = new Map();
@@ -1177,6 +1188,23 @@ export class DatabaseStorage implements IStorage {
       .from(dashboardManualValues)
       .where(eq(dashboardManualValues.clienteIndex, this.hashString(uniqueKey)));
     return result?.cpl || 0;
+  }
+
+  async updateVentaPorCampanaByClienteAndCampana(clienteNombre: string, numeroCampana: string, venta: number): Promise<void> {
+    const uniqueKey = `${clienteNombre}-${numeroCampana}`;
+    
+    await db
+      .insert(dashboardManualValues)
+      .values({
+        clienteIndex: this.hashString(uniqueKey),
+        ventaPorCampana: venta
+      })
+      .onConflictDoUpdate({
+        target: dashboardManualValues.clienteIndex,
+        set: { ventaPorCampana: venta }
+      });
+    
+    console.log(`💰 Database: Venta updated for ${clienteNombre} #${numeroCampana}: $${venta}`);
   }
 
   async getVentaPorCampanaByClienteAndCampana(clienteNombre: string, numeroCampana: string): Promise<number> {

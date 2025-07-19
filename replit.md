@@ -69,7 +69,17 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Mapeo por Nombre de Campaña 100% Funcional + Analista Automatizado (Latest - January 19, 2025)
+### Sistema Finanzas + Reportes Completo (Latest - January 19, 2025)
+- **Finanzas con CPL Directo**: Sistema de finanzas ahora usa exclusivamente valores CPL de CPL Directo (no datos-diarios)
+- **Guardado Instantáneo Venta**: Implementado guardado inmediato de venta por campaña como CPL Directo
+- **Validación Funcional**: Confirmado guardado exitoso de $15,000 para PEUGEOT ALBENS campaña #1 con persistencia en base de datos
+- **Dashboard Reportes**: Creado módulo de reportes con filtros dinámicos por marca, campaña, fecha y mes
+- **Visualización Gráfica**: Gráficos de barras, pie y área temporal que se actualizan según filtros aplicados
+- **Integración Completa**: CPL Real del módulo finanzas mapeado a CPL Directo para consistencia de datos
+- **API Funcional**: Endpoints de venta `/api/dashboard/update-venta` funcionando con parámetros cliente-campaña
+- **Estado Final**: Guardado instantáneo funcionando, finanzas usando CPL correcto, reportes con filtros operativos
+
+### Mapeo por Nombre de Campaña 100% Funcional + Analista Automatizado (January 19, 2025)
 - **RENAULT Mapeo Corregido**: Sistema ahora mapea correctamente RENAULT - Javier Cagiao a sus 45 datos reales medidos
 - **Analista Funcional Automatizado**: Implementado sistema que verifica automáticamente mapeo de datos por cliente, marca y provincia
 - **Correcciones Automáticas**: Sistema aplica valores reales específicos (RENAULT: 45, CITROËN: 19, PEUGEOT Córdoba: 8)

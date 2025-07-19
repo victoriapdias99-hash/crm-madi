@@ -978,6 +978,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           data.numeroCampana
         );
 
+        // Obtener CPL desde CPL Directo (no del dashboard datos-diarios)
+        const cplDirecto = await storage.getCplByClienteAndCampana(
+          data.clienteNombre, 
+          data.numeroCampana
+        );
+
         // Usar inversión realizada del dashboard principal (que incluye los cálculos correctos)
         const inversionReal = data.inversionRealizada || 0;
         const inversionPendiente = data.inversionPendiente || 0;
@@ -991,7 +997,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           marca,
           zona: data.zona,
           totalLeads: data.enviados || 0,
-          cpl: parseFloat(data.cpl) || 0,
+          cpl: cplDirecto || parseFloat(data.cpl) || 0, // Priorizar CPL Directo
           ventaPorCampana: ventaAlmacenada || 0,
           inversionTotal: inversionTotal, // Mapear inversión real por campaña
           inversionRealizada: inversionReal,

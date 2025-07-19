@@ -15,6 +15,7 @@ import CampanasManagement from "@/pages/campanas-management";
 import MetaAdsDashboard from "@/pages/meta-ads-dashboard";
 import MetaAdsConfig from "@/pages/meta-ads-config";
 import FinanzasDashboard from "@/pages/finanzas-dashboard";
+import ReportesDashboard from "@/pages/reportes-dashboard";
 import ReportesGraficos from "@/pages/reportes-graficos";
 import FunctionalAnalyst from "@/pages/functional-analyst";
 import CPLSimple from "@/pages/cpl-simple";
@@ -34,7 +35,8 @@ function Router() {
       <Route path="/meta-ads" component={MetaAdsDashboard} />
       <Route path="/meta-ads-config" component={MetaAdsConfig} />
       <Route path="/finanzas" component={FinanzasDashboard} />
-      <Route path="/reportes" component={ReportesGraficos} />
+      <Route path="/reportes" component={ReportesDashboard} />
+      <Route path="/reportes-graficos" component={ReportesGraficos} />
       <Route path="/pruebas" component={FunctionalAnalyst} />
       <Route path="/cpl-simple" component={CPLSimple} />
       <Route path="/cpl-directo" component={CPLDirecto} />
