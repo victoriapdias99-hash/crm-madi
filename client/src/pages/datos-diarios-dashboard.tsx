@@ -487,10 +487,15 @@ export default function DatosDiariosDashboard() {
                     
                     const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0; // Use CPL from storage or server
                     
-                    // Crear objeto actualizado 
+                    // Crear objeto actualizado con validaciones para datos > 100%
+                    const porcentajeReal = data.pedidosTotal > 0 ? (data.enviados / data.pedidosTotal) * 100 : 0;
+                    const esSuperior100 = porcentajeReal > 100;
+                    
                     const updatedData = {
                       ...data,
-                      faltantesAEnviar: Math.max(0, data.pedidosTotal - data.enviados), // Pedidos Total - Enviados
+                      faltantesAEnviar: esSuperior100 ? 0 : Math.max(0, data.pedidosTotal - data.enviados), // Si supera 100%, faltantes = 0
+                      porcentajeDatosEnviados: Math.min(100, porcentajeReal), // Limitar a 100% para display
+                      esSuperior100: esSuperior100
                     };
                     
                     const inversions = calculateInversions(updatedData, currentCpl);
@@ -543,12 +548,21 @@ export default function DatosDiariosDashboard() {
                           <div className="flex flex-col items-center gap-2">
                             <div className="w-24 h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full overflow-hidden shadow-inner">
                               <div 
-                                className="h-full bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 transition-all duration-500 shadow-lg"
+                                className={`h-full transition-all duration-500 shadow-lg ${
+                                  updatedData.esSuperior100 
+                                    ? 'bg-gradient-to-r from-green-400 via-emerald-500 to-green-600' 
+                                    : 'bg-gradient-to-r from-amber-400 via-orange-500 to-red-500'
+                                }`}
                                 style={{ width: `${Math.min(data.porcentajeDatosEnviados || 0, 100)}%` }}
                               />
                             </div>
-                            <Badge className="bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold text-xs">
-                              {data.porcentajeDatosEnviados ? data.porcentajeDatosEnviados.toFixed(1) : '0.0'}%
+                            <Badge className={`font-bold text-xs ${
+                              updatedData.esSuperior100 
+                                ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white' 
+                                : 'bg-gradient-to-r from-amber-500 to-orange-600 text-white'
+                            }`}>
+                              {updatedData.porcentajeDatosEnviados.toFixed(1)}%
+                              {updatedData.esSuperior100 && <span className="ml-1">✓</span>}
                             </Badge>
                           </div>
                         </td>
