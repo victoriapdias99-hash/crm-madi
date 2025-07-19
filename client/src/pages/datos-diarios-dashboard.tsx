@@ -53,7 +53,7 @@ export default function DatosDiariosDashboard() {
     queryKey: ['/api/meta-ads/campaigns'],
     refetchInterval: 300000, // Refetch every 5 minutes
     retry: false, // No retry Meta Ads if it fails
-    enabled: false, // Disable Meta Ads query temporarily
+    enabled: true, // Enable Meta Ads query to show when available
   });
 
   const updateCplMutation = useMutation({
