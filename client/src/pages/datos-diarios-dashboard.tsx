@@ -29,7 +29,11 @@ interface DatosDiariosData {
   ventaPorCampana: number;
   inversionRealizada: number;
   inversionPendiente: number;
-  inversionTotal: number;
+  fechaCampana: string;
+  fechaFinReal: string;
+  cantidadSolicitada: number;
+  diasProcesados: number;
+  estadoCampana: string;
 }
 
 export default function DatosDiariosDashboard() {
@@ -493,7 +497,6 @@ export default function DatosDiariosDashboard() {
                           ARS ${inversions.inversionPendiente.toLocaleString('es-AR')}
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
-                          ARS ${inversions.inversionTotal.toLocaleString('es-AR')}
                         </td>
                       </tr>
                     );
@@ -653,7 +656,6 @@ export default function DatosDiariosDashboard() {
                           ARS ${inversions.inversionPendiente.toLocaleString('es-AR')}
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
-                          ARS ${inversions.inversionTotal.toLocaleString('es-AR')}
                         </td>
                       </tr>
                     );
