@@ -38,14 +38,13 @@ interface ResumenPorMarca {
 export default function FinanzasDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [ventaValues, setVentaValues] = useState<Record<number, number>>({});
-
   const { data: finanzasData, isLoading } = useQuery({
     queryKey: ['/api/dashboard/finanzas'],
     refetchInterval: 300000, // Refrescar cada 5 minutos
   });
 
-  const updateVentaMutation = useMutation({
+  // Eliminar mutation - modo solo lectura
+  /*const updateVentaMutation = useMutation({
     mutationFn: async ({ clienteIndex, venta, clienteNombre, numeroCampana }: { 
       clienteIndex?: number; 
       venta: number; 
@@ -83,62 +82,9 @@ export default function FinanzasDashboard() {
       });
       console.error('Error updating venta:', error);
     }
-  });
+  });*/
 
-  const handleVentaChange = (index: number, value: string) => {
-    // Permitir valores vacíos y números válidos
-    if (value === '') {
-      setVentaValues(prev => ({ ...prev, [index]: '' as any }));
-    } else {
-      const numValue = parseFloat(value);
-      if (!isNaN(numValue) && numValue >= 0) {
-        setVentaValues(prev => ({ ...prev, [index]: numValue }));
-      }
-    }
-  };
-
-  const handleSaveVenta = (index: number, clienteNombre?: string, numeroCampana?: number) => {
-    const venta = ventaValues[index];
-    
-    // Validación más robusta
-    if (venta === '' || venta === undefined || venta === null) {
-      toast({
-        title: "Campo Vacío",
-        description: "Ingrese un valor de venta antes de guardar",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const ventaNum = typeof venta === 'string' ? parseFloat(venta) : venta;
-    
-    if (isNaN(ventaNum) || ventaNum <= 0) {
-      toast({
-        title: "Valor Inválido",
-        description: "Ingrese un valor de venta numérico mayor a 0",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!clienteNombre || !numeroCampana) {
-      toast({
-        title: "Error de Datos",
-        description: "Faltan datos de cliente o campaña",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    console.log(`💰 Guardando venta: ${clienteNombre} #${numeroCampana} = $${ventaNum}`);
-    
-    updateVentaMutation.mutate({ 
-      clienteIndex: index, 
-      venta: ventaNum, 
-      clienteNombre, 
-      numeroCampana: numeroCampana.toString()
-    });
-  };
+  // MODO SOLO LECTURA - Funciones de edición removidas
 
   // Calcular métricas financieras
   const calculateFinancialMetrics = (data: FinanzasData, ventaManual?: number): {

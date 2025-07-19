@@ -158,6 +158,7 @@ export const campanasComerciales = pgTable("campanas_comerciales", {
   fechaCampana: date("fecha_campana"), // Campo fecha cuando se da de alta la campaña
   fechaFin: date("fecha_fin"), // Fecha de finalización para rangos de matching
   pedidosPorDia: integer("pedidos_por_dia").default(0), // Pedidos por día editables
+  facturacionBruta: numeric("facturacion_bruta", { precision: 12, scale: 2 }).default("0"), // Facturación bruta por campaña
   fechaCreacion: timestamp("fecha_creacion").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -295,6 +296,8 @@ export const insertCampanaComercialSchema = createInsertSchema(campanasComercial
   localizado: true,
   fechaCampana: true,
   fechaFin: true,
+  pedidosPorDia: true,
+  facturacionBruta: true,
 });
 
 // Schema para crear campañas sin campos calculados automáticamente

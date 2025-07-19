@@ -989,11 +989,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         else if (clienteNombre.includes('renault')) marca = 'Renault';
         else if (clienteNombre.includes('citroen')) marca = 'Citroen';
 
-        // Obtener venta almacenada por cliente y campaña
-        const ventaAlmacenada = await storage.getVentaPorCampanaByClienteAndCampana(
-          data.clienteNombre, 
-          data.numeroCampana
-        );
+        // Obtener facturación bruta desde campañas comerciales
+        const campanasComerciales = await storage.getAllCampanasComerciales();
+        const clientes = await storage.getAllClientes();
+        const campanaComercial = campanasComerciales.find(c => {
+          const cliente = clientes.find(cl => cl.id === c.clienteId);
+          return cliente?.nombreCliente === data.clienteNombre && 
+                 c.numeroCampana === data.numeroCampana.toString();
+        });
+        const facturacionBruta = campanaComercial?.facturacionBruta ? 
+          parseFloat(campanaComercial.facturacionBruta) : 0;
 
         // Obtener CPL desde CPL Directo (no del dashboard datos-diarios)
         const cplDirecto = await storage.getCplByClienteAndCampana(
@@ -1015,7 +1020,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           zona: data.zona,
           totalLeads: data.enviados || 0,
           cpl: cplDirecto || parseFloat(data.cpl) || 0, // Priorizar CPL Directo
-          ventaPorCampana: ventaAlmacenada || 0,
+          ventaPorCampana: facturacionBruta,
           inversionTotal: inversionTotal, // Mapear inversión real por campaña
           inversionRealizada: inversionReal,
           inversionPendiente: inversionPendiente

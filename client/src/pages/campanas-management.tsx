@@ -117,6 +117,7 @@ export default function CampanasManagement() {
       zona: "",
       fechaCampana: "",
       pedidosPorDia: 0,
+      facturacionBruta: 0,
     },
   });
 
@@ -201,6 +202,7 @@ export default function CampanasManagement() {
         zona: campana.zona,
         fechaCampana: campana.fechaCampana || "",
         pedidosPorDia: campana.pedidosPorDia || 0,
+        facturacionBruta: parseFloat(campana.facturacionBruta || "0"),
       });
     } else {
       setEditingCampana(null);
@@ -211,6 +213,7 @@ export default function CampanasManagement() {
         zona: "",
         fechaCampana: "",
         pedidosPorDia: 0,
+        facturacionBruta: 0,
       });
     }
     setIsDialogOpen(true);
@@ -225,6 +228,7 @@ export default function CampanasManagement() {
       zona: campana.zona,
       fechaCampana: "", // Clear date for new campaign
       pedidosPorDia: campana.pedidosPorDia || 0,
+      facturacionBruta: parseFloat(campana.facturacionBruta || "0"),
     });
     setIsDialogOpen(true);
   };
@@ -432,29 +436,56 @@ export default function CampanasManagement() {
                   )}
                 />
 
-                {/* Pedidos por Día */}
-                <FormField
-                  control={form.control}
-                  name="pedidosPorDia"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Pedidos por Día</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          min="0"
-                          placeholder="Ej: 20" 
-                          {...field} 
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                      <p className="text-sm text-muted-foreground">
-                        Cantidad de datos que se entregan por día
-                      </p>
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Pedidos por Día */}
+                  <FormField
+                    control={form.control}
+                    name="pedidosPorDia"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Pedidos por Día</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min="0"
+                            placeholder="Ej: 20" 
+                            {...field} 
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                        <p className="text-sm text-muted-foreground">
+                          Cantidad de datos que se entregan por día
+                        </p>
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Facturación Bruta */}
+                  <FormField
+                    control={form.control}
+                    name="facturacionBruta"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Facturación Bruta</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min="0"
+                            step="0.01"
+                            placeholder="Ej: 600000" 
+                            {...field} 
+                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                        <p className="text-sm text-muted-foreground">
+                          Monto total de facturación bruta por campaña
+                        </p>
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <div className="flex justify-end space-x-2 pt-4">
                   <Button 
