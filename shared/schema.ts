@@ -298,6 +298,8 @@ export const insertCampanaComercialSchema = createInsertSchema(campanasComercial
   fechaFin: true,
   pedidosPorDia: true,
   facturacionBruta: true,
+}).extend({
+  facturacionBruta: z.union([z.string(), z.number()]).transform(val => String(val)),
 });
 
 // Schema para crear campañas sin campos calculados automáticamente
@@ -309,6 +311,9 @@ export const createCampanaComercialSchema = createInsertSchema(campanasComercial
     fechaCreacion: true, 
     createdAt: true, 
     updatedAt: true 
+  })
+  .extend({
+    facturacionBruta: z.union([z.string(), z.number()]).transform(val => String(val)),
   });
 
 export type CampanaComercial = typeof campanasComerciales.$inferSelect;

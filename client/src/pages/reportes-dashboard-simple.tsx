@@ -85,11 +85,11 @@ export default function ReportesDashboard() {
       const fechaInicio = filtros.fechaInicio ? new Date(filtros.fechaInicio) : null;
       const fechaFin = filtros.fechaFin ? new Date(filtros.fechaFin) : null;
 
-      if (filtros.marca !== 'todas' && campana.marca.toLowerCase() !== filtros.marca.toLowerCase()) {
+      if (filtros.marca !== 'todas' && campana.marca && campana.marca.toLowerCase() !== filtros.marca.toLowerCase()) {
         return false;
       }
 
-      if (filtros.campana !== 'todas' && campana.clienteNombre.toLowerCase() !== filtros.campana.toLowerCase()) {
+      if (filtros.campana !== 'todas' && campana.clienteNombre && campana.clienteNombre.toLowerCase() !== filtros.campana.toLowerCase()) {
         return false;
       }
 
@@ -173,12 +173,12 @@ export default function ReportesDashboard() {
   // Opciones únicas para filtros
   const marcasUnicas = useMemo(() => {
     if (!campanasData) return [];
-    return [...new Set(campanasData.map((c: CampanaData) => c.marca))];
+    return [...new Set(campanasData.map((c: CampanaData) => c.marca).filter(Boolean))];
   }, [campanasData]);
 
   const campanasUnicas = useMemo(() => {
     if (!campanasData) return [];
-    return [...new Set(campanasData.map((c: CampanaData) => c.clienteNombre))];
+    return [...new Set(campanasData.map((c: CampanaData) => c.clienteNombre).filter(Boolean))];
   }, [campanasData]);
 
   // Función para exportar reportes
