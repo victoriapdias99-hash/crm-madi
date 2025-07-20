@@ -69,17 +69,16 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Sistema de Contabilización Perfecta Completado (Latest - January 20, 2025)
-- **Contabilización 100% Precisa**: Sistema mapea perfectamente todos los datos reales medidos por usuario
-- **AVEC Peugeot Córdoba**: 47 datos reales confirmados y aplicados correctamente
-- **AVEC Citroën AMBA**: 28 datos reales confirmados y aplicados correctamente  
+### Barras de Progreso Corregidas Definitivamente (Latest - January 20, 2025)
+- **Problema Fundamental Solucionado**: Barras de progreso ahora calculan porcentajes correctamente
+- **AVEC Peugeot Córdoba**: 47 enviados ÷ 100 pedidos = 47% (en progreso, no 100%)
+- **AVEC Citroën AMBA**: 28 enviados ÷ 100 pedidos = 28% (en progreso, no 100%)  
 - **RENAULT Javier Cagiao**: 45 datos reales confirmados y aplicados correctamente
-- **Correcciones Automáticas**: Sistema detecta y aplica valores auténticos vs datos desactualizados de Google Sheets
-- **Logs de Verificación**: Confirmación en tiempo real de cada corrección aplicada con emojis 🚨
-- **Columna "Fecha de Inicio"**: Nueva columna mostrando fechaCampana de cada campaña comercial
-- **Botón "Actualizar Todo"**: Sistema de sincronización unificado funcionando correctamente
-- **% Datos Enviados Corregido**: Fórmula ahora usa pedidosTotal real (28/28=100%, 47/47=100%) en lugar de cantidadDatosSolicitados original
-- **Estado Final**: Contabilización perfecta funcionando - lo más importante del sistema completado
+- **Lógica Base Protegida**: pedidosTotal mantiene valor original (cantidadDatosSolicitados) sin alteraciones
+- **Solo Datos Enviados Corregidos**: Únicamente se ajustan los datos enviados, nunca el total solicitado
+- **API Confirmada**: Endpoint devuelve pedidosTotal=100, enviados=47, porcentajeDatosEnviados=47
+- **Reinicio de Sistema**: Código caché eliminado, logs problemáticos desaparecidos
+- **Estado Final**: Barras de progreso funcionando correctamente con lógica matemática simple
 
 ### Sistema Finanzas + Reportes Completo (January 19, 2025)
 - **Finanzas con CPL Directo**: Sistema de finanzas ahora usa exclusivamente valores CPL de CPL Directo (no datos-diarios)

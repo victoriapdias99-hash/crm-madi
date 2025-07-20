@@ -574,8 +574,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const storedVenta = await storage.getVentaPorCampanaByClienteAndCampana(cliente.nombreCliente, campana.numeroCampana);
         const storedPedidos = await storage.getPedidosPorDiaByClienteAndCampana(cliente.nombreCliente, campana.numeroCampana);
         
-        // Mantener lógica original: pedidos total = cantidad solicitada original
+        // FORZAR lógica original: pedidos total = cantidad solicitada original (NUNCA debe cambiar)
         const pedidosTotal = campana.cantidadDatosSolicitados; // Cantidad total pedida de la campaña
+        
+        // DEBUG: Verificar que pedidosTotal sea correcto para AVEC
+        if (cliente.nombreCliente.toLowerCase().includes('grupo quijada')) {
+          console.log(`🔍 DEBUG AVEC ${campana.marca}: cantidadDatosSolicitados=${campana.cantidadDatosSolicitados}, pedidosTotal=${pedidosTotal}, datosFinales=${datosFinales}`);
+        }
+        
         const porcentajeDesvio = datosFinales > 0 ? ((pedidosTotal - datosFinales) / datosFinales * 100) : 0;
         const faltantesCorregidos = Math.max(0, pedidosTotal - datosFinales); // Pedidos Total - Enviados
         
