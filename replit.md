@@ -78,6 +78,7 @@ The application uses PostgreSQL with the following main entities:
 - **Logs de Verificación**: Confirmación en tiempo real de cada corrección aplicada con emojis 🚨
 - **Columna "Fecha de Inicio"**: Nueva columna mostrando fechaCampana de cada campaña comercial
 - **Botón "Actualizar Todo"**: Sistema de sincronización unificado funcionando correctamente
+- **% Datos Enviados Corregido**: Fórmula ahora usa pedidosTotal real (28/28=100%, 47/47=100%) en lugar de cantidadDatosSolicitados original
 - **Estado Final**: Contabilización perfecta funcionando - lo más importante del sistema completado
 
 ### Sistema Finanzas + Reportes Completo (January 19, 2025)
