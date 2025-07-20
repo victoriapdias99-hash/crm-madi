@@ -52,7 +52,7 @@ export default function DatosDiariosDashboard() {
     queryKey: ['/api/dashboard/datos-diarios'],
     refetchInterval: 10 * 1000, // Auto-refresh every 10 seconds for immediate updates
     staleTime: 0, // Always get fresh data for real-time updates
-    cacheTime: 0, // Don't cache data to ensure fresh data
+    gcTime: 0, // Don't cache data to ensure fresh data (React Query v5)
     retry: 2,
     retryDelay: 1000,
     refetchOnWindowFocus: true, // Refresh when window gets focus
@@ -373,6 +373,54 @@ export default function DatosDiariosDashboard() {
     });
   };
 
+  // Mutation unificada que ejecuta todas las acciones de actualización
+  const unifiedUpdateMutation = useMutation({
+    mutationFn: async () => {
+      console.log('Iniciando actualización unificada completa...');
+      
+      // Secuencia de actualizaciones:
+      // 1. Forzar actualización inmediata
+      await apiRequest('/api/dashboard/force-refresh', 'POST', {});
+      
+      // 2. Mapear campañas
+      await apiRequest('/api/dashboard/mapear-campanas', 'POST');
+      
+      // 3. Actualizar todos los datos
+      await apiRequest('/api/dashboard/refresh-all-data', 'POST', {});
+      
+      return { success: true };
+    },
+    onSuccess: () => {
+      // Invalidar todas las queries relevantes para recargar datos frescos
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/campanas-comerciales'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/clientes'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/meta-ads/campaigns'] });
+      
+      // Forzar recarga manual
+      queryClient.removeQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+      refetch();
+      
+      toast({
+        title: "🚀 Actualización completa exitosa",
+        description: "Todos los datos han sido actualizados: Google Sheets, campañas mapeadas y sincronización completa",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error en actualización unificada:', error);
+      toast({
+        title: "Error en actualización",
+        description: error?.message || "No se pudieron actualizar todos los datos. Algunos cambios pueden haberse aplicado.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Función handler para el botón unificado
+  const handleUnifiedUpdate = () => {
+    unifiedUpdateMutation.mutate();
+  };
+
   if (finalIsLoading && !finalData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-blue-900/20 flex items-center justify-center">
@@ -408,65 +456,17 @@ export default function DatosDiariosDashboard() {
           </div>
           <div className="flex gap-3">
             <Button
-              onClick={() => forceRefreshMutation.mutate()}
-              disabled={forceRefreshMutation.isPending}
-              className="bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-semibold shadow-lg transform hover:scale-105 transition-all duration-200"
-              size="sm"
+              onClick={handleUnifiedUpdate}
+              disabled={unifiedUpdateMutation.isPending}
+              className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 hover:from-blue-700 hover:via-purple-700 hover:to-indigo-700 text-white font-bold shadow-xl transform hover:scale-105 transition-all duration-300 px-6 py-3"
+              size="lg"
             >
-              {forceRefreshMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              {unifiedUpdateMutation.isPending ? (
+                <Loader2 className="h-5 w-5 mr-3 animate-spin" />
               ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
+                <RefreshCw className="h-5 w-5 mr-3" />
               )}
-              Actualización Inmediata
-            </Button>
-            <Button
-              onClick={() => {
-                queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
-                toast({
-                  title: "🔄 Actualizando datos en tiempo real",
-                  description: "Refrescando datos enviados desde Google Sheets"
-                });
-              }}
-              className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold shadow-lg transform hover:scale-105 transition-all duration-200"
-              size="sm"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Datos en Tiempo Real
-            </Button>
-            <Button
-              onClick={() => mapearCampanasMutation.mutate()}
-              disabled={mapearCampanasMutation.isPending}
-              className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold shadow-lg transform hover:scale-105 transition-all duration-200"
-              size="sm"
-            >
-              {mapearCampanasMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
-              )}
-              Mapear Campañas
-            </Button>
-            <Button
-              onClick={() => refreshAllDataMutation.mutate()}
-              disabled={refreshAllDataMutation.isPending}
-              className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white font-semibold shadow-lg transform hover:scale-105 transition-all duration-200"
-              size="sm"
-            >
-              {refreshAllDataMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
-              )}
-              Actualizar
-            </Button>
-            <Button
-              onClick={clearAllManualValues}
-              className="bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-semibold shadow-lg transform hover:scale-105 transition-all duration-200"
-              size="sm"
-            >
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Limpiar Valores
+              Actualizar Todo
             </Button>
           </div>
         </div>

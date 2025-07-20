@@ -69,7 +69,17 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Sistema Finanzas + Reportes Completo (Latest - January 19, 2025)
+### Unificación de Botones de Actualización + Lógica Lineal de Campañas (Latest - January 20, 2025)
+- **Botón Único "Actualizar Todo"**: Consolidado 5 botones de actualización en un solo botón principal
+- **Lógica Lineal Completamente Implementada**: Sistema de campañas continuas donde cada campaña continúa donde terminó la anterior
+- **FIAT Campañas Corregidas**: Campaña 1 (datos 1-500) y Campaña 2 (datos 501-1000) funcionando correctamente
+- **Cálculo de Rangos Automático**: Sistema calcula automáticamente rangos por cliente/marca/zona/fecha de inicio
+- **Performance Mejorado**: Removido debug logs excesivos para mejor velocidad de carga
+- **React Query v5**: Corregido error `cacheTime` → `gcTime` para compatibilidad
+- **Interface Simplificada**: Un solo botón ejecuta: actualización inmediata, mapeo de campañas, sincronización completa
+- **Estado Final**: Lógica lineal 100% funcional, interface limpia con botón unificado
+
+### Sistema Finanzas + Reportes Completo (January 19, 2025)
 - **Finanzas con CPL Directo**: Sistema de finanzas ahora usa exclusivamente valores CPL de CPL Directo (no datos-diarios)
 - **Guardado Instantáneo Venta**: Implementado guardado inmediato de venta por campaña como CPL Directo
 - **Validación Funcional**: Confirmado guardado exitoso de $15,000 para PEUGEOT ALBENS campaña #1 con persistencia en base de datos
