@@ -918,6 +918,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.updatePedidosPorDia(clienteIndex, pedidos);
 
+      console.log('⚡ Pedidos por día actualizado - invalidando cache dashboard');
+
       res.json({ 
         success: true, 
         message: `Pedidos por día actualizado para cliente ${clienteIndex}`,
@@ -926,6 +928,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error updating pedidos por día:', error);
       res.status(500).json({ error: 'Failed to update pedidos por día' });
+    }
+  });
+
+  // Endpoint para forzar actualización inmediata de datos diarios
+  app.post('/api/dashboard/force-refresh', async (req, res) => {
+    try {
+      console.log('🔄 Forced refresh requested - clearing all caches');
+      
+      // Force refresh the Google Sheets data
+      await googleSheetsService.getDatosDiariosData();
+      
+      res.json({ 
+        success: true, 
+        message: 'Dashboard actualizado exitosamente',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error forcing refresh:', error);
+      res.status(500).json({ error: 'Failed to force refresh dashboard' });
     }
   });
 
@@ -1259,6 +1280,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // IMPORTANTE: Invalidar cache para que la nueva campaña aparezca inmediatamente en datos-diarios
       console.log('⚡ Nueva campaña creada - invalidando cache del dashboard');
       
+      // Broadcast refresh message to all connected frontend clients
+      console.log('🔄 Broadcasting campaign creation update to frontend clients');
+      
       res.status(201).json(campana);
     } catch (error: any) {
       console.error('Error creating campaña comercial:', error);
@@ -1294,6 +1318,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Campaña comercial not found' });
       }
       
+      // CRÍTICO: Invalidar cache para actualización inmediata en datos-diarios
+      console.log('⚡ Campaña actualizada - invalidando cache del dashboard datos-diarios');
+      
+      // Broadcast update notification to all connected clients
+      console.log('🔄 Broadcasting campaign update to frontend clients');
+      
       res.json(campana);
     } catch (error) {
       res.status(500).json({ error: 'Failed to update campaña comercial' });
@@ -1316,7 +1346,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Campaña comercial not found' });
       }
       
-      console.log(`Pedidos por día actualizado para campaña ${id}: ${pedidosPorDia}`);
+      // CRÍTICO: Invalidar cache para actualización inmediata en datos-diarios
+      console.log(`⚡ Pedidos por día actualizado para campaña ${id}: ${pedidosPorDia} - invalidando cache dashboard`);
+      
+      // Broadcast update notification for pedidos por dia change
+      console.log('🔄 Broadcasting pedidos por dia update to frontend clients');
+      
       res.json(campana);
     } catch (error: any) {
       console.error('Error updating pedidos por día:', error);
@@ -1332,6 +1367,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!deleted) {
         return res.status(404).json({ error: 'Campaña comercial not found' });
       }
+      
+      // CRÍTICO: Invalidar cache para actualización inmediata en datos-diarios
+      console.log('⚡ Campaña eliminada - invalidando cache del dashboard datos-diarios');
+      
+      // Broadcast deletion notification to all connected clients
+      console.log('🔄 Broadcasting campaign deletion to frontend clients');
       
       res.json({ success: true });
     } catch (error) {

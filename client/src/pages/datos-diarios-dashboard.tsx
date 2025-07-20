@@ -169,6 +169,27 @@ export default function DatosDiariosDashboard() {
     }
   });
 
+  // Mutation para forzar actualización inmediata tras cambios de campañas
+  const forceRefreshMutation = useMutation({
+    mutationFn: () => apiRequest('/api/dashboard/force-refresh', 'POST', {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+      queryClient.removeQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+      refetch();
+      toast({
+        title: "🚀 Actualización inmediata completada",
+        description: "Los datos se han actualizado reflejando cambios de campañas",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error al forzar actualización",
+        description: "Intenta nuevamente en unos segundos",
+        variant: "destructive",
+      });
+    },
+  });
+
   const updateCplMutation = useMutation({
     mutationFn: async ({ clienteIndex, cpl, clienteNombre, numeroCampana }: { 
       clienteIndex: number; 
@@ -386,6 +407,19 @@ export default function DatosDiariosDashboard() {
             <div className="absolute -top-2 -left-2 w-24 h-24 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full opacity-10 animate-pulse"></div>
           </div>
           <div className="flex gap-3">
+            <Button
+              onClick={() => forceRefreshMutation.mutate()}
+              disabled={forceRefreshMutation.isPending}
+              className="bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-semibold shadow-lg transform hover:scale-105 transition-all duration-200"
+              size="sm"
+            >
+              {forceRefreshMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              Actualización Inmediata
+            </Button>
             <Button
               onClick={() => {
                 queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });

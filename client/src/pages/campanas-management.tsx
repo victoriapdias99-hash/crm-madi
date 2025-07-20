@@ -181,10 +181,17 @@ export default function CampanasManagement() {
       await apiRequest(`/api/campanas-comerciales/${id}`, 'PUT', data);
     },
     onSuccess: () => {
+      // Invalidar múltiples queries para actualización inmediata en todos los dashboards
       queryClient.invalidateQueries({ queryKey: ['/api/campanas-comerciales'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/finanzas'] });
       setIsDialogOpen(false);
       setEditingCampana(null);
-      toast({ title: "Campaña actualizada exitosamente" });
+      toast({ 
+        title: "Campaña actualizada exitosamente", 
+        description: "Los cambios se reflejarán inmediatamente en Datos Diarios" 
+      });
     },
     onError: () => {
       toast({ title: "Error al actualizar campaña", variant: "destructive" });
@@ -196,8 +203,15 @@ export default function CampanasManagement() {
       await apiRequest(`/api/campanas-comerciales/${id}`, 'DELETE');
     },
     onSuccess: () => {
+      // Invalidar múltiples queries para actualización inmediata en todos los dashboards
       queryClient.invalidateQueries({ queryKey: ['/api/campanas-comerciales'] });
-      toast({ title: "Campaña eliminada exitosamente" });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/finanzas'] });
+      toast({ 
+        title: "Campaña eliminada exitosamente", 
+        description: "Los cambios se reflejarán inmediatamente en todos los dashboards" 
+      });
     },
     onError: () => {
       toast({ title: "Error al eliminar campaña", variant: "destructive" });
