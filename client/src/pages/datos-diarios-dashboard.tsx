@@ -48,16 +48,17 @@ export default function DatosDiariosDashboard() {
   const [manualData, setManualData] = useState<DatosDiariosData[] | null>(null);
   
   // Real-time optimized query for live data updates
-  const { data: datosDiarios, isLoading, error } = useQuery({
+  const { data: datosDiarios, isLoading, error, refetch } = useQuery({
     queryKey: ['/api/dashboard/datos-diarios'],
-    refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds for real-time data
+    refetchInterval: 10 * 1000, // Auto-refresh every 10 seconds for immediate updates
     staleTime: 0, // Always get fresh data for real-time updates
-    cacheTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    cacheTime: 0, // Don't cache data to ensure fresh data
     retry: 2,
     retryDelay: 1000,
     refetchOnWindowFocus: true, // Refresh when window gets focus
     refetchOnMount: true,
     enabled: true,
+    refetchOnReconnect: true,
   });
 
   // Manual data fetching as fallback
