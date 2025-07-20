@@ -22,6 +22,20 @@ import {
   ZONAS_DISPONIBLES
 } from "@shared/schema";
 
+// Función para formatear fechas sin problemas de timezone
+function formatDateForDisplay(dateString: string): string {
+  if (!dateString) return 'No especificada';
+  
+  // Si viene en formato YYYY-MM-DD, convertir a DD/MM/YYYY
+  if (dateString.includes('-') && dateString.length === 10) {
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year}`;
+  }
+  
+  // Si ya viene en formato DD/MM/YYYY, devolverlo tal como está
+  return dateString;
+}
+
 // Componente para editar pedidos por día inline
 function EditablePedidosPorDia({ campana }: { campana: CampanaComercial }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -603,7 +617,7 @@ export default function CampanasManagement() {
                     <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Fecha Inicio</h4>
                   </div>
                   <p className="text-sm">
-                    {campana.fechaCampana ? new Date(campana.fechaCampana).toLocaleDateString('es-AR') : 'No especificada'}
+                    {campana.fechaCampana ? formatDateForDisplay(campana.fechaCampana) : 'No especificada'}
                   </p>
                 </div>
 
@@ -614,7 +628,7 @@ export default function CampanasManagement() {
                     <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Fecha Fin</h4>
                   </div>
                   <p className="text-sm">
-                    {campana.fechaFin ? new Date(campana.fechaFin).toLocaleDateString('es-AR') : 'No especificada'}
+                    {campana.fechaFin ? formatDateForDisplay(campana.fechaFin) : 'No especificada'}
                   </p>
                 </div>
 
