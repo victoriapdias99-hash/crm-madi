@@ -502,6 +502,7 @@ export default function DatosDiariosDashboard() {
                   <tr className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20">
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-left font-semibold text-amber-900 dark:text-amber-100">Cliente</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-left font-semibold text-amber-900 dark:text-amber-100">Zona</th>
+                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Fecha de Inicio</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Enviados</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Entregados/día</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Pedidos/día</th>
@@ -547,6 +548,13 @@ export default function DatosDiariosDashboard() {
                           </div>
                         </td>
                         <td className="border border-amber-200 dark:border-amber-600 p-3 font-medium text-slate-700 dark:text-slate-300">{data.zona}</td>
+                        <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
+                          <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-2 rounded-lg">
+                            <span className="font-medium text-green-700 dark:text-green-300">
+                              {data.fechaCampana || 'N/A'}
+                            </span>
+                          </div>
+                        </td>
                         <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
                           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-2 rounded-lg">
                             <span className="font-bold text-blue-700 dark:text-blue-300">{data.enviados}</span>
@@ -672,6 +680,7 @@ export default function DatosDiariosDashboard() {
                   <tr className="bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20">
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-left font-semibold text-emerald-900 dark:text-emerald-100">Cliente</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-left font-semibold text-emerald-900 dark:text-emerald-100">Zona</th>
+                    <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Fecha de Inicio</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Enviados</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Entregados/día</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Pedidos/día</th>
@@ -706,6 +715,13 @@ export default function DatosDiariosDashboard() {
                           </div>
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2">{data.zona}</td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-2 rounded-lg">
+                            <span className="font-medium text-green-700 dark:text-green-300">
+                              {data.fechaCampana || 'N/A'}
+                            </span>
+                          </div>
+                        </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{data.enviados}</td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
                           {data.entregadosPorDia ? data.entregadosPorDia.toFixed(2) : '0.00'}
