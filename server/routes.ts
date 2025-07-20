@@ -523,10 +523,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const porcentajeDesvio = datosFinales > 0 ? ((pedidosTotal - datosFinales) / datosFinales * 100) : 0;
         const faltantesCorregidos = Math.max(0, pedidosTotal - datosFinales); // Pedidos Total - Enviados
         
-        // Calcular promedios usando 20 días hábiles como base
+        // Usar el valor real de pedidosPorDia de la campaña específica
+        const pedidosPorDiaReal = campana.pedidosPorDia || 0;
+        
+        // Calcular promedios usando 20 días hábiles como base solo si no hay valor específico
         const diasHabilesMes = 20;
         const entregadosPorDiaPromedio = datosFinales > 0 ? Math.round((datosFinales / diasHabilesMes) * 100) / 100 : 0;
-        const pedidosPorDiaCalculado = pedidosTotal > 0 ? Math.round((pedidosTotal / diasHabilesMes) * 100) / 100 : 0;
+        const pedidosPorDiaCalculado = pedidosPorDiaReal > 0 ? pedidosPorDiaReal : (pedidosTotal > 0 ? Math.round((pedidosTotal / diasHabilesMes) * 100) / 100 : 0);
         
         mappedData.push({
           cliente: `${cliente.nombreCliente} - ${campana.marca}`,
