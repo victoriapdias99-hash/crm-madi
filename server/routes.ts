@@ -426,6 +426,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`Campaign ${campana.numeroCampana} - Found ${datosParaCampana.length} matching data records for ${cliente.nombreCliente} from ${campana.fechaCampana}`);
         
+        // Debug específico para FIAT campaña 2
+        if (cliente.nombreCliente.toLowerCase().includes('fiat') && campana.numeroCampana === 2) {
+          console.log('🔍 FIAT CAMPAÑA 2 DEBUG:');
+          console.log(`  Cliente: ${cliente.nombreCliente}`);
+          console.log(`  Fecha campaña: ${campana.fechaCampana}`);
+          console.log(`  Cantidad solicitada: ${campana.cantidadDatosSolicitados}`);
+          console.log(`  Datos encontrados:`, datosParaCampana.map(d => ({
+            cliente: d.cliente,
+            fecha: d.fecha,
+            enviados: d.enviados,
+            cantidad: d.cantidad,
+            totalLeads: d.totalLeads
+          })));
+        }
+        
         // Debug para ver qué datos están disponibles
         if (datosParaCampana.length === 0) {
           console.log(`  No matches found for '${cliente.nombreCliente}' or '${campana.marca}'`);
@@ -463,6 +478,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const diasTranscurridos = diasConDatos + 1; // Incluir el día actual
           const entregadosDelDia = datosDelDia > 0 ? datosDelDia / Math.max(1, diasTranscurridos) : 0;
           
+          // Debug específico para FIAT campaña 2
+          if (cliente.nombreCliente.toLowerCase().includes('fiat') && campana.numeroCampana === 2) {
+            console.log(`  Procesando dato: enviados=${datosDelDia}, fecha=${dato.fecha}`);
+          }
+          
           // Para AVEC/GRUPO QUIJADA, usar solo el dato específico de la marca de esta campaña
           if (cliente.nombreCliente.toLowerCase().includes('grupo quijada')) {
             const marcaCampana = campana.marca.toLowerCase();
@@ -484,7 +504,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
               diasConDatos++;
               fechaFinReal = new Date().toISOString().split('T')[0]; // Fecha actual como fecha real
             }
+            
+            // Debug específico para FIAT campaña 2
+            if (cliente.nombreCliente.toLowerCase().includes('fiat') && campana.numeroCampana === 2) {
+              console.log(`  Acumulando: datosAcumulados=${datosAcumulados}, diasConDatos=${diasConDatos}`);
+            }
           }
+        }
+        
+        // Debug específico para FIAT campaña 2
+        if (cliente.nombreCliente.toLowerCase().includes('fiat') && campana.numeroCampana === 2) {
+          console.log(`  TOTALES CALCULADOS:`);
+          console.log(`  datosAcumulados: ${datosAcumulados}`);
+          console.log(`  cantidadSolicitados: ${campana.cantidadDatosSolicitados}`);
+          console.log(`  porcentaje: ${(datosAcumulados / campana.cantidadDatosSolicitados) * 100}%`);
         }
         
         // Determinar estado de la campaña
