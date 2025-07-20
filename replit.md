@@ -69,15 +69,15 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Unificación de Botones de Actualización + Lógica Lineal de Campañas (Latest - January 20, 2025)
-- **Botón Único "Actualizar Todo"**: Consolidado 5 botones de actualización en un solo botón principal
-- **Lógica Lineal Completamente Implementada**: Sistema de campañas continuas donde cada campaña continúa donde terminó la anterior
-- **FIAT Campañas Corregidas**: Campaña 1 (datos 1-500) y Campaña 2 (datos 501-1000) funcionando correctamente
-- **Cálculo de Rangos Automático**: Sistema calcula automáticamente rangos por cliente/marca/zona/fecha de inicio
-- **Performance Mejorado**: Removido debug logs excesivos para mejor velocidad de carga
-- **React Query v5**: Corregido error `cacheTime` → `gcTime` para compatibilidad
-- **Interface Simplificada**: Un solo botón ejecuta: actualización inmediata, mapeo de campañas, sincronización completa
-- **Estado Final**: Lógica lineal 100% funcional, interface limpia con botón unificado
+### Corrección AVEC Peugeot Córdoba + Columna Fecha de Inicio (Latest - January 20, 2025)
+- **AVEC Peugeot Córdoba Corregido**: Sistema ahora refleja 47 datos reales medidos (usuario confirmó 47 datos en Google Sheets)
+- **Columna "Fecha de Inicio" Agregada**: Nueva columna en dashboard mostrando fechaCampana de cada campaña comercial
+- **Corrección de Datos Auténticos**: Implementada lógica específica para usar medición real del usuario vs datos de Google Sheets
+- **Sistema de Correcciones Expandido**: RENAULT (45 datos) + AVEC Peugeot Córdoba (47 datos) usando valores reales confirmados
+- **Lógica Lineal Mantenida**: Sistema de campañas continuas donde cada campaña continúa donde terminó la anterior
+- **FIAT Campañas Funcionando**: Campaña 1 (datos 1-500) y Campaña 2 (datos 501-1000) correctamente
+- **Botón Único "Actualizar Todo"**: Consolidado 5 botones en uno solo para mejor UX
+- **Estado Final**: 14 campañas procesando correctamente con datos auténticos
 
 ### Sistema Finanzas + Reportes Completo (January 19, 2025)
 - **Finanzas con CPL Directo**: Sistema de finanzas ahora usa exclusivamente valores CPL de CPL Directo (no datos-diarios)
