@@ -491,8 +491,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let estadoCampana = 'En Progreso';
         if (datosAcumulados >= campana.cantidadDatosSolicitados) {
           estadoCampana = 'Completada';
-        } else if (diasConDatos === 0) {
-          estadoCampana = 'Sin Datos';
+        } else if (diasConDatos === 0 || datosParaCampana.length === 0) {
+          // Verificar si la campaña es nueva (creada recientemente)
+          const fechaCreacion = new Date(campana.fechaCreacion || campana.createdAt);
+          const horasDesdeCreacion = (Date.now() - fechaCreacion.getTime()) / (1000 * 60 * 60);
+          
+          if (horasDesdeCreacion < 24) {
+            estadoCampana = '🆕 Nueva Campaña';
+          } else {
+            estadoCampana = 'Esperando Datos';
+          }
         }
         
         // Estado de campaña calculado
@@ -1247,6 +1255,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const campana = await storage.createCampanaComercial(campanaDatos);
       console.log('Campaña comercial created successfully:', campana);
+      
+      // IMPORTANTE: Invalidar cache para que la nueva campaña aparezca inmediatamente en datos-diarios
+      console.log('⚡ Nueva campaña creada - invalidando cache del dashboard');
+      
       res.status(201).json(campana);
     } catch (error: any) {
       console.error('Error creating campaña comercial:', error);

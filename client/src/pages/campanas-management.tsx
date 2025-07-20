@@ -157,10 +157,13 @@ export default function CampanasManagement() {
       await apiRequest('/api/campanas-comerciales', 'POST', dataToSend);
     },
     onSuccess: () => {
+      // Invalidar múltiples queries para actualizar todos los dashboards
       queryClient.invalidateQueries({ queryKey: ['/api/campanas-comerciales'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
       setIsDialogOpen(false);
       form.reset();
-      toast({ title: "Campaña creada exitosamente" });
+      toast({ title: "Campaña creada exitosamente - aparecerá en Datos Diarios inmediatamente" });
     },
     onError: (error: any) => {
       console.error('Frontend: Error creating campaña:', error);
