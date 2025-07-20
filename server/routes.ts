@@ -426,21 +426,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`Campaign ${campana.numeroCampana} - Found ${datosParaCampana.length} matching data records for ${cliente.nombreCliente} from ${campana.fechaCampana}`);
         
-        // Debug específico para FIAT campaña 2
-        if (cliente.nombreCliente.toLowerCase().includes('fiat') && campana.numeroCampana === 2) {
-          console.log('🔍 FIAT CAMPAÑA 2 DEBUG:');
-          console.log(`  Cliente: ${cliente.nombreCliente}`);
-          console.log(`  Fecha campaña: ${campana.fechaCampana}`);
-          console.log(`  Cantidad solicitada: ${campana.cantidadDatosSolicitados}`);
-          console.log(`  Datos encontrados:`, datosParaCampana.map(d => ({
-            cliente: d.cliente,
-            fecha: d.fecha,
-            enviados: d.enviados,
-            cantidad: d.cantidad,
-            totalLeads: d.totalLeads
-          })));
-        }
-        
         // Debug para ver qué datos están disponibles
         if (datosParaCampana.length === 0) {
           console.log(`  No matches found for '${cliente.nombreCliente}' or '${campana.marca}'`);
@@ -469,48 +454,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let diasConDatos = 0;
         let fechaFinReal = null;
         
-        // Los datos de Google Sheets no están organizados por fecha individual
-        // sino que son registros de resumen por campaña/cliente
-        for (const dato of datosParaCampana) {
-          // Usar la estructura correcta de datos de Google Sheets
-          const datosDelDia = dato.enviados || 0;  // Campo principal de datos enviados
-          // Calcular promedio por día basado en los datos reales
-          const diasTranscurridos = diasConDatos + 1; // Incluir el día actual
-          const entregadosDelDia = datosDelDia > 0 ? datosDelDia / Math.max(1, diasTranscurridos) : 0;
-          
-          // Debug específico para FIAT campaña 2
-          if (cliente.nombreCliente.toLowerCase().includes('fiat') && campana.numeroCampana === 2) {
-            console.log(`  Procesando dato: enviados=${datosDelDia}, fecha=${dato.fecha}`);
-          }
-          
-          // Para AVEC/GRUPO QUIJADA, usar solo el dato específico de la marca de esta campaña
-          if (cliente.nombreCliente.toLowerCase().includes('grupo quijada')) {
+        // LÓGICA LINEAL Y CONTINUA: Cada campaña continúa donde terminó la anterior
+        
+        // Debug específico habilitado solo cuando es necesario para resolver problemas
+        
+        // 1. Obtener TODAS las campañas anteriores del mismo cliente/marca/zona para calcular el offset
+        const campanasAnteriores = campanasComerciales.filter(c => 
+          c.clienteId === campana.clienteId &&
+          c.marca === campana.marca &&
+          c.zona === campana.zona &&
+          parseInt(c.numeroCampana) < parseInt(campana.numeroCampana) &&
+          new Date(c.fechaCampana) <= new Date(campana.fechaCampana)
+        );
+        
+        // 2. Calcular el punto de inicio de esta campaña (suma de todas las anteriores)
+        const datosAcumuladosAnteriores = campanasAnteriores.reduce((suma, c) => suma + (c.cantidadDatosSolicitados || 0), 0);
+        const rangoInicio = datosAcumuladosAnteriores + 1; // La campaña actual empieza después de las anteriores
+        const rangoFin = datosAcumuladosAnteriores + campana.cantidadDatosSolicitados;
+        
+        // Lógica de cálculo lineal aplicada (debug removido para performance)
+        
+        // 3. Obtener el total de datos REALES enviados para este cliente/marca/zona desde Google Sheets
+        let datosRealesTotal = 0;
+        
+        // Para AVEC/GRUPO QUIJADA: usar solo el dato específico de la marca
+        if (cliente.nombreCliente.toLowerCase().includes('grupo quijada')) {
+          for (const dato of datosParaCampana) {
             const marcaCampana = campana.marca.toLowerCase();
             const clienteDato = dato.cliente.toLowerCase();
             
-            // Solo usar el dato que corresponde a la marca específica de esta campaña
             if (clienteDato.includes(marcaCampana)) {
-              datosAcumulados = datosDelDia;  // No acumular, usar valor específico
-              entregadosPorDiaTotal = entregadosDelDia;
-              diasConDatos = datosDelDia > 0 ? 1 : 0;
-              fechaFinReal = new Date().toISOString().split('T')[0];
-              break; // Solo usar el primer match específico
-            }
-          } else {
-            // Comportamiento normal para otros clientes
-            if (datosDelDia > 0) {
-              datosAcumulados += datosDelDia;
-              entregadosPorDiaTotal += entregadosDelDia;
-              diasConDatos++;
-              fechaFinReal = new Date().toISOString().split('T')[0]; // Fecha actual como fecha real
-            }
-            
-            // Debug específico para FIAT campaña 2
-            if (cliente.nombreCliente.toLowerCase().includes('fiat') && campana.numeroCampana === 2) {
-              console.log(`  Acumulando: datosAcumulados=${datosAcumulados}, diasConDatos=${diasConDatos}`);
+              datosRealesTotal = dato.enviados || 0;
+              break;
             }
           }
+        } else {
+          // Para otros clientes: sumar todos los datos encontrados
+          for (const dato of datosParaCampana) {
+            datosRealesTotal += (dato.enviados || 0);
+          }
         }
+        
+        // 4. Calcular cuántos datos corresponden a ESTA campaña específica
+        if (datosRealesTotal <= datosAcumuladosAnteriores) {
+          // Aún no se han generado datos para esta campaña
+          datosAcumulados = 0;
+          diasConDatos = 0;
+        } else if (datosRealesTotal >= rangoFin) {
+          // La campaña está completa
+          datosAcumulados = campana.cantidadDatosSolicitados;
+          diasConDatos = 1; // Marcar como con datos
+          fechaFinReal = new Date().toISOString().split('T')[0];
+        } else {
+          // La campaña está en progreso
+          datosAcumulados = datosRealesTotal - datosAcumuladosAnteriores;
+          diasConDatos = datosAcumulados > 0 ? 1 : 0;
+          fechaFinReal = diasConDatos > 0 ? new Date().toISOString().split('T')[0] : null;
+        }
+        
+        // Cálculo de asignación de datos completado
         
         // Debug específico para FIAT campaña 2
         if (cliente.nombreCliente.toLowerCase().includes('fiat') && campana.numeroCampana === 2) {
