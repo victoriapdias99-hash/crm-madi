@@ -1204,15 +1204,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Usar el schema específico para crear (sin campos calculados)
       console.log('Data to validate:', dataWithoutCalculatedFields);
       
-      // Arreglar problema de fecha (mantener fecha exacta sin conversión de timezone)
+      // Mantener fecha exacta sin conversión de timezone
       if (dataWithoutCalculatedFields.fechaCampana) {
-        // Convertir a Date local y extraer solo YYYY-MM-DD sin conversión de timezone
-        const fechaDate = new Date(dataWithoutCalculatedFields.fechaCampana);
-        const year = fechaDate.getFullYear();
-        const month = String(fechaDate.getMonth() + 1).padStart(2, '0');
-        const day = String(fechaDate.getDate()).padStart(2, '0');
-        dataWithoutCalculatedFields.fechaCampana = `${year}-${month}-${day}`;
-        console.log('Fecha corregida para base de datos:', dataWithoutCalculatedFields.fechaCampana);
+        // Si la fecha viene en formato YYYY-MM-DD, mantenerla tal como está
+        const fechaString = dataWithoutCalculatedFields.fechaCampana;
+        if (fechaString.includes('-') && fechaString.length === 10) {
+          // Ya está en formato correcto YYYY-MM-DD
+          dataWithoutCalculatedFields.fechaCampana = fechaString;
+        } else {
+          // Si viene en otro formato, convertir manteniendo la fecha local
+          const fechaParts = fechaString.split('/').reverse(); // DD/MM/YYYY -> [YYYY, MM, DD]
+          if (fechaParts.length === 3) {
+            const [year, month, day] = fechaParts;
+            dataWithoutCalculatedFields.fechaCampana = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+          }
+        }
+        console.log('Fecha mantenida sin conversión timezone:', dataWithoutCalculatedFields.fechaCampana);
       }
       
       const validatedData = createCampanaComercialSchema.parse(dataWithoutCalculatedFields);

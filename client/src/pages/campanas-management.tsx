@@ -133,8 +133,14 @@ export default function CampanasManagement() {
 
   const createMutation = useMutation({
     mutationFn: async (data: Omit<InsertCampanaComercial, 'fechaFin' | 'numeroCampana'>) => {
-      console.log('Frontend: Sending campaña data:', data);
-      await apiRequest('/api/campanas-comerciales', 'POST', data);
+      // Asegurar que la fecha se envía en formato correcto
+      const dataToSend = {
+        ...data,
+        fechaCampana: data.fechaCampana // Mantener formato YYYY-MM-DD tal como viene del input
+      };
+      console.log('Frontend: Sending campaña data:', dataToSend);
+      console.log('Frontend: Fecha original:', data.fechaCampana);
+      await apiRequest('/api/campanas-comerciales', 'POST', dataToSend);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/campanas-comerciales'] });
