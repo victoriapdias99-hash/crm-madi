@@ -565,34 +565,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`🚨 CORRECCIÓN AVEC CITROËN AMBA: Datos finales ajustados a ${datosFinales} (medición real del usuario)`);
         }
         
-        // Calcular pedidos total primero para el porcentaje
-        let pedidosTotal = campana.cantidadDatosSolicitados; // Cantidad total pedida de la campaña
-        
-        // Aplicar correcciones específicas para pedidos total (para porcentaje)
-        if (cliente.nombreCliente.toLowerCase().includes('renault') && cliente.nombreCliente.toLowerCase().includes('javier')) {
-          pedidosTotal = 45; // Usuario reporta 45 datos reales medidos
-        }
-        
-        if (cliente.nombreCliente.toLowerCase().includes('grupo quijada') && 
-            campana.marca.toLowerCase() === 'peugeot' && 
-            campana.zona.toLowerCase() === 'córdoba') {
-          pedidosTotal = 47; // Usuario reporta 47 datos reales medidos
-        }
-        
-        if (cliente.nombreCliente.toLowerCase().includes('grupo quijada') && 
-            campana.marca.toLowerCase() === 'citroen' && 
-            campana.zona.toLowerCase() === 'amba') {
-          pedidosTotal = 28; // Usuario reporta 28 datos reales medidos
-        }
-        
-        const porcentajeDatosEnviados = Math.min(100, (datosFinales / pedidosTotal) * 100);
+        // Para el porcentaje de datos enviados, usar SIEMPRE la cantidad original solicitada
+        // Las correcciones solo afectan la visualización de "Enviados", no el porcentaje
+        const porcentajeDatosEnviados = Math.min(100, (datosFinales / campana.cantidadDatosSolicitados) * 100);
         const faltantesAEnviar = Math.max(0, campana.cantidadDatosSolicitados - datosFinales); // Pedidos Total - Enviados
         // Obtener valores almacenados para esta campaña específica usando clienteNombre y numeroCampana
         const storedCpl = await storage.getCplByClienteAndCampana(cliente.nombreCliente, campana.numeroCampana);
         const storedVenta = await storage.getVentaPorCampanaByClienteAndCampana(cliente.nombreCliente, campana.numeroCampana);
         const storedPedidos = await storage.getPedidosPorDiaByClienteAndCampana(cliente.nombreCliente, campana.numeroCampana);
         
-        // Corregir el cálculo de % desvío usando pedidos total ya calculado arriba
+        // Mantener lógica original: pedidos total = cantidad solicitada original
+        const pedidosTotal = campana.cantidadDatosSolicitados; // Cantidad total pedida de la campaña
         const porcentajeDesvio = datosFinales > 0 ? ((pedidosTotal - datosFinales) / datosFinales * 100) : 0;
         const faltantesCorregidos = Math.max(0, pedidosTotal - datosFinales); // Pedidos Total - Enviados
         
