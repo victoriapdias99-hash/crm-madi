@@ -276,7 +276,7 @@ export default function CampanasManagement() {
               Nueva Campaña
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingCampana ? "Editar Campaña" : "Nueva Campaña"}
