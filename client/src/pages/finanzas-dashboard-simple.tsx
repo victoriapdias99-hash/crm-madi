@@ -17,6 +17,7 @@ interface FinanzasData {
   zona: string;
   totalLeads: number;
   cpl: number;
+  cpa: number;
   ventaPorCampana: number;
   inversionTotal: number;
   inversionRealizada: number;
@@ -352,6 +353,7 @@ export default function FinanzasDashboard() {
                   <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Campaña</th>
                   <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Leads</th>
                   <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL</th>
+                  <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPA Meta Ads</th>
                   <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Venta %</th>
                   <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión</th>
                   <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Ganancia</th>
@@ -368,6 +370,15 @@ export default function FinanzasDashboard() {
                     <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">#{finanza.numeroCampana}</td>
                     <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{finanza.totalLeads}</td>
                     <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{formatCurrency(finanza.cpl)}</td>
+                    <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                      {finanza.cpa > 0 ? (
+                        <Badge variant="secondary" className="bg-gradient-to-r from-purple-500 to-pink-600 text-white font-semibold">
+                          {formatCurrency(finanza.cpa)}
+                        </Badge>
+                      ) : (
+                        <span className="text-gray-400 text-sm">Calculando...</span>
+                      )}
+                    </td>
                     <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{((finanza?.ventaPorCampana || 0) * 100).toFixed(1)}%</td>
                     <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{formatCurrency(finanza?.inversionRealizada || 0)}</td>
                     <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">

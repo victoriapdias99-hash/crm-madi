@@ -1237,9 +1237,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         const leadCount = data.enviados || 0;
-        const inversionCalculada = cplValue * leadCount;
         
-        console.log(`💰 INVERSIÓN ${data.clienteNombre} (${marca}): ${cplValue} × ${leadCount} = ${inversionCalculada}`);
+        // NUEVA LÓGICA: Calcular CPA y usar gasto real de Meta Ads + 2% para inversión
+        let cpaValue = 0;
+        let inversionMetaAds = 0;
+        
+        try {
+          const metaAdsService = getMetaAdsServiceInstance();
+          if (metaAdsService && leadCount > 0) {
+            // Crear rango de fecha para la campaña
+            const fechaInicio = new Date(data.fechaCampana || new Date());
+            const fechaFin = new Date();
+            
+            // Formatear fechas para Meta Ads API
+            const dateRange = {
+              since: fechaInicio.toISOString().split('T')[0],
+              until: fechaFin.toISOString().split('T')[0]
+            };
+            
+            // Mapear nombre del cliente/marca para buscar en Meta Ads
+            let campaignSearchName = marca;
+            
+            // Calcular CPA y obtener gasto real
+            cpaValue = await metaAdsService.calculateCPA(campaignSearchName, dateRange, leadCount);
+            inversionMetaAds = cpaValue * leadCount;
+            
+            console.log(`🔍 CPA FINANZAS: ${marca} | Gasto: $${inversionMetaAds} | Leads: ${leadCount} | CPA: $${cpaValue.toFixed(2)}`);
+          }
+        } catch (error) {
+          console.error(`Error calculating CPA for finanzas ${data.clienteNombre}:`, error);
+          cpaValue = 0;
+          inversionMetaAds = 0;
+        }
+        
+        // Usar inversión de Meta Ads + 2% si está disponible, sino fallback a cálculo tradicional
+        const inversionCalculada = inversionMetaAds > 0 ? inversionMetaAds * 1.02 : cplValue * leadCount;
+        
+        console.log(`💰 INVERSIÓN ${data.clienteNombre} (${marca}): Meta Ads $${inversionMetaAds} + 2% = $${inversionCalculada.toFixed(2)}`);
         
         // Calcular ganancia y ROI
         const ganancia = ventaPorCampana - inversionCalculada;
@@ -1257,6 +1291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           zona: data.zona,
           totalLeads: leadCount,
           cpl: cplValue,
+          cpa: cpaValue,
           ventaPorCampana: ventaPorCampana,
           inversionTotal: inversionCalculada,
           inversionRealizada: inversionCalculada,
