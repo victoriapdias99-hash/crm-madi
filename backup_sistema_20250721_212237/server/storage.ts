@@ -1,16 +1,12 @@
 import { 
   users, campaigns, leads, dailyStats, leadNotes, clientes, campanasComerciales, dashboardManualValues,
-  googleSheetsData, syncControl, enviadosMetrics,
   type User, type InsertUser,
   type Campaign, type InsertCampaign,
   type Lead, type InsertLead,
   type DailyStats, type InsertDailyStats,
   type LeadNote, type InsertLeadNote,
   type Cliente, type InsertCliente,
-  type CampanaComercial, type InsertCampanaComercial,
-  type GoogleSheetsData, type InsertGoogleSheetsData,
-  type SyncControl, type InsertSyncControl,
-  type EnviadosMetrics, type InsertEnviadosMetrics
+  type CampanaComercial, type InsertCampanaComercial
 } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -74,19 +70,6 @@ export interface IStorage {
   createCampanaComercial(campana: InsertCampanaComercial): Promise<CampanaComercial>;
   updateCampanaComercial(id: number, updates: Partial<CampanaComercial>): Promise<CampanaComercial | undefined>;
   deleteCampanaComercial(id: number): Promise<boolean>;
-
-  // Google Sheets data operations (nuevas funciones)
-  getGoogleSheetsData(filters?: { marca?: string; cliente?: string; limit?: number }): Promise<GoogleSheetsData[]>;
-  createGoogleSheetsData(data: InsertGoogleSheetsData): Promise<GoogleSheetsData>;
-  getEnviadosFromDatabase(clienteNombre: string, marca?: string): Promise<number>;
-  
-  // Sync control operations
-  getSyncStatus(): Promise<SyncControl | undefined>;
-  updateSyncStatus(status: InsertSyncControl): Promise<SyncControl>;
-  
-  // Enviados metrics operations
-  getEnviadosMetrics(clienteNombre?: string): Promise<EnviadosMetrics[]>;
-  updateEnviadosMetrics(clienteNombre: string, numeroCampana: string, datosEnviados: number): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -1310,113 +1293,6 @@ export class DatabaseStorage implements IStorage {
     });
 
     return datosConMatching;
-  }
-
-  // Google Sheets data operations (nuevas funciones para el sistema mejorado)
-  async getGoogleSheetsData(filters?: { marca?: string; cliente?: string; limit?: number }): Promise<GoogleSheetsData[]> {
-    let query = db.select().from(googleSheetsData);
-    
-    if (filters?.marca) {
-      query = query.where(eq(googleSheetsData.marca, filters.marca));
-    }
-    
-    if (filters?.cliente) {
-      query = query.where(eq(googleSheetsData.cliente, filters.cliente));
-    }
-    
-    if (filters?.limit) {
-      query = query.limit(filters.limit);
-    }
-    
-    return await query;
-  }
-
-  async createGoogleSheetsData(data: InsertGoogleSheetsData): Promise<GoogleSheetsData> {
-    const [result] = await db.insert(googleSheetsData).values(data).returning();
-    return result;
-  }
-
-  async getEnviadosFromDatabase(clienteNombre: string, marca?: string): Promise<number> {
-    try {
-      let query = db.select().from(googleSheetsData);
-      
-      if (marca) {
-        query = query.where(eq(googleSheetsData.marca, marca));
-      }
-      
-      // Aplicar filtros de cliente similares al sistema actual
-      if (clienteNombre.includes('FIAT AUTOS DEL SOL')) {
-        query = query.where(eq(googleSheetsData.cliente, 'AUTOS DEL SOL'));
-      } else if (clienteNombre.includes('PEUGEOT ALBENS')) {
-        query = query.where(eq(googleSheetsData.cliente, 'ALBENS'));
-      }
-      // Agregar más filtros según necesidad
-      
-      const results = await query;
-      console.log(`📊 DB ENVIADOS: ${clienteNombre} (${marca}) = ${results.length} registros`);
-      return results.length;
-    } catch (error) {
-      console.error('❌ Error contando enviados desde base de datos:', error);
-      return 0;
-    }
-  }
-  
-  // Sync control operations
-  async getSyncStatus(): Promise<SyncControl | undefined> {
-    try {
-      const [result] = await db.select().from(syncControl).orderBy(desc(syncControl.createdAt)).limit(1);
-      return result;
-    } catch (error) {
-      console.error('❌ Error obteniendo estado de sincronización:', error);
-      return undefined;
-    }
-  }
-
-  async updateSyncStatus(status: InsertSyncControl): Promise<SyncControl> {
-    const [result] = await db.insert(syncControl).values(status).returning();
-    return result;
-  }
-  
-  // Enviados metrics operations
-  async getEnviadosMetrics(clienteNombre?: string): Promise<EnviadosMetrics[]> {
-    let query = db.select().from(enviadosMetrics);
-    
-    if (clienteNombre) {
-      query = query.where(eq(enviadosMetrics.clienteNombre, clienteNombre));
-    }
-    
-    return await query;
-  }
-
-  async updateEnviadosMetrics(clienteNombre: string, numeroCampana: string, datosEnviados: number): Promise<void> {
-    try {
-      // Intentar actualizar registro existente
-      const existing = await db.select().from(enviadosMetrics)
-        .where(eq(enviadosMetrics.clienteNombre, clienteNombre))
-        .limit(1);
-
-      if (existing.length > 0) {
-        await db.update(enviadosMetrics)
-          .set({
-            datosEnviados,
-            lastCalculatedAt: new Date(),
-            updatedAt: new Date()
-          })
-          .where(eq(enviadosMetrics.clienteNombre, clienteNombre));
-        console.log(`✅ DB METRICS: Actualizado ${clienteNombre} con ${datosEnviados} enviados`);
-      } else {
-        await db.insert(enviadosMetrics).values({
-          clienteNombre,
-          numeroCampana,
-          datosEnviados,
-          fechaInicio: new Date(),
-          fechaFin: new Date()
-        });
-        console.log(`✅ DB METRICS: Creado ${clienteNombre} con ${datosEnviados} enviados`);
-      }
-    } catch (error) {
-      console.error(`❌ Error actualizando métrica para ${clienteNombre}:`, error);
-    }
   }
 }
 

@@ -42,41 +42,6 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Inicializar servicios críticos
-  console.log('🚀 Inicializando servicios del sistema...');
-  
-  // Importar y configurar Meta Ads
-  try {
-    const metaAdsModule = await import('./meta-ads-service');
-    if (metaAdsModule.setupMetaAds) {
-      await metaAdsModule.setupMetaAds();
-      console.log('✅ Meta Ads configurado');
-    }
-  } catch (error) {
-    console.warn('⚠️ Meta Ads no disponible:', (error as Error)?.message || 'Error desconocido');
-  }
-
-  // Inicializar sincronización automática de Google Sheets
-  try {
-    const { GoogleSheetsSyncService } = await import('./google-sheets-sync-service');
-    const googleSheetsModule = await import('./google-sheets');
-    
-    // Crear un adaptador simple para el servicio
-    const sheetsServiceAdapter = {
-      fetchDataFromSheets: async () => {
-        // Usar la función existente de sincronización
-        console.log('🔄 Adaptador: obteniendo datos de Google Sheets...');
-        return []; // Placeholder, se implementará correctamente en el servicio
-      }
-    };
-    
-    const syncService = new GoogleSheetsSyncService(sheetsServiceAdapter);
-    syncService.startAutoSync();
-    console.log('✅ Sincronización automática Google Sheets iniciada');
-  } catch (error) {
-    console.error('❌ Error iniciando sincronización Google Sheets:', (error as Error)?.message || 'Error desconocido');
-  }
-
   const server = await registerRoutes(app);
 
   // Configuración automática de Meta Ads al arrancar si las credenciales están disponibles

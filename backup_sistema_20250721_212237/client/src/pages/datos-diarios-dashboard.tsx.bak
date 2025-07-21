@@ -1,0 +1,674 @@
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Loader2, Save, RefreshCw, RotateCcw } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { Navigation } from "@/components/navigation";
+import { CPLStorage } from "@/lib/cpl-storage";
+import TestPanel from "@/components/test-panel";
+
+interface DatosDiariosData {
+  cliente: string;
+  clienteNombre: string;
+  zona: string;
+  diasData: number[];
+  enviados: number;
+  entregadosPorDia: number;
+  pedidosPorDia: number;
+  pedidosTotal: number;
+  numeroCampana: number;
+  porcentajeDesvio: number;
+  porcentajeDatosEnviados: number;
+  faltantesAEnviar: number;
+  cpl: number;
+  ventaPorCampana: number;
+  inversionRealizada: number;
+  inversionPendiente: number;
+  fechaCampana: string;
+  fechaFinReal: string;
+  cantidadSolicitada: number;
+  diasProcesados: number;
+  estadoCampana: string;
+}
+
+export default function DatosDiariosDashboard() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [cplValues, setCplValues] = useState<Record<number, number>>({});
+  const [pedidosPorDiaValues, setPedidosPorDiaValues] = useState<Record<number, number>>({});
+
+  const { data: datosDiarios, isLoading, error } = useQuery({
+    queryKey: ['/api/dashboard/datos-diarios'],
+    refetchInterval: 300000, // Refrescar cada 5 minutos
+    staleTime: 60000, // Data remains fresh for 1 minute
+    retry: 2, // Retry failed requests up to 2 times
+    refetchOnWindowFocus: false, // Disable refetch on window focus
+  });
+
+  console.log('Dashboard loading state:', { isLoading, error, dataLength: datosDiarios?.length });
+
+  // Obtener datos de Meta Ads para CPL Real (con manejo de errores)
+  const { data: metaCampaigns } = useQuery({
+    queryKey: ['/api/meta-ads/campaigns'],
+    refetchInterval: 300000, // Refetch every 5 minutes
+    retry: false, // No retry Meta Ads if it fails
+    enabled: true, // Enable Meta Ads query to show when available
+  });
+
+  const updateCplMutation = useMutation({
+    mutationFn: async ({ clienteIndex, cpl, clienteNombre, numeroCampana }: { 
+      clienteIndex: number; 
+      cpl: number; 
+      clienteNombre?: string; 
+      numeroCampana?: string; 
+    }) => {
+      console.log('Updating CPL:', { clienteIndex, cpl, clienteNombre, numeroCampana });
+      const response = await apiRequest('/api/dashboard/update-cpl', 'POST', { 
+        clienteIndex, 
+        cpl, 
+        clienteNombre, 
+        numeroCampana 
+      });
+      console.log('CPL update response:', response);
+      return { ...response, clienteIndex, cpl };
+    },
+    onSuccess: (data) => {
+      console.log('CPL update successful:', data);
+      
+      // Actualizar cache localmente para respuesta inmediata
+      queryClient.setQueryData(['/api/dashboard/datos-diarios'], (oldData: any) => {
+        if (!oldData) return oldData;
+        return oldData.map((item: any, index: number) => {
+          if (index === data.clienteIndex) {
+            return { ...item, cpl: data.cpl };
+          }
+          return item;
+        });
+      });
+      
+      toast({
+        title: "CPL Actualizado",
+        description: `CPL actualizado a ARS $${data.cpl.toLocaleString('es-AR')}`,
+      });
+      
+      // Invalidar queries para sincronización completa
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+    },
+    onError: (error) => {
+      console.error('CPL update error:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el CPL",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const updatePedidosPorDiaMutation = useMutation({
+    mutationFn: async ({ clienteIndex, pedidos }: { clienteIndex: number; pedidos: number }) => {
+      console.log('Updating Pedidos por Día:', { clienteIndex, pedidos });
+      const response = await apiRequest('/api/dashboard/update-pedidos-por-dia', 'POST', { clienteIndex, pedidos });
+      console.log('Pedidos por día update response:', response);
+      return { ...response, clienteIndex, pedidos };
+    },
+    onSuccess: (data) => {
+      console.log('Pedidos por día update successful:', data);
+      
+      // Actualizar cache localmente para respuesta inmediata
+      queryClient.setQueryData(['/api/dashboard/datos-diarios'], (oldData: any) => {
+        if (!oldData) return oldData;
+        return oldData.map((item: any, index: number) => {
+          if (index === data.clienteIndex) {
+            return { ...item, pedidosPorDia: data.pedidos };
+          }
+          return item;
+        });
+      });
+      
+      toast({
+        title: "Pedidos por Día Actualizado",
+        description: `Pedidos por día actualizado a ${data.pedidos}`,
+      });
+      
+      // Invalidar queries para sincronización completa
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+    },
+    onError: (error) => {
+      console.error('Pedidos por día update error:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar los pedidos por día",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Función para calcular CPL Real basado en Meta Ads
+  const calculateCPLReal = (data: DatosDiariosData) => {
+    if (!metaCampaigns || !Array.isArray(metaCampaigns) || data.enviados === 0) {
+      return 0;
+    }
+
+    // Mapear marcas para encontrar campaña correspondiente
+    const brandMap: Record<string, string[]> = {
+      'Fiat': ['fiat'],
+      'Peugeot': ['peugeot'],
+      'Toyota': ['toyota'], 
+      'Chevrolet': ['chevrolet'],
+      'Renault': ['renault'],
+      'Citroen': ['citroen', 'citroën']
+    };
+
+    // Extraer marca del nombre del cliente
+    let detectedBrand = '';
+    for (const [brand, keywords] of Object.entries(brandMap)) {
+      if (keywords.some(keyword => 
+        data.cliente.toLowerCase().includes(keyword) || 
+        data.clienteNombre.toLowerCase().includes(keyword)
+      )) {
+        detectedBrand = brand;
+        break;
+      }
+    }
+
+    if (!detectedBrand) return 0;
+
+    // Encontrar campaña Meta Ads que coincida con la marca
+    const matchingCampaign = metaCampaigns.find((campaign: any) => 
+      brandMap[detectedBrand].some(keyword => 
+        campaign.campaignName?.toLowerCase().includes(keyword)
+      )
+    );
+
+    if (matchingCampaign && matchingCampaign.spend > 0) {
+      // CPL Real = Gasto total Meta Ads / Datos enviados
+      return matchingCampaign.spend / data.enviados;
+    }
+
+    return 0;
+  };
+
+  const mapearCampanasMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('/api/dashboard/mapear-campanas', 'POST');
+      return response;
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Mapeo Exitoso",
+        description: `Se mapearon ${data.mapped || 0} campañas con datos diarios`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+    },
+    onError: (error) => {
+      console.error('Mapeo error:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo realizar el mapeo de campañas",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Calcular inversiones basadas en CPL manual con 2% de impuestos
+  const calculateInversions = (data: DatosDiariosData, cpl: number) => {
+    const inversionRealizada = data.enviados * cpl * 1.02; // +2% impuestos
+    const inversionPendiente = Math.max(0, (data.pedidosTotal - data.enviados)) * cpl * 1.02; // CPL × (Pedidos Total - Enviados) +2% impuestos
+    
+    return {
+      inversionRealizada,
+      inversionPendiente
+    };
+  };
+
+  const handleCplChange = (index: number, value: string) => {
+    const numValue = parseFloat(value) || 0;
+    setCplValues(prev => ({ ...prev, [index]: numValue }));
+  };
+
+  const handlePedidosPorDiaChange = (index: number, value: string) => {
+    const numValue = parseFloat(value) || 0;
+    setPedidosPorDiaValues(prev => ({ ...prev, [index]: numValue }));
+  };
+
+  const handleSaveCpl = (index: number) => {
+    const cpl = cplValues[index];
+    const data = datosDiarios?.data?.[index];
+    
+    console.log('Attempting to save CPL:', { index, cpl, data });
+    if (cpl && cpl > 0 && data) {
+      updateCplMutation.mutate({ 
+        clienteIndex: index, 
+        cpl,
+        clienteNombre: data.cliente,
+        numeroCampana: data.numeroCampana
+      });
+      // Clear the input after saving
+      setCplValues(prev => {
+        const newValues = { ...prev };
+        delete newValues[index];
+        return newValues;
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Por favor ingrese un CPL válido",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSavePedidosPorDia = (index: number) => {
+    const pedidos = pedidosPorDiaValues[index];
+    console.log('Attempting to save Pedidos por Día:', { index, pedidos });
+    if (pedidos && pedidos > 0) {
+      updatePedidosPorDiaMutation.mutate({ clienteIndex: index, pedidos });
+      // Clear the input after saving
+      setPedidosPorDiaValues(prev => {
+        const newValues = { ...prev };
+        delete newValues[index];
+        return newValues;
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Por favor ingrese un valor válido de pedidos por día",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const clearAllManualValues = () => {
+    setCplValues({});
+    setPedidosPorDiaValues({});
+    toast({
+      title: "Valores restablecidos",
+      description: "Todos los valores manuales han sido eliminados",
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Cargando datos diarios...</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <Navigation />
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              Dashboard - Datos Diarios
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">
+              Gestión de campañas Meta Ads con datos reales de Google Sheets
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => mapearCampanasMutation.mutate()}
+              disabled={mapearCampanasMutation.isPending}
+              variant="default"
+              size="sm"
+            >
+              {mapearCampanasMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              Mapear Campañas
+            </Button>
+            <Button
+              onClick={() => {
+                queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+                queryClient.invalidateQueries({ queryKey: ['/api/campanas-comerciales'] });
+                queryClient.invalidateQueries({ queryKey: ['/api/clientes'] });
+                toast({
+                  title: "Datos actualizados",
+                  description: "Se refrescaron los datos de campañas y clientes",
+                });
+              }}
+              variant="outline"
+              size="sm"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Actualizar
+            </Button>
+            <Button
+              onClick={clearAllManualValues}
+              variant="outline"
+              size="sm"
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Limpiar Valores
+            </Button>
+          </div>
+        </div>
+
+        {/* Panel de Pruebas Funcionales */}
+        {/* <TestPanel /> */}
+
+        {/* Campañas en Proceso */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              🚀 Campañas en Proceso
+              <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+                {datosDiarios?.filter(data => data.porcentajeDatosEnviados < 100).length || 0} activas
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse border border-gray-300 dark:border-gray-600">
+                <thead>
+                  <tr className="bg-yellow-50 dark:bg-yellow-900/20">
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-left">Cliente</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-left">Zona</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Enviados</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Entregados/día</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Pedidos/día (Manual)</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Pedidos Total</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">% Desvío</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">% Datos Enviados</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Faltantes</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Input</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Guardado</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Real (Meta Ads)</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Realizada (con impuestos)</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Pendiente (con impuestos)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {datosDiarios?.filter(data => data.porcentajeDatosEnviados < 100).map((data: DatosDiariosData, index: number) => {
+                    // Usar el índice original de la lista completa para identificar correctamente el registro
+                    const originalIndex = datosDiarios?.findIndex(d => d.cliente === data.cliente && d.numeroCampana === data.numeroCampana) || 0;
+                    const uniqueKey = `${data.cliente}-${data.numeroCampana}`;
+                    
+                    const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0; // Use CPL from storage or server
+                    const currentPedidosPorDia = pedidosPorDiaValues[originalIndex] || data.pedidosPorDia || 0;
+                    
+                    // Crear objeto actualizado con valores manuales
+                    const updatedData = {
+                      ...data,
+                      pedidosPorDia: currentPedidosPorDia,
+                      faltantesAEnviar: Math.max(0, data.pedidosTotal - data.enviados), // Pedidos Total - Enviados
+                      porcentajeDesvio: (currentPedidosPorDia > 0 && data.entregadosPorDia > 0) ? 
+                        ((data.entregadosPorDia - currentPedidosPorDia) / currentPedidosPorDia * 100) : 0
+                    };
+                    
+                    const inversions = calculateInversions(updatedData, currentCpl);
+                    
+                    return (
+                      <tr key={uniqueKey} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td className="border border-gray-300 dark:border-gray-600 p-2">
+                          <div>
+                            <div className="font-medium">{data.clienteNombre}</div>
+                            <div className="text-sm text-gray-500">{data.cliente}</div>
+                            <div className="text-xs text-blue-600 font-semibold">Campaña #{data.numeroCampana || 1}</div>
+                          </div>
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2">{data.zona}</td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{data.enviados}</td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          {data.entregadosPorDia ? data.entregadosPorDia.toFixed(2) : '0.00'}
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2">
+                          <div className="flex gap-2 items-center justify-center">
+                            <Input
+                              type="number"
+                              placeholder="Pedidos"
+                              value={pedidosPorDiaValues[originalIndex] || data.pedidosPorDia || ''}
+                              onChange={(e) => handlePedidosPorDiaChange(originalIndex, e.target.value)}
+                              className="w-20"
+                            />
+                            <Button
+                              onClick={() => handleSavePedidosPorDia(originalIndex)}
+                              size="sm"
+                              disabled={updatePedidosPorDiaMutation.isPending}
+                            >
+                              <Save className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          {data.pedidosTotal || 0}
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          <Badge variant={updatedData.porcentajeDesvio && updatedData.porcentajeDesvio < 0 ? "destructive" : "default"}>
+                            {updatedData.porcentajeDesvio ? updatedData.porcentajeDesvio.toFixed(2) : '0.00'}%
+                          </Badge>
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2">
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="w-20 h-3 bg-gray-200 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-yellow-500 transition-all duration-300"
+                                style={{ width: `${Math.min(data.porcentajeDatosEnviados || 0, 100)}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-bold text-yellow-700">
+                              {data.porcentajeDatosEnviados ? data.porcentajeDatosEnviados.toFixed(1) : '0.0'}%
+                            </span>
+                          </div>
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{updatedData.faltantesAEnviar}</td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          {currentCpl > 0 ? (
+                            <Badge variant="secondary" className="text-sm">
+                              ARS ${currentCpl.toLocaleString('es-AR')}
+                            </Badge>
+                          ) : (
+                            <span className="text-gray-400 text-sm">Sin CPL</span>
+                          )}
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          {(() => {
+                            const cplReal = calculateCPLReal(data);
+                            return cplReal > 0 ? (
+                              <div className="flex flex-col items-center gap-1">
+                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                  ARS ${Math.round(cplReal).toLocaleString('es-AR')}
+                                </Badge>
+                                <div className="text-xs text-gray-500">Meta Ads</div>
+                              </div>
+                            ) : (
+                              <div className="text-gray-400 text-sm">-</div>
+                            );
+                          })()}
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
+                          ARS ${inversions.inversionRealizada.toLocaleString('es-AR')}
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
+                          ARS ${inversions.inversionPendiente.toLocaleString('es-AR')}
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {datosDiarios?.filter(data => data.porcentajeDatosEnviados < 100).length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  No hay campañas en proceso actualmente
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Campañas Finalizadas */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              ✅ Campañas Finalizadas
+              <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
+                {datosDiarios?.filter(data => data.porcentajeDatosEnviados >= 100).length || 0} completadas
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse border border-gray-300 dark:border-gray-600">
+                <thead>
+                  <tr className="bg-green-50 dark:bg-green-900/20">
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-left">Cliente</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-left">Zona</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Enviados</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Entregados/día</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Pedidos/día (Manual)</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Pedidos Total</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">% Desvío</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">% Datos Enviados</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Faltantes</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Input</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Guardado</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL Real (Meta Ads)</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Realizada (con impuestos)</th>
+                    <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión Pendiente (con impuestos)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {datosDiarios?.filter(data => data.porcentajeDatosEnviados >= 100).map((data: DatosDiariosData, index: number) => {
+                    const originalIndex = datosDiarios?.findIndex(d => d.cliente === data.cliente && d.numeroCampana === data.numeroCampana) || 0;
+                    const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0;
+                    const currentPedidosPorDia = pedidosPorDiaValues[originalIndex] || data.pedidosPorDia || 0;
+                    
+                    const updatedData = {
+                      ...data,
+                      pedidosPorDia: currentPedidosPorDia,
+                      faltantesAEnviar: Math.max(0, data.pedidosTotal - data.enviados),
+                      porcentajeDesvio: (currentPedidosPorDia > 0 && data.entregadosPorDia > 0) ? 
+                        ((data.entregadosPorDia - currentPedidosPorDia) / currentPedidosPorDia * 100) : 0
+                    };
+                    
+                    const inversions = calculateInversions(updatedData, currentCpl);
+                    
+                    return (
+                      <tr key={`completed-${index}`} className="hover:bg-green-50 dark:hover:bg-green-900/10">
+                        <td className="border border-gray-300 dark:border-gray-600 p-2">
+                          <div>
+                            <div className="font-medium">{data.clienteNombre}</div>
+                            <div className="text-sm text-gray-500">{data.cliente}</div>
+                            <div className="text-xs text-green-600 font-semibold">Campaña #{data.numeroCampana || 1}</div>
+                          </div>
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2">{data.zona}</td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{data.enviados}</td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          {data.entregadosPorDia ? data.entregadosPorDia.toFixed(2) : '0.00'}
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2">
+                          <div className="flex gap-2 items-center justify-center">
+                            <Input
+                              type="number"
+                              placeholder="Pedidos"
+                              value={pedidosPorDiaValues[originalIndex] || data.pedidosPorDia || ''}
+                              onChange={(e) => handlePedidosPorDiaChange(originalIndex, e.target.value)}
+                              className="w-20"
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleSavePedidosPorDia(originalIndex)}
+                              disabled={updatePedidosPorDiaMutation.isPending}
+                            >
+                              {updatePedidosPorDiaMutation.isPending ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Save className="h-3 w-3" />
+                              )}
+                            </Button>
+                          </div>
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
+                          {data.pedidosTotal}
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          {updatedData.porcentajeDesvio.toFixed(1)}%
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2">
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="w-20 h-3 bg-gray-200 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-green-500 transition-all duration-300"
+                                style={{ width: `${Math.min(data.porcentajeDatosEnviados || 0, 100)}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-bold text-green-700">
+                              {data.porcentajeDatosEnviados ? data.porcentajeDatosEnviados.toFixed(1) : '0.0'}%
+                            </span>
+                          </div>
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          <Badge variant="outline" className="bg-gray-100 text-gray-600">
+                            {updatedData.faltantesAEnviar}
+                          </Badge>
+                        </td>
+
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          {currentCpl > 0 ? (
+                            <div className="flex flex-col items-center gap-1">
+                              <div className="text-green-600 font-semibold">
+                                ${currentCpl.toLocaleString('es-AR')}
+                              </div>
+                              <div className="text-xs text-gray-500">Guardado</div>
+                            </div>
+                          ) : (
+                            <div className="text-gray-400">-</div>
+                          )}
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          {(() => {
+                            const cplReal = calculateCPLReal(data);
+                            return cplReal > 0 ? (
+                              <div className="flex flex-col items-center gap-1">
+                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                  ARS ${Math.round(cplReal).toLocaleString('es-AR')}
+                                </Badge>
+                                <div className="text-xs text-gray-500">Meta Ads</div>
+                              </div>
+                            ) : (
+                              <div className="text-gray-400 text-sm">-</div>
+                            );
+                          })()}
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
+                          ARS ${inversions.inversionRealizada.toLocaleString('es-AR')}
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
+                          ARS ${inversions.inversionPendiente.toLocaleString('es-AR')}
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {datosDiarios?.filter(data => data.porcentajeDatosEnviados >= 100).length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  No hay campañas finalizadas aún
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

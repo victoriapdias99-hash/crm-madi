@@ -175,49 +175,6 @@ export const dashboardManualValues = pgTable("dashboard_manual_values", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Nueva tabla para almacenar datos completos de Google Sheets
-export const googleSheetsData = pgTable("google_sheets_data", {
-  id: serial("id").primaryKey(),
-  nombreCompleto: text("nombre_completo").notNull(),
-  telefono: text("telefono").notNull(),
-  email: text("email"),
-  marca: text("marca").notNull(), // Fiat, Peugeot, etc.
-  cliente: text("cliente").notNull(), // AUTOS DEL SOL, ALBENS, etc.
-  provincia: text("provincia"),
-  localidad: text("localidad"),
-  fechaLead: date("fecha_lead"),
-  fechaIngreso: timestamp("fecha_ingreso").notNull(),
-  sourceSheet: text("source_sheet").notNull(), // 'Fiat', 'Peugeot'
-  rowNumber: integer("row_number"), // Número de fila original en Google Sheets
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-// Tabla para control de sincronización
-export const syncControl = pgTable("sync_control", {
-  id: serial("id").primaryKey(),
-  tableName: text("table_name").notNull(),
-  lastSyncAt: timestamp("last_sync_at").notNull(),
-  recordCount: integer("record_count").notNull().default(0),
-  syncStatus: text("sync_status").notNull().default("pending"), // 'pending', 'running', 'completed', 'failed'
-  errorMessage: text("error_message"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-// Tabla para métricas de enviados calculadas desde DB
-export const enviadosMetrics = pgTable("enviados_metrics", {
-  id: serial("id").primaryKey(),
-  clienteNombre: text("cliente_nombre").notNull(),
-  numeroCampana: text("numero_campana").notNull(),
-  datosEnviados: integer("datos_enviados").notNull().default(0),
-  fechaInicio: date("fecha_inicio"),
-  fechaFin: date("fecha_fin"),
-  lastCalculatedAt: timestamp("last_calculated_at").defaultNow().notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
 // Zod schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -372,15 +329,6 @@ export const LEAD_STATUS = {
 } as const;
 
 export type LeadStatus = typeof LEAD_STATUS[keyof typeof LEAD_STATUS];
-
-export type GoogleSheetsData = typeof googleSheetsData.$inferSelect;
-export type InsertGoogleSheetsData = z.infer<typeof insertGoogleSheetsDataSchema>;
-
-export type SyncControl = typeof syncControl.$inferSelect;
-export type InsertSyncControl = z.infer<typeof insertSyncControlSchema>;
-
-export type EnviadosMetrics = typeof enviadosMetrics.$inferSelect;
-export type InsertEnviadosMetrics = z.infer<typeof insertEnviadosMetricsSchema>;
 
 export const CAMPAIGN_STATUS = {
   ACTIVE: 'active',

@@ -69,18 +69,7 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Sistema de Sincronización Automática Database-First Implementado (Latest - January 21, 2025)
-- **Arquitectura Mejorada**: Transición completa de real-time Google Sheets a database-stored data con sincronización automatizada
-- **Nuevas Tablas Creadas**: `google_sheets_data`, `sync_control`, `enviados_metrics` para persistencia mejorada
-- **Sincronización Automática**: GoogleSheetsSyncService ejecutándose cada 30 minutos con node-cron
-- **Backup Completo**: Respaldo completo del sistema antes de cambios arquitectónicos (backup_sistema_20250721_212237)
-- **Endpoints Database**: Nuevos endpoints `/api/sync/status`, `/api/sync/force`, `/api/enviados/database/:cliente`
-- **Medición Precisa**: Sistema de conteo desde base de datos en lugar de real-time para mayor consistencia
-- **Auto-configuración**: Inicialización automática del servicio en server/index.ts con error handling
-- **Storage Expandido**: DatabaseStorage actualizado con funciones para Google Sheets data, sync control y métricas
-- **Estado Transición**: Sistema legacy funcionando paralelo mientras se completa migración a database-first
-
-### Meta Ads Conexión Exitosa Completada (January 21, 2025)
+### Meta Ads Conexión Exitosa Completada (Latest - January 21, 2025)
 - **Meta Ads 100% Funcional**: Token actualizado y conexión exitosa con Facebook Marketing API
 - **Datos Reales Integrados**: 7 campañas activas detectadas con gasto real (Peugeot $930k, Fiat $1.4M, Toyota $262k)
 - **Sincronización Automática**: Habilitada sincronización cada 30 minutos con datos auténticos
