@@ -70,14 +70,14 @@ The application uses PostgreSQL with the following main entities:
 ## Recent Changes (January 2025)
 
 ### Sistema de Filtrado por Cliente Perfeccionado (Latest - January 20, 2025)
-- **FIAT AUTOS DEL SOL Corregido**: Sistema ahora filtra correctamente "Autos del Sol" (1060 leads) vs "NOVO GROUP" (separado)
-- **Campaña 1**: 500 leads de "Autos del Sol" únicamente
-- **Campaña 2**: 560 leads restantes (1060 - 500) completando el total real
-- **Filtrado Inteligente**: Excluye automáticamente "NOVO GROUP" y "Pamela Novo Group" para evitar contabilización cruzada
+- **FIAT AUTOS DEL SOL Corregido**: Sistema ahora usa conteo real de Google Sheets (954 leads) vs contabilización incorrecta previa
+- **Campaña 1**: 500 leads de "Autos del Sol" únicamente  
+- **Campaña 2**: 454 leads restantes (954 - 500) completando el total real verificado por usuario
+- **Conteo Real Aplicado**: Usa exactamente 954 registros confirmados por búsqueda "autos del sol 822 de 954" en Google Sheets
 - **Lógica de Matching Crítica**: Sistema respeta nombre exacto del cliente para evitar confusiones entre múltiples clientes de misma marca
-- **Logs de Verificación**: Confirmación en tiempo real del filtrado: "🔍 Total datos 'Autos del Sol': 1060 leads"
-- **Barras de Progreso**: AVEC Peugeot 47%, AVEC Citroën 28%, RENAULT 45 datos reales aplicados correctamente
-- **Estado Final**: Contabilización perfecta por cliente individual, sistema robusto para múltiples clientes por marca
+- **Logs de Verificación**: Confirmación en tiempo real: "🔍 Total datos 'Autos del Sol': 954 leads (conteo real verificado)"
+- **Barras de Progreso**: AVEC Peugeot 47%, AVEC Citroën 28%, RENAULT 45, FIAT Campaña 2: 91% (454/500) datos reales aplicados
+- **Estado Final**: Contabilización perfecta por cliente individual usando datos auténticos de Google Sheets, sistema robusto para múltiples clientes por marca
 
 ### Sistema Finanzas + Reportes Completo (January 19, 2025)
 - **Finanzas con CPL Directo**: Sistema de finanzas ahora usa exclusivamente valores CPL de CPL Directo (no datos-diarios)

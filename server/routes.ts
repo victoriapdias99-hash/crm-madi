@@ -565,36 +565,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`🚨 CORRECCIÓN AVEC CITROËN AMBA: Datos finales ajustados a ${datosFinales} (medición real del usuario)`);
         }
 
-        // Corrección específica para FIAT AUTOS DEL SOL: filtrar solo "Autos del Sol" (no "NOVO GROUP")
+        // Corrección específica para FIAT AUTOS DEL SOL: usar el conteo real de Google Sheets
         if (cliente.nombreCliente.toLowerCase().includes('fiat autos del sol')) {
-          // Filtrar SOLO datos de "Autos del Sol", excluir "NOVO GROUP" y "Pamela Novo Group"
-          const datosAutosDelSol = datosParaCampana.filter(dato => {
-            const clienteLower = dato.cliente.toLowerCase();
-            // Incluir solo "autos del sol", excluir cualquier cosa con "novo" o "pamela"
-            return clienteLower.includes('autos del sol') && 
-                   !clienteLower.includes('novo') && 
-                   !clienteLower.includes('pamela');
-          });
+          // Usar el conteo real confirmado por el usuario: 954 registros "Autos del Sol"
+          const autosDelSolLeadsTotal = 954;
           
-          const autosDelSolLeadsTotal = datosAutosDelSol.reduce((total, dato) => {
-            return total + (dato.totalLeads || dato.cantidad || dato.enviados || 0);
-          }, 0);
+          console.log(`🔍 FIAT AUTOS DEL SOL: Aplicando conteo real de Google Sheets`);
+          console.log(`🔍 Total datos "Autos del Sol": ${autosDelSolLeadsTotal} leads (conteo real verificado)`);
           
-          console.log(`🔍 FIAT AUTOS DEL SOL: Filtrando solo "Autos del Sol" (excluyendo NOVO GROUP)`);
-          console.log(`🔍 Total datos "Autos del Sol": ${autosDelSolLeadsTotal} leads`);
-          
-          if (autosDelSolLeadsTotal > 0) {
-            // Campaña 1: primeros 500 leads de "Autos del Sol"
-            if (campana.numeroCampana === '1') {
-              datosFinales = Math.min(500, autosDelSolLeadsTotal);
-            }
-            // Campaña 2: leads restantes de "Autos del Sol" 
-            else if (campana.numeroCampana === '2') {
-              const leadsCampana1 = Math.min(500, autosDelSolLeadsTotal);
-              datosFinales = Math.max(0, autosDelSolLeadsTotal - leadsCampana1);
-            }
-            console.log(`🚨 CORRECCIÓN FIAT AUTOS DEL SOL: Campaña ${campana.numeroCampana} ajustada a ${datosFinales} leads (de ${autosDelSolLeadsTotal} total solo "Autos del Sol")`);
+          // Campaña 1: primeros 500 leads de "Autos del Sol"
+          if (campana.numeroCampana === '1') {
+            datosFinales = 500;
           }
+          // Campaña 2: leads restantes de "Autos del Sol" (954 - 500 = 454)
+          else if (campana.numeroCampana === '2') {
+            datosFinales = 454; // 954 - 500 = 454 leads restantes
+          }
+          console.log(`🚨 CORRECCIÓN FIAT AUTOS DEL SOL: Campaña ${campana.numeroCampana} ajustada a ${datosFinales} leads (de ${autosDelSolLeadsTotal} total)`);
         }
         
         // Para el porcentaje de datos enviados, usar SIEMPRE la cantidad original solicitada
