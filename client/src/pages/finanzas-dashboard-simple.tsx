@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, DollarSign, TrendingUp, Calculator, Target } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, DollarSign, TrendingUp, Calculator, Target, Filter } from "lucide-react";
 import { Navigation } from "@/components/navigation";
 
 interface FinanzasData {
@@ -21,13 +23,59 @@ interface FinanzasData {
   roi: number;
   impuestosIIBB: number;
   totalFacturado: number;
+  fechaCampana?: string;
 }
 
 export default function FinanzasDashboard() {
+  const [mesSeleccionado, setMesSeleccionado] = useState<string>("todos");
+  
   const { data: finanzasData, isLoading } = useQuery({
     queryKey: ['/api/dashboard/finanzas'],
     refetchInterval: 300000,
   });
+
+  // Filtrar datos por mes
+  const finanzasDataFiltradas = useMemo(() => {
+    if (!finanzasData || mesSeleccionado === "todos") return finanzasData;
+    
+    return finanzasData.filter((f: FinanzasData) => {
+      if (!f.fechaCampana) return true; // Incluir campañas sin fecha
+      
+      const fechaCampana = new Date(f.fechaCampana);
+      const mesCampana = fechaCampana.getMonth() + 1; // getMonth() devuelve 0-11
+      const anioCampana = fechaCampana.getFullYear();
+      
+      // Formato: "2025-01" para enero 2025
+      const mesAnioSeleccionado = `${anioCampana}-${mesCampana.toString().padStart(2, '0')}`;
+      
+      return mesAnioSeleccionado === mesSeleccionado;
+    });
+  }, [finanzasData, mesSeleccionado]);
+
+  // Obtener lista de meses únicos para el filtro
+  const mesesDisponibles = useMemo(() => {
+    if (!finanzasData) return [];
+    
+    const mesesSet = new Set<string>();
+    
+    finanzasData.forEach((f: FinanzasData) => {
+      if (f.fechaCampana) {
+        const fecha = new Date(f.fechaCampana);
+        const mes = fecha.getMonth() + 1;
+        const anio = fecha.getFullYear();
+        const mesAnio = `${anio}-${mes.toString().padStart(2, '0')}`;
+        mesesSet.add(mesAnio);
+      }
+    });
+    
+    return Array.from(mesesSet).sort().reverse(); // Más recientes primero
+  }, [finanzasData]);
+
+  const formatearMes = (mesAnio: string) => {
+    const [anio, mes] = mesAnio.split('-');
+    const fecha = new Date(parseInt(anio), parseInt(mes) - 1);
+    return fecha.toLocaleDateString('es-AR', { year: 'numeric', month: 'long' });
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-AR', {
@@ -49,12 +97,12 @@ export default function FinanzasDashboard() {
     );
   }
 
-  // Calcular métricas generales
-  const metricsData = finanzasData ? {
-    totalGanancia: finanzasData.reduce((sum: number, f: FinanzasData) => sum + (f?.ganancia || 0), 0),
-    totalInversion: finanzasData.reduce((sum: number, f: FinanzasData) => sum + (f?.inversionRealizada || 0), 0),
-    totalFacturado: finanzasData.reduce((sum: number, f: FinanzasData) => sum + (f.totalFacturado || 0), 0),
-    totalLeads: finanzasData.reduce((sum: number, f: FinanzasData) => sum + (f.totalLeads || 0), 0),
+  // Calcular métricas generales usando datos filtrados
+  const metricsData = finanzasDataFiltradas ? {
+    totalGanancia: finanzasDataFiltradas.reduce((sum: number, f: FinanzasData) => sum + (f?.ganancia || 0), 0),
+    totalInversion: finanzasDataFiltradas.reduce((sum: number, f: FinanzasData) => sum + (f?.inversionRealizada || 0), 0),
+    totalFacturado: finanzasDataFiltradas.reduce((sum: number, f: FinanzasData) => sum + (f.totalFacturado || 0), 0),
+    totalLeads: finanzasDataFiltradas.reduce((sum: number, f: FinanzasData) => sum + (f.totalLeads || 0), 0),
     roiPromedio: 0
   } : null;
 
@@ -62,8 +110,8 @@ export default function FinanzasDashboard() {
     metricsData.roiPromedio = (metricsData.totalGanancia / metricsData.totalInversion) * 100;
   }
 
-  // Agrupar por marca
-  const resumenPorMarca = finanzasData ? finanzasData.reduce((acc: any, f: FinanzasData) => {
+  // Agrupar por marca usando datos filtrados
+  const resumenPorMarca = finanzasDataFiltradas ? finanzasDataFiltradas.reduce((acc: any, f: FinanzasData) => {
     const marca = f.marca;
     if (!acc[marca]) {
       acc[marca] = {
@@ -103,6 +151,27 @@ export default function FinanzasDashboard() {
             Dashboard Financiero - Solo Lectura
           </h1>
           <p className="text-muted-foreground">Análisis financiero automático basado en datos de campañas</p>
+        </div>
+        
+        {/* Filtro de Mes */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-gray-500" />
+            <span className="text-sm font-medium text-gray-700">Filtrar por mes:</span>
+          </div>
+          <Select value={mesSeleccionado} onValueChange={setMesSeleccionado}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Seleccionar mes" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos los meses</SelectItem>
+              {mesesDisponibles.map((mes) => (
+                <SelectItem key={mes} value={mes}>
+                  {formatearMes(mes)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
