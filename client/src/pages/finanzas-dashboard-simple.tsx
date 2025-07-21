@@ -69,8 +69,10 @@ export default function FinanzasDashboard() {
       const mesCampana = fechaCampana.getMonth() + 1; // getMonth() devuelve 0-11
       const anioCampana = fechaCampana.getFullYear();
       
-      // Formato: "2025-01" para enero 2025
+      // Formato: "2025-01" para enero 2025  
       const mesAnioSeleccionado = `${anioCampana}-${mesCampana.toString().padStart(2, '0')}`;
+      
+      console.log(`🔍 FILTRO: Campaña ${f.clienteNombre} fecha=${f.fechaCampana} mes=${mesAnioSeleccionado} filtro=${mesSeleccionado}`);
       
       return mesAnioSeleccionado === mesSeleccionado;
     });

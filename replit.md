@@ -69,7 +69,15 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Corrección Manual Citroën Confirmada (Latest - January 21, 2025)
+### Sistema de Reportes y Meta Ads Diagnóstico Completado (Latest - January 21, 2025)
+- **Reportes Gráficos Corregidos**: Mapeo de marcas arreglado extrayendo desde nombres de clientes (Fiat, Peugeot, Toyota, etc.)
+- **Filtros Dinámicos Implementados**: Sistema completo de filtros por marca y campaña con interfaz visual
+- **Datos Filtrados Aplicados**: Todos los gráficos y estadísticas ahora usan datos filtrados correctamente
+- **Meta Ads Diagnóstico**: Estado verificado - configurado pero token inválido, requiere renovación urgente
+- **Finanzas Filtro Mensual**: Corrección de mapeo de fechas para filtro mensual en dashboard de finanzas
+- **Documentación Meta Ads**: Creado ESTADO_META_ADS.md con diagnóstico completo y pasos para renovar conexión
+
+### Corrección Manual Citroën Confirmada (January 21, 2025)
 - **CITROËN AMBA Manual**: Usuario confirma conteo manual de 10 datos exactos para campaña Citroën
 - **Corrección Aplicada**: Sistema actualizado en routes.ts y google-sheets.ts para usar 10 datos (no 19/28 automáticos)
 - **Logs Funcionando**: Confirmación en tiempo real "🚨 CORRECCIÓN AVEC CITROËN AMBA: Datos finales ajustados a 10 (conteo manual confirmado por usuario)"
