@@ -432,13 +432,10 @@ export default function DatosDiariosDashboard() {
       // 1. Forzar actualización inmediata
       await apiRequest('/api/dashboard/force-refresh', 'POST', {});
       
-      // 2. CRÍTICO: Actualizar específicamente los conteos de "enviados"
-      await apiRequest('/api/dashboard/update-enviados', 'POST', {});
-      
-      // 3. Mapear campañas
+      // 2. Mapear campañas
       await apiRequest('/api/dashboard/mapear-campanas', 'POST');
       
-      // 4. Actualizar todos los datos
+      // 3. Actualizar todos los datos (incluye recálculo automático de enviados)
       await apiRequest('/api/dashboard/refresh-all-data', 'POST', {});
       
       return { success: true };
@@ -456,7 +453,7 @@ export default function DatosDiariosDashboard() {
       
       toast({
         title: "🚀 Actualización completa exitosa",
-        description: "Todos los datos han sido actualizados: Google Sheets, conteos de 'enviados', campañas mapeadas y sincronización completa",
+        description: "Todos los datos han sido actualizados: Google Sheets, campañas mapeadas y sincronización completa",
       });
     },
     onError: (error: any) => {
