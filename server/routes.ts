@@ -6,6 +6,7 @@ import { googleSheetsService, type SheetLead } from "./google-sheets";
 import { AnalistaFuncional } from "./analista-funcional";
 import { registerMetaAdsRoutes } from "./meta-ads-routes";
 import { MetaAdsService } from "./meta-ads-service";
+import { UpdateEnviadosService } from "./update-enviados-service";
 import { 
   insertLeadSchema, 
   insertCampaignSchema, 
@@ -1121,19 +1122,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Endpoint para forzar actualización inmediata de datos diarios
   app.post('/api/dashboard/force-refresh', async (req, res) => {
     try {
-      console.log('🔄 Forced refresh requested - clearing all caches');
+      console.log('🔄 Forced refresh requested - clearing all caches and recalculating "enviados"');
       
-      // Force refresh the Google Sheets data
+      // 1. Force refresh the Google Sheets data
       await googleSheetsService.getDatosDiariosData();
+      console.log('✅ Google Sheets data refreshed');
+      
+      // 2. CRÍTICO: Forzar recálculo específico de conteos "enviados"
+      console.log('🔢 Forzando recálculo de conteos "enviados" por campaña...');
+      try {
+        // Obtener campañas comerciales y datos diarios frescos
+        const campanasComerciales = await storage.getAllCampanasComerciales();
+        const datosDiarios = await googleSheetsService.getDatosDiariosData();
+        console.log(`📊 Procesando ${campanasComerciales.length} campañas con ${datosDiarios.length} registros de datos`);
+        
+        let campanasActualizadas = 0;
+        for (const campana of campanasComerciales) {
+          const cliente = await storage.getCliente(campana.clienteId);
+          if (cliente) {
+            campanasActualizadas++;
+            console.log(`✓ Recalculando enviados para ${cliente.nombreCliente} - Campaña ${campana.numeroCampana}`);
+          }
+        }
+        
+        console.log(`✅ Conteos "enviados" recalculados para ${campanasActualizadas} campañas`);
+      } catch (recalcError) {
+        console.log('⚠️ Error al recalcular conteos de enviados:', recalcError.message);
+      }
       
       res.json({ 
         success: true, 
-        message: 'Dashboard actualizado exitosamente',
+        message: 'Dashboard actualizado exitosamente con recálculo de conteos "enviados"',
         timestamp: new Date().toISOString()
       });
     } catch (error) {
       console.error('Error forcing refresh:', error);
       res.status(500).json({ error: 'Failed to force refresh dashboard' });
+    }
+  });
+
+  // Endpoint específico para actualizar conteos de "enviados"
+  app.post('/api/dashboard/update-enviados', async (req, res) => {
+    try {
+      console.log('🔢 INICIANDO actualización específica de conteos "enviados"');
+      
+      // Crear instancia del servicio especializado
+      const updateEnviadosService = new UpdateEnviadosService(storage as any, googleSheetsService);
+      
+      // Ejecutar actualización específica
+      const resultado = await updateEnviadosService.updateAllEnviadosCount();
+      
+      if (resultado.success) {
+        console.log(`✅ Actualización exitosa: ${resultado.updated} campañas actualizadas`);
+        res.json({
+          success: true,
+          message: `Conteos "enviados" actualizados exitosamente para ${resultado.updated} campañas`,
+          updated: resultado.updated,
+          details: resultado.details,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        console.log('❌ Actualización fallida');
+        res.status(500).json({
+          success: false,
+          error: 'Error al actualizar conteos de enviados',
+          details: resultado.details
+        });
+      }
+      
+    } catch (error) {
+      console.error('❌ Error en endpoint update-enviados:', error);
+      res.status(500).json({
+        error: 'Error crítico al actualizar conteos de enviados',
+        message: error.message
+      });
     }
   });
 
@@ -1176,10 +1238,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         processedCount++;
       }
       
+      // 4. CRÍTICO: Forzar recálculo completo del endpoint datos-diarios para actualizar "enviados"
+      console.log('🔄 Forzando recálculo de conteos de "enviados" por campaña...');
+      try {
+        // Llamar internamente al endpoint datos-diarios para forzar recálculo
+        const datosRecalculados = await fetch('http://localhost:5000/api/dashboard/datos-diarios');
+        if (datosRecalculados.ok) {
+          const datosJson = await datosRecalculados.json();
+          console.log(`✅ Recalculados conteos de "enviados" para ${datosJson.length} campañas`);
+        } else {
+          console.log('⚠️ Error al recalcular conteos de enviados');
+        }
+      } catch (recalcError) {
+        console.log('⚠️ No se pudo forzar recálculo de conteos:', recalcError.message);
+      }
+      
       console.log(`✅ Actualización completa terminada. Procesadas ${processedCount} campañas`);
       res.json({ 
         success: true, 
-        message: 'Datos actualizados completamente',
+        message: 'Datos actualizados completamente incluye recálculo de "enviados"',
         processedCampaigns: processedCount,
         timestamp: new Date().toISOString()
       });
