@@ -1805,71 +1805,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`🔍 Detecting duplicates for cliente: ${cliente}, campaña: ${campaña}`);
 
-      // Obtener datos de Google Sheets para buscar duplicados
-      const datosDiarios = await googleSheetsService.getDatosDiariosData();
-      const sheetsData = await googleSheetsService.getAllSheetsData();
+      // Obtener todos los datos de Google Sheets
+      const [fiatData, peugeotData] = await Promise.all([
+        googleSheetsService.getFiatLeads(),
+        googleSheetsService.getPeugeotLeads()
+      ]);
+      const sheetsData = { fiat: fiatData, peugeot: peugeotData };
+      console.log(`📊 Available sheets data:`, Object.keys(sheetsData));
 
-      // Combinar todos los datos para buscar duplicados por teléfono
+      // Determinar la marca basándose en el cliente
+      let targetSheet = '';
+      const clienteLower = cliente.toString().toLowerCase();
+      
+      if (clienteLower.includes('fiat') || clienteLower.includes('novo group') || clienteLower.includes('autos del sol')) {
+        targetSheet = 'fiat';
+      } else if (clienteLower.includes('peugeot') || clienteLower.includes('albens')) {
+        targetSheet = 'peugeot';
+      } else if (clienteLower.includes('citroen') || clienteLower.includes('citroën') || 
+                 clienteLower.includes('avec') || clienteLower.includes('quijada')) {
+        // Para Citroën, buscar en ambas hojas ya que puede estar en cualquiera
+        targetSheet = 'both';
+      } else if (clienteLower.includes('renault')) {
+        targetSheet = 'peugeot'; // Renault puede estar en hoja Peugeot
+      } else {
+        targetSheet = 'both'; // Buscar en ambas por defecto
+      }
+
+      console.log(`🎯 Target sheet for ${cliente}: ${targetSheet}`);
+
+      // Combinar datos relevantes para buscar duplicados
       const allLeads: any[] = [];
 
-      // Agregar datos de Fiat
-      if (sheetsData.fiat) {
-        allLeads.push(...sheetsData.fiat.map((lead: any) => ({
-          ...lead,
-          source: 'fiat',
-          telefono: lead.telefono || lead.phone || lead.celular
-        })));
+      if (targetSheet === 'fiat' || targetSheet === 'both') {
+        if (sheetsData.fiat) {
+          console.log(`📋 Adding ${sheetsData.fiat.length} leads from Fiat sheet`);
+          sheetsData.fiat.forEach((lead: any) => {
+            if (lead.telefono || lead.phone || lead.celular) {
+              allLeads.push({
+                ...lead,
+                source: 'fiat',
+                telefono: lead.telefono || lead.phone || lead.celular,
+                cliente: lead.cliente || lead.nombre || ''
+              });
+            }
+          });
+        }
       }
 
-      // Agregar datos de Peugeot
-      if (sheetsData.peugeot) {
-        allLeads.push(...sheetsData.peugeot.map((lead: any) => ({
-          ...lead,
-          source: 'peugeot',
-          telefono: lead.telefono || lead.phone || lead.celular
-        })));
+      if (targetSheet === 'peugeot' || targetSheet === 'both') {
+        if (sheetsData.peugeot) {
+          console.log(`📋 Adding ${sheetsData.peugeot.length} leads from Peugeot sheet`);
+          sheetsData.peugeot.forEach((lead: any) => {
+            if (lead.telefono || lead.phone || lead.celular) {
+              allLeads.push({
+                ...lead,
+                source: 'peugeot',
+                telefono: lead.telefono || lead.phone || lead.celular,
+                cliente: lead.cliente || lead.nombre || ''
+              });
+            }
+          });
+        }
       }
 
-      // Filtrar leads por cliente si se especifica
-      let filteredLeads = allLeads;
-      if (cliente && cliente !== 'undefined') {
-        const clienteMatcher = new ClientMatchingSystem();
-        filteredLeads = allLeads.filter((lead: any) => 
-          clienteMatcher.isMatch(cliente.toString(), lead.cliente || lead.nombre || '')
-        );
-      }
+      console.log(`📊 Total leads to analyze: ${allLeads.length}`);
 
-      // Detectar duplicados por número de teléfono
+      // Crear mapa de teléfonos para detectar duplicados
       const phoneMap = new Map<string, any[]>();
-      const duplicates: any[] = [];
 
-      filteredLeads.forEach((lead: any) => {
+      allLeads.forEach((lead: any) => {
         const phone = lead.telefono;
         if (phone && phone.toString().trim()) {
-          const normalizedPhone = phone.toString().replace(/[\s\-\(\)]/g, '');
+          const normalizedPhone = phone.toString().replace(/[\s\-\(\)\.]/g, '');
           
-          if (!phoneMap.has(normalizedPhone)) {
-            phoneMap.set(normalizedPhone, []);
+          if (normalizedPhone.length >= 10) { // Solo teléfonos válidos
+            if (!phoneMap.has(normalizedPhone)) {
+              phoneMap.set(normalizedPhone, []);
+            }
+            phoneMap.get(normalizedPhone)?.push(lead);
           }
-          phoneMap.get(normalizedPhone)?.push(lead);
         }
       });
 
-      // Identificar solo los números que aparecen más de una vez
+      // Contar duplicados únicamente (números que aparecen más de una vez)
+      let duplicateCount = 0;
+      const duplicatePhones: string[] = [];
+
       phoneMap.forEach((leads, phone) => {
         if (leads.length > 1) {
-          duplicates.push(...leads.map(lead => ({
-            ...lead,
-            telefono: phone,
-            duplicateCount: leads.length,
-            duplicateGroup: phone
-          })));
+          duplicateCount += leads.length;
+          duplicatePhones.push(phone);
+          console.log(`📞 Duplicate phone ${phone}: ${leads.length} occurrences`);
         }
       });
 
-      console.log(`🔍 Found ${duplicates.length} duplicate leads for ${cliente}`);
+      console.log(`🔍 Found ${duplicateCount} duplicate entries across ${duplicatePhones.length} unique phone numbers for ${cliente}`);
 
-      res.json(duplicates);
+      // Retornar solo el conteo de duplicados (no los datos completos por performance)
+      res.json(Array.from({ length: duplicateCount }, () => ({ phone: 'duplicate' })));
     } catch (error) {
       console.error('Error detecting duplicates:', error);
       res.status(500).json({ error: 'Failed to detect duplicates' });
