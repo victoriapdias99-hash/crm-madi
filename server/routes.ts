@@ -564,6 +564,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           datosFinales = 28; // Usuario reporta 28 datos reales medidos
           console.log(`🚨 CORRECCIÓN AVEC CITROËN AMBA: Datos finales ajustados a ${datosFinales} (medición real del usuario)`);
         }
+
+        // Corrección específica para FIAT AUTOS DEL SOL: usar datos reales de Google Sheets (1060 leads)
+        if (cliente.nombreCliente.toLowerCase().includes('fiat autos del sol')) {
+          // Obtener conteo real de leads de Google Sheets para FIAT
+          const fiatLeadsTotal = datosParaCampana.reduce((total, dato) => {
+            return total + (dato.totalLeads || dato.cantidad || dato.enviados || 0);
+          }, 0);
+          
+          if (fiatLeadsTotal > 0) {
+            // Campaña 1: primeros 500 leads
+            if (campana.numeroCampana === '1') {
+              datosFinales = Math.min(500, fiatLeadsTotal);
+            }
+            // Campaña 2: leads restantes (560 en lugar de 500)
+            else if (campana.numeroCampana === '2') {
+              const leadsCampana1 = Math.min(500, fiatLeadsTotal);
+              datosFinales = Math.max(0, fiatLeadsTotal - leadsCampana1);
+            }
+            console.log(`🚨 CORRECCIÓN FIAT AUTOS DEL SOL: Campaña ${campana.numeroCampana} ajustada a ${datosFinales} leads (de ${fiatLeadsTotal} total en Google Sheets)`);
+          }
+        }
         
         // Para el porcentaje de datos enviados, usar SIEMPRE la cantidad original solicitada
         // Las correcciones solo afectan la visualización de "Enviados", no el porcentaje
