@@ -109,10 +109,10 @@ export default function DatosDiariosDashboard() {
   const campanasEnProceso = campanasData.campanasEnProceso;
   const campanasFinalizadas = campanasData.campanasFinalizadas;
 
-  const finalData = datosDiarios;
+  const finalData: DatosDiariosData[] = datosDiarios || [];
   const finalIsLoading = isLoading;
 
-  console.log('Dashboard loading state:', { isLoading, error, dataLength: finalData?.length });
+  console.log('Dashboard loading state:', { isLoading, error, dataLength: finalData.length });
   console.log('Performance data:', { campanasEnProceso: campanasEnProceso.length, campanasFinalizadas: campanasFinalizadas.length });
   
   // Debug para verificar estado del query
@@ -658,7 +658,7 @@ export default function DatosDiariosDashboard() {
                       <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
                         <div className="bg-gradient-to-r from-red-100 to-pink-100 dark:from-red-800/50 dark:to-pink-800/50 p-2 rounded-lg">
                           <span className="font-bold text-red-700 dark:text-red-300">
-                            {campanasEnProceso.reduce((sum, data) => {
+                            {campanasEnProceso.reduce((sum: number, data: DatosDiariosData) => {
                               const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0;
                               const inversions = calculateInversions(data, currentCpl);
                               return sum + inversions.faltantes;
@@ -672,7 +672,7 @@ export default function DatosDiariosDashboard() {
                       <td className="border border-amber-200 dark:border-amber-600 p-3 text-center font-medium">
                         <div className="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-800/50 dark:to-emerald-800/50 p-2 rounded-lg">
                           <span className="text-green-700 dark:text-green-300 font-bold">
-                            ARS ${campanasEnProceso.reduce((sum, data) => {
+                            ARS ${campanasEnProceso.reduce((sum: number, data: DatosDiariosData) => {
                               const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0;
                               const inversions = calculateInversions(data, currentCpl);
                               return sum + inversions.inversionRealizada;
@@ -683,7 +683,7 @@ export default function DatosDiariosDashboard() {
                       <td className="border border-amber-200 dark:border-amber-600 p-3 text-center font-medium">
                         <div className="bg-gradient-to-r from-orange-100 to-red-100 dark:from-orange-800/50 dark:to-red-800/50 p-2 rounded-lg">
                           <span className="text-orange-700 dark:text-orange-300 font-bold">
-                            ARS ${campanasEnProceso.reduce((sum, data) => {
+                            ARS ${campanasEnProceso.reduce((sum: number, data: DatosDiariosData) => {
                               const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0;
                               const inversions = calculateInversions(data, currentCpl);
                               const cplReal = calculateCPLReal(data);
@@ -867,7 +867,7 @@ export default function DatosDiariosDashboard() {
                       <td className="border border-emerald-200 dark:border-emerald-600 p-3 text-center">
                         <div className="bg-gradient-to-r from-red-100 to-pink-100 dark:from-red-800/50 dark:to-pink-800/50 p-2 rounded-lg">
                           <span className="font-bold text-red-700 dark:text-red-300">
-                            {campanasFinalizadas.reduce((sum, data) => {
+                            {campanasFinalizadas.reduce((sum: number, data: DatosDiariosData) => {
                               const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0;
                               const inversions = calculateInversions(data, currentCpl);
                               return sum + inversions.faltantes;
