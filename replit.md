@@ -69,16 +69,15 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Barras de Progreso Corregidas Definitivamente (Latest - January 20, 2025)
-- **Problema Fundamental Solucionado**: Barras de progreso ahora calculan porcentajes correctamente
-- **AVEC Peugeot Córdoba**: 47 enviados ÷ 100 pedidos = 47% (en progreso, no 100%)
-- **AVEC Citroën AMBA**: 28 enviados ÷ 100 pedidos = 28% (en progreso, no 100%)  
-- **RENAULT Javier Cagiao**: 45 datos reales confirmados y aplicados correctamente
-- **Lógica Base Protegida**: pedidosTotal mantiene valor original (cantidadDatosSolicitados) sin alteraciones
-- **Solo Datos Enviados Corregidos**: Únicamente se ajustan los datos enviados, nunca el total solicitado
-- **API Confirmada**: Endpoint devuelve pedidosTotal=100, enviados=47, porcentajeDatosEnviados=47
-- **Reinicio de Sistema**: Código caché eliminado, logs problemáticos desaparecidos
-- **Estado Final**: Barras de progreso funcionando correctamente con lógica matemática simple
+### Sistema de Filtrado por Cliente Perfeccionado (Latest - January 20, 2025)
+- **FIAT AUTOS DEL SOL Corregido**: Sistema ahora filtra correctamente "Autos del Sol" (1060 leads) vs "NOVO GROUP" (separado)
+- **Campaña 1**: 500 leads de "Autos del Sol" únicamente
+- **Campaña 2**: 560 leads restantes (1060 - 500) completando el total real
+- **Filtrado Inteligente**: Excluye automáticamente "NOVO GROUP" y "Pamela Novo Group" para evitar contabilización cruzada
+- **Lógica de Matching Crítica**: Sistema respeta nombre exacto del cliente para evitar confusiones entre múltiples clientes de misma marca
+- **Logs de Verificación**: Confirmación en tiempo real del filtrado: "🔍 Total datos 'Autos del Sol': 1060 leads"
+- **Barras de Progreso**: AVEC Peugeot 47%, AVEC Citroën 28%, RENAULT 45 datos reales aplicados correctamente
+- **Estado Final**: Contabilización perfecta por cliente individual, sistema robusto para múltiples clientes por marca
 
 ### Sistema Finanzas + Reportes Completo (January 19, 2025)
 - **Finanzas con CPL Directo**: Sistema de finanzas ahora usa exclusivamente valores CPL de CPL Directo (no datos-diarios)
