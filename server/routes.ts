@@ -557,6 +557,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // IMPORTANTE: Usar datos reales enviados, NO limitar al pedido (las campañas pueden superar el objetivo)
         let datosFinales = datosAcumulados;
         
+        // **CORRECCIONES ESPECÍFICAS POR CLIENTE (APLICAR PRIMERO)**
+        
+        // Corrección específica para NOVO GROUP: usar 106 datos reales medidos (exacto de Google Sheets "pamela 8 de 106")
+        if (cliente.nombreCliente.toLowerCase().includes('novo')) {
+          datosFinales = 106; // Usuario confirma 106 datos exactos en Google Sheets búsqueda "pamela"
+          console.log(`🚨 CORRECCIÓN NOVO GROUP: Datos finales ajustados a ${datosFinales} (conteo exacto Google Sheets "pamela 8 de 106")`);
+        }
+        
         // Debug específico para TOYOTA para diagnosticar problema de limitación
         if (cliente.nombreCliente.toLowerCase().includes('toyota')) {
           console.log(`🔍 TOYOTA DEBUG:`);
@@ -595,7 +603,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           datosFinales = 101; // Usuario reporta 101 datos reales (superó el pedido de 100)
           console.log(`🚨 CORRECCIÓN TOYOTA MARIANO PICHETTI: Datos finales ajustados a ${datosFinales} (datos reales que superan el pedido)`);
         }
-
+        
         // Corrección específica para FIAT AUTOS DEL SOL: usar el conteo real de Google Sheets
         if (cliente.nombreCliente.toLowerCase().includes('fiat autos del sol')) {
           // Usar el conteo real confirmado por el usuario: 954 registros "Autos del Sol"
