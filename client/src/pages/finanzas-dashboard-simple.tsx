@@ -60,7 +60,7 @@ export default function FinanzasDashboard() {
 
   // Filtrar datos por mes
   const finanzasDataFiltradas = useMemo(() => {
-    if (!finanzasData || mesSeleccionado === "todos") return finanzasData;
+    if (!finanzasData || !Array.isArray(finanzasData) || mesSeleccionado === "todos") return finanzasData;
     
     return finanzasData.filter((f: FinanzasData) => {
       if (!f.fechaCampana) return true; // Incluir campañas sin fecha
@@ -78,7 +78,7 @@ export default function FinanzasDashboard() {
 
   // Obtener lista de meses únicos para el filtro
   const mesesDisponibles = useMemo(() => {
-    if (!finanzasData) return [];
+    if (!finanzasData || !Array.isArray(finanzasData)) return [];
     
     const mesesSet = new Set<string>();
     
@@ -135,7 +135,7 @@ export default function FinanzasDashboard() {
   }
 
   // Agrupar por marca usando datos filtrados
-  const resumenPorMarca = finanzasDataFiltradas ? finanzasDataFiltradas.reduce((acc: any, f: FinanzasData) => {
+  const resumenPorMarca = finanzasDataFiltradas && Array.isArray(finanzasDataFiltradas) ? finanzasDataFiltradas.reduce((acc: any, f: FinanzasData) => {
     const marca = f.marca;
     if (!acc[marca]) {
       acc[marca] = {
@@ -357,7 +357,7 @@ export default function FinanzasDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {finanzasData?.map((finanza: FinanzasData, index: number) => (
+                {finanzasDataFiltradas && Array.isArray(finanzasDataFiltradas) ? finanzasDataFiltradas.map((finanza: FinanzasData, index: number) => (
                   <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="border border-gray-300 dark:border-gray-600 p-2">{finanza.clienteNombre}</td>
                     <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
@@ -374,12 +374,18 @@ export default function FinanzasDashboard() {
                       </span>
                     </td>
                     <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
-                      <span className={(finanza?.roiNegocio || 0) >= 0 ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
-                        {(finanza?.roiNegocio || 0).toFixed(1)}%
+                      <span className={(finanza?.roi || 0) >= 0 ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+                        {(finanza?.roi || 0).toFixed(1)}%
                       </span>
                     </td>
                   </tr>
-                ))}
+                )) : (
+                  <tr>
+                    <td colSpan={9} className="border border-gray-300 dark:border-gray-600 p-4 text-center text-gray-500">
+                      No hay datos de finanzas disponibles
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
