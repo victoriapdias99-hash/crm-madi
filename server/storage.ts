@@ -1187,7 +1187,10 @@ export class DatabaseStorage implements IStorage {
       .select({ cpl: dashboardManualValues.cpl })
       .from(dashboardManualValues)
       .where(eq(dashboardManualValues.clienteIndex, this.hashString(uniqueKey)));
-    return result?.cpl || 0;
+    
+    const cplValue = result?.cpl ? parseFloat(result.cpl) : 0;
+    console.log(`🔍 CPL DATABASE: ${clienteNombre} #${numeroCampana} = ${cplValue}`);
+    return cplValue;
   }
 
   async updateVentaPorCampanaByClienteAndCampana(clienteNombre: string, numeroCampana: string, venta: number): Promise<void> {

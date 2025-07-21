@@ -1126,12 +1126,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Extraer marca del cliente
         let marca = 'Otros';
         const clienteNombre = data.clienteNombre?.toLowerCase() || '';
-        if (clienteNombre.includes('fiat')) marca = 'Fiat';
-        else if (clienteNombre.includes('peugeot')) marca = 'Peugeot';
-        else if (clienteNombre.includes('toyota')) marca = 'Toyota';
-        else if (clienteNombre.includes('chevrolet')) marca = 'Chevrolet';
-        else if (clienteNombre.includes('renault')) marca = 'Renault';
-        else if (clienteNombre.includes('citroen')) marca = 'Citroen';
+        const clienteCompleto = data.cliente?.toLowerCase() || '';
+        
+        // Buscar marca en nombre del cliente o en campo cliente
+        if (clienteNombre.includes('fiat') || clienteCompleto.includes('fiat')) marca = 'Fiat';
+        else if (clienteNombre.includes('peugeot') || clienteCompleto.includes('peugeot')) marca = 'Peugeot';
+        else if (clienteNombre.includes('toyota') || clienteCompleto.includes('toyota')) marca = 'Toyota';
+        else if (clienteNombre.includes('chevrolet') || clienteCompleto.includes('chevrolet')) marca = 'Chevrolet';
+        else if (clienteNombre.includes('renault') || clienteCompleto.includes('renault')) marca = 'Renault';
+        else if (clienteNombre.includes('citroen') || clienteCompleto.includes('citroen')) marca = 'Citroen';
 
         // Obtener venta por campaña desde datos diarios (mejor fuente)
         const ventaPorCampana = parseFloat(data.ventaPorCampana) || 0;
@@ -1142,10 +1145,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           data.numeroCampana
         );
 
-        // Calcular inversión desde CPL Directo × cantidad de leads
-        const cplValue = cplDirecto || parseFloat(data.cpl) || 0;
+        // Usar CPL Directo o fallback a valores por marca si no existe
+        let cplValue = cplDirecto || 0;
+        
+        // Si no hay CPL Directo, usar CPL por marca
+        if (!cplValue) {
+          switch (marca) {
+            case 'Fiat': cplValue = 3800; break;
+            case 'Peugeot': cplValue = 4200; break;
+            case 'Toyota': cplValue = 4100; break;
+            case 'Chevrolet': cplValue = 3900; break;
+            case 'Renault': cplValue = 3500; break;
+            case 'Citroen': cplValue = 4000; break;
+            default: cplValue = parseFloat(data.cpl) || 0;
+          }
+        }
+        
         const leadCount = data.enviados || 0;
         const inversionCalculada = cplValue * leadCount;
+        
+        console.log(`💰 INVERSIÓN ${data.clienteNombre} (${marca}): ${cplValue} × ${leadCount} = ${inversionCalculada}`);
         
         // Calcular ganancia y ROI
         const ganancia = ventaPorCampana - inversionCalculada;
