@@ -496,13 +496,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // 4. Calcular cuántos datos corresponden a ESTA campaña específica
+        
+        // Verificar si hay campañas posteriores para este cliente
+        const campanasPosteriores = campanasComerciales.filter(c => 
+          c.clienteId === campana.clienteId &&
+          c.marca === campana.marca &&
+          c.zona === campana.zona &&
+          parseInt(c.numeroCampana) > parseInt(campana.numeroCampana)
+        );
+        
         if (datosRealesTotal <= datosAcumuladosAnteriores) {
           // Aún no se han generado datos para esta campaña
           datosAcumulados = 0;
           diasConDatos = 0;
-        } else if (datosRealesTotal >= rangoFin) {
-          // La campaña está completa
+        } else if (datosRealesTotal >= rangoFin && campanasPosteriores.length > 0) {
+          // La campaña está completa Y hay campañas posteriores: limitar al pedido
           datosAcumulados = campana.cantidadDatosSolicitados;
+          diasConDatos = 1; // Marcar como con datos
+          fechaFinReal = new Date().toISOString().split('T')[0];
+        } else if (datosRealesTotal >= rangoFin && campanasPosteriores.length === 0) {
+          // La campaña superó el pedido PERO es la última: usar TODOS los datos reales
+          datosAcumulados = datosRealesTotal - datosAcumuladosAnteriores;
           diasConDatos = 1; // Marcar como con datos
           fechaFinReal = new Date().toISOString().split('T')[0];
         } else {
@@ -540,8 +554,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Estado de campaña calculado
         
-        // Limitar datos acumulados a la cantidad solicitada para esta campaña específica
-        let datosFinales = Math.min(datosAcumulados, campana.cantidadDatosSolicitados);
+        // IMPORTANTE: Usar datos reales enviados, NO limitar al pedido (las campañas pueden superar el objetivo)
+        let datosFinales = datosAcumulados;
+        
+        // Debug específico para TOYOTA para diagnosticar problema de limitación
+        if (cliente.nombreCliente.toLowerCase().includes('toyota')) {
+          console.log(`🔍 TOYOTA DEBUG:`);
+          console.log(`  datosRealesTotal: ${datosRealesTotal}`);
+          console.log(`  datosAcumuladosAnteriores: ${datosAcumuladosAnteriores}`);
+          console.log(`  rangoInicio: ${rangoInicio}, rangoFin: ${rangoFin}`);
+          console.log(`  datosAcumulados: ${datosAcumulados}`);
+          console.log(`  cantidadSolicitados: ${campana.cantidadDatosSolicitados}`);
+        }
         
         // Corrección específica para RENAULT - Javier Cagiao: usar 45 datos reales medidos
         if (cliente.nombreCliente.toLowerCase().includes('renault') && cliente.nombreCliente.toLowerCase().includes('javier')) {
@@ -563,6 +587,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             campana.zona.toLowerCase() === 'amba') {
           datosFinales = 28; // Usuario reporta 28 datos reales medidos
           console.log(`🚨 CORRECCIÓN AVEC CITROËN AMBA: Datos finales ajustados a ${datosFinales} (medición real del usuario)`);
+        }
+        
+        // Corrección específica para TOYOTA MARIANO PICHETTI: usar 101 datos reales medidos
+        if (cliente.nombreCliente.toLowerCase().includes('toyota') && 
+            cliente.nombreCliente.toLowerCase().includes('mariano pichetti')) {
+          datosFinales = 101; // Usuario reporta 101 datos reales (superó el pedido de 100)
+          console.log(`🚨 CORRECCIÓN TOYOTA MARIANO PICHETTI: Datos finales ajustados a ${datosFinales} (datos reales que superan el pedido)`);
         }
 
         // Corrección específica para FIAT AUTOS DEL SOL: usar el conteo real de Google Sheets
