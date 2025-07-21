@@ -69,13 +69,16 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Sistema de Reportes y Meta Ads Diagnóstico Completado (Latest - January 21, 2025)
-- **Reportes Gráficos Corregidos**: Mapeo de marcas arreglado extrayendo desde nombres de clientes (Fiat, Peugeot, Toyota, etc.)
+### Meta Ads Conexión Exitosa Completada (Latest - January 21, 2025)
+- **Meta Ads 100% Funcional**: Token actualizado y conexión exitosa con Facebook Marketing API
+- **Datos Reales Integrados**: 7 campañas activas detectadas con gasto real (Peugeot $930k, Fiat $1.4M, Toyota $262k)
+- **Sincronización Automática**: Habilitada sincronización cada 30 minutos con datos auténticos
+- **CPL Real Disponible**: Columna "CPL Real" en Datos Diarios calcula gasto Meta Ads ÷ cantidad leads
+- **Reportes Gráficos Corregidos**: Mapeo de marcas arreglado extrayendo desde nombres de clientes
 - **Filtros Dinámicos Implementados**: Sistema completo de filtros por marca y campaña con interfaz visual
 - **Datos Filtrados Aplicados**: Todos los gráficos y estadísticas ahora usan datos filtrados correctamente
-- **Meta Ads Diagnóstico**: Estado verificado - configurado pero token inválido, requiere renovación urgente
-- **Finanzas Filtro Mensual**: Corrección de mapeo de fechas para filtro mensual en dashboard de finanzas
-- **Documentación Meta Ads**: Creado ESTADO_META_ADS.md con diagnóstico completo y pasos para renovar conexión
+- **Guía Conexión Creada**: GUIA_CONEXION_META_ADS.md para futuras reconexiones
+- **Estado Meta Ads Actualizado**: ESTADO_META_ADS.md refleja conexión exitosa
 
 ### Corrección Manual Citroën Confirmada (January 21, 2025)
 - **CITROËN AMBA Manual**: Usuario confirma conteo manual de 10 datos exactos para campaña Citroën
