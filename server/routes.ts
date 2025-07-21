@@ -1133,16 +1133,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         else if (clienteNombre.includes('renault')) marca = 'Renault';
         else if (clienteNombre.includes('citroen')) marca = 'Citroen';
 
-        // Obtener facturación bruta desde campañas comerciales
-        const campanasComerciales = await storage.getAllCampanasComerciales();
-        const clientes = await storage.getAllClientes();
-        const campanaComercial = campanasComerciales.find(c => {
-          const cliente = clientes.find(cl => cl.id === c.clienteId);
-          return cliente?.nombreCliente === data.clienteNombre && 
-                 c.numeroCampana === data.numeroCampana.toString();
-        });
-        const facturacionBruta = campanaComercial?.facturacionBruta ? 
-          parseFloat(campanaComercial.facturacionBruta) : 0;
+        // Obtener venta por campaña desde datos diarios (mejor fuente)
+        const ventaPorCampana = parseFloat(data.ventaPorCampana) || 0;
 
         // Obtener CPL desde CPL Directo (no del dashboard datos-diarios)
         const cplDirecto = await storage.getCplByClienteAndCampana(
@@ -1150,10 +1142,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           data.numeroCampana
         );
 
-        // Usar inversión realizada del dashboard principal (que incluye los cálculos correctos)
-        const inversionReal = data.inversionRealizada || 0;
-        const inversionPendiente = data.inversionPendiente || 0;
-        const inversionTotal = inversionReal + inversionPendiente;
+        // Calcular inversión desde CPL Directo × cantidad de leads
+        const cplValue = cplDirecto || parseFloat(data.cpl) || 0;
+        const leadCount = data.enviados || 0;
+        const inversionCalculada = cplValue * leadCount;
+        
+        // Calcular ganancia y ROI
+        const ganancia = ventaPorCampana - inversionCalculada;
+        const roi = inversionCalculada > 0 ? (ganancia / inversionCalculada) * 100 : 0;
+        
+        // Calcular impuestos IIBB (4% sobre venta)
+        const impuestosIIBB = ventaPorCampana * 0.04;
 
         return {
           cliente: data.cliente,
@@ -1162,12 +1161,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           numeroCampana: data.numeroCampana || 1,
           marca,
           zona: data.zona,
-          totalLeads: data.enviados || 0,
-          cpl: cplDirecto || parseFloat(data.cpl) || 0, // Priorizar CPL Directo
-          ventaPorCampana: facturacionBruta,
-          inversionTotal: inversionTotal, // Mapear inversión real por campaña
-          inversionRealizada: inversionReal,
-          inversionPendiente: inversionPendiente
+          totalLeads: leadCount,
+          cpl: cplValue,
+          ventaPorCampana: ventaPorCampana,
+          inversionTotal: inversionCalculada,
+          inversionRealizada: inversionCalculada,
+          inversionPendiente: 0,
+          ganancia: ganancia,
+          roi: roi,
+          impuestosIIBB: impuestosIIBB,
+          totalFacturado: ventaPorCampana
         };
       }));
       

@@ -18,7 +18,7 @@ interface FinanzasData {
   inversionRealizada: number;
   inversionPendiente: number;
   ganancia: number;
-  roiNegocio: number;
+  roi: number;
   impuestosIIBB: number;
   totalFacturado: number;
 }
@@ -79,7 +79,7 @@ export default function FinanzasDashboard() {
     
     acc[marca].totalGanancia += f?.ganancia || 0;
     acc[marca].totalInversion += f?.inversionRealizada || 0;
-    acc[marca].totalFacturado += f?.totalFacturado || 0;
+    acc[marca].totalFacturado += f?.totalFacturado || f?.ventaPorCampana || 0;
     acc[marca].totalLeads += f?.totalLeads || 0;
     acc[marca].campañas += 1;
     
