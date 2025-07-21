@@ -172,6 +172,76 @@ export function registerMetaAdsRoutes(app: Express) {
     }
   });
 
+  // Calcular CPA (Cost Per Acquisition) por campaña y fecha
+  app.post('/api/meta-ads/calculate-cpa', async (req, res) => {
+    try {
+      const service = getMetaAdsService();
+      if (!service) {
+        return res.status(400).json({ 
+          error: 'Meta Ads service not configured' 
+        });
+      }
+
+      const { campaignName, dateRange, leadCount } = req.body;
+
+      if (!campaignName || !dateRange || !leadCount) {
+        return res.status(400).json({ 
+          error: 'Campaign name, date range, and lead count are required' 
+        });
+      }
+
+      const cpa = await service.calculateCPA(campaignName, dateRange, leadCount);
+      
+      res.json({
+        campaignName,
+        dateRange,
+        leadCount,
+        cpa,
+        currency: 'ARS'
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        error: `Failed to calculate CPA: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      });
+    }
+  });
+
+  // Obtener datos de adsets por campaña
+  app.get('/api/meta-ads/adsets', async (req, res) => {
+    try {
+      const service = getMetaAdsService();
+      if (!service) {
+        return res.status(400).json({ 
+          error: 'Meta Ads service not configured' 
+        });
+      }
+
+      const { campaignName, timeRange } = req.query;
+      let parsedTimeRange;
+
+      if (timeRange && typeof timeRange === 'string') {
+        try {
+          parsedTimeRange = JSON.parse(timeRange);
+        } catch (e) {
+          return res.status(400).json({ 
+            error: 'Invalid time range format' 
+          });
+        }
+      }
+
+      const adsets = await service.getAdsetSpendData({
+        campaignName: campaignName as string,
+        dateRange: parsedTimeRange
+      });
+      
+      res.json(adsets);
+    } catch (error) {
+      res.status(500).json({ 
+        error: `Failed to fetch adsets: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      });
+    }
+  });
+
   // Obtener estado del servicio
   app.get('/api/meta-ads/status', async (req, res) => {
     try {

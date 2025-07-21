@@ -21,6 +21,22 @@ interface CampaignSpendData {
   lastUpdated: Date;
 }
 
+interface AdsetSpendData {
+  adsetId: string;
+  adsetName: string;
+  campaignId: string;
+  campaignName: string;
+  spend: number;
+  accountCurrency: string;
+  impressions: number;
+  clicks: number;
+  cpc: number;
+  cpm: number;
+  dateStart: string;
+  dateStop: string;
+  lastUpdated: Date;
+}
+
 interface BudgetData {
   campaignId: string;
   dailyBudget?: number;
@@ -103,6 +119,105 @@ class MetaAdsService {
     } catch (error) {
       console.error('Error fetching Meta Ads campaign data:', error);
       throw new Error(`Meta Ads API Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Obtiene datos de gasto de adsets filtrados por fecha y campaña para calcular CPA
+   */
+  async getAdsetSpendData(filters: {
+    campaignName?: string;
+    dateRange?: { since: string; until: string };
+  }): Promise<AdsetSpendData[]> {
+    try {
+      const defaultTimeRange = filters.dateRange || {
+        since: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        until: new Date().toISOString().split('T')[0]
+      };
+
+      const fields = [
+        'adset_id',
+        'adset_name', 
+        'campaign_id',
+        'campaign_name',
+        'spend',
+        'account_currency',
+        'impressions',
+        'clicks',
+        'cpc',
+        'cpm',
+        'date_start',
+        'date_stop'
+      ].join(',');
+
+      const params: any = {
+        access_token: this.config.accessToken,
+        fields: fields,
+        level: 'adset',
+        time_range: JSON.stringify(defaultTimeRange),
+        limit: 100
+      };
+
+      // Si se especifica campaña, filtrar por nombre de campaña
+      if (filters.campaignName) {
+        params.filtering = JSON.stringify([{
+          field: 'campaign.name',
+          operator: 'CONTAIN',
+          value: filters.campaignName
+        }]);
+      }
+
+      const response = await axios.get(`${this.baseUrl}/${this.config.accountId}/insights`, { params });
+      
+      if (response.data?.data) {
+        const adsets = response.data.data.map((adset: any) => ({
+          adsetId: adset.adset_id,
+          adsetName: adset.adset_name,
+          campaignId: adset.campaign_id,
+          campaignName: adset.campaign_name,
+          spend: parseFloat(adset.spend || '0'),
+          accountCurrency: adset.account_currency || 'ARS',
+          impressions: parseInt(adset.impressions || '0'),
+          clicks: parseInt(adset.clicks || '0'),
+          cpc: parseFloat(adset.cpc || '0'),
+          cpm: parseFloat(adset.cpm || '0'),
+          dateStart: adset.date_start,
+          dateStop: adset.date_stop,
+          lastUpdated: new Date()
+        }));
+
+        return adsets;
+      }
+
+      return [];
+    } catch (error) {
+      console.error('Error fetching Meta Ads adset data:', error);
+      throw new Error(`Meta Ads Adset API Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Calcula CPA (Cost Per Acquisition) por campaña y fecha
+   */
+  async calculateCPA(campaignName: string, dateRange: { since: string; until: string }, leadCount: number): Promise<number> {
+    try {
+      const adsetData = await this.getAdsetSpendData({
+        campaignName,
+        dateRange
+      });
+
+      // Sumar el gasto total de todos los adsets de la campaña en el rango de fechas
+      const totalSpend = adsetData.reduce((sum, adset) => sum + adset.spend, 0);
+
+      // Calcular CPA: Gasto total / Cantidad de leads
+      const cpa = leadCount > 0 ? totalSpend / leadCount : 0;
+
+      console.log(`🔍 CPA CALCULADO: ${campaignName} | Gasto: $${totalSpend} | Leads: ${leadCount} | CPA: $${cpa.toFixed(2)}`);
+
+      return cpa;
+    } catch (error) {
+      console.error(`Error calculating CPA for ${campaignName}:`, error);
+      return 0;
     }
   }
 
@@ -262,4 +377,4 @@ class MetaAdsService {
   }
 }
 
-export { MetaAdsService, type CampaignSpendData, type BudgetData, type MetaAdsConfig };
+export { MetaAdsService, type CampaignSpendData, type BudgetData, type MetaAdsConfig, type AdsetSpendData };

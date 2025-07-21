@@ -583,6 +583,7 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">% Desvío</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">% Datos Enviados</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Faltantes</th>
+                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">CPA Meta Ads</th>
                     {showDuplicatesOnly && (
                       <th className="border border-red-200 dark:border-red-600 p-3 text-center font-semibold text-red-900 dark:text-red-100">
                         🔍 Duplicados
@@ -692,6 +693,15 @@ export default function DatosDiariosDashboard() {
                             <span className="font-bold text-red-700 dark:text-red-300">{inversions.faltantes}</span>
                           </div>
                         </td>
+                        <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
+                          {(data as any).cpa > 0 ? (
+                            <Badge variant="secondary" className="bg-gradient-to-r from-purple-500 to-pink-600 text-white font-semibold shadow-lg">
+                              ARS ${((data as any).cpa).toLocaleString('es-AR')}
+                            </Badge>
+                          ) : (
+                            <span className="text-gray-400 text-sm">Calculando...</span>
+                          )}
+                        </td>
                         {showDuplicatesOnly && (
                           <td className="border border-red-200 dark:border-red-600 p-3 text-center">
                             <div className="bg-gradient-to-r from-red-100 to-pink-100 dark:from-red-800/50 dark:to-pink-800/50 p-2 rounded-lg">
@@ -742,7 +752,7 @@ export default function DatosDiariosDashboard() {
                   {/* Fila de Totales - Campañas en Proceso */}
                   {campanasEnProceso.length > 0 && (
                     <tr className="bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-800/50 dark:to-orange-800/50 border-t-4 border-amber-500">
-                      <td colSpan={showDuplicatesOnly ? 10 : 9} className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100 text-lg">
+                      <td colSpan={showDuplicatesOnly ? 11 : 10} className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100 text-lg">
                         TOTAL CAMPAÑAS EN PROCESO
                       </td>
                       <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
@@ -837,6 +847,7 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">% Desvío</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">% Datos Enviados</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Faltantes</th>
+                    <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">CPA Meta Ads</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">CPL Guardado</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Inversión Realizada</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Inversión Pendiente</th>
@@ -915,7 +926,15 @@ export default function DatosDiariosDashboard() {
                             <span className="font-bold text-red-700 dark:text-red-300">{inversions.faltantes}</span>
                           </div>
                         </td>
-
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          {(data as any).cpa > 0 ? (
+                            <Badge variant="secondary" className="bg-gradient-to-r from-purple-500 to-pink-600 text-white font-semibold shadow-lg">
+                              ARS ${((data as any).cpa).toLocaleString('es-AR')}
+                            </Badge>
+                          ) : (
+                            <span className="text-gray-400 text-sm">Calculando...</span>
+                          )}
+                        </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
                           {currentCpl > 0 ? (
                             <div className="flex flex-col items-center gap-1">
@@ -949,7 +968,7 @@ export default function DatosDiariosDashboard() {
                   {/* Fila de Totales - Campañas Finalizadas */}
                   {campanasFinalizadas.length > 0 && (
                     <tr className="bg-gradient-to-r from-emerald-100 to-green-100 dark:from-emerald-800/50 dark:to-green-800/50 border-t-4 border-emerald-500">
-                      <td colSpan={9} className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-bold text-emerald-900 dark:text-emerald-100 text-lg">
+                      <td colSpan={10} className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-bold text-emerald-900 dark:text-emerald-100 text-lg">
                         TOTAL CAMPAÑAS FINALIZADAS
                       </td>
                       <td className="border border-emerald-200 dark:border-emerald-600 p-3 text-center">

@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { googleSheetsService, type SheetLead } from "./google-sheets";
 import { AnalistaFuncional } from "./analista-funcional";
 import { registerMetaAdsRoutes } from "./meta-ads-routes";
+import { MetaAdsService } from "./meta-ads-service";
 import { 
   insertLeadSchema, 
   insertCampaignSchema, 
@@ -170,6 +171,38 @@ const clientMatchingSystem = new ClientMatchingSystem();
 interface WebSocketWithData extends WebSocket {
   userId?: number;
   dashboardId?: string;
+}
+
+// Función para obtener instancia de Meta Ads Service
+function getMetaAdsServiceInstance(): MetaAdsService | null {
+  // Primero intentar obtener de la instancia global
+  if (global.metaAdsService) {
+    return global.metaAdsService;
+  }
+  
+  // Si no existe, crear una nueva instancia con variables de entorno
+  const accessToken = process.env.META_ACCESS_TOKEN;
+  const accountId = process.env.META_AD_ACCOUNT_ID;
+  const appSecret = process.env.META_APP_SECRET;
+  
+  if (accessToken && accountId) {
+    try {
+      const service = new MetaAdsService({
+        accessToken,
+        accountId,
+        appSecret
+      });
+      
+      // Guardar como instancia global
+      global.metaAdsService = service;
+      return service;
+    } catch (error) {
+      console.error('Error creating Meta Ads service:', error);
+      return null;
+    }
+  }
+  
+  return null;
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -651,6 +684,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const entregadosPorDiaPromedio = datosFinales > 0 ? Math.round((datosFinales / diasHabilesMes) * 100) / 100 : 0;
         const pedidosPorDiaCalculado = pedidosPorDiaReal > 0 ? pedidosPorDiaReal : (pedidosTotal > 0 ? Math.round((pedidosTotal / diasHabilesMes) * 100) / 100 : 0);
         
+        // Calcular CPA usando Meta Ads data
+        let cpaValue = 0;
+        try {
+          const metaAdsService = getMetaAdsServiceInstance();
+          if (metaAdsService && datosFinales > 0) {
+            // Crear rango de fecha para la campaña (desde inicio hasta hoy)
+            const fechaInicio = new Date(campana.fechaCampana);
+            const fechaFin = new Date();
+            
+            // Formatear fechas para Meta Ads API
+            const dateRange = {
+              since: fechaInicio.toISOString().split('T')[0],
+              until: fechaFin.toISOString().split('T')[0]
+            };
+            
+            // Mapear nombre del cliente/marca para buscar en Meta Ads
+            let campaignSearchName = cliente.nombreCliente;
+            
+            // Buscar por marca específica en nombres de campaña de Meta Ads
+            if (campana.marca.toLowerCase().includes('peugeot')) {
+              campaignSearchName = 'Peugeot';
+            } else if (campana.marca.toLowerCase().includes('fiat')) {
+              campaignSearchName = 'Fiat';
+            } else if (campana.marca.toLowerCase().includes('toyota')) {
+              campaignSearchName = 'Toyota';
+            } else if (campana.marca.toLowerCase().includes('renault')) {
+              campaignSearchName = 'Renault';
+            } else if (campana.marca.toLowerCase().includes('chevrolet')) {
+              campaignSearchName = 'Chevrolet';
+            } else if (campana.marca.toLowerCase().includes('citroen') || campana.marca.toLowerCase().includes('citroën')) {
+              campaignSearchName = 'Citroen';
+            }
+            
+            // Calcular CPA
+            cpaValue = await metaAdsService.calculateCPA(campaignSearchName, dateRange, datosFinales);
+          }
+        } catch (error) {
+          console.error(`Error calculating CPA for ${cliente.nombreCliente}:`, error);
+          cpaValue = 0;
+        }
+        
         mappedData.push({
           cliente: `${cliente.nombreCliente} - ${campana.marca}`,
           clienteNombre: cliente.nombreCliente,
@@ -664,6 +738,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           porcentajeDatosEnviados: Math.round(porcentajeDatosEnviados),
           faltantesAEnviar: faltantesCorregidos,
           cpl: storedCpl || 0,
+          cpa: Math.round(cpaValue), // Nuevo campo CPA calculado desde Meta Ads
           ventaPorCampana: storedVenta || 0,
           inversionRealizada: datosFinales * (storedCpl || 0) * 1.02, // 2% impuestos
           inversionPendiente: faltantesCorregidos * (storedCpl || 0) * 1.02, // Solo lo que falta por enviar
