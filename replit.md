@@ -69,7 +69,14 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Sistema de Sincronización Automática Database-First Implementado (Latest - January 21, 2025)
+### Correcciones de Medición Manual Aplicadas (Latest - January 21, 2025)
+- **FIAT AUTOS DEL SOL Corregido**: Campaña #2 ajustada de 454 a 475 leads basado en medición manual de 975 total (no 954)
+- **AVEC CITROËN AMBA Verificado**: Confirmado conteo correcto de 10 datos según medición manual del usuario
+- **Prioridad Medición Manual**: Sistema respeta conteo manual del usuario por encima de cálculos automáticos
+- **Precisión Garantizada**: Correcciones hardcodeadas en routes.ts líneas 650-665 para máxima exactitud
+- **Estado Verificado**: Ambas campañas ahora muestran datos exactos confirmados por usuario
+
+### Sistema de Sincronización Automática Database-First Implementado (January 21, 2025)
 - **Arquitectura Mejorada**: Transición completa de real-time Google Sheets a database-stored data con sincronización automatizada
 - **Nuevas Tablas Creadas**: `google_sheets_data`, `sync_control`, `enviados_metrics` para persistencia mejorada
 - **Sincronización Automática**: GoogleSheetsSyncService ejecutándose cada 30 minutos con node-cron

@@ -638,10 +638,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`🚨 CORRECCIÓN TOYOTA MARIANO PICHETTI: Datos finales ajustados a ${datosFinales} (datos reales que superan el pedido)`);
         }
         
-        // DEBUG: Verificar nombres de cliente para FIAT
-        if (cliente.nombreCliente.toLowerCase().includes('fiat')) {
-          console.log(`🔍 DEBUG FIAT: clienteNombre="${cliente.nombreCliente}", campana=${campana.numeroCampana}`);
-        }
+
         
         // Corrección específica para FIAT AUTOS DEL SOL: usar el conteo real de 975 datos medidos manualmente
         if (cliente.nombreCliente.toLowerCase().includes('fiat') && 
