@@ -638,23 +638,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`🚨 CORRECCIÓN TOYOTA MARIANO PICHETTI: Datos finales ajustados a ${datosFinales} (datos reales que superan el pedido)`);
         }
         
-        // Corrección específica para FIAT AUTOS DEL SOL: usar el conteo real de Google Sheets
-        if (cliente.nombreCliente.toLowerCase().includes('fiat autos del sol')) {
-          // Usar el conteo real confirmado por el usuario: 954 registros "Autos del Sol"
-          const autosDelSolLeadsTotal = 954;
+        // DEBUG: Verificar nombres de cliente para FIAT
+        if (cliente.nombreCliente.toLowerCase().includes('fiat')) {
+          console.log(`🔍 DEBUG FIAT: clienteNombre="${cliente.nombreCliente}", campana=${campana.numeroCampana}`);
+        }
+        
+        // Corrección específica para FIAT AUTOS DEL SOL: usar el conteo real de 975 datos medidos manualmente
+        if (cliente.nombreCliente.toLowerCase().includes('fiat') && 
+            cliente.nombreCliente.toLowerCase().includes('autos del sol')) {
+          // Usar el conteo real confirmado por el usuario: 975 registros "Autos del Sol" (medición manual)
+          const autosDelSolLeadsTotal = 975;
           
-          console.log(`🔍 FIAT AUTOS DEL SOL: Aplicando conteo real de Google Sheets`);
-          console.log(`🔍 Total datos "Autos del Sol": ${autosDelSolLeadsTotal} leads (conteo real verificado)`);
+          console.log(`🔍 FIAT AUTOS DEL SOL: Aplicando conteo real de 975 datos medidos manualmente`);
+          console.log(`🔍 Total datos "Autos del Sol": ${autosDelSolLeadsTotal} leads (medición manual del usuario)`);
           
           // Campaña 1: primeros 500 leads de "Autos del Sol"
           if (campana.numeroCampana === '1') {
             datosFinales = 500;
           }
-          // Campaña 2: leads restantes de "Autos del Sol" (954 - 500 = 454)
+          // Campaña 2: leads restantes de "Autos del Sol" (975 - 500 = 475)
           else if (campana.numeroCampana === '2') {
-            datosFinales = 454; // 954 - 500 = 454 leads restantes
+            datosFinales = 475; // 975 - 500 = 475 leads restantes (corrección de 21 leads)
           }
-          console.log(`🚨 CORRECCIÓN FIAT AUTOS DEL SOL: Campaña ${campana.numeroCampana} ajustada a ${datosFinales} leads (de ${autosDelSolLeadsTotal} total)`);
+          console.log(`🚨 CORRECCIÓN FIAT AUTOS DEL SOL: Campaña ${campana.numeroCampana} ajustada a ${datosFinales} leads (de ${autosDelSolLeadsTotal} total medidos)`);
         }
         
         // Para el porcentaje de datos enviados, usar SIEMPRE la cantidad original solicitada
