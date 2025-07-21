@@ -2145,8 +2145,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Crear adaptador que usa el servicio existente
       const sheetsServiceAdapter = {
         fetchDataFromSheets: async () => {
-          const result = await googleSheetsService.syncDataFromSheets();
-          return result.allLeads || [];
+          // Llamar directamente a getAllLeadsFromSheets que es el método correcto
+          const allLeads = await googleSheetsService.getAllLeadsFromSheets();
+          return allLeads || [];
         }
       };
       
