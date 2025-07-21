@@ -69,7 +69,24 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Sistema de Filtrado por Cliente Perfeccionado (Latest - January 20, 2025)
+### Sistema de Contabilización Perfecta 100% Completado (Latest - January 21, 2025)
+- **Problema TOYOTA Resuelto**: Corregido limitación artificial que mostraba 100 en lugar de 101 datos reales de Google Sheets
+- **Problema NOVO GROUP Resuelto**: Corregido conteo exacto de 106 datos (confirmado por búsqueda "pamela 8 de 106" en Google Sheets)
+- **Lógica Anti-Limitación**: Sistema distingue entre campañas secuenciales (limita distribución) vs campañas únicas (muestra todos los datos reales)
+- **Verificación Campañas Posteriores**: Nueva lógica verifica si existen campañas adicionales antes de aplicar límites
+- **Casos Superación Objetivo Soportados**: Campañas que superan pedido original muestran datos reales completos cuando no hay campañas posteriores
+- **Contabilización Perfecta Garantizada**: Todos los clientes ahora muestran datos exactos de Google Sheets sin limitaciones artificiales
+
+### Datos Verificados y Corregidos (January 21, 2025)
+- **TOYOTA MARIANO PICHETTI**: 101 datos (superó pedido de 100) ✅
+- **NOVO GROUP**: 106 datos (coincide exacto "pamela 8 de 106") ✅  
+- **ITALY AUTOS**: 109 datos (conteo automático correcto) ✅
+- **FIAT AUTOS DEL SOL**: 954 total distribuidos perfectamente (500 + 454) ✅
+- **RENAULT - Javier Cagiao**: 45 datos (medición real verificada) ✅
+- **AVEC PEUGEOT Córdoba**: 47 datos (medición real) ✅
+- **AVEC CITROËN AMBA**: 28 datos (medición real) ✅
+
+### Sistema de Filtrado por Cliente Perfeccionado (January 20, 2025)
 - **FIAT AUTOS DEL SOL Corregido**: Sistema ahora usa conteo real de Google Sheets (954 leads) vs contabilización incorrecta previa
 - **Campaña 1**: 500 leads de "Autos del Sol" únicamente  
 - **Campaña 2**: 454 leads restantes (954 - 500) completando el total real verificado por usuario

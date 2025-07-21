@@ -649,6 +649,52 @@ export default function DatosDiariosDashboard() {
                       </tr>
                     );
                   })}
+                  {/* Fila de Totales - Campañas en Proceso */}
+                  {campanasEnProceso.length > 0 && (
+                    <tr className="bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-800/50 dark:to-orange-800/50 border-t-4 border-amber-500">
+                      <td colSpan={9} className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100 text-lg">
+                        TOTAL CAMPAÑAS EN PROCESO
+                      </td>
+                      <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
+                        <div className="bg-gradient-to-r from-red-100 to-pink-100 dark:from-red-800/50 dark:to-pink-800/50 p-2 rounded-lg">
+                          <span className="font-bold text-red-700 dark:text-red-300">
+                            {campanasEnProceso.reduce((sum, data) => {
+                              const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0;
+                              const inversions = calculateInversions(data, currentCpl);
+                              return sum + inversions.faltantes;
+                            }, 0)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100">
+                        —
+                      </td>
+                      <td className="border border-amber-200 dark:border-amber-600 p-3 text-center font-medium">
+                        <div className="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-800/50 dark:to-emerald-800/50 p-2 rounded-lg">
+                          <span className="text-green-700 dark:text-green-300 font-bold">
+                            ARS ${campanasEnProceso.reduce((sum, data) => {
+                              const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0;
+                              const inversions = calculateInversions(data, currentCpl);
+                              return sum + inversions.inversionRealizada;
+                            }, 0).toLocaleString('es-AR')}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="border border-amber-200 dark:border-amber-600 p-3 text-center font-medium">
+                        <div className="bg-gradient-to-r from-orange-100 to-red-100 dark:from-orange-800/50 dark:to-red-800/50 p-2 rounded-lg">
+                          <span className="text-orange-700 dark:text-orange-300 font-bold">
+                            ARS ${campanasEnProceso.reduce((sum, data) => {
+                              const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0;
+                              const inversions = calculateInversions(data, currentCpl);
+                              const cplReal = calculateCPLReal(data);
+                              const metaAdsAmount = cplReal > 0 ? Math.round(cplReal * data.enviados) : inversions.inversionPendiente;
+                              return sum + metaAdsAmount;
+                            }, 0).toLocaleString('es-AR')}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
               {campanasEnProceso.length === 0 && (
@@ -812,6 +858,67 @@ export default function DatosDiariosDashboard() {
                       </tr>
                     );
                   })}
+                  {/* Fila de Totales - Campañas Finalizadas */}
+                  {campanasFinalizadas.length > 0 && (
+                    <tr className="bg-gradient-to-r from-emerald-100 to-green-100 dark:from-emerald-800/50 dark:to-green-800/50 border-t-4 border-emerald-500">
+                      <td colSpan={9} className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-bold text-emerald-900 dark:text-emerald-100 text-lg">
+                        TOTAL CAMPAÑAS FINALIZADAS
+                      </td>
+                      <td className="border border-emerald-200 dark:border-emerald-600 p-3 text-center">
+                        <div className="bg-gradient-to-r from-red-100 to-pink-100 dark:from-red-800/50 dark:to-pink-800/50 p-2 rounded-lg">
+                          <span className="font-bold text-red-700 dark:text-red-300">
+                            {campanasFinalizadas.reduce((sum, data) => {
+                              const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0;
+                              const inversions = calculateInversions(data, currentCpl);
+                              return sum + inversions.faltantes;
+                            }, 0)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-bold text-emerald-900 dark:text-emerald-100">
+                        —
+                      </td>
+                      <td className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-medium">
+                        <div className="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-800/50 dark:to-emerald-800/50 p-2 rounded-lg">
+                          <span className="text-green-700 dark:text-green-300 font-bold">
+                            ARS ${campanasFinalizadas.reduce((sum, data) => {
+                              const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0;
+                              const inversions = calculateInversions(data, currentCpl);
+                              return sum + inversions.inversionRealizada;
+                            }, 0).toLocaleString('es-AR')}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-bold text-emerald-900 dark:text-emerald-100">
+                        —
+                      </td>
+                      <td className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-medium">
+                        <div className="bg-gradient-to-r from-orange-100 to-red-100 dark:from-orange-800/50 dark:to-red-800/50 p-2 rounded-lg">
+                          <span className="text-orange-700 dark:text-orange-300 font-bold">
+                            ARS ${campanasFinalizadas.reduce((sum, data) => {
+                              const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0;
+                              const inversions = calculateInversions(data, currentCpl);
+                              return sum + inversions.inversionPendiente;
+                            }, 0).toLocaleString('es-AR')}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-medium">
+                        <div className="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-800/50 dark:to-emerald-800/50 p-2 rounded-lg">
+                          <span className="text-green-700 dark:text-green-300 font-bold">
+                            ARS ${campanasFinalizadas.reduce((sum, data) => {
+                              const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0;
+                              const inversions = calculateInversions(data, currentCpl);
+                              return sum + inversions.inversionRealizada;
+                            }, 0).toLocaleString('es-AR')}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-bold text-emerald-900 dark:text-emerald-100">
+                        —
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
               {datosDiarios?.filter(data => data.porcentajeDatosEnviados >= 100).length === 0 && (
@@ -822,6 +929,70 @@ export default function DatosDiariosDashboard() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Totales Generales de Todo el Dashboard */}
+        {(campanasEnProceso.length > 0 || campanasFinalizadas.length > 0) && (
+          <Card className="border-0 shadow-2xl bg-gradient-to-r from-white via-purple-50 to-indigo-50 dark:from-gray-800 dark:via-purple-900/10 dark:to-indigo-900/10">
+            <CardHeader className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-t-lg">
+              <CardTitle className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                  💰
+                </div>
+                <span className="text-xl font-bold">TOTALES GENERALES</span>
+                <Badge variant="secondary" className="bg-white/20 text-white border-white/30 font-bold">
+                  {campanasEnProceso.length + campanasFinalizadas.length} campañas totales
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-800/50 dark:to-emerald-800/50 p-4 rounded-lg border-2 border-green-200 dark:border-green-600">
+                  <div className="text-center">
+                    <div className="text-sm font-medium text-green-700 dark:text-green-300 mb-2">INVERSIÓN REALIZADA TOTAL</div>
+                    <div className="text-2xl font-bold text-green-800 dark:text-green-200">
+                      ARS ${[...campanasEnProceso, ...campanasFinalizadas].reduce((sum, data) => {
+                        const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0;
+                        const inversions = calculateInversions(data, currentCpl);
+                        return sum + inversions.inversionRealizada;
+                      }, 0).toLocaleString('es-AR')}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-gradient-to-br from-orange-100 to-red-100 dark:from-orange-800/50 dark:to-red-800/50 p-4 rounded-lg border-2 border-orange-200 dark:border-orange-600">
+                  <div className="text-center">
+                    <div className="text-sm font-medium text-orange-700 dark:text-orange-300 mb-2">INVERSIÓN PENDIENTE TOTAL</div>
+                    <div className="text-2xl font-bold text-orange-800 dark:text-orange-200">
+                      ARS ${[...campanasEnProceso, ...campanasFinalizadas].reduce((sum, data) => {
+                        const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0;
+                        const inversions = calculateInversions(data, currentCpl);
+                        const cplReal = calculateCPLReal(data);
+                        const metaAdsAmount = cplReal > 0 ? Math.round(cplReal * data.enviados) : inversions.inversionPendiente;
+                        return sum + (data.porcentajeDatosEnviados >= 100 ? inversions.inversionPendiente : metaAdsAmount);
+                      }, 0).toLocaleString('es-AR')}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-800/50 dark:to-indigo-800/50 p-4 rounded-lg border-2 border-purple-200 dark:border-purple-600">
+                  <div className="text-center">
+                    <div className="text-sm font-medium text-purple-700 dark:text-purple-300 mb-2">INVERSIÓN TOTAL</div>
+                    <div className="text-2xl font-bold text-purple-800 dark:text-purple-200">
+                      ARS ${[...campanasEnProceso, ...campanasFinalizadas].reduce((sum, data) => {
+                        const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0;
+                        const inversions = calculateInversions(data, currentCpl);
+                        const cplReal = calculateCPLReal(data);
+                        const metaAdsAmount = cplReal > 0 ? Math.round(cplReal * data.enviados) : inversions.inversionPendiente;
+                        const pendiente = data.porcentajeDatosEnviados >= 100 ? inversions.inversionPendiente : metaAdsAmount;
+                        return sum + inversions.inversionRealizada + pendiente;
+                      }, 0).toLocaleString('es-AR')}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
