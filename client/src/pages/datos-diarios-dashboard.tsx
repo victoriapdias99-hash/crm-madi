@@ -43,6 +43,7 @@ export default function DatosDiariosDashboard() {
   const [cplValues, setCplValues] = useState<Record<number, number>>({});
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc'); // Por defecto ascendente (menos faltantes primero)
   const [forceShowContent, setForceShowContent] = useState(false);
+  const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
 
   const [isManualLoading, setIsManualLoading] = useState(false);
   const [manualData, setManualData] = useState<DatosDiariosData[] | null>(null);
@@ -87,6 +88,45 @@ export default function DatosDiariosDashboard() {
     }
   };
 
+  // State for duplicates data
+  const [duplicatesData, setDuplicatesData] = useState<Record<string, number>>({});
+  const [isLoadingDuplicates, setIsLoadingDuplicates] = useState(false);
+
+  // Function to detect duplicates for all campaigns
+  const detectAllDuplicates = async () => {
+    if (!datosDiarios) return;
+
+    setIsLoadingDuplicates(true);
+    const duplicatesMap: Record<string, number> = {};
+
+    try {
+      const duplicatesPromises = datosDiarios.map(async (campaign) => {
+        try {
+          const response = await fetch(`/api/leads/duplicates?cliente=${encodeURIComponent(campaign.cliente)}&campaña=${campaign.numeroCampana}`);
+          if (response.ok) {
+            const duplicates = await response.json();
+            const key = `${campaign.cliente}-${campaign.numeroCampana}`;
+            duplicatesMap[key] = duplicates.length;
+            return { campaign, duplicatesCount: duplicates.length };
+          }
+          return { campaign, duplicatesCount: 0 };
+        } catch (error) {
+          console.error(`Error detecting duplicates for ${campaign.cliente}:`, error);
+          return { campaign, duplicatesCount: 0 };
+        }
+      });
+      
+      await Promise.all(duplicatesPromises);
+      setDuplicatesData(duplicatesMap);
+      
+      console.log('🔍 Duplicates detection completed:', duplicatesMap);
+    } catch (error) {
+      console.error('Error in duplicates detection:', error);
+    } finally {
+      setIsLoadingDuplicates(false);
+    }
+  };
+
   // Memoize filtered and sorted data for performance
   const campanasData = useMemo(() => {
     if (!datosDiarios) return { campanasEnProceso: [], campanasFinalizadas: [] };
@@ -95,16 +135,26 @@ export default function DatosDiariosDashboard() {
       // Performance optimization complete
     });
     
-    const enProceso = datosDiarios
+    let filteredData = datosDiarios;
+    
+    // If showing duplicates only, filter to show campaigns with duplicate data
+    if (showDuplicatesOnly) {
+      filteredData = datosDiarios.filter(data => {
+        const key = `${data.cliente}-${data.numeroCampana}`;
+        return duplicatesData[key] > 0;
+      });
+    }
+    
+    const enProceso = filteredData
       .filter(data => data.porcentajeDatosEnviados < 100)
       .sort((a, b) => sortOrder === 'asc' ? a.faltantesAEnviar - b.faltantesAEnviar : b.faltantesAEnviar - a.faltantesAEnviar);
     
-    const finalizadas = datosDiarios
+    const finalizadas = filteredData
       .filter(data => data.porcentajeDatosEnviados >= 100)
       .sort((a, b) => sortOrder === 'asc' ? a.faltantesAEnviar - b.faltantesAEnviar : b.faltantesAEnviar - a.faltantesAEnviar);
     
     return { campanasEnProceso: enProceso, campanasFinalizadas: finalizadas };
-  }, [datosDiarios, sortOrder]);
+  }, [datosDiarios, sortOrder, showDuplicatesOnly]);
 
   const campanasEnProceso = campanasData.campanasEnProceso;
   const campanasFinalizadas = campanasData.campanasFinalizadas;
@@ -493,6 +543,29 @@ export default function DatosDiariosDashboard() {
               >
                 {sortOrder === 'asc' ? '↑' : '↓'} Ordenar por Faltantes
               </Button>
+              <Button
+                onClick={async () => {
+                  if (!showDuplicatesOnly) {
+                    await detectAllDuplicates();
+                  }
+                  setShowDuplicatesOnly(!showDuplicatesOnly);
+                }}
+                variant="secondary"
+                size="sm"
+                disabled={isLoadingDuplicates}
+                className={`border-white/30 hover:bg-white/30 transition-all duration-300 ${
+                  showDuplicatesOnly 
+                    ? 'bg-red-500/80 text-white border-red-300' 
+                    : 'bg-white/20 text-white'
+                }`}
+              >
+                {isLoadingDuplicates ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  '🔍 '
+                )}
+                Datos Duplicados {showDuplicatesOnly ? '(Activo)' : ''}
+              </Button>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -510,6 +583,11 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">% Desvío</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">% Datos Enviados</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Faltantes</th>
+                    {showDuplicatesOnly && (
+                      <th className="border border-red-200 dark:border-red-600 p-3 text-center font-semibold text-red-900 dark:text-red-100">
+                        🔍 Duplicados
+                      </th>
+                    )}
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">CPL Guardado</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Inversión Realizada</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Inversión Pendiente</th>
@@ -614,6 +692,18 @@ export default function DatosDiariosDashboard() {
                             <span className="font-bold text-red-700 dark:text-red-300">{inversions.faltantes}</span>
                           </div>
                         </td>
+                        {showDuplicatesOnly && (
+                          <td className="border border-red-200 dark:border-red-600 p-3 text-center">
+                            <div className="bg-gradient-to-r from-red-100 to-pink-100 dark:from-red-800/50 dark:to-pink-800/50 p-2 rounded-lg">
+                              <span className="font-bold text-red-700 dark:text-red-300">
+                                {duplicatesData[uniqueKey] || 0}
+                              </span>
+                              {duplicatesData[uniqueKey] > 0 && (
+                                <div className="text-xs text-red-500 mt-1">teléfonos</div>
+                              )}
+                            </div>
+                          </td>
+                        )}
                         <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
                           {currentCpl > 0 ? (
                             <Badge variant="secondary" className="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold shadow-lg">
@@ -652,7 +742,7 @@ export default function DatosDiariosDashboard() {
                   {/* Fila de Totales - Campañas en Proceso */}
                   {campanasEnProceso.length > 0 && (
                     <tr className="bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-800/50 dark:to-orange-800/50 border-t-4 border-amber-500">
-                      <td colSpan={9} className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100 text-lg">
+                      <td colSpan={showDuplicatesOnly ? 10 : 9} className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100 text-lg">
                         TOTAL CAMPAÑAS EN PROCESO
                       </td>
                       <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
@@ -666,6 +756,19 @@ export default function DatosDiariosDashboard() {
                           </span>
                         </div>
                       </td>
+                      {showDuplicatesOnly && (
+                        <td className="border border-red-200 dark:border-red-600 p-3 text-center">
+                          <div className="bg-gradient-to-r from-red-100 to-pink-100 dark:from-red-800/50 dark:to-pink-800/50 p-2 rounded-lg">
+                            <span className="font-bold text-red-700 dark:text-red-300">
+                              {campanasEnProceso.reduce((sum: number, data: DatosDiariosData) => {
+                                const key = `${data.cliente}-${data.numeroCampana}`;
+                                return sum + (duplicatesData[key] || 0);
+                              }, 0)}
+                            </span>
+                            <div className="text-xs text-red-500 mt-1">Total</div>
+                          </div>
+                        </td>
+                      )}
                       <td className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100">
                         —
                       </td>
@@ -833,27 +936,12 @@ export default function DatosDiariosDashboard() {
                           </div>
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
-                          {(() => {
-                            const cplReal = calculateCPLReal(data);
-                            return cplReal > 0 ? (
-                              <div className="flex flex-col items-center gap-1">
-                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                  ARS ${Math.round(cplReal).toLocaleString('es-AR')}
-                                </Badge>
-                                <div className="text-xs text-gray-500">Meta Ads</div>
-                              </div>
-                            ) : (
-                              <div className="text-gray-400 text-sm">-</div>
-                            );
-                          })()}
-                        </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
-                          ARS ${inversions.inversionPendiente.toLocaleString('es-AR')}
-                        </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
-                          ARS ${inversions.inversionRealizada.toLocaleString('es-AR')}
-                        </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
+                          <div className="bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 p-2 rounded-lg">
+                            <span className="text-red-700 dark:text-red-300 font-bold">
+                              ARS $0
+                            </span>
+                            <div className="text-xs text-gray-500 mt-1">Completada</div>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -889,33 +977,13 @@ export default function DatosDiariosDashboard() {
                           </span>
                         </div>
                       </td>
-                      <td className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-bold text-emerald-900 dark:text-emerald-100">
-                        —
-                      </td>
                       <td className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-medium">
-                        <div className="bg-gradient-to-r from-orange-100 to-red-100 dark:from-orange-800/50 dark:to-red-800/50 p-2 rounded-lg">
-                          <span className="text-orange-700 dark:text-orange-300 font-bold">
-                            ARS ${campanasFinalizadas.reduce((sum, data) => {
-                              const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0;
-                              const inversions = calculateInversions(data, currentCpl);
-                              return sum + inversions.inversionPendiente;
-                            }, 0).toLocaleString('es-AR')}
+                        <div className="bg-gradient-to-r from-red-100 to-pink-100 dark:from-red-800/50 dark:to-pink-800/50 p-2 rounded-lg">
+                          <span className="text-red-700 dark:text-red-300 font-bold">
+                            ARS $0
                           </span>
+                          <div className="text-xs text-gray-500 mt-1">Todas Completadas</div>
                         </div>
-                      </td>
-                      <td className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-medium">
-                        <div className="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-800/50 dark:to-emerald-800/50 p-2 rounded-lg">
-                          <span className="text-green-700 dark:text-green-300 font-bold">
-                            ARS ${campanasFinalizadas.reduce((sum, data) => {
-                              const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0;
-                              const inversions = calculateInversions(data, currentCpl);
-                              return sum + inversions.inversionRealizada;
-                            }, 0).toLocaleString('es-AR')}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-bold text-emerald-900 dark:text-emerald-100">
-                        —
                       </td>
                     </tr>
                   )}

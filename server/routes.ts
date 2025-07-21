@@ -1794,6 +1794,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint para detectar datos duplicados basándose en números de teléfono
+  app.get('/api/leads/duplicates', async (req, res) => {
+    try {
+      const { cliente, campaña } = req.query;
+      
+      if (!cliente) {
+        return res.status(400).json({ error: 'Cliente parameter is required' });
+      }
+
+      console.log(`🔍 Detecting duplicates for cliente: ${cliente}, campaña: ${campaña}`);
+
+      // Obtener datos de Google Sheets para buscar duplicados
+      const datosDiarios = await googleSheetsService.getDatosDiariosData();
+      const sheetsData = await googleSheetsService.getAllSheetsData();
+
+      // Combinar todos los datos para buscar duplicados por teléfono
+      const allLeads: any[] = [];
+
+      // Agregar datos de Fiat
+      if (sheetsData.fiat) {
+        allLeads.push(...sheetsData.fiat.map((lead: any) => ({
+          ...lead,
+          source: 'fiat',
+          telefono: lead.telefono || lead.phone || lead.celular
+        })));
+      }
+
+      // Agregar datos de Peugeot
+      if (sheetsData.peugeot) {
+        allLeads.push(...sheetsData.peugeot.map((lead: any) => ({
+          ...lead,
+          source: 'peugeot',
+          telefono: lead.telefono || lead.phone || lead.celular
+        })));
+      }
+
+      // Filtrar leads por cliente si se especifica
+      let filteredLeads = allLeads;
+      if (cliente && cliente !== 'undefined') {
+        const clienteMatcher = new ClientMatchingSystem();
+        filteredLeads = allLeads.filter((lead: any) => 
+          clienteMatcher.isMatch(cliente.toString(), lead.cliente || lead.nombre || '')
+        );
+      }
+
+      // Detectar duplicados por número de teléfono
+      const phoneMap = new Map<string, any[]>();
+      const duplicates: any[] = [];
+
+      filteredLeads.forEach((lead: any) => {
+        const phone = lead.telefono;
+        if (phone && phone.toString().trim()) {
+          const normalizedPhone = phone.toString().replace(/[\s\-\(\)]/g, '');
+          
+          if (!phoneMap.has(normalizedPhone)) {
+            phoneMap.set(normalizedPhone, []);
+          }
+          phoneMap.get(normalizedPhone)?.push(lead);
+        }
+      });
+
+      // Identificar solo los números que aparecen más de una vez
+      phoneMap.forEach((leads, phone) => {
+        if (leads.length > 1) {
+          duplicates.push(...leads.map(lead => ({
+            ...lead,
+            telefono: phone,
+            duplicateCount: leads.length,
+            duplicateGroup: phone
+          })));
+        }
+      });
+
+      console.log(`🔍 Found ${duplicates.length} duplicate leads for ${cliente}`);
+
+      res.json(duplicates);
+    } catch (error) {
+      console.error('Error detecting duplicates:', error);
+      res.status(500).json({ error: 'Failed to detect duplicates' });
+    }
+  });
+
   // Función para calcular fecha de fin automáticamente
   async function calculateFechaFin(fechaInicio: string, cantidadSolicitada: number, marca: string): Promise<string> {
     try {
