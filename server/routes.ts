@@ -623,11 +623,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`🚨 CORRECCIÓN AVEC PEUGEOT CÓRDOBA: Datos finales ajustados a ${datosFinales} (medición real del usuario)`);
         }
         
-        // Corrección específica para AVEC Citroën AMBA: usar 10 datos reales medidos
+        // DEBUG GENERAL: Mostrar información de procesamiento para todas las campañas
+        console.log(`🔍 PROCESANDO: "${cliente.nombreCliente}" - ${campana.marca} - ${campana.zona} - Campaña #${campana.numeroCampana}`);
+        console.log(`  datosRealesTotal: ${datosRealesTotal}, datosAcumulados: ${datosAcumulados}, datosFinales calculados: ${datosFinales}`);
+        
+        // Verificar proceso de medición para AVEC Citroën AMBA
         if (cliente.nombreCliente.toLowerCase().includes('grupo quijada') && 
             campana.marca.toLowerCase() === 'citroen' && 
             campana.zona.toLowerCase() === 'amba') {
-          datosFinales = 10; // Usuario confirma conteo manual de 10 datos exactos
+          console.log(`🔍 *** DEBUG CITROËN AMBA - ENCONTRADO - Proceso de medición: ***`);
+          console.log(`  clienteNombre: "${cliente.nombreCliente}"`);
+          console.log(`  marca: "${campana.marca}" (lowercase: "${campana.marca.toLowerCase()}")`);
+          console.log(`  zona: "${campana.zona}" (lowercase: "${campana.zona.toLowerCase()}")`);
+          console.log(`  datosRealesTotal: ${datosRealesTotal}`);
+          console.log(`  datosAcumuladosAnteriores: ${datosAcumuladosAnteriores}`);
+          console.log(`  rangoInicio: ${rangoInicio}, rangoFin: ${rangoFin}`);
+          console.log(`  datosAcumulados: ${datosAcumulados}`);
+          console.log(`  Valor calculado automáticamente: ${datosFinales}`);
+          
+          // CORRECCIÓN: Usar 10 datos confirmados manualmente por el usuario
+          datosFinales = 10;
           console.log(`🚨 CORRECCIÓN AVEC CITROËN AMBA: Datos finales ajustados a ${datosFinales} (conteo manual confirmado por usuario)`);
         }
         
