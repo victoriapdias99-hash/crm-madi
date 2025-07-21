@@ -51,8 +51,8 @@ export default function FinanzasDashboard() {
 
   // Calcular métricas generales
   const metricsData = finanzasData ? {
-    totalGanancia: finanzasData.reduce((sum: number, f: FinanzasData) => sum + (f.ganancia || 0), 0),
-    totalInversion: finanzasData.reduce((sum: number, f: FinanzasData) => sum + (f.inversionRealizada || 0), 0),
+    totalGanancia: finanzasData.reduce((sum: number, f: FinanzasData) => sum + (f?.ganancia || 0), 0),
+    totalInversion: finanzasData.reduce((sum: number, f: FinanzasData) => sum + (f?.inversionRealizada || 0), 0),
     totalFacturado: finanzasData.reduce((sum: number, f: FinanzasData) => sum + (f.totalFacturado || 0), 0),
     totalLeads: finanzasData.reduce((sum: number, f: FinanzasData) => sum + (f.totalLeads || 0), 0),
     roiPromedio: 0
@@ -77,10 +77,10 @@ export default function FinanzasDashboard() {
       };
     }
     
-    acc[marca].totalGanancia += f.ganancia || 0;
-    acc[marca].totalInversion += f.inversionRealizada || 0;
-    acc[marca].totalFacturado += f.totalFacturado || 0;
-    acc[marca].totalLeads += f.totalLeads || 0;
+    acc[marca].totalGanancia += f?.ganancia || 0;
+    acc[marca].totalInversion += f?.inversionRealizada || 0;
+    acc[marca].totalFacturado += f?.totalFacturado || 0;
+    acc[marca].totalLeads += f?.totalLeads || 0;
     acc[marca].campañas += 1;
     
     if (acc[marca].totalInversion > 0) {
@@ -257,16 +257,16 @@ export default function FinanzasDashboard() {
                     <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">#{finanza.numeroCampana}</td>
                     <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{finanza.totalLeads}</td>
                     <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{formatCurrency(finanza.cpl)}</td>
-                    <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{(finanza.ventaPorCampana * 100).toFixed(1)}%</td>
-                    <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{formatCurrency(finanza.inversionRealizada)}</td>
+                    <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{((finanza?.ventaPorCampana || 0) * 100).toFixed(1)}%</td>
+                    <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{formatCurrency(finanza?.inversionRealizada || 0)}</td>
                     <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
-                      <span className={finanza.ganancia >= 0 ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
-                        {formatCurrency(finanza.ganancia)}
+                      <span className={(finanza?.ganancia || 0) >= 0 ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+                        {formatCurrency(finanza?.ganancia || 0)}
                       </span>
                     </td>
                     <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
-                      <span className={finanza.roiNegocio >= 0 ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
-                        {finanza.roiNegocio.toFixed(1)}%
+                      <span className={(finanza?.roiNegocio || 0) >= 0 ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+                        {(finanza?.roiNegocio || 0).toFixed(1)}%
                       </span>
                     </td>
                   </tr>
