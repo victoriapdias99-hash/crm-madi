@@ -1,10 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, DollarSign, TrendingUp, Calculator, Target, Filter } from "lucide-react";
+import { Loader2, DollarSign, TrendingUp, Calculator, Target, Filter, RefreshCw } from "lucide-react";
 import { Navigation } from "@/components/navigation";
+import { useToast } from "@/hooks/use-toast";
 
 interface FinanzasData {
   cliente: string;
@@ -28,11 +30,33 @@ interface FinanzasData {
 
 export default function FinanzasDashboard() {
   const [mesSeleccionado, setMesSeleccionado] = useState<string>("todos");
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   const { data: finanzasData, isLoading } = useQuery({
     queryKey: ['/api/dashboard/finanzas'],
     refetchInterval: 300000,
   });
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await queryClient.refetchQueries({ queryKey: ['/api/dashboard/finanzas'] });
+      toast({
+        title: "Datos actualizados",
+        description: "Los datos de finanzas se han actualizado correctamente",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Error al actualizar los datos",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Filtrar datos por mes
   const finanzasDataFiltradas = useMemo(() => {
@@ -153,25 +177,41 @@ export default function FinanzasDashboard() {
           <p className="text-muted-foreground">Análisis financiero automático basado en datos de campañas</p>
         </div>
         
-        {/* Filtro de Mes */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">Filtrar por mes:</span>
-          </div>
-          <Select value={mesSeleccionado} onValueChange={setMesSeleccionado}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Seleccionar mes" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos los meses</SelectItem>
-              {mesesDisponibles.map((mes) => (
-                <SelectItem key={mes} value={mes}>
-                  {formatearMes(mes)}
-                </SelectItem>
+        {/* Filtro de Mes y Botón Actualizar */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-gray-500" />
+              <span className="text-sm font-medium text-gray-700">Filtrar por mes:</span>
+            </div>
+            <Select value={mesSeleccionado} onValueChange={setMesSeleccionado}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Seleccionar mes" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos los meses</SelectItem>
+                {mesesDisponibles.map((mes) => (
+                  <SelectItem key={mes} value={mes}>
+                    {formatearMes(mes)}
+                  </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          </div>
+          
+          {/* Botón Actualizar */}
+          <Button 
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2"
+          >
+            {isRefreshing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            {isRefreshing ? "Actualizando..." : "Actualizar"}
+          </Button>
         </div>
       </div>
 
