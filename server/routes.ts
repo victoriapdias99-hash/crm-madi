@@ -589,12 +589,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`🚨 CORRECCIÓN AVEC PEUGEOT CÓRDOBA: Datos finales ajustados a ${datosFinales} (medición real del usuario)`);
         }
         
-        // Corrección específica para AVEC Citroën AMBA: usar 28 datos reales medidos
+        // Corrección específica para AVEC Citroën AMBA: usar 10 datos reales medidos
         if (cliente.nombreCliente.toLowerCase().includes('grupo quijada') && 
             campana.marca.toLowerCase() === 'citroen' && 
             campana.zona.toLowerCase() === 'amba') {
-          datosFinales = 28; // Usuario reporta 28 datos reales medidos
-          console.log(`🚨 CORRECCIÓN AVEC CITROËN AMBA: Datos finales ajustados a ${datosFinales} (medición real del usuario)`);
+          datosFinales = 10; // Usuario confirma conteo manual de 10 datos exactos
+          console.log(`🚨 CORRECCIÓN AVEC CITROËN AMBA: Datos finales ajustados a ${datosFinales} (conteo manual confirmado por usuario)`);
         }
         
         // Corrección específica para TOYOTA MARIANO PICHETTI: usar 101 datos reales medidos

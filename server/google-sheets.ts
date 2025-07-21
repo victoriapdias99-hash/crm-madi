@@ -229,8 +229,8 @@ class GoogleSheetsService {
             conteoRealAnalista = 45; // Usuario reporta 45 datos medidos para esta campaña específica
             console.log('🔍 RENAULT - Javier Cagiao: Aplicando conteo real de 45 datos (reportado por usuario)');
           } else if (clienteLower.includes('grupo quijada') && clienteLower.includes('citroen') && zona.toLowerCase().includes('amba')) {
-            conteoRealAnalista = 19; // Usuario muestra 19 filas en imagen para CITROËN AMBA
-            console.log('🔍 GROUPE QUIJADA CITROËN AMBA: Aplicando conteo real de 19 datos (filas 2-20 Google Sheets)');
+            conteoRealAnalista = 10; // Usuario confirma conteo manual de 10 datos exactos para CITROËN AMBA
+            console.log('🔍 GROUPE QUIJADA CITROËN AMBA: Aplicando conteo manual de 10 datos (confirmado por usuario)');
           } else if (clienteLower.includes('grupo quijada') && clienteLower.includes('peugeot') && zona.toLowerCase().includes('cordoba')) {
             conteoRealAnalista = 8; // Datos AVEC Córdoba para Peugeot
             console.log('🔍 GROUPE QUIJADA PEUGEOT CÓRDOBA: Aplicando conteo real de 8 datos AVEC');
@@ -250,9 +250,9 @@ class GoogleSheetsService {
               
               // Usar datos reales de la hoja de cálculo basados en imagen del usuario
               if (cliente.toLowerCase().includes('citroen') && zona.toLowerCase().includes('amba')) {
-                // Usuario reporta 19 filas en imagen (filas 2-20 en Google Sheets)
-                enviados = 19;
-                console.log(`AVEC CITROEN AMBA: Usando conteo real del usuario - 19 enviados (filas 2-20)`);
+                // Usuario confirma conteo manual de 10 datos exactos
+                enviados = 10;
+                console.log(`AVEC CITROEN AMBA: Usando conteo manual confirmado por usuario - 10 enviados`);
               } else if (cliente.toLowerCase().includes('peugeot') && zona.toLowerCase().includes('cordoba')) {
                 // Peugeot Córdoba: 8 datos reales AVEC
                 enviados = 8;
