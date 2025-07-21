@@ -1,21 +1,98 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Navigation } from "@/components/navigation";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { TrendingUp, PieChart as PieChartIcon, BarChart3, Activity } from "lucide-react";
+import { TrendingUp, PieChart as PieChartIcon, BarChart3, Activity, Filter } from "lucide-react";
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
 export default function ReportesGraficos() {
+  const [marcaSeleccionada, setMarcaSeleccionada] = useState<string>("todas");
+  const [campannaSeleccionada, setCampannaSeleccionada] = useState<string>("todas");
+  
   // Fetch datos diarios
   const { data: datosDiarios = [], isLoading } = useQuery({
     queryKey: ['/api/dashboard/datos-diarios'],
   });
 
-  // Procesar datos para gráficos
+  // Datos filtrados según selecciones
+  const datosFiltrados = useMemo(() => {
+    return datosDiarios.filter((dato: any) => {
+      // Filtro por marca
+      if (marcaSeleccionada !== "todas") {
+        const clienteNombre = (dato.clienteNombre || dato.cliente || '').toLowerCase();
+        let marca = dato.marca || '';
+        
+        // Extraer marca del nombre del cliente si no está presente
+        if (!marca) {
+          if (clienteNombre.includes('fiat')) marca = 'Fiat';
+          else if (clienteNombre.includes('peugeot')) marca = 'Peugeot';
+          else if (clienteNombre.includes('toyota')) marca = 'Toyota';
+          else if (clienteNombre.includes('chevrolet')) marca = 'Chevrolet';
+          else if (clienteNombre.includes('renault')) marca = 'Renault';
+          else if (clienteNombre.includes('citroen')) marca = 'Citroen';
+          else marca = 'Otros';
+        }
+        
+        if (marca !== marcaSeleccionada) return false;
+      }
+      
+      // Filtro por campaña
+      if (campannaSeleccionada !== "todas") {
+        if (dato.numeroCampana?.toString() !== campannaSeleccionada) return false;
+      }
+      
+      return true;
+    });
+  }, [datosDiarios, marcaSeleccionada, campannaSeleccionada]);
+
+  // Obtener marcas disponibles
+  const marcasDisponibles = useMemo(() => {
+    const marcas = new Set<string>();
+    datosDiarios.forEach((dato: any) => {
+      const clienteNombre = (dato.clienteNombre || dato.cliente || '').toLowerCase();
+      let marca = dato.marca || '';
+      
+      if (!marca) {
+        if (clienteNombre.includes('fiat')) marca = 'Fiat';
+        else if (clienteNombre.includes('peugeot')) marca = 'Peugeot';
+        else if (clienteNombre.includes('toyota')) marca = 'Toyota';
+        else if (clienteNombre.includes('chevrolet')) marca = 'Chevrolet';
+        else if (clienteNombre.includes('renault')) marca = 'Renault';
+        else if (clienteNombre.includes('citroen')) marca = 'Citroen';
+        else marca = 'Otros';
+      }
+      
+      marcas.add(marca);
+    });
+    return Array.from(marcas).sort();
+  }, [datosDiarios]);
+
+  // Obtener campañas disponibles  
+  const campanasDisponibles = useMemo(() => {
+    const campanas = new Set(datosDiarios.map((dato: any) => dato.numeroCampana?.toString()).filter(Boolean));
+    return Array.from(campanas).sort((a, b) => parseInt(a) - parseInt(b));
+  }, [datosDiarios]);
+
+  // Procesar datos para gráficos (usando datos filtrados)
   const procesarDatosPorMarca = () => {
-    const datosPorMarca = datosDiarios.reduce((acc: any, dato: any) => {
-      const marca = dato.marca || 'Sin marca';
+    const datosPorMarca = datosFiltrados.reduce((acc: any, dato: any) => {
+      // Mapear marca desde el cliente si no está presente
+      let marca = dato.marca || 'Sin marca';
+      
+      // Si no hay marca, extraerla del nombre del cliente
+      if (marca === 'Sin marca' || !marca) {
+        const clienteNombre = (dato.clienteNombre || dato.cliente || '').toLowerCase();
+        if (clienteNombre.includes('fiat')) marca = 'Fiat';
+        else if (clienteNombre.includes('peugeot')) marca = 'Peugeot';
+        else if (clienteNombre.includes('toyota')) marca = 'Toyota';
+        else if (clienteNombre.includes('chevrolet')) marca = 'Chevrolet';
+        else if (clienteNombre.includes('renault')) marca = 'Renault';
+        else if (clienteNombre.includes('citroen')) marca = 'Citroen';
+        else marca = 'Otros';
+      }
       if (!acc[marca]) {
         acc[marca] = {
           marca,
@@ -36,7 +113,7 @@ export default function ReportesGraficos() {
   };
 
   const procesarDatosPorCliente = () => {
-    const datosPorCliente = datosDiarios.reduce((acc: any, dato: any) => {
+    const datosPorCliente = datosFiltrados.reduce((acc: any, dato: any) => {
       const cliente = dato.cliente || 'Sin cliente';
       if (!acc[cliente]) {
         acc[cliente] = {
@@ -62,7 +139,7 @@ export default function ReportesGraficos() {
   };
 
   const procesarEvolucionTemporal = () => {
-    const datosPorFecha = datosDiarios.reduce((acc: any, dato: any) => {
+    const datosPorFecha = datosFiltrados.reduce((acc: any, dato: any) => {
       const fecha = dato.fecha || 'Sin fecha';
       if (!acc[fecha]) {
         acc[fecha] = {
@@ -87,11 +164,11 @@ export default function ReportesGraficos() {
   const datosPorCliente = procesarDatosPorCliente();
   const evolucionTemporal = procesarEvolucionTemporal();
 
-  // Estadísticas generales
-  const totalLeads = datosDiarios.reduce((sum: number, dato: any) => sum + (dato.cantidad || 0), 0);
-  const totalInversion = datosDiarios.reduce((sum: number, dato: any) => sum + ((dato.cantidad || 0) * (dato.cpl || 0)), 0);
+  // Estadísticas generales (usando datos filtrados)
+  const totalLeads = datosFiltrados.reduce((sum: number, dato: any) => sum + (dato.cantidad || 0), 0);
+  const totalInversion = datosFiltrados.reduce((sum: number, dato: any) => sum + ((dato.cantidad || 0) * (dato.cpl || 0)), 0);
   const cplPromedio = totalLeads > 0 ? totalInversion / totalLeads : 0;
-  const totalCampanas = new Set(datosDiarios.map((dato: any) => dato.numeroCampana)).size;
+  const totalCampanas = new Set(datosFiltrados.map((dato: any) => dato.numeroCampana)).size;
 
   if (isLoading) {
     return (
@@ -121,6 +198,74 @@ export default function ReportesGraficos() {
           </p>
         </div>
       </div>
+
+      {/* Filtros de Análisis */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filtros de Análisis
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Marca</label>
+              <Select value={marcaSeleccionada} onValueChange={setMarcaSeleccionada}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar marca" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas las marcas</SelectItem>
+                  {marcasDisponibles.map((marca) => (
+                    <SelectItem key={marca} value={marca}>
+                      {marca}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Campaña</label>
+              <Select value={campannaSeleccionada} onValueChange={setCampannaSeleccionada}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar campaña" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas las campañas</SelectItem>
+                  {campanasDisponibles.map((campana) => (
+                    <SelectItem key={campana} value={campana}>
+                      Campaña #{campana}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Filtros Activos</label>
+              <div className="flex flex-wrap gap-2">
+                {marcaSeleccionada !== "todas" && (
+                  <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs">
+                    Marca: {marcaSeleccionada}
+                  </span>
+                )}
+                {campannaSeleccionada !== "todas" && (
+                  <span className="px-2 py-1 bg-green-100 text-green-800 rounded-md text-xs">
+                    Campaña #{campannaSeleccionada}
+                  </span>
+                )}
+                {marcaSeleccionada === "todas" && campannaSeleccionada === "todas" && (
+                  <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-md text-xs">
+                    Sin filtros aplicados
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Estadísticas Generales */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
