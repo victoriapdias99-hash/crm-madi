@@ -89,7 +89,6 @@ export default function MetaAdsDashboard() {
     rangoRapido: 'ult7dias'
   });
   const [auditReport, setAuditReport] = useState<AuditReport | null>(null);
-  const [showFullReport, setShowFullReport] = useState(false);
 
   // Función para aplicar rango rápido
   const applyQuickRange = (rangoRapido: string) => {
@@ -612,24 +611,14 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
                 </Button>
                 
                 {auditReport && (
-                  <>
-                    <Button
-                      onClick={() => setShowFullReport(!showFullReport)}
-                      variant="outline"
-                      className="border-blue-200 hover:bg-blue-50 text-blue-600"
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      {showFullReport ? 'Vista Resumida' : 'Ver Completo'}
-                    </Button>
-                    <Button
-                      onClick={downloadReport}
-                      variant="outline"
-                      className="border-green-200 hover:bg-green-50 text-green-600"
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Descargar
-                    </Button>
-                  </>
+                  <Button
+                    onClick={downloadReport}
+                    variant="outline"
+                    className="border-green-200 hover:bg-green-50 text-green-600"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Descargar Informe
+                  </Button>
                 )}
               </div>
 
@@ -686,44 +675,26 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
                           </div>
                         </CardContent>
                       </Card>
-                    ) : (
-                      <Card className="mb-4">
-                        <CardHeader>
-                          <CardTitle className="text-base">Información del Informe</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="p-4 bg-yellow-50 rounded-lg">
-                            <p className="text-sm text-gray-600">
-                              Informe generado exitosamente. Datos de auditoría disponibles para el período seleccionado.
-                            </p>
-                            {auditReport.resumen && (
-                              <div className="mt-3">
-                                <h4 className="font-medium mb-2">Resumen:</h4>
-                                <p className="text-sm text-gray-700">{auditReport.resumen}</p>
-                              </div>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
+                    ) : null}
 
-                    {/* Vista Completa del Informe */}
-                    {showFullReport && (
-                      <Card className="mb-4">
-                        <CardHeader>
-                          <CardTitle className="text-base">Informe Completo Redactado</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="prose prose-sm max-w-none">
-                            <div className="bg-white p-6 border border-gray-200 rounded-lg shadow-sm">
-                              <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-gray-700">
-                                {generateFullReportText(auditReport)}
-                              </pre>
-                            </div>
+                    {/* Informe Completo Redactado - Siempre Visible */}
+                    <Card className="mb-4">
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <FileText className="h-5 w-5 text-blue-600" />
+                          Informe Completo de Auditoría
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="bg-gradient-to-br from-gray-50 to-blue-50 p-6 border border-gray-200 rounded-lg shadow-sm">
+                          <div className="bg-white p-6 rounded-lg shadow-inner">
+                            <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-gray-800">
+                              {generateFullReportText(auditReport)}
+                            </pre>
                           </div>
-                        </CardContent>
-                      </Card>
-                    )}
+                        </div>
+                      </CardContent>
+                    </Card>
 
                     {/* Costes y Resultados */}
                     {auditReport.costes && auditReport.resultados && (
