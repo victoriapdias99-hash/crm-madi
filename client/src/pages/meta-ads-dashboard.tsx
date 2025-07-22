@@ -8,6 +8,7 @@ import { RefreshCw, DollarSign, TrendingUp, Users, BarChart3, Settings, FileText
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Navigation } from "@/components/navigation";
+import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 
 interface MetaCampaign {
   campaignId: string;
@@ -73,6 +74,7 @@ interface AuditFilters {
   fechaInicio: string;
   fechaFin: string;
   campanaId: string;
+  rangoRapido: string;
 }
 
 export default function MetaAdsDashboard() {
@@ -81,11 +83,54 @@ export default function MetaAdsDashboard() {
   
   // Estado para el módulo de auditoría
   const [auditFilters, setAuditFilters] = useState<AuditFilters>({
-    fechaInicio: '',
-    fechaFin: '',
-    campanaId: ''
+    fechaInicio: format(subDays(new Date(), 7), 'yyyy-MM-dd'),
+    fechaFin: format(new Date(), 'yyyy-MM-dd'),
+    campanaId: '',
+    rangoRapido: 'ult7dias'
   });
   const [auditReport, setAuditReport] = useState<AuditReport | null>(null);
+
+  // Función para aplicar rango rápido
+  const applyQuickRange = (rangoRapido: string) => {
+    const now = new Date();
+    const today = format(now, 'yyyy-MM-dd');
+    const yesterday = format(subDays(now, 1), 'yyyy-MM-dd');
+    
+    let fechaInicio = '';
+    let fechaFin = '';
+    
+    switch (rangoRapido) {
+      case 'hoy':
+        fechaInicio = today;
+        fechaFin = today;
+        break;
+      case 'ayer':
+        fechaInicio = yesterday;
+        fechaFin = yesterday;
+        break;
+      case 'ult7dias':
+        fechaInicio = format(subDays(now, 6), 'yyyy-MM-dd');
+        fechaFin = today;
+        break;
+      case 'ult14dias':
+        fechaInicio = format(subDays(now, 13), 'yyyy-MM-dd');
+        fechaFin = today;
+        break;
+      case 'ult30dias':
+        fechaInicio = format(subDays(now, 29), 'yyyy-MM-dd');
+        fechaFin = today;
+        break;
+      default:
+        return; // No cambiar fechas si es personalizado
+    }
+    
+    setAuditFilters(prev => ({
+      ...prev,
+      rangoRapido,
+      fechaInicio,
+      fechaFin
+    }));
+  };
 
   const { data: metaStats, isLoading: statsLoading } = useQuery<MetaStats>({
     queryKey: ['/api/meta-ads/stats'],
@@ -406,39 +451,59 @@ export default function MetaAdsDashboard() {
           <CardContent>
             <div className="space-y-4">
               {/* Filtros */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+              <div className="space-y-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                {/* Filtros de Rango Rápido */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">Fecha Inicio</label>
-                  <input
-                    type="date"
-                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    value={auditFilters.fechaInicio}
-                    onChange={(e) => setAuditFilters(prev => ({ ...prev, fechaInicio: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Fecha Fin</label>
-                  <input
-                    type="date"
-                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    value={auditFilters.fechaFin}
-                    onChange={(e) => setAuditFilters(prev => ({ ...prev, fechaFin: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Campaña</label>
+                  <label className="block text-sm font-medium mb-2">Período</label>
                   <select
                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    value={auditFilters.campanaId}
-                    onChange={(e) => setAuditFilters(prev => ({ ...prev, campanaId: e.target.value }))}
+                    value={auditFilters.rangoRapido}
+                    onChange={(e) => applyQuickRange(e.target.value)}
                   >
-                    <option value="">Todas las campañas</option>
-                    {campaigns?.map((campaign) => (
-                      <option key={campaign.campaignId} value={campaign.campaignId}>
-                        {campaign.campaignName}
-                      </option>
-                    ))}
+                    <option value="hoy">Hoy</option>
+                    <option value="ayer">Ayer</option>
+                    <option value="ult7dias">Últimos 7 días</option>
+                    <option value="ult14dias">Últimos 14 días</option>
+                    <option value="ult30dias">Últimos 30 días</option>
+                    <option value="personalizado">Personalizado</option>
                   </select>
+                </div>
+                
+                {/* Filtros de Fecha Personalizada */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Fecha Inicio</label>
+                    <input
+                      type="date"
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      value={auditFilters.fechaInicio}
+                      onChange={(e) => setAuditFilters(prev => ({ ...prev, fechaInicio: e.target.value, rangoRapido: 'personalizado' }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Fecha Fin</label>
+                    <input
+                      type="date"
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      value={auditFilters.fechaFin}
+                      onChange={(e) => setAuditFilters(prev => ({ ...prev, fechaFin: e.target.value, rangoRapido: 'personalizado' }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Campaña</label>
+                    <select
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      value={auditFilters.campanaId}
+                      onChange={(e) => setAuditFilters(prev => ({ ...prev, campanaId: e.target.value }))}
+                    >
+                      <option value="">Todas las campañas</option>
+                      {campaigns?.map((campaign) => (
+                        <option key={campaign.campaignId} value={campaign.campaignId}>
+                          {campaign.campaignName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
 
