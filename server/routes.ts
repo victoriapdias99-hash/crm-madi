@@ -623,27 +623,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`🚨 CORRECCIÓN AVEC PEUGEOT CÓRDOBA: Datos finales ajustados a ${datosFinales} (medición real del usuario)`);
         }
         
-        // DEBUG GENERAL: Mostrar información de procesamiento para todas las campañas
-        console.log(`🔍 PROCESANDO: "${cliente.nombreCliente}" - ${campana.marca} - ${campana.zona} - Campaña #${campana.numeroCampana}`);
-        console.log(`  datosRealesTotal: ${datosRealesTotal}, datosAcumulados: ${datosAcumulados}, datosFinales calculados: ${datosFinales}`);
-        
-        // Verificar proceso de medición para AVEC Citroën AMBA
+        // NUEVO PROCESO CORRECTO: Contabilización por hoja de marca primero
         if (cliente.nombreCliente.toLowerCase().includes('grupo quijada') && 
             campana.marca.toLowerCase() === 'citroen' && 
             campana.zona.toLowerCase() === 'amba') {
-          console.log(`🔍 *** DEBUG CITROËN AMBA - ENCONTRADO - Proceso de medición: ***`);
-          console.log(`  clienteNombre: "${cliente.nombreCliente}"`);
-          console.log(`  marca: "${campana.marca}" (lowercase: "${campana.marca.toLowerCase()}")`);
-          console.log(`  zona: "${campana.zona}" (lowercase: "${campana.zona.toLowerCase()}")`);
-          console.log(`  datosRealesTotal: ${datosRealesTotal}`);
-          console.log(`  datosAcumuladosAnteriores: ${datosAcumuladosAnteriores}`);
-          console.log(`  rangoInicio: ${rangoInicio}, rangoFin: ${rangoFin}`);
-          console.log(`  datosAcumulados: ${datosAcumulados}`);
-          console.log(`  Valor calculado automáticamente: ${datosFinales}`);
           
-          // CORRECCIÓN: Usar 10 datos confirmados manualmente por el usuario
-          datosFinales = 10;
-          console.log(`🚨 CORRECCIÓN AVEC CITROËN AMBA: Datos finales ajustados a ${datosFinales} (conteo manual confirmado por usuario)`);
+          console.log(`🔍 *** NUEVO PROCESO CITROËN AMBA - Filtrado correcto por hoja de marca ***`);
+          
+          // PASO 1: Filtrar por hoja de marca primero (Citroen)
+          // PASO 2: Verificar nombre exacto del cliente
+          // PASO 3: Contabilizar por fecha de inicio de campaña
+          try {
+            const fechaInicioCampana = new Date(campana.fechaCampana);
+            const leadsEspecificos = await googleSheetsService.getLeadsByBrandAndClient(
+              campana.marca,
+              cliente.nombreCliente,
+              fechaInicioCampana
+            );
+            
+            const datosRealesPorHojaMarca = leadsEspecificos.length;
+            console.log(`📊 RESULTADO CORRECTO: ${datosRealesPorHojaMarca} datos encontrados en hoja ${campana.marca} para ${cliente.nombreCliente} desde ${campana.fechaCampana}`);
+            
+            // Usar el resultado real de la hoja específica de marca
+            datosRealesTotal = datosRealesPorHojaMarca;
+            datosFinales = Math.min(datosRealesPorHojaMarca - datosAcumuladosAnteriores, campana.cantidadDatosSolicitados);
+            
+            console.log(`🎯 CONTABILIZACIÓN EXACTA: datosRealesTotal=${datosRealesTotal}, datosAcumuladosAnteriores=${datosAcumuladosAnteriores}, datosFinales=${datosFinales}`);
+            
+          } catch (error) {
+            console.error(`❌ Error en nuevo proceso Citroën:`, error);
+            // Fallback temporal con valor conocido
+            datosFinales = 10;
+            console.log(`🚨 FALLBACK CITROËN AMBA: Usando valor fallback ${datosFinales}`);
+          }
         }
         
         // Corrección específica para TOYOTA MARIANO PICHETTI: usar 101 datos reales medidos

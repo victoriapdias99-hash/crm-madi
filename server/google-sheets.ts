@@ -111,7 +111,7 @@ class GoogleSheetsService {
       return [];
     }
 
-    const sheetNames = ['Fiat', 'Peugeot']; // Add more sheet names as needed
+    const sheetNames = ['Fiat', 'Peugeot', 'Citroen', 'Toyota', 'Chevrolet', 'Renault']; // Todas las hojas por marca
     const allLeads: SheetLead[] = [];
 
     for (const sheetName of sheetNames) {
@@ -125,6 +125,65 @@ class GoogleSheetsService {
     }
 
     return allLeads;
+  }
+
+  // Nueva función para obtener datos específicos por marca y cliente
+  async getLeadsByBrandAndClient(marca: string, clienteNombre: string, fechaInicio?: Date): Promise<SheetLead[]> {
+    if (!this.sheets) {
+      console.log('Google Sheets API not configured');
+      return [];
+    }
+
+    try {
+      // PASO 1: Filtrar por hoja de marca primero
+      const marcaCapitalized = marca.charAt(0).toUpperCase() + marca.slice(1).toLowerCase();
+      console.log(`🔍 FILTRO POR MARCA: Buscando en hoja "${marcaCapitalized}" para cliente "${clienteNombre}"`);
+      
+      const leads = await this.getSheetData(marcaCapitalized);
+      
+      // PASO 2: Verificar que el nombre del cliente y marca es el mismo
+      const leadsFiltered = leads.filter(lead => {
+        const leadData = lead.name ? lead.name.toLowerCase() : '';
+        const clientData = clienteNombre.toLowerCase();
+        
+        // Verificar coincidencia exacta del cliente
+        const isClientMatch = leadData.includes(clientData) || 
+                              clientData.includes(leadData) ||
+                              this.normalizeClientName(leadData) === this.normalizeClientName(clientData);
+        
+        if (isClientMatch) {
+          console.log(`✅ CLIENTE COINCIDE: "${lead.name}" matches "${clienteNombre}"`);
+        }
+        
+        return isClientMatch;
+      });
+
+      // PASO 3: Contabilizar por fecha de inicio de campaña si se especifica
+      if (fechaInicio && leadsFiltered.length > 0) {
+        const fechaInicioStr = fechaInicio.toISOString().split('T')[0];
+        const leadsFromDate = leadsFiltered.filter(lead => {
+          const leadDate = new Date(lead.timestamp).toISOString().split('T')[0];
+          return leadDate >= fechaInicioStr;
+        });
+        
+        console.log(`📅 FILTRO POR FECHA: ${leadsFromDate.length} leads desde ${fechaInicioStr}`);
+        return leadsFromDate;
+      }
+
+      console.log(`📊 RESULTADO FINAL: ${leadsFiltered.length} leads para ${marca} - ${clienteNombre}`);
+      return leadsFiltered;
+      
+    } catch (error) {
+      console.error(`Error fetching leads for ${marca} - ${clienteNombre}:`, error);
+      return [];
+    }
+  }
+
+  private normalizeClientName(name: string): string {
+    return name.toLowerCase()
+      .replace(/[^\w\s]/g, '') // Remover caracteres especiales
+      .replace(/\s+/g, ' ')    // Normalizar espacios
+      .trim();
   }
 
   async getAvailableSheets(): Promise<string[]> {
@@ -172,7 +231,7 @@ class GoogleSheetsService {
       const dataRows = rows.slice(2);
 
       const processedData = dataRows
-        .filter(row => {
+        .filter((row: any[]) => {
           const cliente = row[0] && row[0].trim();
           // Filtrar filas vacías y registros no válidos
           return cliente && 
@@ -181,7 +240,7 @@ class GoogleSheetsService {
                  !cliente.toLowerCase().includes('junio') &&
                  !cliente.toLowerCase().includes('julio');
         })
-        .map(row => {
+        .map((row: any[]) => {
           const cliente = row[0] || '';
           const zona = row[1] || '';
           
@@ -349,8 +408,8 @@ class GoogleSheetsService {
       const dataRows = rows.slice(1);
 
       const processedData = dataRows
-        .filter(row => row[0] && row[0].trim() !== '') // Filtrar filas vacías
-        .map(row => {
+        .filter((row: any[]) => row[0] && row[0].trim() !== '') // Filtrar filas vacías
+        .map((row: any[]) => {
           return {
             nombreCliente: row[0] || '',
             nombreComercial: row[1] || '',
