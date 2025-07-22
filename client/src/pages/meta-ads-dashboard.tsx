@@ -524,7 +524,7 @@ export default function MetaAdsDashboard() {
               </div>
 
               {/* Resultado del Informe */}
-              {auditReport && (
+              {auditReport && auditReport.cambios && auditReport.cambios.adsets && (
                 <div className="space-y-4 mt-6">
                   <div className="border-t pt-4">
                     <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -558,7 +558,7 @@ export default function MetaAdsDashboard() {
                             </div>
                           </div>
                           
-                          {auditReport.cambios.detalles.length > 0 && (
+                          {auditReport.cambios && auditReport.cambios.detalles && auditReport.cambios.detalles.length > 0 && (
                             <div className="mt-4">
                               <h4 className="font-medium mb-2">Cambios Detectados:</h4>
                               <div className="space-y-2 max-h-40 overflow-y-auto">
@@ -577,90 +577,92 @@ export default function MetaAdsDashboard() {
                     </Card>
 
                     {/* Costes y Resultados */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-base">Costes y Resultados</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {/* Métricas de Coste */}
-                          <div>
-                            <h4 className="font-medium mb-3 text-gray-700">Inversión Total</h4>
-                            <div className="space-y-2">
-                              <div className="flex justify-between">
-                                <span>Gasto Total:</span>
-                                <span className="font-semibold text-green-600">
-                                  {formatCurrency(auditReport.costes.gastoTotal, auditReport.costes.moneda)}
-                                </span>
+                    {auditReport.costes && auditReport.resultados && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-base">Costes y Resultados</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Métricas de Coste */}
+                            <div>
+                              <h4 className="font-medium mb-3 text-gray-700">Inversión Total</h4>
+                              <div className="space-y-2">
+                                <div className="flex justify-between">
+                                  <span>Gasto Total:</span>
+                                  <span className="font-semibold text-green-600">
+                                    {formatCurrency(auditReport.costes.gastoTotal || 0, auditReport.costes.moneda || 'ARS')}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Gasto Promedio Diario:</span>
+                                  <span className="font-medium">
+                                    {formatCurrency(auditReport.costes.gastoDiario || 0, auditReport.costes.moneda || 'ARS')}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>CPC Promedio:</span>
+                                  <span className="font-medium">
+                                    {formatCurrency(auditReport.costes.cpcPromedio || 0, auditReport.costes.moneda || 'ARS')}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>CPM Promedio:</span>
+                                  <span className="font-medium">
+                                    {formatCurrency(auditReport.costes.cpmPromedio || 0, auditReport.costes.moneda || 'ARS')}
+                                  </span>
+                                </div>
                               </div>
-                              <div className="flex justify-between">
-                                <span>Gasto Promedio Diario:</span>
-                                <span className="font-medium">
-                                  {formatCurrency(auditReport.costes.gastoDiario, auditReport.costes.moneda)}
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>CPC Promedio:</span>
-                                <span className="font-medium">
-                                  {formatCurrency(auditReport.costes.cpcPromedio, auditReport.costes.moneda)}
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>CPM Promedio:</span>
-                                <span className="font-medium">
-                                  {formatCurrency(auditReport.costes.cpmPromedio, auditReport.costes.moneda)}
-                                </span>
+                            </div>
+
+                            {/* Métricas de Resultado */}
+                            <div>
+                              <h4 className="font-medium mb-3 text-gray-700">Resultados Obtenidos</h4>
+                              <div className="space-y-2">
+                                <div className="flex justify-between">
+                                  <span>Impresiones:</span>
+                                  <span className="font-semibold text-blue-600">
+                                    {formatNumber(auditReport.resultados.impresiones || 0)}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Clics:</span>
+                                  <span className="font-semibold text-purple-600">
+                                    {formatNumber(auditReport.resultados.clics || 0)}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>CTR:</span>
+                                  <span className="font-medium">
+                                    {(auditReport.resultados.ctr || 0).toFixed(2)}%
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Alcance:</span>
+                                  <span className="font-medium">
+                                    {formatNumber(auditReport.resultados.alcance || 0)}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Frecuencia:</span>
+                                  <span className="font-medium">
+                                    {(auditReport.resultados.frecuencia || 0).toFixed(2)}
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           </div>
 
-                          {/* Métricas de Resultado */}
-                          <div>
-                            <h4 className="font-medium mb-3 text-gray-700">Resultados Obtenidos</h4>
-                            <div className="space-y-2">
-                              <div className="flex justify-between">
-                                <span>Impresiones:</span>
-                                <span className="font-semibold text-blue-600">
-                                  {formatNumber(auditReport.resultados.impresiones)}
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Clics:</span>
-                                <span className="font-semibold text-purple-600">
-                                  {formatNumber(auditReport.resultados.clics)}
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>CTR:</span>
-                                <span className="font-medium">
-                                  {auditReport.resultados.ctr.toFixed(2)}%
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Alcance:</span>
-                                <span className="font-medium">
-                                  {formatNumber(auditReport.resultados.alcance)}
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Frecuencia:</span>
-                                <span className="font-medium">
-                                  {auditReport.resultados.frecuencia.toFixed(2)}
-                                </span>
-                              </div>
-                            </div>
+                          {/* Resumen Ejecutivo */}
+                          <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
+                            <h4 className="font-semibold mb-2 text-gray-800">Resumen Ejecutivo</h4>
+                            <p className="text-sm text-gray-700 leading-relaxed">
+                              {auditReport.resumen}
+                            </p>
                           </div>
-                        </div>
-
-                        {/* Resumen Ejecutivo */}
-                        <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
-                          <h4 className="font-semibold mb-2 text-gray-800">Resumen Ejecutivo</h4>
-                          <p className="text-sm text-gray-700 leading-relaxed">
-                            {auditReport.resumen}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </CardContent>
+                      </Card>
+                    )}
                   </div>
                 </div>
               )}
