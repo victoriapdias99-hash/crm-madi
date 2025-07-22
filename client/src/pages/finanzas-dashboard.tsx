@@ -43,9 +43,8 @@ export default function FinanzasDashboard() {
   const [mesSeleccionado, setMesSeleccionado] = useState<string>('todos');
   const [ventaValues, setVentaValues] = useState<Record<number, number>>({});
   
-  // NUEVO: Database-first centralized finanzas data
   const { data: finanzasData, isLoading } = useQuery({
-    queryKey: ['/api/finanzas/centralized'],
+    queryKey: ['/api/dashboard/finanzas'],
     refetchInterval: 300000, // Refrescar cada 5 minutos
   });
 

@@ -13,41 +13,28 @@ import { CPLStorage } from "@/lib/cpl-storage";
 import { debounce, memoize, measurePerformance } from "@/lib/performance";
 import TestPanel from "@/components/test-panel";
 
-// Interfaz actualizada para endpoint centralizado
 interface DatosDiariosData {
-  id: number;
-  clienteId: number;
+  cliente: string;
   clienteNombre: string;
-  numeroCampana: string;
-  marca: string;
   zona: string;
-  fechaCampana: string;
-  cantidadDatosSolicitados: number;
+  diasData: number[];
   enviados: number;
+  entregadosPorDia: number;
+  pedidosPorDia: number;
+  pedidosTotal: number;
+  numeroCampana: number;
+  porcentajeDesvio: number;
+  porcentajeDatosEnviados: number;
+  faltantesAEnviar: number;
   cpl: number;
-  venta: number;
   ventaPorCampana: number;
-  inversion: number;
   inversionRealizada: number;
   inversionPendiente: number;
-  porcentajeCompletado: number;
-  estado: string;
-  cpa: number;
-  fechaUltimaActualizacion?: string;
-  
-  // Campos derivados para compatibilidad
-  cliente?: string;
-  diasData?: number[];
-  entregadosPorDia?: number;
-  pedidosPorDia?: number;
-  pedidosTotal?: number;
-  porcentajeDesvio?: number;
-  porcentajeDatosEnviados?: number;
-  faltantesAEnviar?: number;
-  fechaFinReal?: string;
-  cantidadSolicitada?: number;
-  diasProcesados?: number;
-  estadoCampana?: string;
+  fechaCampana: string;
+  fechaFinReal: string;
+  cantidadSolicitada: number;
+  diasProcesados: number;
+  estadoCampana: string;
 }
 
 export default function DatosDiariosDashboard() {
@@ -61,9 +48,9 @@ export default function DatosDiariosDashboard() {
   const [isManualLoading, setIsManualLoading] = useState(false);
   const [manualData, setManualData] = useState<DatosDiariosData[] | null>(null);
   
-  // NUEVO: Database-first centralized data (real-time query optimized)
+  // Real-time optimized query for live data updates
   const { data: datosDiarios, isLoading, error, refetch } = useQuery({
-    queryKey: ['/api/datos-diarios/centralized'],
+    queryKey: ['/api/dashboard/datos-diarios'],
     refetchInterval: 10 * 1000, // Auto-refresh every 10 seconds for immediate updates
     staleTime: 0, // Always get fresh data for real-time updates
     gcTime: 0, // Don't cache data to ensure fresh data (React Query v5)
@@ -79,7 +66,7 @@ export default function DatosDiariosDashboard() {
   const fetchDataManually = async () => {
     try {
       setIsManualLoading(true);
-      const response = await fetch('/api/datos-diarios/centralized', {
+      const response = await fetch('/api/dashboard/datos-diarios', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
