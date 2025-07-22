@@ -35,6 +35,7 @@ function Router() {
       <Route path="/clientes" component={ClientesManagement} />
       <Route path="/campanas" component={CampanasManagement} />
       <Route path="/meta-ads" component={MetaAdsDashboard} />
+      <Route path="/meta-ads-dashboard" component={MetaAdsDashboard} />
       <Route path="/meta-ads-config" component={MetaAdsConfig} />
       <Route path="/finanzas" component={FinanzasDashboard} />
       <Route path="/finanzas-simple" component={FinanzasDashboard} />

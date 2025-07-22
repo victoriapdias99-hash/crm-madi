@@ -304,6 +304,35 @@ export function registerMetaAdsRoutes(app: Express) {
       res.json({ success: false, message: 'Auto-sync was not running' });
     }
   });
+
+  // Audit report endpoint
+  app.post('/api/meta-ads/audit-report', async (req, res) => {
+    try {
+      const { fechaInicio, fechaFin, campanaId } = req.body;
+      
+      if (!fechaInicio || !fechaFin) {
+        return res.status(400).json({ error: 'fechaInicio and fechaFin are required' });
+      }
+
+      const service = getMetaAdsService();
+      if (!service) {
+        return res.status(400).json({ 
+          error: 'Meta Ads service not configured. Please configure first.' 
+        });
+      }
+
+      const auditReport = await service.generateAuditReport({
+        fechaInicio,
+        fechaFin,
+        campanaId: campanaId || null
+      });
+
+      res.json(auditReport);
+    } catch (error) {
+      console.error('Meta Ads audit report error:', error);
+      res.status(500).json({ error: 'Failed to generate audit report' });
+    }
+  });
 }
 
 // Cleanup function para cerrar recursos

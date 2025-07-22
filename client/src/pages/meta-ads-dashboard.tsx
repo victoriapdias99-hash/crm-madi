@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { RefreshCw, DollarSign, TrendingUp, Users, BarChart3, Settings } from "lucide-react";
+import { RefreshCw, DollarSign, TrendingUp, Users, BarChart3, Settings, FileText, Activity } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Navigation } from "@/components/navigation";
@@ -35,9 +35,57 @@ interface MetaStats {
   lastSync: Date | null;
 }
 
+// Interfaces para el informe de auditoría
+interface AuditReport {
+  periodo: string;
+  cambios: {
+    adsets: {
+      total: number;
+      nuevos: number;
+      modificados: number;
+      pausados: number;
+    };
+    detalles: Array<{
+      tipo: string;
+      nombre: string;
+      descripcion: string;
+      fecha: string;
+    }>;
+  };
+  costes: {
+    gastoTotal: number;
+    gastoDiario: number;
+    cpcPromedio: number;
+    cpmPromedio: number;
+    moneda: string;
+  };
+  resultados: {
+    impresiones: number;
+    clics: number;
+    ctr: number;
+    alcance: number;
+    frecuencia: number;
+  };
+  resumen: string;
+}
+
+interface AuditFilters {
+  fechaInicio: string;
+  fechaFin: string;
+  campanaId: string;
+}
+
 export default function MetaAdsDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Estado para el módulo de auditoría
+  const [auditFilters, setAuditFilters] = useState<AuditFilters>({
+    fechaInicio: '',
+    fechaFin: '',
+    campanaId: ''
+  });
+  const [auditReport, setAuditReport] = useState<AuditReport | null>(null);
 
   const { data: metaStats, isLoading: statsLoading } = useQuery<MetaStats>({
     queryKey: ['/api/meta-ads/stats'],
@@ -88,6 +136,44 @@ export default function MetaAdsDashboard() {
       });
     },
   });
+
+  // Mutación para generar informe de auditoría
+  const generateReportMutation = useMutation({
+    mutationFn: async (filters: AuditFilters) => {
+      return await apiRequest('/api/meta-ads/audit-report', { 
+        method: 'POST',
+        body: JSON.stringify(filters),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    },
+    onSuccess: (data: AuditReport) => {
+      setAuditReport(data);
+      toast({
+        title: "Informe generado",
+        description: "El informe de auditoría ha sido generado exitosamente",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error generando informe",
+        description: error.message || "No se pudo generar el informe de auditoría",
+      });
+    }
+  });
+
+  // Función para generar informe
+  const generateAuditReport = () => {
+    if (!auditFilters.fechaInicio || !auditFilters.fechaFin) {
+      toast({
+        variant: "destructive",
+        title: "Fechas requeridas",
+        description: "Por favor selecciona fecha de inicio y fin",
+      });
+      return;
+    }
+    generateReportMutation.mutate(auditFilters);
+  };
 
   const formatCurrency = (amount: number, currency: string = 'USD') => {
     return new Intl.NumberFormat('es-AR', {
@@ -307,6 +393,217 @@ export default function MetaAdsDashboard() {
                 <p className="text-sm">Sincroniza para cargar datos de Meta Ads</p>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Módulo de Informes de Auditoría */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-purple-500" />
+              Informes de Auditoría
+            </CardTitle>
+            <CardDescription>
+              Genera informes detallados de cambios en conjuntos de anuncios y resultados de campañas
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* Filtros */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Fecha Inicio</label>
+                  <input
+                    type="date"
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={auditFilters.fechaInicio}
+                    onChange={(e) => setAuditFilters(prev => ({ ...prev, fechaInicio: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Fecha Fin</label>
+                  <input
+                    type="date"
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={auditFilters.fechaFin}
+                    onChange={(e) => setAuditFilters(prev => ({ ...prev, fechaFin: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Campaña</label>
+                  <select
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={auditFilters.campanaId}
+                    onChange={(e) => setAuditFilters(prev => ({ ...prev, campanaId: e.target.value }))}
+                  >
+                    <option value="">Todas las campañas</option>
+                    {campaigns?.map((campaign) => (
+                      <option key={campaign.campaignId} value={campaign.campaignId}>
+                        {campaign.campaignName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Botón Generar Informe */}
+              <div className="flex justify-center">
+                <Button
+                  onClick={generateAuditReport}
+                  disabled={generateReportMutation.isPending || !auditFilters.fechaInicio || !auditFilters.fechaFin}
+                  className="bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700"
+                >
+                  {generateReportMutation.isPending ? (
+                    <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <FileText className="h-4 w-4 mr-2" />
+                  )}
+                  Generar Informe
+                </Button>
+              </div>
+
+              {/* Resultado del Informe */}
+              {auditReport && (
+                <div className="space-y-4 mt-6">
+                  <div className="border-t pt-4">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <Activity className="h-5 w-5 text-green-500" />
+                      Informe de Auditoría - {auditReport.periodo}
+                    </h3>
+
+                    {/* Cambios en Conjuntos y Anuncios */}
+                    <Card className="mb-4">
+                      <CardHeader>
+                        <CardTitle className="text-base">Auditoría de Cambios en Conjuntos y Anuncios</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                            <div className="p-3 bg-blue-50 rounded-lg">
+                              <div className="text-2xl font-bold text-blue-600">{auditReport.cambios.adsets.total}</div>
+                              <div className="text-sm text-gray-600">Conjuntos Activos</div>
+                            </div>
+                            <div className="p-3 bg-green-50 rounded-lg">
+                              <div className="text-2xl font-bold text-green-600">{auditReport.cambios.adsets.nuevos}</div>
+                              <div className="text-sm text-gray-600">Nuevos</div>
+                            </div>
+                            <div className="p-3 bg-yellow-50 rounded-lg">
+                              <div className="text-2xl font-bold text-yellow-600">{auditReport.cambios.adsets.modificados}</div>
+                              <div className="text-sm text-gray-600">Modificados</div>
+                            </div>
+                            <div className="p-3 bg-red-50 rounded-lg">
+                              <div className="text-2xl font-bold text-red-600">{auditReport.cambios.adsets.pausados}</div>
+                              <div className="text-sm text-gray-600">Pausados</div>
+                            </div>
+                          </div>
+                          
+                          {auditReport.cambios.detalles.length > 0 && (
+                            <div className="mt-4">
+                              <h4 className="font-medium mb-2">Cambios Detectados:</h4>
+                              <div className="space-y-2 max-h-40 overflow-y-auto">
+                                {auditReport.cambios.detalles.map((cambio, index) => (
+                                  <div key={index} className="p-2 bg-gray-50 rounded text-sm">
+                                    <div className="font-medium">{cambio.tipo}: {cambio.nombre}</div>
+                                    <div className="text-gray-600">{cambio.descripcion}</div>
+                                    <div className="text-xs text-gray-500">{cambio.fecha}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Costes y Resultados */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">Costes y Resultados</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {/* Métricas de Coste */}
+                          <div>
+                            <h4 className="font-medium mb-3 text-gray-700">Inversión Total</h4>
+                            <div className="space-y-2">
+                              <div className="flex justify-between">
+                                <span>Gasto Total:</span>
+                                <span className="font-semibold text-green-600">
+                                  {formatCurrency(auditReport.costes.gastoTotal, auditReport.costes.moneda)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Gasto Promedio Diario:</span>
+                                <span className="font-medium">
+                                  {formatCurrency(auditReport.costes.gastoDiario, auditReport.costes.moneda)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>CPC Promedio:</span>
+                                <span className="font-medium">
+                                  {formatCurrency(auditReport.costes.cpcPromedio, auditReport.costes.moneda)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>CPM Promedio:</span>
+                                <span className="font-medium">
+                                  {formatCurrency(auditReport.costes.cpmPromedio, auditReport.costes.moneda)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Métricas de Resultado */}
+                          <div>
+                            <h4 className="font-medium mb-3 text-gray-700">Resultados Obtenidos</h4>
+                            <div className="space-y-2">
+                              <div className="flex justify-between">
+                                <span>Impresiones:</span>
+                                <span className="font-semibold text-blue-600">
+                                  {formatNumber(auditReport.resultados.impresiones)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Clics:</span>
+                                <span className="font-semibold text-purple-600">
+                                  {formatNumber(auditReport.resultados.clics)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>CTR:</span>
+                                <span className="font-medium">
+                                  {auditReport.resultados.ctr.toFixed(2)}%
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Alcance:</span>
+                                <span className="font-medium">
+                                  {formatNumber(auditReport.resultados.alcance)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Frecuencia:</span>
+                                <span className="font-medium">
+                                  {auditReport.resultados.frecuencia.toFixed(2)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Resumen Ejecutivo */}
+                        <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
+                          <h4 className="font-semibold mb-2 text-gray-800">Resumen Ejecutivo</h4>
+                          <p className="text-sm text-gray-700 leading-relaxed">
+                            {auditReport.resumen}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
