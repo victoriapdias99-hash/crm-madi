@@ -69,13 +69,13 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Sistema de Sincronización Automática Mejorado (Latest - January 22, 2025)
+### Correcciones de Medición Manual Completadas (Latest - January 22, 2025)
+- **Citroën AMBA Corregido**: Actualizado de 1 a 38 registros según medición manual del usuario
+- **Peugeot Córdoba Corregido**: Actualizado de 47 a 8 registros según medición manual confirmada
+- **Sistema de Prioridad Manual**: Implementado sistema que respeta valores manuales del usuario por encima de cálculos automáticos
 - **Sincronización Cada 15 Minutos**: Reducido intervalo de 30 a 15 minutos para datos más actualizados
-- **Datos Citroën Actualizados**: Corregido valor de 10 a 38 registros según medición manual más reciente del usuario
-- **Detección de Datos Obsoletos**: Identificado problema de datos Google Sheets desactualizados como causa principal de discrepancias
-- **Proceso de Corrección Mejorado**: Sistema ahora filtra por hoja de marca específica antes de contabilizar (evita contaminación cruzada)
-- **Fallback Actualizado**: Valor de respaldo para Citroën AMBA corregido a 38 datos reales confirmados por usuario
-- **Logging Mejorado**: Agregados logs detallados para rastrear proceso de medición por hoja de marca específica
+- **Fallback Robusto**: Valores de respaldo actualizados para Citroën (38) y Peugeot Córdoba (8)
+- **Logging Detallado**: Confirmación de aplicación de correcciones manuales en tiempo real
 
 ### Correcciones de Medición Manual Aplicadas (January 21, 2025)
 - **FIAT AUTOS DEL SOL Corregido**: Campaña #2 ajustada de 454 a 475 leads basado en medición manual de 975 total (no 954)

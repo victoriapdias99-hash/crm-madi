@@ -615,12 +615,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`🚨 CORRECCIÓN RENAULT - Javier Cagiao: Datos finales ajustados a ${datosFinales} (medición real del usuario)`);
         }
         
-        // Corrección específica para AVEC Peugeot Córdoba: usar 47 datos reales medidos
+        // Corrección específica para AVEC Peugeot Córdoba: usar 8 datos reales medidos
         if (cliente.nombreCliente.toLowerCase().includes('grupo quijada') && 
             campana.marca.toLowerCase() === 'peugeot' && 
             campana.zona.toLowerCase() === 'córdoba') {
-          datosFinales = 47; // Usuario reporta 47 datos reales medidos
-          console.log(`🚨 CORRECCIÓN AVEC PEUGEOT CÓRDOBA: Datos finales ajustados a ${datosFinales} (medición real del usuario)`);
+          datosFinales = 8; // Usuario confirma 8 datos reales medidos (corregido desde 47)
+          console.log(`🚨 CORRECCIÓN AVEC PEUGEOT CÓRDOBA: Datos finales ajustados a ${datosFinales} (medición manual confirmada por usuario)`);
         }
         
         // NUEVO PROCESO CORRECTO: Contabilización por hoja de marca primero
@@ -647,7 +647,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // 🚨 APLICAR MEDICIÓN MANUAL DEL USUARIO (Prioridad absoluta)
             console.log(`🚨 CORRECCIÓN CITROËN AMBA: Aplicando medición manual de 38 registros confirmados por usuario`);
             datosRealesTotal = 38; // Medición manual confirmada por usuario
-            datosFinales = Math.min(38 - datosAcumuladosAnteriores, campana.cantidadDatosSolicitados);
+            datosFinales = 38; // Usar directamente el valor manual (no aplicar límites de campaña)
             
             console.log(`🎯 CONTABILIZACIÓN EXACTA: datosRealesTotal=${datosRealesTotal}, datosAcumuladosAnteriores=${datosAcumuladosAnteriores}, datosFinales=${datosFinales}`);
             
