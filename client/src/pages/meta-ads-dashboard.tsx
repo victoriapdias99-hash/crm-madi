@@ -140,11 +140,7 @@ export default function MetaAdsDashboard() {
   // Mutación para generar informe de auditoría
   const generateReportMutation = useMutation({
     mutationFn: async (filters: AuditFilters) => {
-      return await apiRequest('/api/meta-ads/audit-report', { 
-        method: 'POST',
-        body: JSON.stringify(filters),
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return await apiRequest('/api/meta-ads/audit-report', 'POST', filters);
     },
     onSuccess: (data: AuditReport) => {
       setAuditReport(data);
