@@ -392,6 +392,12 @@ class MetaAdsService {
         modificados: number;
         pausados: number;
       };
+      anuncios: {
+        total: number;
+        nuevos: number;
+        modificados: number;
+        pausados: number;
+      };
       detalles: Array<{
         tipo: string;
         nombre: string;
@@ -436,7 +442,7 @@ class MetaAdsService {
       const totalSpend = campaignData.reduce((sum, campaign) => sum + campaign.spend, 0);
       const totalImpressions = campaignData.reduce((sum, campaign) => sum + campaign.impressions, 0);
       const totalClicks = campaignData.reduce((sum, campaign) => sum + campaign.clicks, 0);
-      const totalReach = campaignData.reduce((sum, campaign) => sum + (campaign.reach || 0), 0);
+      const totalReach = campaignData.reduce((sum, campaign) => sum + campaign.impressions, 0); // Usamos impressions como aproximación de reach
       const avgFrequency = campaignData.length > 0 
         ? campaignData.reduce((sum, campaign) => sum + campaign.frequency, 0) / campaignData.length 
         : 0;
@@ -490,11 +496,19 @@ class MetaAdsService {
   }
 
   /**
-   * Obtiene datos de conjuntos de anuncios para auditoría
+   * Obtiene datos de conjuntos de anuncios para auditoría de 2 capas (adsets + anuncios)
    */
   private async getAdsetsForAudit(campaignData: CampaignSpendData[], dateRange: { fechaInicio: string; fechaFin: string }) {
+    console.log('🔍 AUDITORÍA 2 CAPAS: Iniciando análisis de adsets y anuncios para', campaignData.length, 'campañas');
+    
     const changes = {
       adsets: {
+        total: 0,
+        nuevos: 0,
+        modificados: 0,
+        pausados: 0
+      },
+      anuncios: {
         total: 0,
         nuevos: 0,
         modificados: 0,
@@ -509,69 +523,138 @@ class MetaAdsService {
     };
 
     try {
-      // Para cada campaña, obtener sus conjuntos de anuncios
+      const rangeStart = new Date(dateRange.fechaInicio);
+      const rangeEnd = new Date(dateRange.fechaFin);
+      
+      // Para cada campaña, obtener conjuntos de anuncios y anuncios
       for (const campaign of campaignData) {
-        const response = await fetch(
-          `https://graph.facebook.com/v21.0/${campaign.campaignId}/adsets?` +
-          `fields=id,name,status,effective_status,created_time,updated_time,start_time,end_time&` +
-          `access_token=${this.config.accessToken}&` +
-          `time_range=${JSON.stringify({since: dateRange.fechaInicio, until: dateRange.fechaFin})}`
+        console.log(`🔍 Analizando campaña: ${campaign.campaignName} (ID: ${campaign.campaignId})`);
+        
+        // CAPA 1: ADSETS (Conjuntos de Anuncios)
+        const adsetsResponse = await axios.get(
+          `${this.baseUrl}/${campaign.campaignId}/adsets`,
+          {
+            params: {
+              access_token: this.config.accessToken,
+              fields: 'id,name,status,effective_status,created_time,updated_time,start_time,end_time,daily_budget,lifetime_budget,targeting',
+              limit: 100
+            }
+          }
         );
 
-        if (!response.ok) {
-          console.warn(`Failed to fetch adsets for campaign ${campaign.campaignId}`);
-          continue;
-        }
+        if (adsetsResponse.data?.data) {
+          const adsets = adsetsResponse.data.data;
+          changes.adsets.total += adsets.length;
+          console.log(`📊 Encontrados ${adsets.length} adsets en campaña ${campaign.campaignName}`);
 
-        const data = await response.json();
-        const adsets = data.data || [];
+          for (const adset of adsets) {
+            const createdDate = new Date(adset.created_time);
+            const updatedDate = new Date(adset.updated_time);
 
-        changes.adsets.total += adsets.length;
+            // Detectar adsets nuevos
+            if (createdDate >= rangeStart && createdDate <= rangeEnd) {
+              changes.adsets.nuevos++;
+              changes.detalles.push({
+                tipo: '🆕 Nuevo Conjunto de Anuncios',
+                nombre: adset.name,
+                descripcion: `Creado en campaña: ${campaign.campaignName}. Presupuesto: ${adset.daily_budget ? '$' + adset.daily_budget + '/día' : 'Sin límite'}`,
+                fecha: createdDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+              });
+            }
 
-        for (const adset of adsets) {
-          // Detectar cambios basándose en fechas de actualización
-          const createdDate = new Date(adset.created_time);
-          const updatedDate = new Date(adset.updated_time);
-          const rangeStart = new Date(dateRange.fechaInicio);
-          const rangeEnd = new Date(dateRange.fechaFin);
+            // Detectar adsets modificados (con diferencia de más de 5 minutos entre creación y actualización)
+            if (updatedDate >= rangeStart && updatedDate <= rangeEnd && 
+                Math.abs(updatedDate.getTime() - createdDate.getTime()) > 5 * 60 * 1000) {
+              changes.adsets.modificados++;
+              changes.detalles.push({
+                tipo: '✏️ Conjunto Modificado',
+                nombre: adset.name,
+                descripcion: `Estado actual: ${adset.effective_status}. Campaña: ${campaign.campaignName}`,
+                fecha: updatedDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+              });
+            }
 
-          if (createdDate >= rangeStart && createdDate <= rangeEnd) {
-            changes.adsets.nuevos++;
-            changes.detalles.push({
-              tipo: 'Nuevo Conjunto',
-              nombre: adset.name,
-              descripcion: `Conjunto de anuncios creado en la campaña ${campaign.campaignName}`,
-              fecha: createdDate.toLocaleDateString('es-ES')
-            });
-          } else if (updatedDate >= rangeStart && updatedDate <= rangeEnd && 
-                     Math.abs(updatedDate.getTime() - createdDate.getTime()) > 60000) { // Más de 1 minuto de diferencia
-            changes.adsets.modificados++;
-            changes.detalles.push({
-              tipo: 'Modificación',
-              nombre: adset.name,
-              descripcion: `Estado: ${adset.effective_status || adset.status}`,
-              fecha: updatedDate.toLocaleDateString('es-ES')
-            });
-          }
+            // Detectar adsets pausados
+            if (adset.effective_status === 'PAUSED' || adset.status === 'PAUSED') {
+              changes.adsets.pausados++;
+            }
 
-          if (adset.effective_status === 'PAUSED' || adset.status === 'PAUSED') {
-            changes.adsets.pausados++;
+            // CAPA 2: ANUNCIOS DENTRO DE CADA ADSET
+            try {
+              const adsResponse = await axios.get(
+                `${this.baseUrl}/${adset.id}/ads`,
+                {
+                  params: {
+                    access_token: this.config.accessToken,
+                    fields: 'id,name,status,effective_status,created_time,updated_time,creative{title,body}',
+                    limit: 50
+                  }
+                }
+              );
+
+              if (adsResponse.data?.data) {
+                const ads = adsResponse.data.data;
+                changes.anuncios.total += ads.length;
+                console.log(`📢 Encontrados ${ads.length} anuncios en adset ${adset.name}`);
+
+                for (const ad of ads) {
+                  const adCreatedDate = new Date(ad.created_time);
+                  const adUpdatedDate = new Date(ad.updated_time);
+
+                  // Detectar anuncios nuevos
+                  if (adCreatedDate >= rangeStart && adCreatedDate <= rangeEnd) {
+                    changes.anuncios.nuevos++;
+                    changes.detalles.push({
+                      tipo: '🎯 Nuevo Anuncio',
+                      nombre: ad.name,
+                      descripcion: `Creado en conjunto: ${adset.name}. ${ad.creative?.title ? 'Título: ' + ad.creative.title : 'Sin título'}`,
+                      fecha: adCreatedDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                    });
+                  }
+
+                  // Detectar anuncios modificados
+                  if (adUpdatedDate >= rangeStart && adUpdatedDate <= rangeEnd && 
+                      Math.abs(adUpdatedDate.getTime() - adCreatedDate.getTime()) > 5 * 60 * 1000) {
+                    changes.anuncios.modificados++;
+                    changes.detalles.push({
+                      tipo: '📝 Anuncio Modificado',
+                      nombre: ad.name,
+                      descripcion: `Estado: ${ad.effective_status}. Conjunto: ${adset.name}`,
+                      fecha: adUpdatedDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                    });
+                  }
+
+                  // Detectar anuncios pausados
+                  if (ad.effective_status === 'PAUSED' || ad.status === 'PAUSED') {
+                    changes.anuncios.pausados++;
+                  }
+                }
+              }
+            } catch (adsError) {
+              console.warn(`⚠️ No se pudieron obtener anuncios del adset ${adset.id}:`, adsError);
+            }
+
+            // Pequeña pausa para evitar límites de rate limiting
+            await new Promise(resolve => setTimeout(resolve, 100));
           }
         }
       }
+
+      console.log('✅ AUDITORÍA COMPLETADA:', {
+        adsets: changes.adsets,
+        anuncios: changes.anuncios,
+        detallesEncontrados: changes.detalles.length
+      });
+
     } catch (error) {
-      console.error('Error fetching adsets for audit:', error);
-      // Generar datos de ejemplo si no se pueden obtener datos reales
-      changes.adsets.total = campaignData.length * 3; // Estimación promedio
-      changes.adsets.nuevos = Math.floor(changes.adsets.total * 0.2);
-      changes.adsets.modificados = Math.floor(changes.adsets.total * 0.3);
-      changes.adsets.pausados = Math.floor(changes.adsets.total * 0.1);
+      console.error('🚨 Error en auditoría 2 capas:', error);
       
+      // En caso de error, proporcionar información del error real
       changes.detalles.push({
-        tipo: 'Sistema',
-        nombre: 'Auditoría Automática',
-        descripcion: 'Datos estimados - verificar permisos de API para detalles exactos',
-        fecha: new Date().toLocaleDateString('es-ES')
+        tipo: '⚠️ Error de Auditoría',
+        nombre: 'Sistema de Auditoría',
+        descripcion: `Error al consultar Meta Ads API: ${error instanceof Error ? error.message : 'Error desconocido'}. Verificar permisos de API y conectividad.`,
+        fecha: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
       });
     }
 
@@ -600,10 +683,14 @@ class MetaAdsService {
 
     const formatNumber = (num: number) => new Intl.NumberFormat('es-AR').format(num);
 
+    const adsets = adsetsChanges.adsets;
+    const anuncios = adsetsChanges.anuncios || { nuevos: 0, modificados: 0, pausados: 0, total: 0 };
+    
     return `Durante el período ${dateRange}, se monitorearon ${campaignCount} campañas activas con una inversión total de ${formatCurrency(totalSpend)} ` +
            `(promedio diario: ${formatCurrency(dailySpend)}). Las campañas generaron ${formatNumber(totalImpressions)} impresiones y ${formatNumber(totalClicks)} clics, ` +
-           `alcanzando un CTR del ${ctr.toFixed(2)}%. Se detectaron ${adsetsChanges.adsets.nuevos} nuevos conjuntos de anuncios, ` +
-           `${adsetsChanges.adsets.modificados} modificaciones y ${adsetsChanges.adsets.pausados} conjuntos pausados. ` +
+           `alcanzando un CTR del ${ctr.toFixed(2)}%. ` +
+           `ANÁLISIS DE CONJUNTOS DE ANUNCIOS: Se detectaron ${adsets.nuevos} nuevos conjuntos, ${adsets.modificados} modificaciones y ${adsets.pausados} conjuntos pausados de ${adsets.total} totales. ` +
+           `ANÁLISIS DE ANUNCIOS INDIVIDUALES: Se encontraron ${anuncios.nuevos} nuevos anuncios, ${anuncios.modificados} modificaciones y ${anuncios.pausados} anuncios pausados de ${anuncios.total} anuncios activos. ` +
            `El rendimiento general muestra ${ctr > 1 ? 'un CTR saludable' : 'oportunidades de mejora en CTR'} y ` +
            `${totalSpend > 100000 ? 'una inversión significativa' : 'una inversión moderada'} en el período analizado.`;
   }

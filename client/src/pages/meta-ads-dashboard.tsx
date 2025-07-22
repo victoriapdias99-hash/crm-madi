@@ -46,6 +46,12 @@ interface AuditReport {
       modificados: number;
       pausados: number;
     };
+    anuncios?: {
+      total: number;
+      nuevos: number;
+      modificados: number;
+      pausados: number;
+    };
     detalles: Array<{
       tipo: string;
       nombre: string;
@@ -242,7 +248,7 @@ RESUMEN EJECUTIVO
 ----------------------------------------
 ${report.resumen || 'Informe de auditoría generado para analizar el rendimiento y cambios en las campañas de Meta Ads durante el período especificado.'}
 
-ANÁLISIS DE CAMBIOS EN CONJUNTOS DE ANUNCIOS
+ANÁLISIS DE CAMBIOS EN CONJUNTOS DE ANUNCIOS (CAPA 1)
 ----------------------------------------
 ${report.cambios && report.cambios.adsets ? `
 • Conjuntos activos: ${report.cambios.adsets.total || 0}
@@ -250,6 +256,15 @@ ${report.cambios && report.cambios.adsets ? `
 • Conjuntos modificados: ${report.cambios.adsets.modificados || 0}
 • Conjuntos pausados: ${report.cambios.adsets.pausados || 0}
 ` : 'No hay datos disponibles de cambios en conjuntos de anuncios.'}
+
+ANÁLISIS DE CAMBIOS EN ANUNCIOS INDIVIDUALES (CAPA 2)
+----------------------------------------
+${report.cambios && report.cambios.anuncios ? `
+• Anuncios activos: ${report.cambios.anuncios.total || 0}
+• Nuevos anuncios: ${report.cambios.anuncios.nuevos || 0}
+• Anuncios modificados: ${report.cambios.anuncios.modificados || 0}
+• Anuncios pausados: ${report.cambios.anuncios.pausados || 0}
+` : 'No hay datos disponibles de cambios en anuncios individuales.'}
 
 ${report.cambios && report.cambios.detalles && report.cambios.detalles.length > 0 ? `
 DETALLES DE CAMBIOS DETECTADOS
@@ -282,10 +297,11 @@ ${report.resultados ? `
 
 CONCLUSIONES Y RECOMENDACIONES
 ----------------------------------------
-• Durante el período analizado se han monitoreado los cambios en las campañas activas
-• Se recomienda revisar periódicamente los conjuntos de anuncios para optimizar el rendimiento
-• Los datos de gasto y rendimiento pueden utilizarse para ajustar estrategias futuras
-• Es importante mantener un seguimiento continuo de las métricas clave (CPC, CPM, CTR)
+• Durante el período analizado se han monitoreado los cambios en campañas, conjuntos de anuncios y anuncios individuales
+• Se recomienda revisar periódicamente tanto los conjuntos de anuncios como los anuncios individuales para optimizar el rendimiento
+• Los datos de gasto y rendimiento pueden utilizarse para ajustar estrategias tanto a nivel de adset como de anuncio
+• Es importante mantener un seguimiento continuo de las métricas clave (CPC, CPM, CTR) en ambas capas
+• La auditoría de 2 capas proporciona mayor granularidad para identificar oportunidades de optimización específicas
 
 ----------------------------------------
 Informe generado automáticamente por el Sistema de Gestión de Campañas Meta Ads
