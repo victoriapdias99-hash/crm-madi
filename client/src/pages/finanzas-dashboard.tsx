@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Save, RefreshCw, DollarSign, TrendingUp, Calculator } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, Save, RefreshCw, DollarSign, TrendingUp, Calculator, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Navigation } from "@/components/navigation";
@@ -24,6 +25,7 @@ interface FinanzasData {
   roiNegocio: number;
   impuestosIIBB: number;
   totalFacturado: number;
+  fechaCampana: string;
 }
 
 interface ResumenPorMarca {
@@ -38,10 +40,53 @@ interface ResumenPorMarca {
 export default function FinanzasDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [mesSeleccionado, setMesSeleccionado] = useState<string>('todos');
+  const [ventaValues, setVentaValues] = useState<Record<number, number>>({});
+  
   const { data: finanzasData, isLoading } = useQuery({
     queryKey: ['/api/dashboard/finanzas'],
     refetchInterval: 300000, // Refrescar cada 5 minutos
   });
+
+  // Extraer meses únicos de los datos
+  const mesesDisponibles = useMemo(() => {
+    if (!finanzasData) return [];
+    
+    const meses = new Set<string>();
+    finanzasData.forEach((f: FinanzasData) => {
+      if (f.fechaCampana) {
+        const fecha = new Date(f.fechaCampana);
+        const mesAno = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+        meses.add(mesAno);
+      }
+    });
+    
+    return Array.from(meses).sort().reverse(); // Más recientes primero
+  }, [finanzasData]);
+
+  // Filtrar datos por mes
+  const finanzasDataFiltradas = useMemo(() => {
+    if (!finanzasData) return [];
+    
+    if (mesSeleccionado === 'todos') {
+      return finanzasData;
+    }
+    
+    return finanzasData.filter((f: FinanzasData) => {
+      if (!f.fechaCampana) return false;
+      
+      const fecha = new Date(f.fechaCampana);
+      const mesAno = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+      return mesAno === mesSeleccionado;
+    });
+  }, [finanzasData, mesSeleccionado]);
+
+  // Formatear mes para mostrar
+  const formatearMes = (mesAno: string) => {
+    const [año, mes] = mesAno.split('-');
+    const fecha = new Date(parseInt(año), parseInt(mes) - 1);
+    return fecha.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  };
 
   // Eliminar mutation - modo solo lectura
   /*const updateVentaMutation = useMutation({
@@ -119,8 +164,8 @@ export default function FinanzasDashboard() {
     };
   };
 
-  // Agrupar datos por marca
-  const resumenPorMarca = finanzasData ? finanzasData.reduce((acc: Record<string, ResumenPorMarca>, item: FinanzasData, index: number) => {
+  // Agrupar datos por marca (usando datos filtrados)
+  const resumenPorMarca = finanzasDataFiltradas ? finanzasDataFiltradas.reduce((acc: Record<string, ResumenPorMarca>, item: FinanzasData, index: number) => {
     const venta = ventaValues[index] || item.ventaPorCampana || 0;
     const metrics = calculateFinancialMetrics(item, venta);
     
@@ -183,14 +228,33 @@ export default function FinanzasDashboard() {
           </h1>
           <p className="text-muted-foreground">Análisis de rentabilidad y ROI por campaña y marca</p>
         </div>
-        <Button
-          onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/dashboard/finanzas'] })}
-          variant="outline"
-          size="sm"
-        >
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Actualizar
-        </Button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4" />
+            <span className="text-sm font-medium">Filtrar por mes:</span>
+            <Select value={mesSeleccionado} onValueChange={setMesSeleccionado}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Todos los meses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos los meses</SelectItem>
+                {mesesDisponibles.map(mes => (
+                  <SelectItem key={mes} value={mes}>
+                    {formatearMes(mes)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/dashboard/finanzas'] })}
+            variant="outline"
+            size="sm"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Actualizar
+          </Button>
+        </div>
       </div>
 
       {/* Resumen por marca */}
@@ -237,7 +301,7 @@ export default function FinanzasDashboard() {
           <CardTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5" />
             Análisis Financiero por Campaña
-            <Badge variant="secondary">{finanzasData?.length || 0} campañas</Badge>
+            <Badge variant="secondary">{finanzasDataFiltradas?.length || 0} campañas</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -259,7 +323,7 @@ export default function FinanzasDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {finanzasData?.map((data: FinanzasData, index: number) => {
+                {finanzasDataFiltradas?.map((data: FinanzasData, index: number) => {
                   const currentVenta = ventaValues[index] || data.ventaPorCampana || 0;
                   const metrics = calculateFinancialMetrics(data, currentVenta);
                   

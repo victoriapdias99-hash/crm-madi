@@ -1408,7 +1408,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           roi: roi,
           impuestosIIBB: impuestosIIBB,
           totalFacturado: ventaPorCampana,
-          fechaCampana: data.fecha || data.fechaInicio || new Date().toISOString().split('T')[0] // Agregar fecha para filtro de mes
+          fechaCampana: data.fechaCampana || data.fecha || data.fechaInicio || new Date().toISOString().split('T')[0] // Agregar fecha para filtro de mes
         };
       }));
       
