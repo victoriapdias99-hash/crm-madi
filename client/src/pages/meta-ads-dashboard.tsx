@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { RefreshCw, DollarSign, TrendingUp, Users, BarChart3, Settings, FileText, Activity } from "lucide-react";
+import { RefreshCw, DollarSign, TrendingUp, Users, BarChart3, Settings, FileText, Activity, Download, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Navigation } from "@/components/navigation";
@@ -89,6 +89,7 @@ export default function MetaAdsDashboard() {
     rangoRapido: 'ult7dias'
   });
   const [auditReport, setAuditReport] = useState<AuditReport | null>(null);
+  const [showFullReport, setShowFullReport] = useState(false);
 
   // Función para aplicar rango rápido
   const applyQuickRange = (rangoRapido: string) => {
@@ -228,6 +229,91 @@ export default function MetaAdsDashboard() {
 
   const formatNumber = (num: number) => {
     return new Intl.NumberFormat('es-AR').format(num);
+  };
+
+  // Función para generar informe completo en texto
+  const generateFullReportText = (report: AuditReport) => {
+    const reportText = `
+INFORME DE AUDITORÍA META ADS
+========================================
+Período: ${report.periodo}
+Fecha de generación: ${format(new Date(), 'dd/MM/yyyy HH:mm:ss')}
+
+RESUMEN EJECUTIVO
+----------------------------------------
+${report.resumen || 'Informe de auditoría generado para analizar el rendimiento y cambios en las campañas de Meta Ads durante el período especificado.'}
+
+ANÁLISIS DE CAMBIOS EN CONJUNTOS DE ANUNCIOS
+----------------------------------------
+${report.cambios && report.cambios.adsets ? `
+• Conjuntos activos: ${report.cambios.adsets.total || 0}
+• Nuevos conjuntos: ${report.cambios.adsets.nuevos || 0}
+• Conjuntos modificados: ${report.cambios.adsets.modificados || 0}
+• Conjuntos pausados: ${report.cambios.adsets.pausados || 0}
+` : 'No hay datos disponibles de cambios en conjuntos de anuncios.'}
+
+${report.cambios && report.cambios.detalles && report.cambios.detalles.length > 0 ? `
+DETALLES DE CAMBIOS DETECTADOS
+----------------------------------------
+${report.cambios.detalles.map((cambio, index) => `
+${index + 1}. ${cambio.tipo}: ${cambio.nombre}
+   Descripción: ${cambio.descripcion}
+   Fecha: ${cambio.fecha}
+`).join('\n')}
+` : 'No se detectaron cambios específicos en el período analizado.'}
+
+ANÁLISIS DE COSTES Y INVERSIÓN
+----------------------------------------
+${report.costes ? `
+• Gasto total: ${formatCurrency(report.costes.gastoTotal || 0, report.costes.moneda || 'ARS')}
+• Gasto promedio diario: ${formatCurrency(report.costes.gastoDiario || 0, report.costes.moneda || 'ARS')}
+• CPC promedio: ${formatCurrency(report.costes.cpcPromedio || 0, report.costes.moneda || 'ARS')}
+• CPM promedio: ${formatCurrency(report.costes.cpmPromedio || 0, report.costes.moneda || 'ARS')}
+` : 'No hay datos disponibles de costes.'}
+
+RESULTADOS Y RENDIMIENTO
+----------------------------------------
+${report.resultados ? `
+• Impresiones totales: ${formatNumber(report.resultados.impresiones || 0)}
+• Clics totales: ${formatNumber(report.resultados.clics || 0)}
+• CTR (Click Through Rate): ${(report.resultados.ctr || 0).toFixed(2)}%
+• Alcance: ${formatNumber(report.resultados.alcance || 0)}
+• Frecuencia: ${(report.resultados.frecuencia || 0).toFixed(2)}
+` : 'No hay datos disponibles de resultados.'}
+
+CONCLUSIONES Y RECOMENDACIONES
+----------------------------------------
+• Durante el período analizado se han monitoreado los cambios en las campañas activas
+• Se recomienda revisar periódicamente los conjuntos de anuncios para optimizar el rendimiento
+• Los datos de gasto y rendimiento pueden utilizarse para ajustar estrategias futuras
+• Es importante mantener un seguimiento continuo de las métricas clave (CPC, CPM, CTR)
+
+----------------------------------------
+Informe generado automáticamente por el Sistema de Gestión de Campañas Meta Ads
+© ${new Date().getFullYear()} - Dashboard de Auditoría
+`.trim();
+    return reportText;
+  };
+
+  // Función para descargar informe como archivo de texto
+  const downloadReport = () => {
+    if (!auditReport) return;
+    
+    const reportText = generateFullReportText(auditReport);
+    const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `informe-auditoria-meta-ads-${format(new Date(), 'yyyy-MM-dd-HHmmss')}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Informe descargado",
+      description: "El informe de auditoría ha sido descargado exitosamente",
+    });
   };
 
   if (statsLoading || campaignLoading) {
@@ -511,7 +597,7 @@ export default function MetaAdsDashboard() {
               </div>
 
               {/* Botón Generar Informe */}
-              <div className="flex justify-center">
+              <div className="flex justify-center gap-3">
                 <Button
                   onClick={generateAuditReport}
                   disabled={generateReportMutation.isPending || !auditFilters.fechaInicio || !auditFilters.fechaFin}
@@ -524,6 +610,27 @@ export default function MetaAdsDashboard() {
                   )}
                   Generar Informe
                 </Button>
+                
+                {auditReport && (
+                  <>
+                    <Button
+                      onClick={() => setShowFullReport(!showFullReport)}
+                      variant="outline"
+                      className="border-blue-200 hover:bg-blue-50 text-blue-600"
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      {showFullReport ? 'Vista Resumida' : 'Ver Completo'}
+                    </Button>
+                    <Button
+                      onClick={downloadReport}
+                      variant="outline"
+                      className="border-green-200 hover:bg-green-50 text-green-600"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Descargar
+                    </Button>
+                  </>
+                )}
               </div>
 
               {/* Resultado del Informe */}
@@ -595,6 +702,24 @@ export default function MetaAdsDashboard() {
                                 <p className="text-sm text-gray-700">{auditReport.resumen}</p>
                               </div>
                             )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Vista Completa del Informe */}
+                    {showFullReport && (
+                      <Card className="mb-4">
+                        <CardHeader>
+                          <CardTitle className="text-base">Informe Completo Redactado</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="prose prose-sm max-w-none">
+                            <div className="bg-white p-6 border border-gray-200 rounded-lg shadow-sm">
+                              <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-gray-700">
+                                {generateFullReportText(auditReport)}
+                              </pre>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
