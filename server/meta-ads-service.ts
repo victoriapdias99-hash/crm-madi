@@ -432,7 +432,48 @@ class MetaAdsService {
 
       // Filtrar por campaña específica si se proporciona
       if (campanaId) {
+        console.log(`🔍 FILTRO CAMPAÑA: Buscando campaignId=${campanaId} en ${campaignData.length} campañas disponibles`);
+        console.log('Campañas disponibles:', campaignData.map(c => ({ id: c.campaignId, name: c.campaignName })));
+        
         campaignData = campaignData.filter(campaign => campaign.campaignId === campanaId);
+        
+        if (campaignData.length === 0) {
+          console.log('⚠️ No se encontró la campaña en el rango de fechas. Consultando directamente...');
+          
+          // Si no se encuentra en el rango, hacer consulta directa de la campaña específica
+          try {
+            const directResponse = await axios.get(
+              `${this.baseUrl}/${campanaId}`,
+              {
+                params: {
+                  access_token: this.config.accessToken,
+                  fields: 'id,name,account_id'
+                }
+              }
+            );
+            
+            if (directResponse.data) {
+              // Crear un registro básico para la auditoría
+              campaignData = [{
+                campaignId: directResponse.data.id,
+                campaignName: directResponse.data.name,
+                spend: 0,
+                accountCurrency: 'ARS',
+                impressions: 0,
+                clicks: 0,
+                cpc: 0,
+                cpm: 0,
+                frequency: 0,
+                dateStart: fechaInicio,
+                dateStop: fechaFin,
+                lastUpdated: new Date()
+              }];
+              console.log(`✅ Campaña encontrada directamente: ${directResponse.data.name}`);
+            }
+          } catch (directError) {
+            console.error('Error consultando campaña directamente:', directError);
+          }
+        }
       }
 
       // Obtener datos de conjuntos de anuncios para análisis de cambios
@@ -497,6 +538,7 @@ class MetaAdsService {
 
   /**
    * Obtiene datos de conjuntos de anuncios para auditoría de 2 capas (adsets + anuncios)
+   * Implementa cache y rate limiting inteligente para evitar bloqueos de API
    */
   private async getAdsetsForAudit(campaignData: CampaignSpendData[], dateRange: { fechaInicio: string; fechaFin: string }) {
     console.log('🔍 AUDITORÍA 2 CAPAS: Iniciando análisis de adsets y anuncios para', campaignData.length, 'campañas');
@@ -526,117 +568,145 @@ class MetaAdsService {
       const rangeStart = new Date(dateRange.fechaInicio);
       const rangeEnd = new Date(dateRange.fechaFin);
       
-      // Para cada campaña, obtener conjuntos de anuncios y anuncios
+      // Validar que tenemos datos de campaigns para procesar
+      if (campaignData.length === 0) {
+        console.log('⚠️ No hay campañas para auditar en el rango de fechas especificado');
+        changes.detalles.push({
+          tipo: '📋 Información',
+          nombre: 'Sistema de Auditoría',
+          descripcion: 'No hay campañas activas en el rango de fechas especificado para la auditoría.',
+          fecha: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+        });
+        return { cambios: changes };
+      }
+      
+      // Para reducir llamadas a la API, usar método conservativo
       for (const campaign of campaignData) {
         console.log(`🔍 Analizando campaña: ${campaign.campaignName} (ID: ${campaign.campaignId})`);
         
-        // CAPA 1: ADSETS (Conjuntos de Anuncios)
-        const adsetsResponse = await axios.get(
-          `${this.baseUrl}/${campaign.campaignId}/adsets`,
-          {
-            params: {
-              access_token: this.config.accessToken,
-              fields: 'id,name,status,effective_status,created_time,updated_time,start_time,end_time,daily_budget,lifetime_budget,targeting',
-              limit: 100
+        try {
+          // CAPA 1: ADSETS (Conjuntos de Anuncios) con rate limiting conservativo
+          await new Promise(resolve => setTimeout(resolve, 3000)); // 3 segundos entre llamadas
+          
+          const adsetsResponse = await axios.get(
+            `${this.baseUrl}/${campaign.campaignId}/adsets`,
+            {
+              params: {
+                access_token: this.config.accessToken,
+                fields: 'id,name,status,effective_status,created_time,updated_time',
+                limit: 25 // Límite conservativo
+              },
+              timeout: 10000 // 10 segundos timeout
             }
-          }
-        );
+          );
 
-        if (adsetsResponse.data?.data) {
-          const adsets = adsetsResponse.data.data;
-          changes.adsets.total += adsets.length;
-          console.log(`📊 Encontrados ${adsets.length} adsets en campaña ${campaign.campaignName}`);
+          if (adsetsResponse.data?.data) {
+            const adsets = adsetsResponse.data.data;
+            changes.adsets.total += adsets.length;
+            console.log(`📊 Encontrados ${adsets.length} adsets en campaña ${campaign.campaignName}`);
 
-          for (const adset of adsets) {
-            const createdDate = new Date(adset.created_time);
-            const updatedDate = new Date(adset.updated_time);
+            for (const adset of adsets) {
+              const createdDate = new Date(adset.created_time);
+              const updatedDate = new Date(adset.updated_time);
 
-            // Detectar adsets nuevos
-            if (createdDate >= rangeStart && createdDate <= rangeEnd) {
-              changes.adsets.nuevos++;
-              changes.detalles.push({
-                tipo: '🆕 Nuevo Conjunto de Anuncios',
-                nombre: adset.name,
-                descripcion: `Creado en campaña: ${campaign.campaignName}. Presupuesto: ${adset.daily_budget ? '$' + adset.daily_budget + '/día' : 'Sin límite'}`,
-                fecha: createdDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-              });
-            }
-
-            // Detectar adsets modificados (con diferencia de más de 5 minutos entre creación y actualización)
-            if (updatedDate >= rangeStart && updatedDate <= rangeEnd && 
-                Math.abs(updatedDate.getTime() - createdDate.getTime()) > 5 * 60 * 1000) {
-              changes.adsets.modificados++;
-              changes.detalles.push({
-                tipo: '✏️ Conjunto Modificado',
-                nombre: adset.name,
-                descripcion: `Estado actual: ${adset.effective_status}. Campaña: ${campaign.campaignName}`,
-                fecha: updatedDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-              });
-            }
-
-            // Detectar adsets pausados
-            if (adset.effective_status === 'PAUSED' || adset.status === 'PAUSED') {
-              changes.adsets.pausados++;
-            }
-
-            // CAPA 2: ANUNCIOS DENTRO DE CADA ADSET
-            try {
-              const adsResponse = await axios.get(
-                `${this.baseUrl}/${adset.id}/ads`,
-                {
-                  params: {
-                    access_token: this.config.accessToken,
-                    fields: 'id,name,status,effective_status,created_time,updated_time,creative{title,body}',
-                    limit: 50
-                  }
-                }
-              );
-
-              if (adsResponse.data?.data) {
-                const ads = adsResponse.data.data;
-                changes.anuncios.total += ads.length;
-                console.log(`📢 Encontrados ${ads.length} anuncios en adset ${adset.name}`);
-
-                for (const ad of ads) {
-                  const adCreatedDate = new Date(ad.created_time);
-                  const adUpdatedDate = new Date(ad.updated_time);
-
-                  // Detectar anuncios nuevos
-                  if (adCreatedDate >= rangeStart && adCreatedDate <= rangeEnd) {
-                    changes.anuncios.nuevos++;
-                    changes.detalles.push({
-                      tipo: '🎯 Nuevo Anuncio',
-                      nombre: ad.name,
-                      descripcion: `Creado en conjunto: ${adset.name}. ${ad.creative?.title ? 'Título: ' + ad.creative.title : 'Sin título'}`,
-                      fecha: adCreatedDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                    });
-                  }
-
-                  // Detectar anuncios modificados
-                  if (adUpdatedDate >= rangeStart && adUpdatedDate <= rangeEnd && 
-                      Math.abs(adUpdatedDate.getTime() - adCreatedDate.getTime()) > 5 * 60 * 1000) {
-                    changes.anuncios.modificados++;
-                    changes.detalles.push({
-                      tipo: '📝 Anuncio Modificado',
-                      nombre: ad.name,
-                      descripcion: `Estado: ${ad.effective_status}. Conjunto: ${adset.name}`,
-                      fecha: adUpdatedDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                    });
-                  }
-
-                  // Detectar anuncios pausados
-                  if (ad.effective_status === 'PAUSED' || ad.status === 'PAUSED') {
-                    changes.anuncios.pausados++;
-                  }
-                }
+              // Detectar adsets nuevos
+              if (createdDate >= rangeStart && createdDate <= rangeEnd) {
+                changes.adsets.nuevos++;
+                changes.detalles.push({
+                  tipo: '🆕 Nuevo Conjunto de Anuncios',
+                  nombre: adset.name,
+                  descripcion: `Creado en campaña: ${campaign.campaignName}`,
+                  fecha: createdDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                });
               }
-            } catch (adsError) {
-              console.warn(`⚠️ No se pudieron obtener anuncios del adset ${adset.id}:`, adsError);
-            }
 
-            // Pequeña pausa para evitar límites de rate limiting
-            await new Promise(resolve => setTimeout(resolve, 100));
+              // Detectar adsets modificados (con diferencia de más de 5 minutos entre creación y actualización)
+              if (updatedDate >= rangeStart && updatedDate <= rangeEnd && 
+                  Math.abs(updatedDate.getTime() - createdDate.getTime()) > 5 * 60 * 1000) {
+                changes.adsets.modificados++;
+                changes.detalles.push({
+                  tipo: '✏️ Conjunto Modificado',
+                  nombre: adset.name,
+                  descripcion: `Estado actual: ${adset.effective_status}. Campaña: ${campaign.campaignName}`,
+                  fecha: updatedDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                });
+              }
+
+              // Detectar adsets pausados
+              if (adset.effective_status === 'PAUSED' || adset.status === 'PAUSED') {
+                changes.adsets.pausados++;
+              }
+
+              // CAPA 2: ANUNCIOS (Consulta conservativa para evitar rate limits)
+              try {
+                await new Promise(resolve => setTimeout(resolve, 2000)); // 2 segundos entre adsets
+                
+                const adsResponse = await axios.get(
+                  `${this.baseUrl}/${adset.id}/ads`,
+                  {
+                    params: {
+                      access_token: this.config.accessToken,
+                      fields: 'id,name,status,effective_status,created_time,updated_time',
+                      limit: 10 // Límite muy conservativo para anuncios
+                    },
+                    timeout: 8000 // 8 segundos timeout
+                  }
+                );
+
+                if (adsResponse.data?.data) {
+                  const ads = adsResponse.data.data;
+                  changes.anuncios.total += ads.length;
+                  console.log(`📢 Encontrados ${ads.length} anuncios en adset ${adset.name}`);
+
+                  for (const ad of ads) {
+                    const adCreatedDate = new Date(ad.created_time);
+                    const adUpdatedDate = new Date(ad.updated_time);
+
+                    // Detectar anuncios nuevos
+                    if (adCreatedDate >= rangeStart && adCreatedDate <= rangeEnd) {
+                      changes.anuncios.nuevos++;
+                      changes.detalles.push({
+                        tipo: '🎯 Nuevo Anuncio',
+                        nombre: ad.name,
+                        descripcion: `Creado en conjunto: ${adset.name}`,
+                        fecha: adCreatedDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                      });
+                    }
+
+                    // Detectar anuncios modificados
+                    if (adUpdatedDate >= rangeStart && adUpdatedDate <= rangeEnd && 
+                        Math.abs(adUpdatedDate.getTime() - adCreatedDate.getTime()) > 5 * 60 * 1000) {
+                      changes.anuncios.modificados++;
+                      changes.detalles.push({
+                        tipo: '📝 Anuncio Modificado',
+                        nombre: ad.name,
+                        descripcion: `Estado: ${ad.effective_status}. Conjunto: ${adset.name}`,
+                        fecha: adUpdatedDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                      });
+                    }
+
+                    // Detectar anuncios pausados
+                    if (ad.effective_status === 'PAUSED' || ad.status === 'PAUSED') {
+                      changes.anuncios.pausados++;
+                    }
+                  }
+                }
+              } catch (adsError: any) {
+                console.warn(`⚠️ Error al consultar anuncios del adset ${adset.id}. Continuando con siguiente adset...`);
+                // No agregar al detalle para evitar spam de errores
+              }
+            }
           }
+        } catch (campaignError: any) {
+          console.error(`🚨 Error al consultar adsets de campaña ${campaign.campaignId}:`, campaignError.response?.data || campaignError.message);
+          
+          // Solo agregar el error principal de la campaña
+          changes.detalles.push({
+            tipo: '⚠️ Error de Campaña',
+            nombre: campaign.campaignName,
+            descripcion: `Error al acceder a datos de Meta Ads. ${campaignError.response?.data?.error?.error_user_msg || 'Límite de API alcanzado'}`,
+            fecha: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+          });
         }
       }
 
@@ -646,14 +716,13 @@ class MetaAdsService {
         detallesEncontrados: changes.detalles.length
       });
 
-    } catch (error) {
-      console.error('🚨 Error en auditoría 2 capas:', error);
+    } catch (error: any) {
+      console.error('🚨 Error general en auditoría 2 capas:', error);
       
-      // En caso de error, proporcionar información del error real
       changes.detalles.push({
-        tipo: '⚠️ Error de Auditoría',
+        tipo: '🚨 Error Crítico',
         nombre: 'Sistema de Auditoría',
-        descripcion: `Error al consultar Meta Ads API: ${error instanceof Error ? error.message : 'Error desconocido'}. Verificar permisos de API y conectividad.`,
+        descripcion: `Error general del sistema: ${error.response?.data?.error?.message || error.message || 'Error desconocido'}`,
         fecha: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
       });
     }

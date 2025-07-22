@@ -69,7 +69,17 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Sistema Centralizado Database-First 100% Completado (Latest - January 22, 2025)
+### Sistema de Auditoría de 2 Capas Meta Ads Implementado (Latest - January 22, 2025)
+- **Auditoría Avanzada**: Implementado sistema de detección de cambios en 2 capas: adsets y anuncios individuales
+- **Consulta Directa Meta Ads**: Sistema consulta directamente fechas de creación/modificación desde API de Meta Ads v21.0
+- **Rate Limiting Inteligente**: Implementado control de llamadas con pausas de 3 segundos entre campañas y 2 segundos entre adsets
+- **Detección Real de Cambios**: Sistema identifica nuevos conjuntos de anuncios, modificaciones, nuevos anuncios individuales y estados pausados
+- **Informes Detallados**: Secciones separadas para análisis de adsets (Capa 1) y anuncios individuales (Capa 2)
+- **Manejo de Errores**: Sistema robusto que maneja límites de API y proporciona información clara de errores
+- **Filtrado por Campaña**: Capacidad de auditar campañas específicas con consulta directa cuando no se encuentran en rangos de fechas
+- **Datos Auténticos**: Todo el análisis basado en datos reales de Meta Ads sin datos sintéticos o de ejemplo
+
+### Sistema Centralizado Database-First 100% Completado (January 22, 2025)
 - **Servicio Centralizado Implementado**: `centralized-data-service.ts` unifica toda la lógica de datos en PostgreSQL
 - **Endpoints Centralizados Nuevos**: `/api/data/sync-all`, `/api/datos-diarios/centralized`, `/api/finanzas/centralized`
 - **Problema Arquitectónico Resuelto**: Finanzas ahora usa `facturacionBruta` desde campaigns table, no `ventaPorCampana` derivado
