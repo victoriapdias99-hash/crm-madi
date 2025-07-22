@@ -188,6 +188,8 @@ export default function MetaAdsDashboard() {
       return await apiRequest('/api/meta-ads/audit-report', 'POST', filters);
     },
     onSuccess: (data: AuditReport) => {
+      console.log("🔍 AUDIT REPORT DATA RECEIVED:", data);
+      console.log("🔍 DATA STRUCTURE:", JSON.stringify(data, null, 2));
       setAuditReport(data);
       toast({
         title: "Informe generado",
@@ -195,6 +197,7 @@ export default function MetaAdsDashboard() {
       });
     },
     onError: (error: any) => {
+      console.error("🚨 AUDIT REPORT ERROR:", error);
       toast({
         variant: "destructive",
         title: "Error generando informe",
@@ -524,7 +527,7 @@ export default function MetaAdsDashboard() {
               </div>
 
               {/* Resultado del Informe */}
-              {auditReport && auditReport.cambios && auditReport.cambios.adsets && (
+              {auditReport && (
                 <div className="space-y-4 mt-6">
                   <div className="border-t pt-4">
                     <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -533,48 +536,69 @@ export default function MetaAdsDashboard() {
                     </h3>
 
                     {/* Cambios en Conjuntos y Anuncios */}
-                    <Card className="mb-4">
-                      <CardHeader>
-                        <CardTitle className="text-base">Auditoría de Cambios en Conjuntos y Anuncios</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                            <div className="p-3 bg-blue-50 rounded-lg">
-                              <div className="text-2xl font-bold text-blue-600">{auditReport.cambios.adsets.total}</div>
-                              <div className="text-sm text-gray-600">Conjuntos Activos</div>
-                            </div>
-                            <div className="p-3 bg-green-50 rounded-lg">
-                              <div className="text-2xl font-bold text-green-600">{auditReport.cambios.adsets.nuevos}</div>
-                              <div className="text-sm text-gray-600">Nuevos</div>
-                            </div>
-                            <div className="p-3 bg-yellow-50 rounded-lg">
-                              <div className="text-2xl font-bold text-yellow-600">{auditReport.cambios.adsets.modificados}</div>
-                              <div className="text-sm text-gray-600">Modificados</div>
-                            </div>
-                            <div className="p-3 bg-red-50 rounded-lg">
-                              <div className="text-2xl font-bold text-red-600">{auditReport.cambios.adsets.pausados}</div>
-                              <div className="text-sm text-gray-600">Pausados</div>
-                            </div>
-                          </div>
-                          
-                          {auditReport.cambios && auditReport.cambios.detalles && auditReport.cambios.detalles.length > 0 && (
-                            <div className="mt-4">
-                              <h4 className="font-medium mb-2">Cambios Detectados:</h4>
-                              <div className="space-y-2 max-h-40 overflow-y-auto">
-                                {auditReport.cambios.detalles.map((cambio, index) => (
-                                  <div key={index} className="p-2 bg-gray-50 rounded text-sm">
-                                    <div className="font-medium">{cambio.tipo}: {cambio.nombre}</div>
-                                    <div className="text-gray-600">{cambio.descripcion}</div>
-                                    <div className="text-xs text-gray-500">{cambio.fecha}</div>
-                                  </div>
-                                ))}
+                    {auditReport.cambios && auditReport.cambios.adsets ? (
+                      <Card className="mb-4">
+                        <CardHeader>
+                          <CardTitle className="text-base">Auditoría de Cambios en Conjuntos y Anuncios</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                              <div className="p-3 bg-blue-50 rounded-lg">
+                                <div className="text-2xl font-bold text-blue-600">{auditReport.cambios.adsets.total || 0}</div>
+                                <div className="text-sm text-gray-600">Conjuntos Activos</div>
+                              </div>
+                              <div className="p-3 bg-green-50 rounded-lg">
+                                <div className="text-2xl font-bold text-green-600">{auditReport.cambios.adsets.nuevos || 0}</div>
+                                <div className="text-sm text-gray-600">Nuevos</div>
+                              </div>
+                              <div className="p-3 bg-yellow-50 rounded-lg">
+                                <div className="text-2xl font-bold text-yellow-600">{auditReport.cambios.adsets.modificados || 0}</div>
+                                <div className="text-sm text-gray-600">Modificados</div>
+                              </div>
+                              <div className="p-3 bg-red-50 rounded-lg">
+                                <div className="text-2xl font-bold text-red-600">{auditReport.cambios.adsets.pausados || 0}</div>
+                                <div className="text-sm text-gray-600">Pausados</div>
                               </div>
                             </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
+                            
+                            {auditReport.cambios.detalles && auditReport.cambios.detalles.length > 0 && (
+                              <div className="mt-4">
+                                <h4 className="font-medium mb-2">Cambios Detectados:</h4>
+                                <div className="space-y-2 max-h-40 overflow-y-auto">
+                                  {auditReport.cambios.detalles.map((cambio, index) => (
+                                    <div key={index} className="p-2 bg-gray-50 rounded text-sm">
+                                      <div className="font-medium">{cambio.tipo}: {cambio.nombre}</div>
+                                      <div className="text-gray-600">{cambio.descripcion}</div>
+                                      <div className="text-xs text-gray-500">{cambio.fecha}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <Card className="mb-4">
+                        <CardHeader>
+                          <CardTitle className="text-base">Información del Informe</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="p-4 bg-yellow-50 rounded-lg">
+                            <p className="text-sm text-gray-600">
+                              Informe generado exitosamente. Datos de auditoría disponibles para el período seleccionado.
+                            </p>
+                            {auditReport.resumen && (
+                              <div className="mt-3">
+                                <h4 className="font-medium mb-2">Resumen:</h4>
+                                <p className="text-sm text-gray-700">{auditReport.resumen}</p>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
 
                     {/* Costes y Resultados */}
                     {auditReport.costes && auditReport.resultados && (
