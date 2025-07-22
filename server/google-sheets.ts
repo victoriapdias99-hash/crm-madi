@@ -140,6 +140,7 @@ class GoogleSheetsService {
       console.log(`🔍 FILTRO POR MARCA: Buscando en hoja "${marcaCapitalized}" para cliente "${clienteNombre}"`);
       
       const leads = await this.getSheetData(marcaCapitalized);
+      console.log(`📋 DATOS ACTUALES EN HOJA ${marcaCapitalized}: ${leads.length} registros totales`);
       
       // PASO 2: Verificar que el nombre del cliente y marca es el mismo
       const leadsFiltered = leads.filter(lead => {

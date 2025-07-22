@@ -16,19 +16,21 @@ export class GoogleSheetsSyncService {
   }
 
   /**
-   * Inicializa el sistema de sincronización automática cada 30 minutos
+   * Inicializa el sistema de sincronización automática cada 15 minutos
    */
   public startAutoSync() {
-    console.log('🚀 Iniciando sincronización automática de Google Sheets cada 30 minutos');
+    console.log('🚀 Iniciando sincronización automática de Google Sheets cada 15 minutos');
     
     // Ejecutar sincronización inicial
     this.performSync();
 
-    // Programar sincronización cada 30 minutos usando node-cron
-    cron.schedule('*/30 * * * *', () => {
-      console.log('⏰ Ejecutando sincronización programada de Google Sheets...');
+    // Programar sincronización cada 15 minutos usando node-cron
+    cron.schedule('*/15 * * * *', () => {
+      console.log('⏰ Ejecutando sincronización programada de Google Sheets (cada 15 min)...');
       this.performSync();
     });
+    
+    console.log('📊 Próxima sincronización automática en 15 minutos');
   }
 
   /**

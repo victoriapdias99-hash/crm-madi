@@ -72,7 +72,7 @@ app.use((req, res, next) => {
     
     const syncService = new GoogleSheetsSyncService(sheetsServiceAdapter);
     syncService.startAutoSync();
-    console.log('✅ Sincronización automática Google Sheets iniciada');
+    console.log('✅ Sincronización automática Google Sheets iniciada (cada 15 minutos)');
   } catch (error) {
     console.error('❌ Error iniciando sincronización Google Sheets:', (error as Error)?.message || 'Error desconocido');
   }

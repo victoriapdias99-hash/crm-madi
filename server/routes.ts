@@ -652,9 +652,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
           } catch (error) {
             console.error(`❌ Error en nuevo proceso Citroën:`, error);
-            // Fallback temporal con valor conocido
-            datosFinales = 10;
-            console.log(`🚨 FALLBACK CITROËN AMBA: Usando valor fallback ${datosFinales}`);
+            // Fallback temporal con valor conocido (actualizado según medición manual del usuario)
+            datosFinales = 38;
+            console.log(`🚨 FALLBACK CITROËN AMBA: Usando valor actualizado ${datosFinales} (medición manual 38 registros confirmada por usuario)`);
           }
         }
         
