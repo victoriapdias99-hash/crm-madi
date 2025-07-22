@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Building2, Calendar, Target, Package, Copy, Clock, Edit2, Check, X } from "lucide-react";
+import { Plus, Building2, Calendar, Target, Package, Copy, Clock, Edit2, Check, X, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -119,6 +119,7 @@ function EditablePedidosPorDia({ campana }: { campana: CampanaComercial }) {
 export default function CampanasManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCampana, setEditingCampana] = useState<CampanaComercial | null>(null);
+  const [clienteFiltro, setClienteFiltro] = useState<string>('todos');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -281,6 +282,19 @@ export default function CampanasManagement() {
     return cliente ? cliente.nombreCliente : `Cliente #${clienteId}`;
   };
 
+  // Filtrar campañas por cliente
+  const campanasFiltradas = useMemo(() => {
+    if (!Array.isArray(campanas)) return [];
+    
+    if (clienteFiltro === 'todos') {
+      return campanas;
+    }
+    
+    return campanas.filter((campana: CampanaComercial) => 
+      campana.clienteId.toString() === clienteFiltro
+    );
+  }, [campanas, clienteFiltro]);
+
   if (isLoading) {
     return (
       <div className="p-6">
@@ -303,17 +317,35 @@ export default function CampanasManagement() {
             Gestión de Campañas
           </h1>
           <p className="text-muted-foreground">
-            Administra las campañas comerciales de tus clientes
+            Administra las campañas comerciales de tus clientes • {campanasFiltradas?.length || 0} campañas
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => openDialog()} className="btn-gradient">
-              <Plus className="w-4 h-4 mr-2" />
-              Nueva Campaña
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4" />
+            <span className="text-sm font-medium">Filtrar por cliente:</span>
+            <Select value={clienteFiltro} onValueChange={setClienteFiltro}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Todos los clientes" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos los clientes</SelectItem>
+                {clientes.map(cliente => (
+                  <SelectItem key={cliente.id} value={cliente.id.toString()}>
+                    {cliente.nombreCliente}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => openDialog()} className="btn-gradient">
+                <Plus className="w-4 h-4 mr-2" />
+                Nueva Campaña
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingCampana ? "Editar Campaña" : "Nueva Campaña"}
@@ -544,11 +576,12 @@ export default function CampanasManagement() {
             </Form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Lista de Campañas */}
       <div className="grid gap-4">
-        {campanas && campanas.length > 0 ? campanas.map((campana: CampanaComercial) => (
+        {campanasFiltradas && campanasFiltradas.length > 0 ? campanasFiltradas.map((campana: CampanaComercial) => (
           <Card key={campana.id} className="card-elevated hover-lift">
             <CardHeader className="pb-3">
               <div className="flex justify-between items-start">
@@ -656,30 +689,53 @@ export default function CampanasManagement() {
                     <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Fecha Creación</h4>
                   </div>
                   <p className="text-sm">
-                    {new Date(campana.fechaCreacion).toLocaleDateString('es-AR')}
+                    {campana.fechaCreacion ? new Date(campana.fechaCreacion).toLocaleDateString('es-AR') : 'No especificada'}
                   </p>
                 </div>
               </div>
             </CardContent>
           </Card>
-        )) : null}
+        )) : (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Filter className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-lg font-medium mb-2">
+                {Array.isArray(campanas) && campanas.length === 0 
+                  ? "No hay campañas registradas" 
+                  : "No hay campañas para el cliente seleccionado"
+                }
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                {Array.isArray(campanas) && campanas.length === 0 
+                  ? "Comienza creando tu primera campaña comercial."
+                  : clienteFiltro !== 'todos' 
+                    ? "Prueba seleccionando otro cliente o crea una nueva campaña."
+                    : "Comienza creando tu primera campaña comercial."
+                }
+              </p>
+              {Array.isArray(campanas) && campanas.length === 0 ? (
+                <Button onClick={() => openDialog()} className="btn-gradient">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Crear Primera Campaña
+                </Button>
+              ) : (
+                <div className="flex gap-2 justify-center">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setClienteFiltro('todos')}
+                  >
+                    Ver Todas las Campañas
+                  </Button>
+                  <Button onClick={() => openDialog()} className="btn-gradient">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Nueva Campaña
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
-
-      {campanas && campanas.length === 0 && (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <Target className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-medium mb-2">No hay campañas registradas</h3>
-            <p className="text-muted-foreground mb-4">
-              Comienza creando tu primera campaña comercial.
-            </p>
-            <Button onClick={() => openDialog()} className="btn-gradient">
-              <Plus className="w-4 h-4 mr-2" />
-              Crear Primera Campaña
-            </Button>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
