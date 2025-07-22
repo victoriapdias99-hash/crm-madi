@@ -25,16 +25,14 @@ export default function ReportesGraficos() {
         const clienteNombre = (dato.clienteNombre || dato.cliente || '').toLowerCase();
         let marca = dato.marca || '';
         
-        // Extraer marca del nombre del cliente si no está presente
-        if (!marca) {
-          if (clienteNombre.includes('fiat')) marca = 'Fiat';
-          else if (clienteNombre.includes('peugeot')) marca = 'Peugeot';
-          else if (clienteNombre.includes('toyota')) marca = 'Toyota';
-          else if (clienteNombre.includes('chevrolet')) marca = 'Chevrolet';
-          else if (clienteNombre.includes('renault')) marca = 'Renault';
-          else if (clienteNombre.includes('citroen')) marca = 'Citroen';
-          else marca = 'Otros';
-        }
+        // Siempre extraer marca del nombre del cliente ya que dato.marca viene null
+        if (clienteNombre.includes('fiat')) marca = 'Fiat';
+        else if (clienteNombre.includes('peugeot')) marca = 'Peugeot';
+        else if (clienteNombre.includes('toyota')) marca = 'Toyota';
+        else if (clienteNombre.includes('chevrolet')) marca = 'Chevrolet';
+        else if (clienteNombre.includes('renault')) marca = 'Renault';
+        else if (clienteNombre.includes('citroen')) marca = 'Citroen';
+        else marca = 'Otros';
         
         if (marca !== marcaSeleccionada) return false;
       }
@@ -55,17 +53,18 @@ export default function ReportesGraficos() {
       const clienteNombre = (dato.clienteNombre || dato.cliente || '').toLowerCase();
       let marca = dato.marca || '';
       
-      if (!marca) {
-        if (clienteNombre.includes('fiat')) marca = 'Fiat';
-        else if (clienteNombre.includes('peugeot')) marca = 'Peugeot';
-        else if (clienteNombre.includes('toyota')) marca = 'Toyota';
-        else if (clienteNombre.includes('chevrolet')) marca = 'Chevrolet';
-        else if (clienteNombre.includes('renault')) marca = 'Renault';
-        else if (clienteNombre.includes('citroen')) marca = 'Citroen';
-        else marca = 'Otros';
-      }
+      // Siempre extraer marca del nombre del cliente ya que dato.marca viene null
+      if (clienteNombre.includes('fiat')) marca = 'Fiat';
+      else if (clienteNombre.includes('peugeot')) marca = 'Peugeot';
+      else if (clienteNombre.includes('toyota')) marca = 'Toyota';
+      else if (clienteNombre.includes('chevrolet')) marca = 'Chevrolet';
+      else if (clienteNombre.includes('renault')) marca = 'Renault';
+      else if (clienteNombre.includes('citroen')) marca = 'Citroen';
+      else marca = 'Otros';
       
-      marcas.add(marca);
+      if (marca && marca !== 'Otros') {
+        marcas.add(marca);
+      }
     });
     return Array.from(marcas).sort();
   }, [datosDiarios]);
@@ -82,17 +81,15 @@ export default function ReportesGraficos() {
       // Mapear marca desde el cliente si no está presente
       let marca = dato.marca || 'Sin marca';
       
-      // Si no hay marca, extraerla del nombre del cliente
-      if (marca === 'Sin marca' || !marca) {
-        const clienteNombre = (dato.clienteNombre || dato.cliente || '').toLowerCase();
-        if (clienteNombre.includes('fiat')) marca = 'Fiat';
-        else if (clienteNombre.includes('peugeot')) marca = 'Peugeot';
-        else if (clienteNombre.includes('toyota')) marca = 'Toyota';
-        else if (clienteNombre.includes('chevrolet')) marca = 'Chevrolet';
-        else if (clienteNombre.includes('renault')) marca = 'Renault';
-        else if (clienteNombre.includes('citroen')) marca = 'Citroen';
-        else marca = 'Otros';
-      }
+      // Siempre extraer marca del nombre del cliente ya que dato.marca viene null
+      const clienteNombre = (dato.clienteNombre || dato.cliente || '').toLowerCase();
+      if (clienteNombre.includes('fiat')) marca = 'Fiat';
+      else if (clienteNombre.includes('peugeot')) marca = 'Peugeot';
+      else if (clienteNombre.includes('toyota')) marca = 'Toyota';
+      else if (clienteNombre.includes('chevrolet')) marca = 'Chevrolet';
+      else if (clienteNombre.includes('renault')) marca = 'Renault';
+      else if (clienteNombre.includes('citroen')) marca = 'Citroen';
+      else marca = 'Otros';
       if (!acc[marca]) {
         acc[marca] = {
           marca,
@@ -471,6 +468,60 @@ export default function ReportesGraficos() {
                     <td className="p-2 text-right">{marca.campanas}</td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tabla de Datos Detallados */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Datos Detallados</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-2">Cliente</th>
+                  <th className="text-left p-2">Marca</th>
+                  <th className="text-left p-2">Fecha Inicio</th>
+                  <th className="text-left p-2">Fecha Fin</th>
+                  <th className="text-right p-2">Días de Campaña</th>
+                  <th className="text-left p-2">Fecha</th>
+                </tr>
+              </thead>
+              <tbody>
+                {datosFiltrados.map((dato: any, index: number) => {
+                  // Extraer marca del nombre del cliente ya que dato.marca viene null
+                  const clienteNombre = (dato.clienteNombre || dato.cliente || '').toLowerCase();
+                  let marca = dato.marca || '';
+                  if (clienteNombre.includes('fiat')) marca = 'Fiat';
+                  else if (clienteNombre.includes('peugeot')) marca = 'Peugeot';
+                  else if (clienteNombre.includes('toyota')) marca = 'Toyota';
+                  else if (clienteNombre.includes('chevrolet')) marca = 'Chevrolet';
+                  else if (clienteNombre.includes('renault')) marca = 'Renault';
+                  else if (clienteNombre.includes('citroen')) marca = 'Citroen';
+                  else marca = 'Otros';
+
+                  // Calcular fechas de campaña basado en la fecha actual y duración estimada
+                  const fechaActual = dato.fecha ? new Date(dato.fecha) : new Date();
+                  const fechaInicio = dato.fechaInicio ? new Date(dato.fechaInicio) : new Date(fechaActual.getTime() - (7 * 24 * 60 * 60 * 1000)); // 7 días atrás por defecto
+                  const fechaFin = dato.fechaFin ? new Date(dato.fechaFin) : fechaActual;
+                  const diasCampana = Math.ceil((fechaFin.getTime() - fechaInicio.getTime()) / (24 * 60 * 60 * 1000));
+
+                  return (
+                    <tr key={index} className="border-b hover:bg-gray-50 dark:hover:bg-gray-900">
+                      <td className="p-2 font-medium">{dato.clienteNombre || dato.cliente || 'Sin cliente'}</td>
+                      <td className="p-2">{marca}</td>
+                      <td className="p-2">{fechaInicio.toLocaleDateString('es-AR')}</td>
+                      <td className="p-2">{fechaFin.toLocaleDateString('es-AR')}</td>
+                      <td className="p-2 text-right">{diasCampana} días</td>
+                      <td className="p-2">{fechaActual.toLocaleDateString('es-AR')}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
