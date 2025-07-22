@@ -1378,44 +1378,57 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Enviados metrics operations
-  async getEnviadosMetrics(clienteNombre?: string): Promise<EnviadosMetrics[]> {
-    let query = db.select().from(enviadosMetrics);
-    
-    if (clienteNombre) {
-      query = query.where(eq(enviadosMetrics.clienteNombre, clienteNombre));
-    }
-    
-    return await query;
+  async getEnviadosMetrics(clienteNombre: string, numeroCampana: string): Promise<EnviadosMetrics | undefined> {
+    const [metrics] = await db.select().from(enviadosMetrics)
+      .where(
+        eq(enviadosMetrics.clienteNombre, clienteNombre) && 
+        eq(enviadosMetrics.numeroCampana, numeroCampana)
+      );
+    return metrics || undefined;
   }
 
-  async updateEnviadosMetrics(clienteNombre: string, numeroCampana: string, datosEnviados: number): Promise<void> {
-    try {
-      // Intentar actualizar registro existente
-      const existing = await db.select().from(enviadosMetrics)
-        .where(eq(enviadosMetrics.clienteNombre, clienteNombre))
-        .limit(1);
+  async updateEnviadosMetrics(data: Partial<InsertEnviadosMetrics>): Promise<EnviadosMetrics> {
+    if (!data.clienteNombre || !data.numeroCampana) {
+      throw new Error('clienteNombre and numeroCampana are required');
+    }
 
-      if (existing.length > 0) {
-        await db.update(enviadosMetrics)
-          .set({
-            datosEnviados,
-            lastCalculatedAt: new Date(),
-            updatedAt: new Date()
-          })
-          .where(eq(enviadosMetrics.clienteNombre, clienteNombre));
-        console.log(`✅ DB METRICS: Actualizado ${clienteNombre} con ${datosEnviados} enviados`);
-      } else {
-        await db.insert(enviadosMetrics).values({
-          clienteNombre,
-          numeroCampana,
-          datosEnviados,
+    // Try to update existing record first
+    const existing = await this.getEnviadosMetrics(data.clienteNombre, data.numeroCampana);
+    
+    if (existing) {
+      const [updated] = await db.update(enviadosMetrics)
+        .set({
+          ...data,
+          lastCalculatedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(
+          eq(enviadosMetrics.clienteNombre, data.clienteNombre) && 
+          eq(enviadosMetrics.numeroCampana, data.numeroCampana)
+        )
+        .returning();
+      return updated;
+    } else {
+      // Create new record
+      const [created] = await db.insert(enviadosMetrics)
+        .values({
+          clienteNombre: data.clienteNombre,
+          numeroCampana: data.numeroCampana,
+          datosEnviados: data.datosEnviados || 0,
+          enviados: data.enviados || 0,
+          inversion: data.inversion || 0,
+          cpl: data.cpl || 0,
+          venta: data.venta || 0,
+          ganancia: data.ganancia || 0,
+          roi: data.roi || 0,
+          impuestos: data.impuestos || 0,
+          cpa: data.cpa || 0,
           fechaInicio: new Date(),
-          fechaFin: new Date()
-        });
-        console.log(`✅ DB METRICS: Creado ${clienteNombre} con ${datosEnviados} enviados`);
-      }
-    } catch (error) {
-      console.error(`❌ Error actualizando métrica para ${clienteNombre}:`, error);
+          fechaFin: new Date(),
+          fechaActualizacion: new Date()
+        })
+        .returning();
+      return created;
     }
   }
 }

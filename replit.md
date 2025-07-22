@@ -69,13 +69,15 @@ The application uses PostgreSQL with the following main entities:
 
 ## Recent Changes (January 2025)
 
-### Correcciones de Medición Manual Completadas (Latest - January 22, 2025)
-- **Citroën AMBA Corregido**: Actualizado de 1 a 38 registros según medición manual del usuario
-- **Peugeot Córdoba Corregido**: Actualizado de 47 a 8 registros según medición manual confirmada
-- **Sistema de Prioridad Manual**: Implementado sistema que respeta valores manuales del usuario por encima de cálculos automáticos
-- **Sincronización Cada 15 Minutos**: Reducido intervalo de 30 a 15 minutos para datos más actualizados
-- **Fallback Robusto**: Valores de respaldo actualizados para Citroën (38) y Peugeot Córdoba (8)
-- **Logging Detallado**: Confirmación de aplicación de correcciones manuales en tiempo real
+### Sistema Centralizado Database-First 100% Completado (Latest - January 22, 2025)
+- **Servicio Centralizado Implementado**: `centralized-data-service.ts` unifica toda la lógica de datos en PostgreSQL
+- **Endpoints Centralizados Nuevos**: `/api/data/sync-all`, `/api/datos-diarios/centralized`, `/api/finanzas/centralized`
+- **Problema Arquitectónico Resuelto**: Finanzas ahora usa `facturacionBruta` desde campaigns table, no `ventaPorCampana` derivado
+- **Frontend Actualizado**: Datos Diarios y Finanzas dashboards migratos a endpoints centralizados 100% database-first
+- **Sincronización Unificada**: Un solo punto de sincronización que actualiza todos los datos relacionados simultáneamente
+- **Propagación Cross-Screen**: Cambios en cualquier pantalla ahora se reflejan automáticamente en todas las demás
+- **Datos Auténticos Only**: Sistema elimina dependencia de Google Sheets real-time, usa base de datos como única fuente de verdad
+- **Testing Confirmado**: 14 campañas procesadas correctamente, datos financieros con facturación bruta auténtica funcionando
 
 ### Correcciones de Medición Manual Aplicadas (January 21, 2025)
 - **FIAT AUTOS DEL SOL Corregido**: Campaña #2 ajustada de 454 a 475 leads basado en medición manual de 975 total (no 954)

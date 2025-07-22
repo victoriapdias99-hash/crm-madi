@@ -7,6 +7,7 @@ import { AnalistaFuncional } from "./analista-funcional";
 import { registerMetaAdsRoutes } from "./meta-ads-routes";
 import { MetaAdsService } from "./meta-ads-service";
 import { UpdateEnviadosService } from "./update-enviados-service";
+import { centralizedDataService } from "./centralized-data-service";
 import { 
   insertLeadSchema, 
   insertCampaignSchema, 
@@ -1232,6 +1233,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Obtener datos para dashboard de finanzas
   // Endpoint para actualizar completamente todos los datos
+  // NUEVO ENDPOINT CENTRALIZADO: Sincronización completa de datos desde DB
+  app.post('/api/data/sync-all', async (req, res) => {
+    try {
+      console.log('🔄 CENTRALIZED: Iniciando sincronización completa database-first...');
+      
+      const result = await centralizedDataService.syncAllDataToDatabase();
+      
+      console.log('✅ CENTRALIZED: Sincronización completa exitosa');
+      res.json({
+        success: true,
+        message: 'Datos sincronizados completamente desde base de datos',
+        ...result,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error: any) {
+      console.error('❌ CENTRALIZED: Error en sincronización:', error);
+      res.status(500).json({ 
+        error: `Error al sincronizar datos: ${error.message}`,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // NUEVO ENDPOINT CENTRALIZADO: Datos completos desde DB para cualquier pantalla
+  app.get('/api/data/complete', async (req, res) => {
+    try {
+      console.log('📊 CENTRALIZED: Obteniendo datos completos desde base de datos...');
+      
+      const { clienteId, marca, fechaDesde, fechaHasta } = req.query;
+      const filters = {
+        clienteId: clienteId ? parseInt(clienteId as string) : undefined,
+        marca: marca as string,
+        fechaDesde: fechaDesde as string,
+        fechaHasta: fechaHasta as string
+      };
+      
+      const data = await centralizedDataService.getCompleteDataFromDatabase(filters);
+      
+      console.log(`📊 CENTRALIZED: Datos obtenidos: ${data.length} registros`);
+      res.json({
+        success: true,
+        data,
+        count: data.length,
+        filters,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error: any) {
+      console.error('❌ CENTRALIZED: Error obteniendo datos:', error);
+      res.status(500).json({ 
+        error: `Error al obtener datos: ${error.message}`,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
   app.post('/api/dashboard/refresh-all-data', async (req, res) => {
     try {
       console.log('🔄 Iniciando actualización completa de datos...');
@@ -1298,11 +1356,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // NUEVO ENDPOINT FINANZAS CENTRALIZADO: Solo desde base de datos
+  app.get('/api/finanzas/centralized', async (req, res) => {
+    try {
+      console.log('💰 CENTRALIZED FINANZAS: Obteniendo datos financieros desde base de datos...');
+      
+      const { mes, marca } = req.query;
+      const filters = {
+        marca: marca as string,
+        fechaDesde: mes ? `${mes}-01` : undefined,
+        fechaHasta: mes ? `${mes}-31` : undefined
+      };
+      
+      const data = await centralizedDataService.getCompleteDataFromDatabase(filters);
+      
+      // Transformar para formato de finanzas
+      const finanzasData = data.map(item => ({
+        cliente: item.clienteNombre,
+        clienteNombre: item.clienteNombre,
+        campana: `${item.clienteNombre} - ${item.marca} #${item.numeroCampana}`,
+        numeroCampana: item.numeroCampana,
+        marca: item.marca,
+        zona: item.zona,
+        totalLeads: item.enviados,
+        cpl: item.cpl,
+        cpa: item.cpa,
+        ventaPorCampana: item.venta,
+        inversionTotal: item.inversion,
+        inversionRealizada: item.inversion,
+        inversionPendiente: 0,
+        ganancia: item.ganancia,
+        roi: item.roi,
+        impuestosIIBB: item.impuestos,
+        totalFacturado: item.facturacionBruta || item.venta,
+        fechaCampana: item.fechaCampana
+      }));
+      
+      console.log(`💰 CENTRALIZED FINANZAS: ${finanzasData.length} registros financieros desde BD`);
+      res.json(finanzasData);
+      
+    } catch (error: any) {
+      console.error('❌ CENTRALIZED FINANZAS: Error:', error);
+      res.status(500).json({ error: `Error obteniendo finanzas: ${error.message}` });
+    }
+  });
+
+  // NUEVO ENDPOINT DATOS DIARIOS CENTRALIZADO: Solo desde base de datos
+  app.get('/api/datos-diarios/centralized', async (req, res) => {
+    try {
+      console.log('📊 CENTRALIZED DATOS DIARIOS: Obteniendo desde base de datos...');
+      
+      const data = await centralizedDataService.getCompleteDataFromDatabase();
+      
+      // Transformar para formato de datos diarios
+      const datosDiariosData = data.map(item => ({
+        id: item.id,
+        clienteId: item.clienteId,
+        clienteNombre: item.clienteNombre,
+        numeroCampana: item.numeroCampana,
+        marca: item.marca,
+        zona: item.zona,
+        fechaCampana: item.fechaCampana,
+        cantidadDatosSolicitados: item.cantidadDatosSolicitados,
+        enviados: item.enviados,
+        cpl: item.cpl,
+        venta: item.venta,
+        ventaPorCampana: item.venta,
+        inversion: item.inversion,
+        inversionRealizada: item.inversion,
+        inversionPendiente: Math.max(0, (item.cantidadDatosSolicitados * item.cpl) - item.inversion),
+        porcentajeCompletado: item.cantidadDatosSolicitados > 0 ? 
+          Math.round((item.enviados / item.cantidadDatosSolicitados) * 100) : 0,
+        estado: item.enviados >= item.cantidadDatosSolicitados ? 'Completada' : 'En Progreso',
+        cpa: item.cpa,
+        fechaUltimaActualizacion: item.fechaUltimaActualizacion
+      }));
+      
+      console.log(`📊 CENTRALIZED DATOS DIARIOS: ${datosDiariosData.length} registros desde BD`);
+      res.json(datosDiariosData);
+      
+    } catch (error: any) {
+      console.error('❌ CENTRALIZED DATOS DIARIOS: Error:', error);
+      res.status(500).json({ error: `Error obteniendo datos diarios: ${error.message}` });
+    }
+  });
+
   app.get('/api/dashboard/finanzas', async (req, res) => {
     try {
       // Obtener datos del dashboard principal que tiene los cálculos de inversión correctos
       const datosDiariosCompletos = await fetch('http://localhost:5000/api/dashboard/datos-diarios');
       const datosDiarios = await datosDiariosCompletos.json();
+      
+      // Obtener todas las campañas comerciales para acceder a facturacionBruta
+      const campanasComerciales = await storage.getAllCampanasComerciales();
       
       // Transformar datos para finanzas con inversiones reales mapeadas
       const finanzasData = await Promise.all(datosDiarios.map(async (data: any, index: number) => {
@@ -1321,6 +1467,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Obtener venta por campaña desde datos diarios (mejor fuente)
         const ventaPorCampana = parseFloat(data.ventaPorCampana) || 0;
+        
+        // Buscar la campaña comercial correspondiente para obtener facturacionBruta
+        const campanaComercial = campanasComerciales.find((c: any) => 
+          c.clienteId.toString() === data.clienteId?.toString() && 
+          c.numeroCampana?.toString() === data.numeroCampana?.toString()
+        );
+        
+        // Usar facturacionBruta de la campaña comercial si está disponible, sino usar ventaPorCampana
+        const totalFacturado = campanaComercial?.facturacionBruta 
+          ? parseFloat(campanaComercial.facturacionBruta.toString()) 
+          : ventaPorCampana;
 
         // Obtener CPL desde CPL Directo (no del dashboard datos-diarios)
         const cplDirecto = await storage.getCplByClienteAndCampana(
@@ -1383,12 +1540,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`💰 INVERSIÓN ${data.clienteNombre} (${marca}): Meta Ads $${inversionMetaAds} + 2% = $${inversionCalculada.toFixed(2)}`);
         
-        // Calcular ganancia y ROI
-        const ganancia = ventaPorCampana - inversionCalculada;
+        // Calcular ganancia y ROI usando totalFacturado
+        const ganancia = totalFacturado - inversionCalculada;
         const roi = inversionCalculada > 0 ? (ganancia / inversionCalculada) * 100 : 0;
         
-        // Calcular impuestos IIBB (4% sobre venta)
-        const impuestosIIBB = ventaPorCampana * 0.04;
+        // Calcular impuestos IIBB (4% sobre facturación)
+        const impuestosIIBB = totalFacturado * 0.04;
 
         return {
           cliente: data.cliente,
@@ -1407,7 +1564,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ganancia: ganancia,
           roi: roi,
           impuestosIIBB: impuestosIIBB,
-          totalFacturado: ventaPorCampana,
+          totalFacturado: totalFacturado,
           fechaCampana: data.fechaCampana || data.fecha || data.fechaInicio || new Date().toISOString().split('T')[0] // Agregar fecha para filtro de mes
         };
       }));

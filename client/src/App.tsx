@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 
 import DatosDiariosDashboard from "@/pages/datos-diarios-dashboard";
+import DatosDiariosCentralized from "@/pages/datos-diarios-centralized";
 import DashboardSimple from "@/pages/dashboard-simple";
 import DatosDiariosMatching from "@/pages/datos-diarios-matching";
 import Login from "@/pages/login";
@@ -27,6 +28,7 @@ function Router() {
       <Route path="/" component={DatosDiariosDashboard} />
       <Route path="/datos-diarios" component={DatosDiariosDashboard} />
       <Route path="/datos-diarios-dashboard" component={DatosDiariosDashboard} />
+      <Route path="/datos-diarios-centralized" component={DatosDiariosCentralized} />
       <Route path="/simple" component={DashboardSimple} />
 
       <Route path="/matching" component={DatosDiariosMatching} />
