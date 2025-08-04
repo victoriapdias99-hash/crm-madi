@@ -300,7 +300,7 @@ export default function DatosDiariosDashboard() {
       console.log('CPL update successful:', data);
       
       // Actualizar cache localmente para respuesta inmediata
-      queryClient.setQueryData(['/api/dashboard/datos-diarios'], (oldData: any) => {
+      queryClient.setQueryData(['/api/dashboard/datos-diarios-db'], (oldData: any) => {
         if (!oldData) return oldData;
         return oldData.map((item: any, index: number) => {
           if (index === data.clienteIndex) {
@@ -315,7 +315,8 @@ export default function DatosDiariosDashboard() {
         description: `CPL actualizado a ARS $${data.cpl.toLocaleString('es-AR')}`,
       });
       
-      // Invalidar queries para sincronización completa
+      // Invalidar queries para sincronización completa (PostgreSQL primero)
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
     },
     onError: (error) => {
@@ -346,12 +347,12 @@ export default function DatosDiariosDashboard() {
       'Citroen': ['citroen', 'citroën']
     };
 
-    // Extraer marca del nombre del cliente
+    // Extraer marca del nombre del cliente (con validación de seguridad)
     let detectedBrand = '';
     for (const [brand, keywords] of Object.entries(brandMap)) {
       if (keywords.some(keyword => 
-        data.cliente.toLowerCase().includes(keyword) || 
-        data.clienteNombre.toLowerCase().includes(keyword)
+        (data.cliente && data.cliente.toLowerCase().includes(keyword)) || 
+        (data.clienteNombre && data.clienteNombre.toLowerCase().includes(keyword))
       )) {
         detectedBrand = brand;
         break;
@@ -385,6 +386,7 @@ export default function DatosDiariosDashboard() {
         title: "Mapeo Exitoso",
         description: `Se mapearon ${data.mapped || 0} campañas con datos diarios`,
       });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
     },
     onError: (error) => {
@@ -397,20 +399,25 @@ export default function DatosDiariosDashboard() {
     }
   });
 
-  // Memoized calculation for inversions - Performance Optimization
+  // Memoized calculation for inversions - Performance Optimization with NaN protection
   const calculateInversions = useMemo(() => memoize((data: DatosDiariosData, cpl: number) => {
-    const inversionRealizada = data.enviados * cpl * 1.02; // +2% impuestos
-    const faltantes = Math.max(0, data.pedidosTotal - data.enviados);
-    const inversionPendiente = data.porcentajeDatosEnviados >= 100 ? 0 : faltantes * cpl * 1.02;
+    const safeCpl = isNaN(cpl) || !cpl ? 0 : cpl;
+    const safeEnviados = isNaN(data.enviados) || !data.enviados ? 0 : data.enviados;
+    const safePedidosTotal = isNaN(data.pedidosTotal) || !data.pedidosTotal ? 0 : data.pedidosTotal;
+    const safePorcentaje = isNaN(data.porcentajeDatosEnviados) || !data.porcentajeDatosEnviados ? 0 : data.porcentajeDatosEnviados;
+    
+    const inversionRealizada = safeEnviados * safeCpl * 1.02; // +2% impuestos
+    const faltantes = Math.max(0, safePedidosTotal - safeEnviados);
+    const inversionPendiente = safePorcentaje >= 100 ? 0 : faltantes * safeCpl * 1.02;
     
     // Corregir porcentaje de desvío: (Pedidos Total - Enviados) / Enviados × 100
-    const porcentajeDesvio = data.enviados > 0 ? ((data.pedidosTotal - data.enviados) / data.enviados) * 100 : 0;
+    const porcentajeDesvio = safeEnviados > 0 ? ((safePedidosTotal - safeEnviados) / safeEnviados) * 100 : 0;
     
     return {
-      inversionRealizada,
-      inversionPendiente,
-      faltantes,
-      porcentajeDesvio
+      inversionRealizada: isNaN(inversionRealizada) ? 0 : inversionRealizada,
+      inversionPendiente: isNaN(inversionPendiente) ? 0 : inversionPendiente,
+      faltantes: isNaN(faltantes) ? 0 : faltantes,
+      porcentajeDesvio: isNaN(porcentajeDesvio) ? 0 : porcentajeDesvio
     };
   }), []);
 
@@ -480,13 +487,15 @@ export default function DatosDiariosDashboard() {
       return { success: true };
     },
     onSuccess: () => {
-      // Invalidar todas las queries relevantes para recargar datos frescos
+      // Invalidar todas las queries relevantes para recargar datos frescos (PostgreSQL primero)
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
       queryClient.invalidateQueries({ queryKey: ['/api/campanas-comerciales'] });
       queryClient.invalidateQueries({ queryKey: ['/api/clientes'] });
       queryClient.invalidateQueries({ queryKey: ['/api/meta-ads/campaigns'] });
       
       // Forzar recarga manual
+      queryClient.removeQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
       queryClient.removeQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
       refetch();
       
@@ -570,14 +579,14 @@ export default function DatosDiariosDashboard() {
               </div>
             </div>
             <Button
-              onClick={() => refetchGS()}
-              disabled={isLoadingGS}
+              onClick={() => fetchGoogleSheetsDataManually()}
+              disabled={isManualLoading}
               variant="outline"
               className="border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-600 dark:text-orange-300 dark:hover:bg-orange-900/20 px-4 py-3"
               size="lg"
               data-testid="button-fallback-googlesheets"
             >
-              {isLoadingGS ? (
+              {isManualLoading ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
                 <RotateCcw className="h-4 w-4 mr-2" />
@@ -677,7 +686,7 @@ export default function DatosDiariosDashboard() {
                   {campanasEnProceso.map((data: DatosDiariosData, index: number) => {
                     // Usar el índice original de la lista completa para identificar correctamente el registro
                     const originalIndex = finalData?.findIndex(d => d.cliente === data.cliente && d.numeroCampana === data.numeroCampana) || 0;
-                    const uniqueKey = `${data.cliente}-${data.numeroCampana}`;
+                    const uniqueKey = `${data.cliente}-${data.numeroCampana}-${originalIndex}`;
                     
                     const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0; // Use CPL from storage or server
                     
