@@ -414,31 +414,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Nuevo endpoint para sincronizar todas las pestañas de marcas
+  // Endpoint refactorizado para sincronizar todas las pestañas de marcas
   app.post('/api/dashboard/sync-all-sheets', async (req, res) => {
     try {
-      console.log('🚀 Iniciando sincronización completa de pestañas...');
-      const result = await googleSheetsService.syncAllBrandSheetsToDatabase();
+      console.log('🔄 Iniciando sincronización completa refactorizada de pestañas de marcas...');
       
-      if (result.success) {
-        res.json({
-          success: true,
-          message: result.message,
-          stats: result.stats
-        });
-      } else {
-        res.status(500).json({
-          success: false,
-          message: result.message,
-          stats: result.stats
-        });
+      const brands = ['Fiat', 'Peugeot', 'Toyota', 'Chevrolet', 'Renault', 'Citroen'];
+      let totalSynced = 0;
+      const stats: any = {};
+      
+      // Limpiar datos existentes para refresco completo
+      await db.delete(googleSheetsData);
+      console.log('🗑️ Datos antiguos eliminados de la base de datos');
+      
+      // Procesar cada marca individualmente
+      for (const brand of brands) {
+        try {
+          console.log(`📊 Procesando pestaña: ${brand}`);
+          
+          // Obtener datos específicos de la marca desde Google Sheets
+          const brandData = await googleSheetsService.getLeadsBySheet(brand);
+          
+          if (brandData && brandData.length > 0) {
+            console.log(`📋 ${brand}: ${brandData.length} filas de datos encontradas`);
+            
+            // Transformar datos con información de marca
+            const transformedBrandData = brandData.map((row: any, index: number) => ({
+              nombreCompleto: row['Nombre Completo'] || row.nombre || '',
+              telefono: row['Teléfono'] || row.telefono || '',
+              email: row['Email'] || row.email || '',
+              marca: brand.toLowerCase(),
+              cliente: row['Cliente'] || `${brand} Cliente`,
+              provincia: row['Provincia'] || row.provincia || '',
+              localidad: row['Localidad'] || row.localidad || '',
+              fechaLead: row['Fecha'] ? new Date(row['Fecha']) : new Date(),
+              fechaIngreso: new Date(),
+              sourceSheet: brand,
+              rowNumber: index + 1,
+              createdAt: new Date(),
+              updatedAt: new Date()
+            })).filter((row: any) => row.nombreCompleto && row.telefono); // Solo registros válidos
+            
+            // Insertar datos en la base de datos en lotes
+            if (transformedBrandData.length > 0) {
+              for (let i = 0; i < transformedBrandData.length; i += 100) {
+                const batch = transformedBrandData.slice(i, i + 100);
+                await db.insert(googleSheetsData).values(batch);
+                totalSynced += batch.length;
+              }
+              stats[brand] = transformedBrandData.length;
+              console.log(`✅ ${brand}: ${transformedBrandData.length} registros sincronizados`);
+            }
+          } else {
+            console.log(`⚠️ ${brand}: No se encontraron datos`);
+            stats[brand] = 0;
+          }
+        } catch (brandError) {
+          console.error(`❌ Error procesando marca ${brand}:`, brandError);
+          stats[brand] = 0;
+          // Continuar con la siguiente marca
+        }
       }
+      
+      console.log(`✅ Sincronización completa: ${totalSynced} registros totales de todas las marcas`);
+      
+      res.json({ 
+        success: true, 
+        message: `Sincronización completada: ${totalSynced} registros de ${brands.length} marcas`,
+        stats: {
+          totalRecords: totalSynced,
+          brandsProcessed: brands.length,
+          brandBreakdown: stats,
+          timestamp: new Date().toISOString()
+        }
+      });
+      
     } catch (error) {
-      console.error('Error en sincronización:', error);
-      res.status(500).json({
-        success: false,
-        message: `Error en sincronización: ${error.message}`,
-        stats: {}
+      console.error('❌ Error en sincronización completa:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Error al sincronizar pestañas de marcas',
+        details: error.message 
       });
     }
   });

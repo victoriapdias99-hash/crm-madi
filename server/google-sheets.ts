@@ -638,6 +638,64 @@ class GoogleSheetsService {
       console.error('Error during initial sync:', error);
     }
   }
+
+  /**
+   * Obtiene datos específicos de una pestaña de marca
+   */
+  async getLeadsBySheet(sheetName: string): Promise<any[]> {
+    if (!this.sheets) {
+      console.log('Google Sheets API not configured');
+      return [];
+    }
+
+    try {
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: this.spreadsheetId,
+        range: `${sheetName}!A1:Z1000`, // Rango amplio para obtener todos los datos
+      });
+
+      const rows = response.data.values || [];
+      if (rows.length < 2) return [];
+
+      // La primera fila son los headers
+      const headers = rows[0];
+      const dataRows = rows.slice(1);
+
+      const processedData = dataRows
+        .filter((row: any[]) => {
+          // Filtrar filas que tengan al menos nombre y teléfono
+          return row[0] && row[1] && row[0].trim() && row[1].trim();
+        })
+        .map((row: any[]) => {
+          const data: any = {};
+          
+          // Mapear datos usando headers
+          headers.forEach((header: string, index: number) => {
+            if (header && row[index]) {
+              data[header] = row[index];
+            }
+          });
+
+          // Mapeo estándar para campos esperados
+          return {
+            'Nombre Completo': data['Nombre Completo'] || data['Nombre'] || data['Full Name'] || row[0] || '',
+            'Teléfono': data['Teléfono'] || data['Telefono'] || data['Phone'] || row[1] || '',
+            'Email': data['Email'] || data['E-mail'] || row[2] || '',
+            'Provincia': data['Provincia'] || data['State'] || row[3] || '',
+            'Localidad': data['Localidad'] || data['City'] || data['Ciudad'] || row[4] || '',
+            'Fecha': data['Fecha'] || data['Date'] || data['created_time'] || row[5] || '',
+            'Cliente': data['Cliente'] || data['Client'] || sheetName || ''
+          };
+        });
+
+      console.log(`Fetched ${processedData.length} leads from ${sheetName} sheet`);
+      return processedData;
+      
+    } catch (error) {
+      console.error(`Error fetching leads from ${sheetName} sheet:`, error);
+      return [];
+    }
+  }
 }
 
 export const googleSheetsService = new GoogleSheetsService();

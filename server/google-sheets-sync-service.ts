@@ -78,42 +78,96 @@ export class GoogleSheetsSyncService {
   }
 
   /**
-   * Obtiene todos los datos de las hojas de Google Sheets
+   * Obtiene todos los datos de las hojas de Google Sheets de todas las marcas
    */
   private async fetchAllSheetsData(): Promise<any[]> {
     try {
-      // Usar directamente el servicio de interface proporcionado
-      const rawData = await this.googleSheetsService.fetchDataFromSheets();
+      const allBrandsData: any[] = [];
+      const brands = ['Fiat', 'Peugeot', 'Toyota', 'Chevrolet', 'Renault', 'Citroen'];
       
-      console.log(`📋 Obtenidos ${rawData.length} registros brutos de Google Sheets`);
+      console.log('🔄 Iniciando sincronización completa de pestañas de marcas...');
       
-      // Transformar todos los datos con información de marca detectada
-      const transformedData = rawData.map((row, index) => {
-        const marca = this.detectMarca(row);
-        const cliente = this.extractClienteFromData(row);
-        
-        return {
-          nombreCompleto: this.cleanString(row.nombre || row.nombreCompleto || row.full_name || ''),
-          telefono: this.cleanString(row.telefono || row.phone || row.phone_number || ''),
-          email: this.cleanString(row.email || ''),
-          marca: marca,
-          cliente: cliente,
-          provincia: this.cleanString(row.provincia || row.state || ''),
-          localidad: this.cleanString(row.localidad || row.city || row.ciudad || ''),
-          fechaLead: this.parseDate(row.fecha || row.fechaLead || row.created_time),
-          fechaIngreso: new Date(),
-          sourceSheet: 'Google Sheets',
-          rowNumber: index + 1
-        };
-      }).filter(row => row.nombreCompleto && row.telefono && row.marca); // Solo registros válidos
+      // Procesar cada marca individualmente
+      for (const brand of brands) {
+        try {
+          console.log(`📊 Procesando pestaña: ${brand}`);
+          
+          // Obtener datos específicos de la marca desde Google Sheets
+          const brandData = await this.fetchBrandSpecificData(brand);
+          
+          if (brandData && brandData.length > 0) {
+            console.log(`📋 ${brand}: ${brandData.length} filas de datos encontradas`);
+            
+            // Transformar datos con información de marca
+            const transformedBrandData = brandData.map((row: any, index: number) => {
+              return {
+                nombreCompleto: this.cleanString(row['Nombre Completo'] || row.nombre || ''),
+                telefono: this.cleanString(row['Teléfono'] || row.telefono || ''),
+                email: this.cleanString(row['Email'] || row.email || ''),
+                marca: brand.toLowerCase(),
+                cliente: this.extractClienteFromBrand(row, brand),
+                provincia: this.cleanString(row['Provincia'] || row.provincia || ''),
+                localidad: this.cleanString(row['Localidad'] || row.localidad || ''),
+                fechaLead: this.parseDate(row['Fecha'] || row.fecha || row['created_time']),
+                fechaIngreso: new Date(),
+                sourceSheet: brand,
+                rowNumber: index + 1
+              };
+            }).filter((row: any) => row.nombreCompleto && row.telefono); // Solo registros válidos
+            
+            allBrandsData.push(...transformedBrandData);
+            console.log(`✅ ${brand}: ${transformedBrandData.length} nuevos, ${allBrandsData.length - transformedBrandData.length} actualizados`);
+          } else {
+            console.log(`⚠️ ${brand}: No se encontraron datos`);
+          }
+        } catch (brandError) {
+          console.error(`❌ Error procesando marca ${brand}:`, brandError);
+          // Continuar con la siguiente marca
+        }
+      }
       
-      console.log(`✅ ${transformedData.length} registros transformados exitosamente`);
-      return transformedData;
+      console.log(`✅ Sincronización completa: ${allBrandsData.length} registros totales de todas las marcas`);
+      return allBrandsData;
       
     } catch (error) {
-      console.error('❌ Error obteniendo datos de Google Sheets:', error);
+      console.error('❌ Error en sincronización completa de marcas:', error);
       throw error;
     }
+  }
+
+  /**
+   * Obtiene datos específicos de una marca desde Google Sheets
+   */
+  private async fetchBrandSpecificData(brand: string): Promise<any[]> {
+    try {
+      // Acceder al método específico de GoogleSheetsService para obtener datos de marca
+      if (typeof (this.googleSheetsService as any).getLeadsBySheet === 'function') {
+        return await (this.googleSheetsService as any).getLeadsBySheet(brand);
+      } else {
+        // Fallback: usar método genérico y filtrar
+        const allData = await this.googleSheetsService.fetchDataFromSheets();
+        return allData.filter((row: any) => 
+          this.detectMarca(row).toLowerCase() === brand.toLowerCase()
+        );
+      }
+    } catch (error) {
+      console.error(`❌ Error obteniendo datos de marca ${brand}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Extrae información del cliente desde datos de marca específica
+   */
+  private extractClienteFromBrand(row: any, brand: string): string {
+    // Buscar en diferentes campos posibles
+    const clienteFields = [
+      row['Cliente'] || row.cliente || row['Client'] || 
+      row['Campaign Name'] || row.campaign_name || row.campaña ||
+      `${brand} Cliente`
+    ];
+    
+    return clienteFields.find(field => field && field.trim()) || `${brand} Cliente`;
   }
 
   /**
