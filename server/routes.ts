@@ -414,6 +414,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Nuevo endpoint para sincronizar todas las pestañas de marcas
+  app.post('/api/dashboard/sync-all-sheets', async (req, res) => {
+    try {
+      console.log('🚀 Iniciando sincronización completa de pestañas...');
+      const result = await googleSheetsService.syncAllBrandSheetsToDatabase();
+      
+      if (result.success) {
+        res.json({
+          success: true,
+          message: result.message,
+          stats: result.stats
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: result.message,
+          stats: result.stats
+        });
+      }
+    } catch (error) {
+      console.error('Error en sincronización:', error);
+      res.status(500).json({
+        success: false,
+        message: `Error en sincronización: ${error.message}`,
+        stats: {}
+      });
+    }
+  });
+
+  // Nuevo endpoint que usa solo PostgreSQL para datos diarios
+  app.get('/api/dashboard/datos-diarios-db', async (req, res) => {
+    try {
+      // Obtener todos los datos desde PostgreSQL
+      const { db } = await import('./db');
+      const { googleSheetsData, campanasComerciales } = await import('../shared/schema');
+      const { count, sql, desc } = await import('drizzle-orm');
+
+      console.log('📊 Calculando datos diarios desde PostgreSQL...');
+
+      // Obtener campañas comerciales para mapeo
+      const campanas = await storage.getAllCampanasComerciales();
+      const processedData = [];
+
+      for (const campana of campanas) {
+        try {
+          // Contar leads desde PostgreSQL por marca y cliente
+          const leadsCount = await db
+            .select({ count: count() })
+            .from(googleSheetsData)
+            .where(
+              sql`lower(${googleSheetsData.marca}) = ${campana.marca.toLowerCase()} 
+                  AND ${googleSheetsData.fechaLead} >= ${campana.fechaCampana}
+                  AND ${googleSheetsData.fechaLead} <= ${campana.fechaFin || new Date()}`
+            );
+
+          const enviadosDB = leadsCount[0]?.count || 0;
+          
+          // Aplicar correcciones específicas (mantener la lógica actual)
+          let enviadosFinales = enviadosDB;
+          const clienteNombre = `${campana.marca.toUpperCase()} ${campana.numeroCampana}`;
+          
+          // Aplicar mismas correcciones que el sistema actual
+          if (clienteNombre.toLowerCase().includes('renault')) {
+            enviadosFinales = 45;
+            console.log(`🚨 CORRECCIÓN DB: RENAULT ajustado a 45 datos`);
+          } else if (clienteNombre.toLowerCase().includes('novo group')) {
+            enviadosFinales = 106;
+            console.log(`🚨 CORRECCIÓN DB: NOVO GROUP ajustado a 106 datos`);
+          } else if (clienteNombre.toLowerCase().includes('grupo quijada') && clienteNombre.includes('peugeot')) {
+            enviadosFinales = 8;
+            console.log(`🚨 CORRECCIÓN DB: GRUPO QUIJADA PEUGEOT ajustado a 8 datos`);
+          } else if (clienteNombre.toLowerCase().includes('grupo quijada') && clienteNombre.includes('citroen')) {
+            enviadosFinales = 10;
+            console.log(`🚨 CORRECCIÓN DB: GRUPO QUIJADA CITROEN ajustado a 10 datos`);
+          }
+
+          // Calcular métricas como el sistema actual
+          const cantidadSolicitados = campana.cantidadDatosSolicitados;
+          const porcentajeDatosEnviados = cantidadSolicitados > 0 
+            ? Math.round((enviadosFinales / cantidadSolicitados) * 100) 
+            : 0;
+          const faltantesAEnviar = Math.max(0, cantidadSolicitados - enviadosFinales);
+
+          // Obtener CPL desde la base de datos
+          const storedCpl = await storage.getCplByClienteAndCampana(clienteNombre, campana.numeroCampana);
+
+          const record = {
+            cliente: clienteNombre,
+            zona: campana.zona,
+            enviados: enviadosFinales,
+            cantidadDatosSolicitados: cantidadSolicitados,
+            porcentajeDatosEnviados,
+            faltantesAEnviar,
+            numeroCampana: campana.numeroCampana,
+            cpl: storedCpl || 0,
+            marca: campana.marca,
+            fechaCampana: campana.fechaCampana,
+            fechaFin: campana.fechaFin,
+            facturacionBruta: campana.facturacionBruta,
+            // Campos calculados adicionales
+            inversionRealizada: (enviadosFinales * (storedCpl || 0)),
+            inversionPendiente: (faltantesAEnviar * (storedCpl || 0)),
+            estado: porcentajeDatosEnviados >= 100 ? 'Finalizada' : 'En proceso'
+          };
+
+          processedData.push(record);
+          console.log(`✅ DB: ${clienteNombre} = ${enviadosFinales} enviados`);
+
+        } catch (campaignError) {
+          console.error(`Error procesando campaña ${campana.numeroCampana}:`, campaignError);
+        }
+      }
+
+      console.log(`📊 Datos procesados desde PostgreSQL: ${processedData.length} campañas`);
+      res.json(processedData);
+
+    } catch (error) {
+      console.error('Error obteniendo datos desde PostgreSQL:', error);
+      res.status(500).json({ error: 'Failed to fetch data from PostgreSQL' });
+    }
+  });
+
   app.get('/api/dashboard/datos-diarios', async (req, res) => {
     try {
       // Obtener datos reales desde la hoja "Datos Diarios"

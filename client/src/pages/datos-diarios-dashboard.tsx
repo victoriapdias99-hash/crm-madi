@@ -62,6 +62,40 @@ export default function DatosDiariosDashboard() {
     refetchOnReconnect: true,
   });
 
+  // Mutation para sincronizar todas las pestañas
+  const syncAllSheetsMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('/api/dashboard/sync-all-sheets', {
+        method: 'POST',
+      });
+      return response;
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Sincronización completada",
+        description: data.message || "Todas las pestañas han sido sincronizadas correctamente",
+      });
+      // Invalidar queries para refrescar datos
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
+    },
+    onError: (error: any) => {
+      console.error('Error en sincronización:', error);
+      toast({
+        title: "Error en sincronización",
+        description: error.message || "No se pudieron sincronizar las pestañas",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Query para datos desde PostgreSQL (nuevo endpoint)
+  const { data: datosDiariosDB, isLoading: isLoadingDB, refetch: refetchDB } = useQuery({
+    queryKey: ['/api/dashboard/datos-diarios-db'],
+    enabled: false, // Solo cargar cuando se solicite manualmente
+    staleTime: 5 * 60 * 1000, // Cache por 5 minutos
+  });
+
   // Manual data fetching as fallback
   const fetchDataManually = async () => {
     try {
@@ -505,6 +539,35 @@ export default function DatosDiariosDashboard() {
             <div className="absolute -top-2 -left-2 w-24 h-24 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full opacity-10 animate-pulse"></div>
           </div>
           <div className="flex gap-3">
+            <Button
+              onClick={() => syncAllSheetsMutation.mutate()}
+              disabled={syncAllSheetsMutation.isPending}
+              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold shadow-xl transform hover:scale-105 transition-all duration-300 px-4 py-3"
+              size="lg"
+              data-testid="button-sync-sheets"
+            >
+              {syncAllSheetsMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              Sincronizar Pestañas
+            </Button>
+            <Button
+              onClick={() => refetchDB()}
+              disabled={isLoadingDB}
+              variant="outline"
+              className="border-purple-300 text-purple-700 hover:bg-purple-50 px-4 py-3"
+              size="lg"
+              data-testid="button-test-postgresql"
+            >
+              {isLoadingDB ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              Test PostgreSQL
+            </Button>
             <Button
               onClick={handleUnifiedUpdate}
               disabled={unifiedUpdateMutation.isPending}

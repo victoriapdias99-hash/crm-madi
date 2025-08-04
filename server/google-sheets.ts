@@ -127,6 +127,185 @@ class GoogleSheetsService {
     return allLeads;
   }
 
+  // Nueva función para sincronizar TODAS las pestañas de marcas a PostgreSQL
+  async syncAllBrandSheetsToDatabase(): Promise<{ success: boolean; message: string; stats: any }> {
+    if (!this.sheets) {
+      return { success: false, message: 'Google Sheets API not configured', stats: {} };
+    }
+
+    const brandSheets = ['Fiat', 'Peugeot', 'Citroen', 'Toyota', 'Chevrolet', 'Renault'];
+    const stats = {
+      totalProcessed: 0,
+      totalInserted: 0,
+      totalUpdated: 0,
+      errors: 0,
+      brandBreakdown: {} as Record<string, number>
+    };
+
+    try {
+      // Importar dependencias de BD aquí para evitar problemas circulares
+      const { db } = await import('./db');
+      const { googleSheetsData } = await import('../shared/schema');
+      const { eq, and } = await import('drizzle-orm');
+
+      console.log('🔄 Iniciando sincronización completa de pestañas de marcas...');
+
+      for (const brandName of brandSheets) {
+        try {
+          console.log(`\n📊 Procesando pestaña: ${brandName}`);
+          
+          // Obtener datos de la pestaña
+          const response = await this.sheets.spreadsheets.values.get({
+            spreadsheetId: this.spreadsheetId,
+            range: `${brandName}!A:Z`, // Columnas A-Z para capturar todo
+          });
+
+          const rows = response.data.values || [];
+          if (rows.length < 2) {
+            console.log(`⚠️  Pestaña ${brandName} vacía o sin datos`);
+            continue;
+          }
+
+          // Primera fila es header
+          const headers = rows[0];
+          const dataRows = rows.slice(1);
+          
+          console.log(`📋 ${brandName}: ${dataRows.length} filas de datos encontradas`);
+          
+          let brandInserted = 0;
+          let brandUpdated = 0;
+
+          for (let i = 0; i < dataRows.length; i++) {
+            const row = dataRows[i];
+            stats.totalProcessed++;
+
+            // Validar que la fila tenga datos mínimos
+            if (!row[0] || !row[1] || row[0].trim() === '') {
+              continue; // Saltar filas vacías
+            }
+
+            try {
+              // Mapear columnas (ajustar según estructura real de tus sheets)
+              const leadData = {
+                nombreCompleto: row[1] || '', // Columna B - Nombre
+                telefono: row[2] || '', // Columna C - Teléfono
+                email: row[3] || '', // Columna D - Email
+                marca: brandName.toLowerCase(),
+                cliente: this.extractClientFromName(row[1] || ''), // Extraer cliente del nombre
+                provincia: row[4] || '', // Columna E - Provincia
+                localidad: row[5] || '', // Columna F - Localidad
+                fechaLead: this.parseDate(row[0]), // Columna A - Timestamp
+                fechaIngreso: new Date(row[0] || new Date()),
+                sourceSheet: brandName,
+                rowNumber: i + 2, // +2 porque empezamos desde fila 2 (después del header)
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              };
+
+              // Verificar si ya existe (por teléfono y marca)
+              const existing = await db
+                .select()
+                .from(googleSheetsData)
+                .where(
+                  and(
+                    eq(googleSheetsData.telefono, leadData.telefono),
+                    eq(googleSheetsData.marca, leadData.marca)
+                  )
+                )
+                .limit(1);
+
+              if (existing.length > 0) {
+                // Actualizar registro existente
+                await db
+                  .update(googleSheetsData)
+                  .set({
+                    ...leadData,
+                    updatedAt: new Date(),
+                  })
+                  .where(eq(googleSheetsData.id, existing[0].id));
+                
+                brandUpdated++;
+                stats.totalUpdated++;
+              } else {
+                // Insertar nuevo registro
+                await db.insert(googleSheetsData).values(leadData);
+                brandInserted++;
+                stats.totalInserted++;
+              }
+
+            } catch (rowError) {
+              console.error(`Error procesando fila ${i + 2} de ${brandName}:`, rowError);
+              stats.errors++;
+            }
+          }
+
+          stats.brandBreakdown[brandName] = brandInserted + brandUpdated;
+          console.log(`✅ ${brandName}: ${brandInserted} nuevos, ${brandUpdated} actualizados`);
+
+        } catch (brandError) {
+          console.error(`Error procesando pestaña ${brandName}:`, brandError);
+          stats.errors++;
+        }
+      }
+
+      // Actualizar control de sincronización
+      const { syncControl } = await import('../shared/schema');
+      await db.insert(syncControl).values({
+        tableName: 'google_sheets_data',
+        lastSyncAt: new Date(),
+        recordCount: stats.totalInserted + stats.totalUpdated,
+        syncStatus: 'completed',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const message = `Sincronización completada: ${stats.totalInserted} nuevos, ${stats.totalUpdated} actualizados, ${stats.errors} errores`;
+      console.log(`\n🎉 ${message}`);
+      
+      return { success: true, message, stats };
+
+    } catch (error) {
+      console.error('Error en sincronización completa:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      return { 
+        success: false, 
+        message: `Error en sincronización: ${errorMessage}`, 
+        stats 
+      };
+    }
+  }
+
+  // Función auxiliar para extraer cliente del nombre
+  private extractClientFromName(fullName: string): string {
+    // Lógica para identificar el cliente desde el nombre completo
+    // Basado en los patrones observados en el sistema actual
+    const name = fullName.toLowerCase();
+    
+    if (name.includes('albens')) return 'PEUGEOT ALBENS';
+    if (name.includes('autos del sol')) return 'FIAT AUTOS DEL SOL';
+    if (name.includes('novo group')) return 'NOVO GROUP';
+    if (name.includes('grupo quijada')) return 'GRUPO QUIJADA';
+    if (name.includes('italy')) return 'ITALY AUTOS';
+    if (name.includes('javier cagiao')) return 'RENAULT - Javier Cagiao';
+    if (name.includes('mariano pichetti')) return 'TOYOTA MARIANO PICHETTI';
+    
+    // Retornar marca genérica si no coincide con patrones específicos
+    return 'CLIENTE GENERICO';
+  }
+
+  // Función auxiliar para parsear fechas
+  private parseDate(dateStr: string): Date | null {
+    if (!dateStr) return null;
+    
+    try {
+      // Intentar diferentes formatos de fecha
+      const date = new Date(dateStr);
+      return isNaN(date.getTime()) ? null : date;
+    } catch {
+      return null;
+    }
+  }
+
   // Nueva función para obtener datos específicos por marca y cliente
   async getLeadsByBrandAndClient(marca: string, clienteNombre: string, fechaInicio?: Date): Promise<SheetLead[]> {
     if (!this.sheets) {
