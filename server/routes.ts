@@ -426,6 +426,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // 1. Ejecutar sincronización completa de todas las hojas de Google Sheets
       console.log('📊 Sincronizando datos desde Google Sheets con columnas G, H, I...');
+      const { googleSheetsService } = await import('./google-sheets');
       const allLeads = await googleSheetsService.getAllLeadsFromSheets();
       console.log(`📥 Obtenidos ${allLeads.length} leads desde Google Sheets`);
       
