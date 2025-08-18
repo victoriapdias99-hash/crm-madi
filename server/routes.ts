@@ -2402,59 +2402,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Función para calcular fecha de fin automáticamente
   async function calculateFechaFin(fechaInicio: string, cantidadSolicitada: number, marca: string): Promise<string> {
     try {
-      console.log('Calculating fecha_fin for:', { fechaInicio, cantidadSolicitada, marca });
+      console.log('🔢 Calculando fecha_fin automática:', { fechaInicio, cantidadSolicitada, marca });
       
-      // Obtener datos diarios desde Google Sheets
-      const datosDiarios = await googleSheetsService.getDatosDiariosData();
-      console.log('Total datos diarios found:', datosDiarios.length);
+      // Obtener leads desde PostgreSQL en lugar de Google Sheets
+      const { db } = await import('./db');
+      const { leads } = await import('../shared/schema');
+      const { sql } = await import('drizzle-orm');
       
-      // Filtrar datos desde fecha de inicio y por marca
-      const fechaInicioObj = new Date(fechaInicio);
+      // Buscar leads cronológicamente desde la fecha de inicio
+      const leadsResult = await db
+        .select({
+          leadDate: leads.leadDate,
+          campaignName: leads.campaignName
+        })
+        .from(leads)
+        .where(
+          sql`lower(${leads.campaignName}) LIKE ${`%${marca.toLowerCase()}%`} 
+              AND ${leads.source} = 'google_sheets'
+              AND date(${leads.leadDate}) >= ${fechaInicio}`
+        )
+        .orderBy(leads.leadDate);
+      
+      console.log(`📊 Encontrados ${leadsResult.length} leads de ${marca} desde ${fechaInicio}`);
+      
+      if (leadsResult.length === 0) {
+        // No hay datos disponibles, usar estimación conservadora
+        const fechaEstimada = new Date(fechaInicio);
+        fechaEstimada.setDate(fechaEstimada.getDate() + Math.ceil(cantidadSolicitada / 3)); // Estimación: 3 leads por día
+        const fechaFinalString = fechaEstimada.toISOString().split('T')[0];
+        console.log(`⚠️ Sin datos disponibles - fecha estimada: ${fechaFinalString}`);
+        return fechaFinalString;
+      }
+      
+      // Contar leads día por día hasta alcanzar la cantidad solicitada
       let contador = 0;
-      let fechaFin = fechaInicioObj;
+      let fechaFin = fechaInicio;
       
-      // Filtrar por marca (más flexible para matching)
-      const datosFiltrados = datosDiarios.filter((dato: any) => {
-        if (!dato.cliente) return false;
-        const clienteNombre = dato.cliente.toLowerCase();
-        const marcaBuscada = marca.toLowerCase();
-        
-        // Buscar marca en el nombre del cliente o campaña
-        return clienteNombre.includes(marcaBuscada) || 
-               (dato.marca && dato.marca.toLowerCase().includes(marcaBuscada));
+      // Agrupar leads por fecha
+      const leadsPorFecha: { [fecha: string]: number } = {};
+      leadsResult.forEach(lead => {
+        const fechaStr = lead.leadDate.toISOString().split('T')[0];
+        leadsPorFecha[fechaStr] = (leadsPorFecha[fechaStr] || 0) + 1;
       });
       
-      console.log('Datos filtrados por marca:', datosFiltrados.length);
+      // Procesar cronológicamente hasta alcanzar la cantidad
+      const fechasOrdenadas = Object.keys(leadsPorFecha).sort();
       
-      // Ordenar datos por fecha y contar desde la fecha de inicio
-      const datosOrdenados = datosFiltrados
-        .sort((a: any, b: any) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
-      
-      for (const dato of datosOrdenados) {
-        const fechaDato = new Date(dato.fecha);
-        if (fechaDato >= fechaInicioObj) {
-          const cantidad = dato.totalLeads || dato.cantidad || 1;
-          contador += cantidad;
-          fechaFin = fechaDato;
-          
-          console.log(`Fecha: ${dato.fecha}, Cantidad: ${cantidad}, Total acumulado: ${contador}`);
-          
-          if (contador >= cantidadSolicitada) {
-            break;
-          }
+      for (const fecha of fechasOrdenadas) {
+        const leadsEnFecha = leadsPorFecha[fecha];
+        contador += leadsEnFecha;
+        fechaFin = fecha;
+        
+        console.log(`📅 ${fecha}: +${leadsEnFecha} leads (total: ${contador}/${cantidadSolicitada})`);
+        
+        if (contador >= cantidadSolicitada) {
+          break;
         }
       }
       
-      const fechaFinString = fechaFin.toISOString().split('T')[0];
-      console.log('Fecha fin calculada:', fechaFinString, 'con', contador, 'datos acumulados');
+      console.log(`✅ Fecha fin calculada automáticamente: ${fechaFin} (${contador} leads acumulados)`);
+      return fechaFin;
       
-      return fechaFinString;
     } catch (error) {
-      console.error('Error calculating fecha fin:', error);
-      // Fallback: sumar días estimados (1 dato por día)
+      console.error('❌ Error calculating fecha fin:', error);
+      // Fallback: estimación basada en promedio de 2 leads por día
       const fechaInicio = new Date(fechaInicio);
-      fechaInicio.setDate(fechaInicio.getDate() + cantidadSolicitada);
-      return fechaInicio.toISOString().split('T')[0];
+      fechaInicio.setDate(fechaInicio.getDate() + Math.ceil(cantidadSolicitada / 2));
+      const fallbackDate = fechaInicio.toISOString().split('T')[0];
+      console.log(`🔄 Usando fecha fallback: ${fallbackDate}`);
+      return fallbackDate;
     }
   }
 
