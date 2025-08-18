@@ -2397,6 +2397,141 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint para exportar leads de una campaña específica
+  app.get('/api/export/campana-leads/:campaignName', async (req, res) => {
+    try {
+      const { campaignName } = req.params;
+      console.log(`📥 Exportando leads para campaña: ${campaignName}`);
+      
+      // Obtener leads desde PostgreSQL
+      const { db } = await import('./db');
+      const { leads } = await import('../shared/schema');
+      const { sql } = await import('drizzle-orm');
+      
+      // Extraer marca y número de campaña del nombre
+      const campaignParts = campaignName.split(' ');
+      const marca = campaignParts[0]?.toLowerCase();
+      const numeroCampana = campaignParts[1];
+      
+      if (!marca) {
+        return res.status(400).json({ error: 'Formato de campaña inválido' });
+      }
+      
+      // Buscar leads que coincidan con la marca
+      const campaignLeads = await db
+        .select({
+          id: leads.id,
+          firstName: leads.firstName,
+          lastName: leads.lastName,
+          email: leads.email,
+          phone: leads.phone,
+          city: leads.city,
+          campaignName: leads.campaignName,
+          origen: leads.origen,
+          localizacion: leads.localizacion,
+          cliente: leads.cliente,
+          leadDate: leads.leadDate,
+          status: leads.status,
+          cost: leads.cost
+        })
+        .from(leads)
+        .where(
+          sql`lower(${leads.campaignName}) LIKE ${`%${marca}%`} 
+              AND ${leads.source} = 'google_sheets'`
+        )
+        .orderBy(leads.leadDate);
+      
+      console.log(`✅ Encontrados ${campaignLeads.length} leads para ${campaignName}`);
+      
+      res.json({
+        campaignName,
+        marca,
+        numeroCampana,
+        totalLeads: campaignLeads.length,
+        leads: campaignLeads,
+        exportDate: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('Error exporting campaign leads:', error);
+      res.status(500).json({ error: 'Failed to export campaign leads' });
+    }
+  });
+
+  // Endpoint para exportar todas las campañas finalizadas en un solo CSV
+  app.get('/api/export/campanas-finalizadas', async (req, res) => {
+    try {
+      console.log('📊 Exportando todas las campañas finalizadas...');
+      
+      // Obtener campañas comerciales finalizadas
+      const campanasFinalizadas = await storage.getAllCampanasComerciales();
+      const { db } = await import('./db');
+      const { leads } = await import('../shared/schema');
+      const { sql } = await import('drizzle-orm');
+      
+      const exportData = [];
+      
+      for (const campana of campanasFinalizadas) {
+        // Contar leads para determinar si está finalizada
+        const leadsCount = await db
+          .select({ count: sql`count(*)` })
+          .from(leads)
+          .where(
+            sql`lower(${leads.campaignName}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
+                AND ${leads.source} = 'google_sheets'
+                AND date(${leads.leadDate}) >= ${campana.fechaCampana}
+                AND date(${leads.leadDate}) <= ${campana.fechaFin || new Date()}`
+          );
+
+        const totalLeads = Number(leadsCount[0]?.count || 0);
+        const porcentajeCompleto = campana.cantidadDatosSolicitados > 0 
+          ? (totalLeads / campana.cantidadDatosSolicitados) * 100 
+          : 0;
+        
+        // Solo incluir campañas finalizadas (100% completadas)
+        if (porcentajeCompleto >= 100) {
+          // Obtener leads detallados para esta campaña
+          const campaignLeads = await db
+            .select()
+            .from(leads)
+            .where(
+              sql`lower(${leads.campaignName}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
+                  AND ${leads.source} = 'google_sheets'
+                  AND date(${leads.leadDate}) >= ${campana.fechaCampana}
+                  AND date(${leads.leadDate}) <= ${campana.fechaFin || new Date()}`
+            )
+            .orderBy(leads.leadDate);
+          
+          exportData.push({
+            campaignId: campana.id,
+            campaignName: `${campana.marca.toUpperCase()} ${campana.numeroCampana}`,
+            marca: campana.marca,
+            zona: campana.zona,
+            fechaInicio: campana.fechaCampana,
+            fechaFin: campana.fechaFin,
+            cantidadSolicitada: campana.cantidadDatosSolicitados,
+            enviados: totalLeads,
+            porcentajeCompleto,
+            leads: campaignLeads
+          });
+        }
+      }
+      
+      console.log(`✅ Exportando ${exportData.length} campañas finalizadas con ${exportData.reduce((acc, c) => acc + c.leads.length, 0)} leads totales`);
+      
+      res.json({
+        totalCampanasFinalizadas: exportData.length,
+        totalLeads: exportData.reduce((acc, c) => acc + c.leads.length, 0),
+        campanas: exportData,
+        exportDate: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('Error exporting finished campaigns:', error);
+      res.status(500).json({ error: 'Failed to export finished campaigns' });
+    }
+  });
+
 
 
   // Función para calcular fecha de fin automáticamente

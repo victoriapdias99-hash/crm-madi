@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Save, RefreshCw } from "lucide-react";
+import { Loader2, Save, RefreshCw, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Navigation } from "@/components/navigation";
@@ -44,6 +44,140 @@ export default function DatosDiariosDashboard() {
 
   const [forceShowContent, setForceShowContent] = useState(false);
   const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
+  const [exportingCSV, setExportingCSV] = useState(false);
+
+  // Función para exportar campañas finalizadas a CSV
+  const handleExportFinalizadasCSV = async () => {
+    if (campanasFinalizadas.length === 0) {
+      toast({
+        title: "Sin datos para exportar",
+        description: "No hay campañas finalizadas para exportar",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setExportingCSV(true);
+    try {
+      // Obtener datos detallados de leads para todas las campañas finalizadas
+      const exportPromises = campanasFinalizadas.map(async (campana) => {
+        try {
+          const response = await apiRequest(`/api/export/campana-leads/${encodeURIComponent(campana.cliente)}`, {
+            method: 'GET',
+          });
+          return {
+            campana: campana.cliente,
+            zona: campana.zona,
+            fechaInicio: campana.fechaCampana,
+            fechaFin: campana.fechaFinReal,
+            enviados: campana.enviados,
+            leads: response.leads || []
+          };
+        } catch (error) {
+          console.error(`Error obteniendo leads para ${campana.cliente}:`, error);
+          return {
+            campana: campana.cliente,
+            zona: campana.zona,
+            fechaInicio: campana.fechaCampana,
+            fechaFin: campana.fechaFinReal,
+            enviados: campana.enviados,
+            leads: []
+          };
+        }
+      });
+
+      const campanasConLeads = await Promise.all(exportPromises);
+      
+      // Generar CSV con todos los leads de campañas finalizadas
+      const csvContent = generateCSVFromCampanasFinalizadas(campanasConLeads);
+      
+      // Crear blob y descargar archivo
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `campanas_finalizadas_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: "Exportación completada",
+        description: `Se exportaron ${campanasFinalizadas.length} campañas finalizadas con ${campanasConLeads.reduce((acc, c) => acc + c.leads.length, 0)} leads`,
+      });
+
+    } catch (error) {
+      console.error('Error exportando CSV:', error);
+      toast({
+        title: "Error en exportación",
+        description: "No se pudo generar el archivo CSV",
+        variant: "destructive",
+      });
+    } finally {
+      setExportingCSV(false);
+    }
+  };
+
+  // Función para generar contenido CSV
+  const generateCSVFromCampanasFinalizadas = (campanasConLeads: any[]) => {
+    const headers = [
+      'Campaña',
+      'Zona',
+      'Fecha Inicio',
+      'Fecha Fin',
+      'Total Enviados',
+      'Nombre Completo',
+      'Teléfono',
+      'Email',
+      'Ciudad',
+      'Marca',
+      'Origen',
+      'Localización',
+      'Cliente Lead',
+      'Fecha Lead',
+      'Estado'
+    ];
+
+    let csvContent = headers.join(',') + '\n';
+
+    campanasConLeads.forEach(campanaData => {
+      if (campanaData.leads.length === 0) {
+        // Si no hay leads, agregar una fila con información de la campaña
+        csvContent += [
+          `"${campanaData.campana}"`,
+          `"${campanaData.zona}"`,
+          `"${campanaData.fechaInicio}"`,
+          `"${campanaData.fechaFin}"`,
+          campanaData.enviados,
+          '"Sin leads disponibles"',
+          '""', '""', '""', '""', '""', '""', '""', '""', '""'
+        ].join(',') + '\n';
+      } else {
+        campanaData.leads.forEach((lead: any) => {
+          csvContent += [
+            `"${campanaData.campana}"`,
+            `"${campanaData.zona}"`,
+            `"${campanaData.fechaInicio}"`,
+            `"${campanaData.fechaFin}"`,
+            campanaData.enviados,
+            `"${lead.firstName || ''} ${lead.lastName || ''}"`.trim(),
+            `"${lead.phone || ''}"`,
+            `"${lead.email || ''}"`,
+            `"${lead.city || ''}"`,
+            `"${lead.campaignName || ''}"`,
+            `"${lead.origen || ''}"`,
+            `"${lead.localizacion || ''}"`,
+            `"${lead.cliente || ''}"`,
+            `"${lead.leadDate ? new Date(lead.leadDate).toISOString().split('T')[0] : ''}"`,
+            `"${lead.status || ''}"`
+          ].join(',') + '\n';
+        });
+      }
+    });
+
+    return csvContent;
+  };
 
   
   // PostgreSQL optimized query for fast data updates (3s vs 15s)
@@ -851,14 +985,30 @@ export default function DatosDiariosDashboard() {
         {/* Campañas Finalizadas */}
         <Card className="border-0 shadow-2xl bg-gradient-to-r from-white via-emerald-50 to-green-50 dark:from-gray-800 dark:via-emerald-900/10 dark:to-green-900/10">
           <CardHeader className="bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-t-lg">
-            <CardTitle className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                ✅
+            <CardTitle className="flex items-center gap-3 justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                  ✅
+                </div>
+                <span className="text-xl font-bold">Campañas Finalizadas</span>
+                <Badge variant="secondary" className="bg-white/20 text-white border-white/30 font-bold">
+                  {campanasFinalizadas.length} completadas
+                </Badge>
               </div>
-              <span className="text-xl font-bold">Campañas Finalizadas</span>
-              <Badge variant="secondary" className="bg-white/20 text-white border-white/30 font-bold">
-                {campanasFinalizadas.length} completadas
-              </Badge>
+              <Button
+                onClick={handleExportFinalizadasCSV}
+                disabled={exportingCSV || campanasFinalizadas.length === 0}
+                className="bg-white/20 hover:bg-white/30 text-white border-white/30 font-semibold"
+                size="sm"
+                data-testid="button-export-finalizadas-csv"
+              >
+                {exportingCSV ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : (
+                  <Download className="w-4 h-4 mr-2" />
+                )}
+                Exportar CSV
+              </Button>
             </CardTitle>
           </CardHeader>
           <CardContent>

@@ -48,6 +48,13 @@ This project is a real-time dashboard for Meta Ads lead management, specifically
 - **Date Range Fixes**: Updated Toyota campaign dates from 2025-06-07 to 2025-07-06→2025-07-19, Citroen to 2025-07-17→2025-08-18, and Fiat to 2025-06-13→2025-08-18
 - **Perfect Data Accuracy**: All campaigns now display correct lead counts with zero data loss, achieving 100% data integrity across all brands
 
+### Enhanced Business Logic and CSV Export System ✅ (August 18, 2025)
+- **Automatic fecha_fin Calculation**: Implemented PostgreSQL-based calculateFechaFin function that determines completion dates when cantidad_datos_solicitados is reached chronologically
+- **CITROEN 3 Fix**: Corrected fecha_fin from 2025-08-14 to 2025-08-15, showing 42 enviados (30 requested + spillover leads from completion day)
+- **CSV Export for Finalized Campaigns**: Added comprehensive export functionality with download button in "Campañas Finalizadas" section
+- **Detailed Lead Export**: New backend endpoints `/api/export/campana-leads/:campaignName` and `/api/export/campanas-finalizadas` provide complete lead data with metadata
+- **Business Rule Compliance**: fecha_fin automatically calculates when nth lead (cantidad_datos_solicitados) is reached, not set manually as fixed date
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
