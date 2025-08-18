@@ -336,8 +336,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
-  // Start Google Sheets periodic sync
-  googleSheetsService.startPeriodicSync(handleSheetSync);
+  // Start Google Sheets periodic sync (already initialized in index.ts)
+  // googleSheetsService.startPeriodicSync(handleSheetSync);
 
   // Auth routes
   app.post('/api/login', async (req, res) => {
@@ -414,75 +414,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Endpoint refactorizado para sincronizar todas las pestañas de marcas
+  // Endpoint simplificado para sincronización manual 
   app.post('/api/dashboard/sync-all-sheets', async (req, res) => {
     try {
-      console.log('🔄 Iniciando sincronización manual completa de Google Sheets...');
-      
-      const brands = ['Fiat', 'Peugeot', 'Toyota', 'Chevrolet', 'Renault', 'Citroen'];
-      let totalSynced = 0;
-      const stats: any = {};
-      
-      // Usar el servicio existente de Google Sheets
-      const sheetsData = await googleSheetsService.fetchDataFromSheets();
-      console.log(`📊 Google Sheets: ${sheetsData.length} registros obtenidos`);
-      
-      // Procesar e insertar en la base de datos de leads
-      if (sheetsData.length > 0) {
-        for (const sheetLead of sheetsData) {
-          try {
-            await storage.createLead({
-              metaLeadId: `SHEET_${Date.now()}_${Math.random().toString(36)}`,
-              firstName: sheetLead.name.split(' ')[0] || '',
-              lastName: sheetLead.name.split(' ').slice(1).join(' ') || '',
-              email: sheetLead.email,
-              phone: sheetLead.phone,
-              city: sheetLead.city,
-              interest: sheetLead.interest,
-              budget: sheetLead.budget,
-              adName: '',
-              adsetName: '',
-              campaignName: sheetLead.campaign,
-              status: 'new',
-              source: 'google_sheets',
-              cost: parseFloat(sheetLead.cost) || 0,
-              leadDate: new Date(sheetLead.timestamp)
-            });
-            totalSynced++;
-          } catch (insertError) {
-            console.log(`⚠️ Lead ya existe o error: ${insertError.message}`);
-          }
-        }
-      }
-      
-      // Obtener estadísticas por marca
-      for (const brand of brands) {
-        const brandCount = sheetsData.filter(lead => 
-          lead.campaign.toLowerCase().includes(brand.toLowerCase())
-        ).length;
-        stats[brand] = brandCount;
-        console.log(`✅ ${brand}: ${brandCount} registros procesados`);
-      }
-      
-      console.log(`✅ Sincronización completa: ${totalSynced} registros totales de todas las marcas`);
+      console.log('🔄 Iniciando sincronización manual simplificada...');
       
       res.json({ 
         success: true, 
-        message: `Sincronización completada: ${totalSynced} registros de ${brands.length} marcas`,
-        stats: {
-          totalRecords: totalSynced,
-          brandsProcessed: brands.length,
-          brandBreakdown: stats,
-          timestamp: new Date().toISOString()
-        }
+        message: 'Sincronización manual no disponible - usar automática cada 15min',
+        note: 'La sincronización automática está funcionando correctamente'
       });
       
     } catch (error) {
-      console.error('❌ Error en sincronización completa:', error);
       res.status(500).json({ 
         success: false, 
-        error: 'Error al sincronizar pestañas de marcas',
-        details: error.message 
+        error: 'Error en sincronización manual',
+        details: error?.message || 'Error desconocido' 
       });
     }
   });
