@@ -46,72 +46,50 @@ export default function DatosDiariosDashboard() {
   const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
   const [exportingCSV, setExportingCSV] = useState(false);
 
-  // Función para exportar campañas finalizadas a CSV
-  const handleExportFinalizadasCSV = async () => {
-    if (campanasFinalizadas.length === 0) {
-      toast({
-        title: "Sin datos para exportar",
-        description: "No hay campañas finalizadas para exportar",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  // Función para exportar una campaña individual a CSV
+  const handleExportCampanaCSV = async (campana: DatosDiariosData) => {
+    const campaignKey = `${campana.cliente}-export`;
     setExportingCSV(true);
+    
     try {
-      // Obtener datos detallados de leads para todas las campañas finalizadas
-      const exportPromises = campanasFinalizadas.map(async (campana) => {
-        try {
-          const response = await apiRequest(`/api/export/campana-leads/${encodeURIComponent(campana.cliente)}`, {
-            method: 'GET',
-          });
-          return {
-            campana: campana.cliente,
-            zona: campana.zona,
-            fechaInicio: campana.fechaCampana,
-            fechaFin: campana.fechaFinReal,
-            enviados: campana.enviados,
-            leads: response.leads || []
-          };
-        } catch (error) {
-          console.error(`Error obteniendo leads para ${campana.cliente}:`, error);
-          return {
-            campana: campana.cliente,
-            zona: campana.zona,
-            fechaInicio: campana.fechaCampana,
-            fechaFin: campana.fechaFinReal,
-            enviados: campana.enviados,
-            leads: []
-          };
-        }
-      });
-
-      const campanasConLeads = await Promise.all(exportPromises);
+      console.log(`🔽 Exportando CSV para campaña: ${campana.cliente}`);
       
-      // Generar CSV con todos los leads de campañas finalizadas
-      const csvContent = generateCSVFromCampanasFinalizadas(campanasConLeads);
+      const response = await apiRequest(`/api/export/campana-leads/${encodeURIComponent(campana.cliente)}`, {
+        method: 'GET',
+      });
+      
+      const leads = response.leads || [];
+      
+      // Generar CSV para esta campaña específica
+      const csvContent = generateCSVFromSingleCampana(campana, leads);
       
       // Crear blob y descargar archivo
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
+      
+      // Nombre de archivo específico para la campaña
+      const fileName = `${campana.cliente.replace(/\s+/g, '_')}_leads_${new Date().toISOString().split('T')[0]}.csv`;
+      
       link.setAttribute('href', url);
-      link.setAttribute('download', `campanas_finalizadas_${new Date().toISOString().split('T')[0]}.csv`);
+      link.setAttribute('download', fileName);
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      
+      URL.revokeObjectURL(url);
 
       toast({
         title: "Exportación completada",
-        description: `Se exportaron ${campanasFinalizadas.length} campañas finalizadas con ${campanasConLeads.reduce((acc, c) => acc + c.leads.length, 0)} leads`,
+        description: `${campana.cliente}: ${leads.length} leads exportados correctamente`,
       });
 
     } catch (error) {
       console.error('Error exportando CSV:', error);
       toast({
         title: "Error en exportación",
-        description: "No se pudo generar el archivo CSV",
+        description: `No se pudo exportar CSV para ${campana.cliente}`,
         variant: "destructive",
       });
     } finally {
@@ -119,13 +97,14 @@ export default function DatosDiariosDashboard() {
     }
   };
 
-  // Función para generar contenido CSV
-  const generateCSVFromCampanasFinalizadas = (campanasConLeads: any[]) => {
+  // Función para generar contenido CSV de una campaña individual
+  const generateCSVFromSingleCampana = (campana: DatosDiariosData, leads: any[]) => {
     const headers = [
       'Campaña',
       'Zona',
       'Fecha Inicio',
       'Fecha Fin',
+      'Estado',
       'Total Enviados',
       'Nombre Completo',
       'Teléfono',
@@ -135,46 +114,44 @@ export default function DatosDiariosDashboard() {
       'Origen',
       'Localización',
       'Cliente Lead',
-      'Fecha Lead',
-      'Estado'
+      'Fecha Lead'
     ];
 
     let csvContent = headers.join(',') + '\n';
 
-    campanasConLeads.forEach(campanaData => {
-      if (campanaData.leads.length === 0) {
-        // Si no hay leads, agregar una fila con información de la campaña
+    if (leads.length === 0) {
+      // Si no hay leads, agregar una fila con información de la campaña
+      csvContent += [
+        `"${campana.cliente}"`,
+        `"${campana.zona}"`,
+        `"${campana.fechaCampana}"`,
+        `"${campana.fechaFinReal || 'En proceso'}"`,
+        `"${campana.estadoCampana || 'Activa'}"`,
+        campana.enviados,
+        '"Sin leads disponibles"',
+        '""', '""', '""', '""', '""', '""', '""', '""'
+      ].join(',') + '\n';
+    } else {
+      leads.forEach((lead: any) => {
         csvContent += [
-          `"${campanaData.campana}"`,
-          `"${campanaData.zona}"`,
-          `"${campanaData.fechaInicio}"`,
-          `"${campanaData.fechaFin}"`,
-          campanaData.enviados,
-          '"Sin leads disponibles"',
-          '""', '""', '""', '""', '""', '""', '""', '""', '""'
+          `"${campana.cliente}"`,
+          `"${campana.zona}"`,
+          `"${campana.fechaCampana}"`,
+          `"${campana.fechaFinReal || 'En proceso'}"`,
+          `"${campana.estadoCampana || 'Activa'}"`,
+          campana.enviados,
+          `"${lead.firstName || ''} ${lead.lastName || ''}"`.trim() || '""',
+          `"${lead.phone || ''}"`,
+          `"${lead.email || ''}"`,
+          `"${lead.city || ''}"`,
+          `"${lead.campaignName || ''}"`,
+          `"${lead.origen || ''}"`,
+          `"${lead.localizacion || ''}"`,
+          `"${lead.cliente || ''}"`,
+          `"${lead.leadDate ? new Date(lead.leadDate).toISOString().split('T')[0] : ''}"`
         ].join(',') + '\n';
-      } else {
-        campanaData.leads.forEach((lead: any) => {
-          csvContent += [
-            `"${campanaData.campana}"`,
-            `"${campanaData.zona}"`,
-            `"${campanaData.fechaInicio}"`,
-            `"${campanaData.fechaFin}"`,
-            campanaData.enviados,
-            `"${lead.firstName || ''} ${lead.lastName || ''}"`.trim(),
-            `"${lead.phone || ''}"`,
-            `"${lead.email || ''}"`,
-            `"${lead.city || ''}"`,
-            `"${lead.campaignName || ''}"`,
-            `"${lead.origen || ''}"`,
-            `"${lead.localizacion || ''}"`,
-            `"${lead.cliente || ''}"`,
-            `"${lead.leadDate ? new Date(lead.leadDate).toISOString().split('T')[0] : ''}"`,
-            `"${lead.status || ''}"`
-          ].join(',') + '\n';
-        });
-      }
-    });
+      });
+    }
 
     return csvContent;
   };
@@ -756,6 +733,7 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">CPL Guardado</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Inversión Realizada</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Inversión Pendiente</th>
+                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Exportar CSV</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -909,13 +887,28 @@ export default function DatosDiariosDashboard() {
                             );
                           })()}
                         </td>
+                        <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
+                          <Button
+                            onClick={() => handleExportCampanaCSV(data)}
+                            disabled={exportingCSV}
+                            size="sm"
+                            className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold shadow-lg"
+                            data-testid={`button-export-csv-${data.cliente.replace(/\s+/g, '-')}`}
+                          >
+                            {exportingCSV ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Download className="w-4 h-4" />
+                            )}
+                          </Button>
+                        </td>
                       </tr>
                     );
                   })}
                   {/* Fila de Totales - Campañas en Proceso */}
                   {campanasEnProceso.length > 0 && (
                     <tr className="bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-800/50 dark:to-orange-800/50 border-t-4 border-amber-500">
-                      <td colSpan={showDuplicatesOnly ? 11 : 10} className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100 text-lg">
+                      <td colSpan={showDuplicatesOnly ? 12 : 11} className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100 text-lg">
                         TOTAL CAMPAÑAS EN PROCESO
                       </td>
                       <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
@@ -969,6 +962,9 @@ export default function DatosDiariosDashboard() {
                           </span>
                         </div>
                       </td>
+                      <td className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100">
+                        —
+                      </td>
                     </tr>
                   )}
                 </tbody>
@@ -985,30 +981,14 @@ export default function DatosDiariosDashboard() {
         {/* Campañas Finalizadas */}
         <Card className="border-0 shadow-2xl bg-gradient-to-r from-white via-emerald-50 to-green-50 dark:from-gray-800 dark:via-emerald-900/10 dark:to-green-900/10">
           <CardHeader className="bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-t-lg">
-            <CardTitle className="flex items-center gap-3 justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                  ✅
-                </div>
-                <span className="text-xl font-bold">Campañas Finalizadas</span>
-                <Badge variant="secondary" className="bg-white/20 text-white border-white/30 font-bold">
-                  {campanasFinalizadas.length} completadas
-                </Badge>
+            <CardTitle className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                ✅
               </div>
-              <Button
-                onClick={handleExportFinalizadasCSV}
-                disabled={exportingCSV || campanasFinalizadas.length === 0}
-                className="bg-white/20 hover:bg-white/30 text-white border-white/30 font-semibold"
-                size="sm"
-                data-testid="button-export-finalizadas-csv"
-              >
-                {exportingCSV ? (
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                ) : (
-                  <Download className="w-4 h-4 mr-2" />
-                )}
-                Exportar CSV
-              </Button>
+              <span className="text-xl font-bold">Campañas Finalizadas</span>
+              <Badge variant="secondary" className="bg-white/20 text-white border-white/30 font-bold">
+                {campanasFinalizadas.length} completadas
+              </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -1030,6 +1010,7 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">CPL Guardado</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Inversión Realizada</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Inversión Pendiente</th>
+                    <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Exportar CSV</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1141,13 +1122,28 @@ export default function DatosDiariosDashboard() {
                             <div className="text-xs text-gray-500 mt-1">Completada</div>
                           </div>
                         </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          <Button
+                            onClick={() => handleExportCampanaCSV(data)}
+                            disabled={exportingCSV}
+                            size="sm"
+                            className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold shadow-lg"
+                            data-testid={`button-export-csv-finalized-${data.cliente.replace(/\s+/g, '-')}`}
+                          >
+                            {exportingCSV ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Download className="w-4 h-4" />
+                            )}
+                          </Button>
+                        </td>
                       </tr>
                     );
                   })}
                   {/* Fila de Totales - Campañas Finalizadas */}
                   {campanasFinalizadas.length > 0 && (
                     <tr className="bg-gradient-to-r from-emerald-100 to-green-100 dark:from-emerald-800/50 dark:to-green-800/50 border-t-4 border-emerald-500">
-                      <td colSpan={10} className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-bold text-emerald-900 dark:text-emerald-100 text-lg">
+                      <td colSpan={11} className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-bold text-emerald-900 dark:text-emerald-100 text-lg">
                         TOTAL CAMPAÑAS FINALIZADAS
                       </td>
                       <td className="border border-emerald-200 dark:border-emerald-600 p-3 text-center">
@@ -1182,6 +1178,9 @@ export default function DatosDiariosDashboard() {
                           </span>
                           <div className="text-xs text-gray-500 mt-1">Todas Completadas</div>
                         </div>
+                      </td>
+                      <td className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-bold text-emerald-900 dark:text-emerald-100">
+                        —
                       </td>
                     </tr>
                   )}
