@@ -417,63 +417,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Endpoint refactorizado para sincronizar todas las pestañas de marcas
   app.post('/api/dashboard/sync-all-sheets', async (req, res) => {
     try {
-      console.log('🔄 Iniciando sincronización completa refactorizada de pestañas de marcas...');
+      console.log('🔄 Iniciando sincronización manual completa de Google Sheets...');
       
       const brands = ['Fiat', 'Peugeot', 'Toyota', 'Chevrolet', 'Renault', 'Citroen'];
       let totalSynced = 0;
       const stats: any = {};
       
-      // Limpiar datos existentes para refresco completo
-      await db.delete(googleSheetsData);
-      console.log('🗑️ Datos antiguos eliminados de la base de datos');
+      // Usar el servicio existente de Google Sheets
+      const sheetsData = await googleSheetsService.fetchDataFromSheets();
+      console.log(`📊 Google Sheets: ${sheetsData.length} registros obtenidos`);
       
-      // Procesar cada marca individualmente
-      for (const brand of brands) {
-        try {
-          console.log(`📊 Procesando pestaña: ${brand}`);
-          
-          // Obtener datos específicos de la marca desde Google Sheets
-          const brandData = await googleSheetsService.getLeadsBySheet(brand);
-          
-          if (brandData && brandData.length > 0) {
-            console.log(`📋 ${brand}: ${brandData.length} filas de datos encontradas`);
-            
-            // Transformar datos con información de marca
-            const transformedBrandData = brandData.map((row: any, index: number) => ({
-              nombreCompleto: row['Nombre Completo'] || row.nombre || '',
-              telefono: row['Teléfono'] || row.telefono || '',
-              email: row['Email'] || row.email || '',
-              marca: brand.toLowerCase(),
-              cliente: row['Cliente'] || `${brand} Cliente`,
-              provincia: row['Provincia'] || row.provincia || '',
-              localidad: row['Localidad'] || row.localidad || '',
-              fechaLead: row['Fecha'] ? new Date(row['Fecha']) : new Date(),
-              fechaIngreso: new Date(),
-              sourceSheet: brand,
-              rowNumber: index + 1,
-              createdAt: new Date(),
-              updatedAt: new Date()
-            })).filter((row: any) => row.nombreCompleto && row.telefono); // Solo registros válidos
-            
-            // Insertar datos en la base de datos en lotes
-            if (transformedBrandData.length > 0) {
-              for (let i = 0; i < transformedBrandData.length; i += 100) {
-                const batch = transformedBrandData.slice(i, i + 100);
-                await db.insert(googleSheetsData).values(batch);
-                totalSynced += batch.length;
-              }
-              stats[brand] = transformedBrandData.length;
-              console.log(`✅ ${brand}: ${transformedBrandData.length} registros sincronizados`);
-            }
-          } else {
-            console.log(`⚠️ ${brand}: No se encontraron datos`);
-            stats[brand] = 0;
+      // Procesar e insertar en la base de datos de leads
+      if (sheetsData.length > 0) {
+        for (const sheetLead of sheetsData) {
+          try {
+            await storage.createLead({
+              metaLeadId: `SHEET_${Date.now()}_${Math.random().toString(36)}`,
+              firstName: sheetLead.name.split(' ')[0] || '',
+              lastName: sheetLead.name.split(' ').slice(1).join(' ') || '',
+              email: sheetLead.email,
+              phone: sheetLead.phone,
+              city: sheetLead.city,
+              interest: sheetLead.interest,
+              budget: sheetLead.budget,
+              adName: '',
+              adsetName: '',
+              campaignName: sheetLead.campaign,
+              status: 'new',
+              source: 'google_sheets',
+              cost: parseFloat(sheetLead.cost) || 0,
+              leadDate: new Date(sheetLead.timestamp)
+            });
+            totalSynced++;
+          } catch (insertError) {
+            console.log(`⚠️ Lead ya existe o error: ${insertError.message}`);
           }
-        } catch (brandError) {
-          console.error(`❌ Error procesando marca ${brand}:`, brandError);
-          stats[brand] = 0;
-          // Continuar con la siguiente marca
         }
+      }
+      
+      // Obtener estadísticas por marca
+      for (const brand of brands) {
+        const brandCount = sheetsData.filter(lead => 
+          lead.campaign.toLowerCase().includes(brand.toLowerCase())
+        ).length;
+        stats[brand] = brandCount;
+        console.log(`✅ ${brand}: ${brandCount} registros procesados`);
       }
       
       console.log(`✅ Sincronización completa: ${totalSynced} registros totales de todas las marcas`);
