@@ -468,7 +468,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Obtener todos los datos desde PostgreSQL
       const { db } = await import('./db');
-      const { googleSheetsData, campanasComerciales } = await import('../shared/schema');
+      const { leads, campanasComerciales } = await import('../shared/schema');
       const { count, sql, desc } = await import('drizzle-orm');
 
       console.log('📊 Calculando datos diarios desde PostgreSQL...');
@@ -479,14 +479,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (const campana of campanas) {
         try {
-          // Contar leads desde PostgreSQL por marca y cliente
+          // Contar leads desde PostgreSQL por marca en campaignName y cliente
           const leadsCount = await db
             .select({ count: count() })
-            .from(googleSheetsData)
+            .from(leads)
             .where(
-              sql`lower(${googleSheetsData.marca}) = ${campana.marca.toLowerCase()} 
-                  AND ${googleSheetsData.fechaLead} >= ${campana.fechaCampana}
-                  AND ${googleSheetsData.fechaLead} <= ${campana.fechaFin || new Date()}`
+              sql`lower(${leads.campaignName}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
+                  AND ${leads.source} = 'google_sheets'
+                  AND date(${leads.leadDate}) >= ${campana.fechaCampana}
+                  AND date(${leads.leadDate}) <= ${campana.fechaFin || new Date()}`
             );
 
           const enviadosDB = leadsCount[0]?.count || 0;

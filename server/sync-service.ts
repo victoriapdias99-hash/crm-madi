@@ -126,6 +126,55 @@ export class SyncService {
   }
 
   /**
+   * Sincroniza todas las pestañas de marcas con opciones específicas
+   * Método requerido por google-sheets-sync-service.ts
+   */
+  async syncAllBrandSheets(options: SyncOptions = {}, preloadedLeads?: any[]): Promise<SyncResult> {
+    const startTime = Date.now();
+    
+    if (this.isRunning) {
+      throw new Error('Sincronización ya en progreso');
+    }
+
+    this.isRunning = true;
+    
+    try {
+      console.log('🔄 Sincronizando todas las pestañas de marcas...');
+      
+      // Usar datos precargados o obtener nuevos
+      const allLeads = preloadedLeads || await this._fetchDataFromSheets();
+      console.log(`📥 Procesando ${allLeads.length} leads desde Google Sheets`);
+      
+      if (allLeads.length === 0) {
+        return this._createResult(true, 0, startTime, 'No hay datos para sincronizar');
+      }
+
+      // Procesar y guardar en base de datos
+      const syncDetails = await this._processAndSaveLeads(allLeads, options);
+      console.log('✅ Datos sincronizados en PostgreSQL con nuevas columnas');
+
+      // Actualizar métricas y dashboard
+      if (options.includeMetrics) {
+        await this._updateMetrics();
+      }
+
+      if (options.includeDashboard) {
+        await this._updateDashboard();
+      }
+
+      this.lastSyncTime = new Date();
+      
+      return this._createResult(true, allLeads.length, startTime, 'Sincronización completada');
+      
+    } catch (error) {
+      console.error('❌ Error en syncAllBrandSheets:', error);
+      return this._createResult(false, 0, startTime, error.message);
+    } finally {
+      this.isRunning = false;
+    }
+  }
+
+  /**
    * Verificar estado de sincronización
    */
   getStatus() {
