@@ -418,9 +418,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Endpoint para sincronización manual COMPLETA con nuevas columnas
+  // Endpoint para sincronización manual (refactorizado) con nuevas columnas
   app.post('/api/dashboard/sync-all-sheets', async (req, res) => {
     try {
+      const startTime = Date.now();
       console.log('🔄 Iniciando sincronización manual COMPLETA con nuevas columnas...');
       
       // 1. Ejecutar sincronización completa de todas las hojas de Google Sheets
@@ -439,12 +440,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('📊 Dashboard actualizado con nuevos datos');
       }
       
+      const duration = Date.now() - startTime;
+      
       res.json({
         success: true,
         message: `Sincronización manual completada: ${allLeads.length} leads procesados`,
         leadsProcessed: allLeads.length,
+        duration: `${duration}ms`,
         timestamp: new Date().toISOString(),
-        note: "Datos actualizados con columnas origen, localización y cliente"
+        note: "Datos actualizados con columnas origen, localización y cliente",
+        architecture: "Refactored sync service ready for CRM-wide reuse"
       });
       
     } catch (error) {
@@ -2526,6 +2531,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Nuevos endpoints para usar SyncService en diferentes contextos del CRM
+  
+  // Endpoint para sincronización incremental
+  app.post('/api/sync/incremental', async (req, res) => {
+    try {
+      const { syncService } = await import('./sync-service');
+      
+      const options = {
+        forceFullSync: false,
+        includeDashboardUpdate: req.query.includeDashboard !== 'false',
+        includeMetricsUpdate: req.query.includeMetrics !== 'false',
+        specificSheets: req.query.sheets ? (req.query.sheets as string).split(',') : undefined
+      };
+      
+      const result = await syncService.executeIncrementalSync(options);
+      
+      res.json({
+        success: result.success,
+        message: result.success ? `Sincronización incremental: ${result.leadsProcessed} leads procesados` : 'Error en sincronización',
+        leadsProcessed: result.leadsProcessed,
+        duration: `${result.duration}ms`,
+        timestamp: result.timestamp,
+        details: result.details,
+        error: result.error
+      });
+      
+    } catch (error) {
+      console.error('Error in incremental sync:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Error ejecutando sincronización incremental',
+        details: error?.message 
+      });
+    }
+  });
+
+  // Endpoint para obtener estado de sincronización
+  app.get('/api/sync/status', async (req, res) => {
+    try {
+      const { syncService } = await import('./sync-service');
+      const status = syncService.getStatus();
+      
+      res.json({
+        status: status.isRunning ? 'running' : 'idle',
+        lastSyncTime: status.lastSyncTime,
+        uptimeMs: status.uptime,
+        uptimeFormatted: status.uptime ? `${Math.round(status.uptime / 1000)}s` : null
+      });
+      
+    } catch (error) {
+      res.status(500).json({ error: 'Error obteniendo estado de sincronización' });
+    }
+  });
+
+  // Endpoint para sincronización específica por hojas
+  app.post('/api/sync/sheets/:sheetNames', async (req, res) => {
+    try {
+      const { syncService } = await import('./sync-service');
+      const sheetNames = req.params.sheetNames.split(',');
+      
+      const options = {
+        forceFullSync: true,
+        includeDashboardUpdate: true,
+        includeMetricsUpdate: true,
+        specificSheets: sheetNames
+      };
+      
+      const result = await syncService.executeFullSync(options);
+      
+      res.json({
+        success: result.success,
+        message: result.success ? 
+          `Sincronización específica completada: ${result.leadsProcessed} leads de hojas [${sheetNames.join(', ')}]` : 
+          'Error en sincronización específica',
+        sheetsProcessed: sheetNames,
+        leadsProcessed: result.leadsProcessed,
+        duration: `${result.duration}ms`,
+        timestamp: result.timestamp,
+        details: result.details,
+        error: result.error
+      });
+      
+    } catch (error) {
+      console.error('Error in specific sheets sync:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Error ejecutando sincronización específica',
+        details: error?.message 
+      });
+    }
+  });
+
   return httpServer;
 }
+
+// Exportar funciones para uso en otros servicios
+export { broadcastDashboardUpdate, getRealtimeStats, handleSheetSync };
 

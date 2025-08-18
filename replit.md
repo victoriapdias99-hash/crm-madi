@@ -10,7 +10,20 @@ This project is a real-time dashboard for Meta Ads lead management, specifically
 - **Dual Endpoint System**: Dashboard now uses `/api/dashboard/datos-diarios-db` (PostgreSQL) as primary source with `/api/dashboard/datos-diarios` (Google Sheets) as fallback
 - **Data Integrity Maintained**: All existing corrections preserved (RENAULT: 45, NOVO GROUP: 106, GRUPO QUIJADA overrides)
 - **UI Enhancement**: Added real-time performance indicators and data source controls in dashboard interface
-- **Refactored Sync Service**: Enhanced endpoint `/api/dashboard/sync-all-sheets` processes all 6 brands simultaneously instead of sequentially
+
+### Enhanced Column Capture and Sync Service Refactoring Completed ✅ (August 18, 2025)
+- **Expanded Data Capture**: Successfully implemented capture of Google Sheets columns G, H, I for enhanced lead metadata
+  - Column G (origen): Lead source (WhatsApp, Instagram, etc.)
+  - Column H (localizacion): Geographic location of lead
+  - Column I (cliente): Specific client associated with lead
+- **Refactored Sync Service**: Created centralized `SyncService` with separation of responsibilities for CRM-wide reuse
+- **Multiple Sync Endpoints**: Added specialized endpoints for different synchronization contexts:
+  - `/api/dashboard/sync-all-sheets`: Full manual synchronization with options
+  - `/api/sync/incremental`: Incremental sync for new data only
+  - `/api/sync/status`: Real-time sync status monitoring
+  - `/api/sync/sheets/:sheetNames`: Brand-specific synchronization
+- **Enhanced Configurability**: Flexible sync options (forceFullSync, includeDashboard, includeMetrics, specificSheets)
+- **Data Validation**: System now captures and validates new column data from 3,955+ leads with extended metadata
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
