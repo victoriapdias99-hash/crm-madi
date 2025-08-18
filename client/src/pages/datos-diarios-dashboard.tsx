@@ -684,9 +684,8 @@ export default function DatosDiariosDashboard() {
                 </thead>
                 <tbody>
                   {campanasEnProceso.map((data: DatosDiariosData, index: number) => {
-                    // Usar el índice original de la lista completa para identificar correctamente el registro
-                    const originalIndex = finalData?.findIndex(d => d.cliente === data.cliente && d.numeroCampana === data.numeroCampana) || 0;
-                    const uniqueKey = `${data.cliente}-${data.numeroCampana}-${originalIndex}`;
+                    // Crear key único usando múltiples identificadores para evitar duplicados
+                    const uniqueKey = `${data.cliente}-${data.numeroCampana}-${data.zona}-${index}-${data.fechaCampana || 'no-fecha'}`;
                     
                     const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0; // Use CPL from storage or server
                     
