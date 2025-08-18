@@ -41,7 +41,7 @@ export default function DatosDiariosDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [cplValues, setCplValues] = useState<Record<number, number>>({});
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc'); // Por defecto ascendente (menos faltantes primero)
+
   const [forceShowContent, setForceShowContent] = useState(false);
   const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
 
@@ -148,14 +148,24 @@ export default function DatosDiariosDashboard() {
     
     const enProceso = filteredData
       .filter(data => data.porcentajeDatosEnviados < 100)
-      .sort((a, b) => sortOrder === 'asc' ? a.faltantesAEnviar - b.faltantesAEnviar : b.faltantesAEnviar - a.faltantesAEnviar);
+      .sort((a, b) => {
+        // Ordenar por fecha de campaña: más reciente primero
+        const dateA = new Date(a.fechaCampana);
+        const dateB = new Date(b.fechaCampana);
+        return dateB.getTime() - dateA.getTime(); // Descendente (más reciente primero)
+      });
     
     const finalizadas = filteredData
       .filter(data => data.porcentajeDatosEnviados >= 100)
-      .sort((a, b) => sortOrder === 'asc' ? a.faltantesAEnviar - b.faltantesAEnviar : b.faltantesAEnviar - a.faltantesAEnviar);
+      .sort((a, b) => {
+        // Ordenar campañas finalizadas también por fecha: más reciente primero
+        const dateA = new Date(a.fechaCampana);
+        const dateB = new Date(b.fechaCampana);
+        return dateB.getTime() - dateA.getTime(); // Descendente (más reciente primero)
+      });
     
     return { campanasEnProceso: enProceso, campanasFinalizadas: finalizadas };
-  }, [datosDiarios, sortOrder, showDuplicatesOnly]);
+  }, [datosDiarios, showDuplicatesOnly]);
 
   const campanasEnProceso = campanasData.campanasEnProceso;
   const campanasFinalizadas = campanasData.campanasFinalizadas;
@@ -560,14 +570,9 @@ export default function DatosDiariosDashboard() {
               <Badge variant="secondary" className="bg-white/20 text-white border-white/30 font-bold">
                 {campanasEnProceso.length} en progreso
               </Badge>
-              <Button
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                variant="secondary"
-                size="sm"
-                className="bg-white/20 text-white border-white/30 hover:bg-white/30"
-              >
-                {sortOrder === 'asc' ? '↑' : '↓'} Ordenar por Faltantes
-              </Button>
+              <div className="bg-white/20 text-white border border-white/30 rounded px-3 py-1 text-sm">
+                📅 Ordenadas por fecha (más reciente primero)
+              </div>
               <Button
                 onClick={async () => {
                   if (!showDuplicatesOnly) {
