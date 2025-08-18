@@ -418,18 +418,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Endpoint simplificado para sincronización manual 
+  // Endpoint para sincronización manual COMPLETA con nuevas columnas
   app.post('/api/dashboard/sync-all-sheets', async (req, res) => {
     try {
-      console.log('🔄 Iniciando sincronización manual simplificada...');
+      console.log('🔄 Iniciando sincronización manual COMPLETA con nuevas columnas...');
       
-      res.json({ 
-        success: true, 
-        message: 'Sincronización manual no disponible - usar automática cada 15min',
-        note: 'La sincronización automática está funcionando correctamente'
+      // 1. Ejecutar sincronización completa de todas las hojas de Google Sheets
+      console.log('📊 Sincronizando datos desde Google Sheets con columnas G, H, I...');
+      const allLeads = await googleSheetsService.getAllLeadsFromSheets();
+      console.log(`📥 Obtenidos ${allLeads.length} leads desde Google Sheets`);
+      
+      if (allLeads.length > 0) {
+        // 2. Convertir y guardar en base de datos usando el sistema existente
+        await handleSheetSync(allLeads);
+        console.log('✅ Datos sincronizados en PostgreSQL con nuevas columnas');
+        
+        // 3. Actualizar métricas del dashboard
+        const stats = await getRealtimeStats();
+        broadcastDashboardUpdate(stats);
+        console.log('📊 Dashboard actualizado con nuevos datos');
+      }
+      
+      res.json({
+        success: true,
+        message: `Sincronización manual completada: ${allLeads.length} leads procesados`,
+        leadsProcessed: allLeads.length,
+        timestamp: new Date().toISOString(),
+        note: "Datos actualizados con columnas origen, localización y cliente"
       });
       
     } catch (error) {
+      console.error('Error in manual sync:', error);
       res.status(500).json({ 
         success: false, 
         error: 'Error en sincronización manual',
