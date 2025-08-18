@@ -296,6 +296,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       city: sheetLead.city,
       interest: sheetLead.interest,
       budget: sheetLead.budget,
+      // Nuevas columnas agregadas
+      origen: sheetLead.origen || '',
+      localizacion: sheetLead.localizacion || '',
+      cliente: sheetLead.cliente || '',
       campaignName: sheetLead.campaign,
       status: 'new' as const,
       source: 'google_sheets',

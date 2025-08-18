@@ -10,6 +10,10 @@ interface SheetLead {
   city: string;
   interest: string;
   budget: string;
+  // Nuevas columnas desde Google Sheets
+  origen: string;
+  localizacion: string;
+  cliente: string;
   source: string;
   campaign: string;
   cost: string;
@@ -68,10 +72,14 @@ class GoogleSheetsService {
       phone: row[3] || '',
       city: row[4] || '',
       interest: row[5] || '',
-      budget: row[6] || '',
+      budget: row[5] || '',
+      // Nuevas columnas G, H, I
+      origen: row[6] || '',      // Columna G
+      localizacion: row[7] || '', // Columna H  
+      cliente: row[8] || '',      // Columna I
       source: 'google_sheets',
       campaign: sheetName,
-      cost: row[7] || '0'
+      cost: row[9] || '0'
     };
   }
 
@@ -84,7 +92,7 @@ class GoogleSheetsService {
     try {
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: `${sheetName}!A:H`, // Assuming columns A to H contain the data
+        range: `${sheetName}!A:I`, // Columnas A-I para incluir origen, localización y cliente
       });
 
       const rows = response.data.values || [];

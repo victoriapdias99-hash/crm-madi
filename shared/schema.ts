@@ -42,6 +42,11 @@ export const leads = pgTable("leads", {
   interest: text("interest"),
   budget: text("budget"),
   
+  // Nuevas columnas desde Google Sheets (columnas G, H, I)
+  origen: text("origen"),
+  localizacion: text("localizacion"), 
+  cliente: text("cliente"),
+  
   // Metadatos de Meta
   adName: text("ad_name"),
   adsetName: text("adset_name"),
@@ -246,6 +251,9 @@ export const insertLeadSchema = createInsertSchema(leads).pick({
   city: true,
   interest: true,
   budget: true,
+  origen: true,
+  localizacion: true,
+  cliente: true,
   adName: true,
   adsetName: true,
   campaignName: true,
