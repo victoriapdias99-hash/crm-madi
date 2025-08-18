@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Save, RefreshCw, RotateCcw } from "lucide-react";
+import { Loader2, Save, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Navigation } from "@/components/navigation";
@@ -45,8 +45,6 @@ export default function DatosDiariosDashboard() {
   const [forceShowContent, setForceShowContent] = useState(false);
   const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
 
-  const [isManualLoading, setIsManualLoading] = useState(false);
-  const [manualData, setManualData] = useState<DatosDiariosData[] | null>(null);
   
   // PostgreSQL optimized query for fast data updates (3s vs 15s)
   const { data: datosDiarios, isLoading, error, refetch } = useQuery({
@@ -89,43 +87,7 @@ export default function DatosDiariosDashboard() {
     }
   });
 
-  // Query de fallback para Google Sheets (solo cuando sea necesario)
-  const { data: datosDiariosGS, isLoading: isLoadingGS, refetch: refetchGS } = useQuery({
-    queryKey: ['/api/dashboard/datos-diarios'],
-    enabled: false, // Solo cargar cuando se solicite manualmente
-    staleTime: 2 * 60 * 1000, // Cache por 2 minutos
-  });
 
-  // Manual fallback to Google Sheets when needed
-  const fetchGoogleSheetsDataManually = async () => {
-    try {
-      setIsManualLoading(true);
-      const response = await fetch('/api/dashboard/datos-diarios', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('Google Sheets fallback successful:', data.length, 'records');
-      setManualData(data);
-    } catch (err) {
-      console.error('Google Sheets fallback failed:', err);
-      toast({
-        title: "Error cargando datos",
-        description: "No se pudieron cargar los datos desde Google Sheets",
-        variant: "destructive",
-      });
-    } finally {
-      setIsManualLoading(false);
-    }
-  };
 
   // State for duplicates data
   const [duplicatesData, setDuplicatesData] = useState<Record<string, number>>({});
@@ -567,32 +529,7 @@ export default function DatosDiariosDashboard() {
               )}
               Sincronizar Pestañas
             </Button>
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-600 rounded-lg px-4 py-2">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                  📊 PostgreSQL Activo
-                </span>
-              </div>
-              <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                3.2s vs 15s Google Sheets (80% más rápido)
-              </div>
-            </div>
-            <Button
-              onClick={() => fetchGoogleSheetsDataManually()}
-              disabled={isManualLoading}
-              variant="outline"
-              className="border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-600 dark:text-orange-300 dark:hover:bg-orange-900/20 px-4 py-3"
-              size="lg"
-              data-testid="button-fallback-googlesheets"
-            >
-              {isManualLoading ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <RotateCcw className="h-4 w-4 mr-2" />
-              )}
-              Fallback: Google Sheets
-            </Button>
+
             <Button
               onClick={handleUnifiedUpdate}
               disabled={unifiedUpdateMutation.isPending}

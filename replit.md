@@ -32,6 +32,15 @@ This project is a real-time dashboard for Meta Ads lead management, specifically
 - **Performance Optimization**: Automatic sync uses efficient handleSheetSync instead of custom processing
 - **Data Integrity**: Preserves all manual corrections (RENAULT: 45, NOVO GROUP: 106) during automatic updates
 
+### Dashboard UI Simplification ✅ (August 18, 2025)
+- **Interface Cleanup**: Removed dual-system complexity by eliminating PostgreSQL/Google Sheets fallback options
+- **Removed Components**: 
+  - "PostgreSQL Activo" status indicator and related visual elements
+  - "Fallback: Google Sheets" button and complete fallback functionality
+  - fetchGoogleSheetsDataManually function and associated state variables
+- **Simplified Architecture**: Dashboard now uses PostgreSQL exclusively as data source with automatic background sync
+- **Enhanced Focus**: Streamlined interface focuses on core functionality without technical complexity indicators
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
