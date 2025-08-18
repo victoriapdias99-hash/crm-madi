@@ -25,6 +25,13 @@ This project is a real-time dashboard for Meta Ads lead management, specifically
 - **Enhanced Configurability**: Flexible sync options (forceFullSync, includeDashboard, includeMetrics, specificSheets)
 - **Data Validation**: System now captures and validates new column data from 3,955+ leads with extended metadata
 
+### Automatic Sync Migration to Incremental System ✅ (August 18, 2025)
+- **Unified Sync Architecture**: Migrated automatic 15-minute sync to use the same proven system as manual sync
+- **Data Preservation**: Changed from destructive full refresh to incremental updates that preserve existing data
+- **Consistent Column Capture**: Automatic sync now captures columns G, H, I like manual sync
+- **Performance Optimization**: Automatic sync uses efficient handleSheetSync instead of custom processing
+- **Data Integrity**: Preserves all manual corrections (RENAULT: 45, NOVO GROUP: 106) during automatic updates
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 

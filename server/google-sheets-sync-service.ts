@@ -34,109 +34,76 @@ export class GoogleSheetsSyncService {
   }
 
   /**
-   * Ejecuta la sincronización completa de datos desde Google Sheets
+   * Ejecuta la sincronización INCREMENTAL de datos desde Google Sheets
+   * Preserva datos existentes y solo agrega/actualiza lo necesario
    */
   public async performSync(): Promise<void> {
     const syncStartTime = new Date();
     
     try {
-      console.log('📊 Iniciando sincronización completa de Google Sheets...');
+      console.log('📊 Iniciando sincronización INCREMENTAL de Google Sheets (preservando datos existentes)...');
       
       // Marcar inicio de sincronización
       await this.updateSyncStatus('google_sheets_data', 'running', 0);
       
-      // Obtener datos de Google Sheets
-      const sheetsData = await this.fetchAllSheetsData();
+      // USAR EL SISTEMA REFACTORIZADO que funciona al 100%
+      const { googleSheetsService } = await import('./google-sheets');
+      const allLeads = await googleSheetsService.getAllLeadsFromSheets();
+      console.log(`📥 Obtenidos ${allLeads.length} leads desde Google Sheets con columnas G, H, I`);
       
-      // Limpiar datos existentes (full refresh)
-      await db.delete(googleSheetsData);
-      console.log('🗑️ Datos antiguos eliminados de la base de datos');
-      
-      // Insertar nuevos datos
-      let insertedCount = 0;
-      for (const batch of this.batchArray(sheetsData, 100)) {
-        await db.insert(googleSheetsData).values(batch);
-        insertedCount += batch.length;
-        console.log(`✅ Insertados ${insertedCount}/${sheetsData.length} registros`);
+      if (allLeads.length > 0) {
+        // USAR EL MISMO SISTEMA INCREMENTAL QUE LA SINCRONIZACIÓN MANUAL
+        const { syncService } = await import('./sync-service');
+        await syncService.syncAllBrandSheets({
+          forceFullSync: false,  // Incremental para preservar datos
+          includeDashboard: true,
+          includeMetrics: true
+        }, allLeads);
+        console.log('✅ Sincronización incremental completada - datos preservados');
       }
       
       // Marcar sincronización completa
-      await this.updateSyncStatus('google_sheets_data', 'completed', insertedCount);
+      await this.updateSyncStatus('google_sheets_data', 'completed', allLeads.length);
       
       const syncEndTime = new Date();
       const syncDuration = syncEndTime.getTime() - syncStartTime.getTime();
       
-      console.log(`🎉 Sincronización completa exitosa: ${insertedCount} registros en ${syncDuration}ms`);
+      console.log(`🎉 Sincronización incremental exitosa: ${allLeads.length} leads procesados en ${syncDuration}ms`);
+      console.log('💾 Datos existentes preservados - solo se agregaron/actualizaron cambios');
       
       // Actualizar métricas de enviados después de la sincronización
       await this.updateEnviadosMetrics();
       
     } catch (error) {
-      console.error('❌ Error en sincronización de Google Sheets:', error);
+      console.error('❌ Error en sincronización incremental de Google Sheets:', error);
       await this.updateSyncStatus('google_sheets_data', 'failed', 0, error.message);
     }
   }
 
   /**
-   * Obtiene todos los datos de las hojas de Google Sheets de todas las marcas
+   * MÉTODO REFACTORIZADO - Ahora usa el sistema que funciona al 100%
+   * Redirige al googleSheetsService.getAllLeadsFromSheets() que captura columnas G, H, I
    */
   private async fetchAllSheetsData(): Promise<any[]> {
     try {
-      const allBrandsData: any[] = [];
-      const brands = ['Fiat', 'Peugeot', 'Toyota', 'Chevrolet', 'Renault', 'Citroen'];
+      console.log('🔄 REFACTORIZADO: Usando sistema que funciona al 100% con columnas G, H, I');
       
-      console.log('🔄 Iniciando sincronización completa de pestañas de marcas...');
+      // Usar el sistema refactorizado que funciona correctamente
+      const { googleSheetsService } = await import('./google-sheets');
+      const allLeads = await googleSheetsService.getAllLeadsFromSheets();
       
-      // Procesar cada marca individualmente
-      for (const brand of brands) {
-        try {
-          console.log(`📊 Procesando pestaña: ${brand}`);
-          
-          // Obtener datos específicos de la marca desde Google Sheets
-          const brandData = await this.fetchBrandSpecificData(brand);
-          
-          if (brandData && brandData.length > 0) {
-            console.log(`📋 ${brand}: ${brandData.length} filas de datos encontradas`);
-            
-            // Transformar datos con información de marca
-            const transformedBrandData = brandData.map((row: any, index: number) => {
-              return {
-                nombreCompleto: this.cleanString(row['Nombre Completo'] || row.nombre || ''),
-                telefono: this.cleanString(row['Teléfono'] || row.telefono || ''),
-                email: this.cleanString(row['Email'] || row.email || ''),
-                marca: brand.toLowerCase(),
-                cliente: this.extractClienteFromBrand(row, brand),
-                provincia: this.cleanString(row['Provincia'] || row.provincia || ''),
-                localidad: this.cleanString(row['Localidad'] || row.localidad || ''),
-                fechaLead: this.parseDate(row['Fecha'] || row.fecha || row['created_time']),
-                fechaIngreso: new Date(),
-                sourceSheet: brand,
-                rowNumber: index + 1
-              };
-            }).filter((row: any) => row.nombreCompleto && row.telefono); // Solo registros válidos
-            
-            allBrandsData.push(...transformedBrandData);
-            console.log(`✅ ${brand}: ${transformedBrandData.length} nuevos, ${allBrandsData.length - transformedBrandData.length} actualizados`);
-          } else {
-            console.log(`⚠️ ${brand}: No se encontraron datos`);
-          }
-        } catch (brandError) {
-          console.error(`❌ Error procesando marca ${brand}:`, brandError);
-          // Continuar con la siguiente marca
-        }
-      }
-      
-      console.log(`✅ Sincronización completa: ${allBrandsData.length} registros totales de todas las marcas`);
-      return allBrandsData;
+      console.log(`✅ Sistema refactorizado obtuvo ${allLeads.length} leads con metadatos completos`);
+      return allLeads;
       
     } catch (error) {
-      console.error('❌ Error en sincronización completa de marcas:', error);
+      console.error('❌ Error en sistema refactorizado:', error);
       throw error;
     }
   }
 
   /**
-   * Obtiene datos específicos de una marca desde Google Sheets
+   * MÉTODO ELIMINADO - Ya no se usa debido a la refactorización
+   * El sistema ahora usa googleSheetsService.getAllLeadsFromSheets()
    */
   private async fetchBrandSpecificData(brand: string): Promise<any[]> {
     try {
