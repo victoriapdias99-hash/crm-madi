@@ -487,7 +487,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               sql`lower(${leads.campaignName}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
                   AND ${leads.source} = 'google_sheets'
                   AND date(${leads.leadDate}) >= ${campana.fechaCampana}
-                  AND date(${leads.leadDate}) <= ${campana.fechaFin || new Date()}`
+                  ${campana.fechaFin ? sql`AND date(${leads.leadDate}) <= ${campana.fechaFin}` : sql``}`
             );
 
           const enviadosDB = leadsCount[0]?.count || 0;
@@ -521,19 +521,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Obtener CPL desde la base de datos
           const storedCpl = await storage.getCplByClienteAndCampana(clienteNombre, campana.numeroCampana);
 
-          // NUEVO: Calcular fecha fin exacta automática para campañas completadas
+          // Usar fecha fin de la campaña sin cálculo automático
+          // Las fechas fin solo se deben calcular cuando realmente se completa la campaña
           let fechaFinExacta = campana.fechaFin;
-          
-          if (porcentajeDatosEnviados >= 100 && (!fechaFinExacta || !fechaFinExacta.includes(' '))) {
-            try {
-              console.log(`🎯 Auto-calculando timestamp exacto: ${campana.marca} ${campana.numeroCampana}`);
-              fechaFinExacta = await calculateFechaFin(campana.fechaCampana, cantidadSolicitados, campana.marca);
-              console.log(`✅ Timestamp exacto calculado: ${fechaFinExacta}`);
-            } catch (error) {
-              console.error(`❌ Error calculando timestamp exacto ${campana.marca}:`, error);
-              fechaFinExacta = campana.fechaFin; // Mantener original
-            }
-          }
 
           const record = {
             cliente: clienteNombre,
@@ -1925,20 +1915,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const nextNumber = existingCampanas.length + 1;
       const numeroGenerado = `${nextNumber}`;
       
-      // Calcular fecha de fin automáticamente basada en datos disponibles
-      const fechaFinCalculada = await calculateFechaFin(
-        validatedData.fechaCampana,
-        validatedData.cantidadDatosSolicitados,
-        validatedData.marca
-      );
-      
       console.log('Generated numero_campana:', numeroGenerado);
-      console.log('Calculated fecha_fin:', fechaFinCalculada);
+      console.log('Nueva campaña SIN fecha fin inicial - se calculará automáticamente al completarse');
       
       const campanaDatos = {
         ...validatedData,
         numeroCampana: numeroGenerado,
-        fechaFin: fechaFinCalculada
+        fechaFin: null // No asignar fecha fin hasta que se complete la campaña
       };
       
       const campana = await storage.createCampanaComercial(campanaDatos);
