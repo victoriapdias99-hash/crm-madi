@@ -31,11 +31,37 @@ interface DatosDiariosData {
   inversionRealizada: number;
   inversionPendiente: number;
   fechaCampana: string;
-  fechaFinReal: string;
+  fechaFinReal: string | null;
   cantidadSolicitada: number;
   diasProcesados: number;
   estadoCampana: string;
 }
+
+// Función utilitaria para formatear fechas con hora exacta
+const formatDateTimeExact = (dateStr: string | null): string => {
+  if (!dateStr || dateStr === 'null') return 'Pendiente';
+  
+  try {
+    // Detectar si ya tiene formato de hora (YYYY-MM-DD HH:mm:ss)
+    if (dateStr.includes(' ') && dateStr.length === 19) {
+      // Ya tiene formato completo, solo formatear para mostrar
+      const [fecha, hora] = dateStr.split(' ');
+      const [year, month, day] = fecha.split('-');
+      const [hours, minutes] = hora.split(':');
+      return `${day}/${month}/${year} ${hours}:${minutes}`;
+    }
+    
+    // Solo fecha (YYYY-MM-DD), estimaremos fin de día
+    if (dateStr.length === 10) {
+      const [year, month, day] = dateStr.split('-');
+      return `${day}/${month}/${year} 23:59`;
+    }
+    
+    return dateStr; // Fallback
+  } catch (error) {
+    return dateStr || 'Error';
+  }
+};
 
 export default function DatosDiariosDashboard() {
   const { toast } = useToast();
@@ -768,9 +794,16 @@ export default function DatosDiariosDashboard() {
                         <td className="border border-amber-200 dark:border-amber-600 p-3 font-medium text-slate-700 dark:text-slate-300">{data.zona}</td>
                         <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
                           <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-2 rounded-lg">
-                            <span className="font-medium text-green-700 dark:text-green-300">
-                              {data.fechaCampana || 'N/A'}
-                            </span>
+                            <div className="space-y-1">
+                              <span className="font-medium text-green-700 dark:text-green-300 block">
+                                {data.fechaCampana || 'N/A'}
+                              </span>
+                              {data.porcentajeDatosEnviados >= 100 && (
+                                <div className="text-xs text-blue-600 dark:text-blue-400 font-semibold">
+                                  Fin: {formatDateTimeExact(data.fechaFinReal)}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </td>
                         <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">

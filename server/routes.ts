@@ -521,6 +521,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Obtener CPL desde la base de datos
           const storedCpl = await storage.getCplByClienteAndCampana(clienteNombre, campana.numeroCampana);
 
+          // NUEVO: Calcular fecha fin exacta automática para campañas completadas
+          let fechaFinExacta = campana.fechaFin;
+          
+          if (porcentajeDatosEnviados >= 100 && (!fechaFinExacta || !fechaFinExacta.includes(' '))) {
+            try {
+              console.log(`🎯 Auto-calculando timestamp exacto: ${campana.marca} ${campana.numeroCampana}`);
+              fechaFinExacta = await calculateFechaFin(campana.fechaCampana, cantidadSolicitados, campana.marca);
+              console.log(`✅ Timestamp exacto calculado: ${fechaFinExacta}`);
+            } catch (error) {
+              console.error(`❌ Error calculando timestamp exacto ${campana.marca}:`, error);
+              fechaFinExacta = campana.fechaFin; // Mantener original
+            }
+          }
+
           const record = {
             cliente: clienteNombre,
             zona: campana.zona,
@@ -532,7 +546,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             cpl: storedCpl || 0,
             marca: campana.marca,
             fechaCampana: campana.fechaCampana,
-            fechaFin: campana.fechaFin,
+            fechaFin: fechaFinExacta, // Usar fecha con timestamp exacto
             facturacionBruta: campana.facturacionBruta,
             // Campos calculados adicionales
             inversionRealizada: (enviadosFinales * (storedCpl || 0)),
@@ -2293,6 +2307,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint para calcular fecha exacta de finalización con timestamp
+  app.post('/api/calculate-exact-fecha-fin', async (req: Request, res: Response) => {
+    try {
+      const { marca, cantidadSolicitada, fechaInicio } = req.body;
+      
+      if (!marca || !cantidadSolicitada || !fechaInicio) {
+        return res.status(400).json({
+          error: 'Faltan parámetros: marca, cantidadSolicitada, fechaInicio'
+        });
+      }
+
+      console.log(`🎯 Calculando fecha exacta para ${marca}, ${cantidadSolicitada} leads desde ${fechaInicio}`);
+      
+      const fechaFinExacta = await calculateFechaFin(fechaInicio, cantidadSolicitada, marca);
+      
+      return res.json({
+        success: true,
+        marca,
+        cantidadSolicitada,
+        fechaInicio,
+        fechaFinExacta,
+        formato: 'YYYY-MM-DD HH:mm:ss'
+      });
+    } catch (error: any) {
+      console.error('Error calculating exact fecha_fin:', error);
+      return res.status(500).json({
+        error: 'Error calculando fecha exacta',
+        message: error.message
+      });
+    }
+  });
+
   // Daily stats routes
   app.get('/api/stats/daily', async (req, res) => {
     try {
@@ -2561,12 +2607,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`📊 Encontrados ${leadsResult.length} leads de ${marca} desde ${fechaInicio}`);
       
       if (leadsResult.length === 0) {
-        // No hay datos disponibles, usar estimación conservadora
+        // No hay datos disponibles, usar estimación conservadora CON HORA
         const fechaEstimada = new Date(fechaInicio);
         fechaEstimada.setDate(fechaEstimada.getDate() + Math.ceil(cantidadSolicitada / 3)); // Estimación: 3 leads por día
-        const fechaFinalString = fechaEstimada.toISOString().split('T')[0];
-        console.log(`⚠️ Sin datos disponibles - fecha estimada: ${fechaFinalString}`);
-        return fechaFinalString;
+        fechaEstimada.setHours(23, 59, 59); // Fin del día estimado
+        const fechaFinalConHora = fechaEstimada.toISOString().substring(0, 19).replace('T', ' ');
+        console.log(`⚠️ Sin datos disponibles - fecha estimada: ${fechaFinalConHora}`);
+        return fechaFinalConHora;
       }
       
       // Contar leads día por día hasta alcanzar la cantidad solicitada
@@ -2580,23 +2627,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         leadsPorFecha[fechaStr] = (leadsPorFecha[fechaStr] || 0) + 1;
       });
       
-      // Procesar cronológicamente hasta alcanzar la cantidad
-      const fechasOrdenadas = Object.keys(leadsPorFecha).sort();
+      // NUEVA IMPLEMENTACIÓN: Procesar cronológicamente con TIMESTAMP EXACTO
+      let fechaFinConHora = fechaInicio;
       
-      for (const fecha of fechasOrdenadas) {
-        const leadsEnFecha = leadsPorFecha[fecha];
-        contador += leadsEnFecha;
-        fechaFin = fecha;
+      // Ordenar TODOS los leads por timestamp exacto (no solo por día)
+      const leadsOrdenados = leadsResult
+        .sort((a, b) => a.leadDate.getTime() - b.leadDate.getTime());
+      
+      console.log('🕒 Procesando leads por timestamp exacto...');
+      
+      for (let i = 0; i < leadsOrdenados.length; i++) {
+        contador = i + 1;
+        const leadActual = leadsOrdenados[i];
         
-        console.log(`📅 ${fecha}: +${leadsEnFecha} leads (total: ${contador}/${cantidadSolicitada})`);
+        // Formatear timestamp completo (fecha + hora)
+        const timestampCompleto = leadActual.leadDate.toISOString();
+        const fechaHoraCompleta = timestampCompleto.substring(0, 19).replace('T', ' '); // "2025-08-15 14:30:45"
         
+        console.log(`🎯 Lead #${contador}: ${fechaHoraCompleta} - Campaign: ${leadActual.campaignName}`);
+        
+        // Si llegamos al lead exacto solicitado, esta es nuestra fecha_fin EXACTA
         if (contador >= cantidadSolicitada) {
+          fechaFinConHora = fechaHoraCompleta;
+          console.log(`⏰ FECHA EXACTA ALCANZADA: Lead #${cantidadSolicitada} en ${fechaHoraCompleta}`);
           break;
         }
       }
       
-      console.log(`✅ Fecha fin calculada automáticamente: ${fechaFin} (${contador} leads acumulados)`);
-      return fechaFin;
+      console.log(`✅ Fecha fin EXACTA calculada: ${fechaFinConHora} (${contador} leads procesados)`);
+      return fechaFinConHora;
       
     } catch (error) {
       console.error('❌ Error calculating fecha fin:', error);
