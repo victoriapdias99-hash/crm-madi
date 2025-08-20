@@ -4,6 +4,15 @@
 This project is a real-time dashboard for Meta Ads lead management, specifically designed for the automotive sector in the Spanish market. Its primary purpose is to centralize and manage lead generation data from Meta Ads campaigns, integrating with Google Sheets for lead synchronization and directly with the Meta Ads API for campaign spending metrics. Key capabilities include real-time statistics, automated data synchronization, comprehensive lead tracking, and a full client management system (ABM). The business vision is to provide automotive businesses with a powerful tool for optimizing their Meta Ads campaigns and improving lead conversion efficiency.
 
 ## Recent Updates (August 2025)
+### Dynamic Sheet Auto-Detection System Implemented ✅ (August 20, 2025)
+- **Automatic Tab Discovery**: System now dynamically detects all brand tabs in Google Sheets without manual code updates
+- **Smart Exclusion Logic**: Automatically excludes control tabs ("Datos Diarios", "Control Campañas") and variations
+- **New Brand Detection**: Successfully detected and synchronized VW brand (243 leads) without any manual intervention  
+- **Comprehensive Coverage**: Now processes 9 brand tabs dynamically: Citroen, Chevrolet, Fiat, Ford, Jeep, Toyota, Renault, Peugeot, VW
+- **Fallback Protection**: Maintains fixed brand list as backup if dynamic detection fails
+- **UI Error Fix**: Resolved sync button HTTP method error, now uses correct apiRequest parameters
+- **Real-time Processing**: Processes 4,359+ leads automatically from all detected tabs
+
 ### PostgreSQL Migration and Performance Optimization Completed ✅
 - **Performance Achievement**: Successfully migrated from Google Sheets API (15+ seconds) to PostgreSQL-based dashboard (3.2 seconds) - **80% performance improvement**
 - **Multi-Brand Synchronization**: Implemented complete refactored synchronization system for all brand-specific Google Sheets tabs (Fiat: 1,081 leads, Peugeot: 391 leads, Toyota, Chevrolet, Renault, Citroen)

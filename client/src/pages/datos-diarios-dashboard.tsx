@@ -174,10 +174,8 @@ export default function DatosDiariosDashboard() {
   // Mutation para sincronizar todas las pestañas
   const syncAllSheetsMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('/api/dashboard/sync-all-sheets', {
-        method: 'POST',
-      });
-      return response;
+      const response = await apiRequest('/api/dashboard/sync-all-sheets', 'POST');
+      return response.json();
     },
     onSuccess: (data) => {
       toast({
