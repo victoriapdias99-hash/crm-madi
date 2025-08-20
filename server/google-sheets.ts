@@ -113,14 +113,56 @@ class GoogleSheetsService {
     }
   }
 
+  /**
+   * Obtiene automáticamente todas las pestañas del documento (excluyendo las de control)
+   */
+  async getAvailableSheetNames(): Promise<string[]> {
+    try {
+      if (!this.sheets) {
+        console.error('Google Sheets service not initialized');
+        return [];
+      }
+
+      // Obtener metadatos del documento para listar todas las pestañas
+      const spreadsheetResponse = await this.sheets.spreadsheets.get({
+        spreadsheetId: this.spreadsheetId,
+      });
+
+      const sheets = spreadsheetResponse.data.sheets || [];
+      
+      // Extraer nombres de pestañas y filtrar las excluidas
+      const excludedSheets = ['Datos Diarios', 'Control Campañas', 'Datos diarios', 'Control campañas'];
+      const availableSheets = sheets
+        .map(sheet => sheet.properties?.title)
+        .filter(sheetName => 
+          sheetName && 
+          !excludedSheets.includes(sheetName) &&
+          !sheetName.toLowerCase().includes('control') &&
+          !sheetName.toLowerCase().includes('datos diarios')
+        );
+
+      console.log('🔍 Pestañas detectadas automáticamente:', availableSheets);
+      console.log('🚫 Pestañas excluidas:', excludedSheets);
+      
+      return availableSheets;
+    } catch (error) {
+      console.error('Error obteniendo lista de pestañas:', error);
+      // Fallback a la lista fija en caso de error
+      return ['Fiat', 'Peugeot', 'Citroen', 'Toyota', 'Chevrolet', 'Renault'];
+    }
+  }
+
   async getAllLeadsFromSheets(): Promise<SheetLead[]> {
     if (!this.sheets) {
       console.log('Google Sheets API not configured');
       return [];
     }
 
-    const sheetNames = ['Fiat', 'Peugeot', 'Citroen', 'Toyota', 'Chevrolet', 'Renault']; // Todas las hojas por marca
+    // NUEVA FUNCIONALIDAD: Detección automática de pestañas
+    const sheetNames = await this.getAvailableSheetNames();
     const allLeads: SheetLead[] = [];
+
+    console.log(`📊 Sincronizando ${sheetNames.length} pestañas automáticamente: ${sheetNames.join(', ')}`);
 
     for (const sheetName of sheetNames) {
       try {
@@ -135,13 +177,21 @@ class GoogleSheetsService {
     return allLeads;
   }
 
-  // Nueva función para sincronizar TODAS las pestañas de marcas a PostgreSQL
+  // Nueva función para sincronizar TODAS las pestañas de marcas a PostgreSQL (DETECCIÓN AUTOMÁTICA)
   async syncAllBrandSheetsToDatabase(): Promise<{ success: boolean; message: string; stats: any }> {
     if (!this.sheets) {
       return { success: false, message: 'Google Sheets API not configured', stats: {} };
     }
 
-    const brandSheets = ['Fiat', 'Peugeot', 'Citroen', 'Toyota', 'Chevrolet', 'Renault'];
+    // NUEVA FUNCIONALIDAD: Usar detección automática en lugar de lista fija
+    const brandSheets = await this.getAvailableSheetNames();
+    console.log(`🔄 Sincronizando automáticamente ${brandSheets.length} pestañas: ${brandSheets.join(', ')}`);
+    
+    // Mantener fallback a lista fija si la detección falla
+    if (brandSheets.length === 0) {
+      console.log('⚠️  Fallback a lista fija de pestañas');
+      brandSheets.push(...['Fiat', 'Peugeot', 'Citroen', 'Toyota', 'Chevrolet', 'Renault']);
+    }
     const stats = {
       totalProcessed: 0,
       totalInserted: 0,

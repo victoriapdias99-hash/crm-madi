@@ -2609,6 +2609,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  // Endpoint para ver pestañas detectadas automáticamente
+  app.get('/api/sheets/auto-detect', async (req, res) => {
+    try {
+      console.log('🔍 Detectando pestañas automáticamente...');
+      const availableSheets = await googleSheetsService.getAvailableSheetNames();
+      
+      // Obtener conteo de leads por pestaña
+      const sheetsInfo = [];
+      for (const sheetName of availableSheets) {
+        try {
+          const leads = await googleSheetsService.getSheetData(sheetName);
+          sheetsInfo.push({
+            name: sheetName,
+            leadsCount: leads.length,
+            status: 'active'
+          });
+        } catch (error) {
+          sheetsInfo.push({
+            name: sheetName,
+            leadsCount: 0,
+            status: 'error',
+            error: error.message
+          });
+        }
+      }
+      
+      res.json({
+        success: true,
+        totalSheets: availableSheets.length,
+        detectedSheets: availableSheets,
+        excludedSheets: ['Datos Diarios', 'Control Campañas'],
+        sheetsInfo,
+        totalLeads: sheetsInfo.reduce((sum, sheet) => sum + sheet.leadsCount, 0)
+      });
+    } catch (error) {
+      console.error('Error en detección automática:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Error en detección automática de pestañas',
+        details: error.message 
+      });
+    }
+  });
+
   // Nuevos endpoints para el sistema mejorado de sincronización
   app.get('/api/sync/status', async (req, res) => {
     try {
