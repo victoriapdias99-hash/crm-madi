@@ -52,13 +52,9 @@ export class GoogleSheetsSyncService {
       console.log(`📥 Obtenidos ${allLeads.length} leads desde Google Sheets con columnas G, H, I`);
       
       if (allLeads.length > 0) {
-        // USAR EL MISMO SISTEMA INCREMENTAL QUE LA SINCRONIZACIÓN MANUAL
-        const { syncService } = await import('./sync-service');
-        await syncService.syncAllBrandSheets({
-          forceFullSync: false,  // Incremental para preservar datos
-          includeDashboard: true,
-          includeMetrics: true
-        }, allLeads);
+        // USAR DIRECTAMENTE handleSheetSync que ya funciona perfectamente
+        const routesModule = await import('./routes');
+        await routesModule.handleSheetSync(allLeads);
         console.log('✅ Sincronización incremental completada - datos preservados');
       }
       

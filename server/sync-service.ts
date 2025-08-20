@@ -216,19 +216,65 @@ export class SyncService {
    */
   private async _processAndSaveLeads(leads: any[], options: SyncOptions) {
     try {
-      // Importar dinámicamente para evitar dependencias circulares
-      const { handleSheetSync } = await import('./routes');
+      // Usar el sistema handleSheetSync existente que ya funciona
+      const routesModule = await import('./routes');
       
       const beforeCount = await this._getLeadsCount();
       
-      await handleSheetSync(leads);
+      // Convertir leads al formato esperado por handleSheetSync
+      const sheetLeads = leads.map(lead => ({
+        nombre: lead.nombre || '',
+        telefono: lead.telefono || '',
+        email: lead.email || '',
+        ciudad: lead.ciudad || '',
+        marca: lead.marca || '',
+        origen: lead.origen || '',
+        localizacion: lead.localizacion || '',
+        cliente: lead.cliente || '',
+        fechaCreacion: lead.fechaCreacion || new Date().toISOString(),
+        // Campos adicionales requeridos por el sistema existente
+        metaLeadId: `${lead.telefono}_${lead.marca}_${Date.now()}` // ID único basado en teléfono
+      }));
+      
+      // Llamar a la función que sabemos que existe y funciona
+      if (typeof routesModule.handleSheetSync === 'function') {
+        await routesModule.handleSheetSync(sheetLeads);
+      } else {
+        // Fallback: procesar directamente con storage
+        const { storage } = await import('./storage');
+        const existingLeads = await storage.getLeads({ limit: 10000 });
+        const existingPhones = new Set(existingLeads.map(lead => lead.phone || ''));
+        
+        for (const leadData of sheetLeads) {
+          if (!existingPhones.has(leadData.telefono) && leadData.telefono) {
+            await storage.createLead({
+              metaLeadId: leadData.metaLeadId || `SYNC_${Date.now()}_${leadData.telefono}`,
+              firstName: leadData.nombre || '',
+              lastName: '',
+              phone: leadData.telefono || '',
+              email: leadData.email || '',
+              city: leadData.ciudad || '',
+              campaignName: leadData.marca || '',
+              origen: leadData.origen || '',
+              localizacion: leadData.localizacion || '',
+              cliente: leadData.cliente || '',
+              source: 'google_sheets',
+              status: 'new',
+              leadDate: new Date(leadData.fechaCreacion || new Date())
+            });
+            existingPhones.add(leadData.telefono);
+          }
+        }
+      }
       
       const afterCount = await this._getLeadsCount();
       const newLeads = Math.max(0, afterCount - beforeCount);
       
+      console.log(`🔄 Procesados ${leads.length} leads, ${newLeads} nuevos agregados`);
+      
       return {
         newLeads,
-        updatedLeads: 0, // Por implementar si se necesita tracking de actualizaciones
+        updatedLeads: 0,
         skippedLeads: leads.length - newLeads
       };
     } catch (error) {
