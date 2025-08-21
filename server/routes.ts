@@ -2469,27 +2469,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Endpoint para exportar leads de una campaña específica
+  // Endpoint para exportar leads de una campaña específica usando filtrado inteligente
   app.get('/api/export/campana-leads/:campaignName', async (req, res) => {
     try {
       const { campaignName } = req.params;
       console.log(`📥 Exportando leads para campaña: ${campaignName}`);
       
-      // Obtener leads desde PostgreSQL
+      // Obtener leads desde PostgreSQL usando el mismo filtro que el dashboard
       const { db } = await import('./db');
       const { leads } = await import('../shared/schema');
       const { sql } = await import('drizzle-orm');
       
-      // Extraer marca y número de campaña del nombre
-      const campaignParts = campaignName.split(' ');
-      const marca = campaignParts[0]?.toLowerCase();
-      const numeroCampana = campaignParts[1];
+      // Buscar campaña comercial que corresponda al nombre
+      const campanas = await storage.getAllCampanasComerciales();
+      const campana = campanas.find(c => `${c.marca.toUpperCase()} ${c.numeroCampana}` === campaignName);
       
-      if (!marca) {
-        return res.status(400).json({ error: 'Formato de campaña inválido' });
+      if (!campana) {
+        return res.status(404).json({ error: `Campaña ${campaignName} no encontrada` });
       }
       
-      // Buscar leads que coincidan con la marca
+      // Obtener datos del cliente para filtro por nombre comercial
+      const clienteData = await storage.getCliente(campana.clienteId);
+      const nombreComercial = clienteData?.nombreComercial || '';
+      
+      console.log(`🔍 DEBUG Export: Campaña=${campaignName}, clienteId=${campana.clienteId}, nombreComercial='${nombreComercial}'`);
+      
+      // Usar el mismo filtrado inteligente que el dashboard
       const campaignLeads = await db
         .select({
           id: leads.id,
@@ -2508,17 +2513,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .from(leads)
         .where(
-          sql`lower(${leads.campaignName}) LIKE ${`%${marca}%`} 
-              AND ${leads.source} = 'google_sheets'`
+          sql`lower(${leads.campaignName}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
+              AND (
+                lower(${leads.cliente}) LIKE ${`%${nombreComercial.toLowerCase()}%`}
+                OR ${leads.cliente} IS NULL 
+                OR ${leads.cliente} = ''
+              )
+              AND ${leads.source} = 'google_sheets'
+              AND date(${leads.leadDate}) >= ${campana.fechaCampana}
+              ${campana.fechaFin ? sql`AND date(${leads.leadDate}) <= ${campana.fechaFin}` : sql``}`
         )
         .orderBy(leads.leadDate);
       
-      console.log(`✅ Encontrados ${campaignLeads.length} leads para ${campaignName}`);
+      console.log(`✅ Encontrados ${campaignLeads.length} leads para ${campaignName} (${nombreComercial})`);
       
       res.json({
         campaignName,
-        marca,
-        numeroCampana,
+        marca: campana.marca,
+        numeroCampana: campana.numeroCampana,
+        nombreComercial,
         totalLeads: campaignLeads.length,
         leads: campaignLeads,
         exportDate: new Date().toISOString()
