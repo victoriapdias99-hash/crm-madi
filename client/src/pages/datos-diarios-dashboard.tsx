@@ -83,9 +83,13 @@ export default function DatosDiariosDashboard() {
       const response = await apiRequest(`/api/export/campana-leads/${encodeURIComponent(campana.cliente)}`);
       
       const leads = response.leads || [];
+      console.log(`📊 DEBUG: Recibidos ${leads.length} leads del endpoint`);
+      console.log(`📋 DEBUG: Primeros 3 leads:`, leads.slice(0, 3));
       
       // Generar CSV para esta campaña específica
       const csvContent = generateCSVFromSingleCampana(campana, leads);
+      console.log(`📄 DEBUG: CSV generado tiene ${csvContent.split('\n').length} líneas`);
+      console.log(`📄 DEBUG: Primeras 5 líneas del CSV:`, csvContent.split('\n').slice(0, 5));
       
       // Crear blob y descargar archivo
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -157,6 +161,9 @@ export default function DatosDiariosDashboard() {
       ].join(',') + '\n';
     } else {
       leads.forEach((lead: any) => {
+        const nombreCompleto = `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Sin nombre';
+        const fechaLead = lead.leadDate ? new Date(lead.leadDate).toISOString().split('T')[0] : '';
+        
         csvContent += [
           `"${campana.cliente}"`,
           `"${campana.zona}"`,
@@ -164,7 +171,7 @@ export default function DatosDiariosDashboard() {
           `"${campana.fechaFinReal || 'En proceso'}"`,
           `"${campana.estadoCampana || 'Activa'}"`,
           campana.enviados,
-          `"${lead.firstName || ''} ${lead.lastName || ''}"`.trim() || '""',
+          `"${nombreCompleto}"`,
           `"${lead.phone || ''}"`,
           `"${lead.email || ''}"`,
           `"${lead.city || ''}"`,
@@ -172,7 +179,7 @@ export default function DatosDiariosDashboard() {
           `"${lead.origen || ''}"`,
           `"${lead.localizacion || ''}"`,
           `"${lead.cliente || ''}"`,
-          `"${lead.leadDate ? new Date(lead.leadDate).toISOString().split('T')[0] : ''}"`
+          `"${fechaLead}"`
         ].join(',') + '\n';
       });
     }
