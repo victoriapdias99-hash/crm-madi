@@ -584,6 +584,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             fechaFin: fechaFinExacta, // Usar fecha con timestamp exacto
             facturacionBruta: campana.facturacionBruta,
             pedidosPorDia: campana.pedidosPorDia ?? 0, // Campo "Día" desde tabla campañas
+            pedidosTotal: campana.cantidadDatosSolicitados, // Campo "Pedidos Total" (Datos Solicitados)
             // Campos calculados adicionales
             inversionRealizada: (enviadosFinales * (storedCpl || 0)),
             inversionPendiente: (faltantesAEnviar * (storedCpl || 0)),
