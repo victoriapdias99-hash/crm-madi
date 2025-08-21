@@ -479,12 +479,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (const campana of campanas) {
         try {
-          // Contar leads desde PostgreSQL por marca en campaignName y cliente
+          // Obtener nombre del cliente para filtro preciso
+          const clienteData = await storage.getCliente(campana.clienteId);
+          const nombreCliente = clienteData?.nombreCliente || '';
+          
+          // Contar leads desde PostgreSQL por marca Y cliente específico
           const leadsCount = await db
             .select({ count: count() })
             .from(leads)
             .where(
               sql`lower(${leads.campaignName}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
+                  AND lower(${leads.cliente}) LIKE ${`%${nombreCliente.toLowerCase()}%`}
                   AND ${leads.source} = 'google_sheets'
                   AND date(${leads.leadDate}) >= ${campana.fechaCampana}
                   ${campana.fechaFin ? sql`AND date(${leads.leadDate}) <= ${campana.fechaFin}` : sql``}`
