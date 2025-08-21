@@ -779,14 +779,14 @@ export default function DatosDiariosDashboard() {
                     
                     const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0; // Use CPL from storage or server
                     
-                    // Crear objeto actualizado con validaciones para datos > 100%
-                    const porcentajeReal = data.pedidosTotal > 0 ? (data.enviados / data.pedidosTotal) * 100 : 0;
+                    // Usar el porcentaje calculado correctamente desde el backend
+                    const porcentajeReal = data.porcentajeDatosEnviados || 0;
                     const esSuperior100 = porcentajeReal > 100;
                     
                     const updatedData = {
                       ...data,
-                      faltantesAEnviar: esSuperior100 ? 0 : Math.max(0, data.pedidosTotal - data.enviados), // Si supera 100%, faltantes = 0
-                      porcentajeDatosEnviados: Math.min(100, porcentajeReal), // Limitar a 100% para display
+                      faltantesAEnviar: esSuperior100 ? 0 : Math.max(0, (data.pedidosTotal || data.cantidadSolicitada || 0) - data.enviados),
+                      porcentajeDatosEnviados: porcentajeReal, // Usar valor del backend directamente
                       esSuperior100: esSuperior100
                     };
                     
@@ -810,7 +810,7 @@ export default function DatosDiariosDashboard() {
                               <span className="font-medium text-green-700 dark:text-green-300 block">
                                 {data.fechaCampana || 'N/A'}
                               </span>
-                              {data.porcentajeDatosEnviados >= 100 && (
+                              {updatedData.porcentajeDatosEnviados >= 100 && (
                                 <div className="text-xs text-blue-600 dark:text-blue-400 font-semibold">
                                   Fin: {formatDateTimeExact(data.fechaFinReal)}
                                 </div>
@@ -859,7 +859,7 @@ export default function DatosDiariosDashboard() {
                                     ? 'bg-gradient-to-r from-green-400 via-emerald-500 to-green-600' 
                                     : 'bg-gradient-to-r from-amber-400 via-orange-500 to-red-500'
                                 }`}
-                                style={{ width: `${Math.min(data.porcentajeDatosEnviados || 0, 100)}%` }}
+                                style={{ width: `${Math.min(updatedData.porcentajeDatosEnviados || 0, 100)}%` }}
                               />
                             </div>
                             <Badge className={`font-bold text-xs ${
