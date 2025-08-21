@@ -586,6 +586,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             pedidosPorDia: campana.pedidosPorDia ?? 0, // Campo "Día" desde tabla campañas
             pedidosTotal: campana.cantidadDatosSolicitados, // Campo "Pedidos Total" (Datos Solicitados)
             faltantes: Math.max(0, campana.cantidadDatosSolicitados - enviadosFinales), // Faltantes = Pedidos Total - Enviados
+            entregadosPorDia: (() => {
+              // Calcular días transcurridos desde fecha de campaña hasta hoy o fecha fin
+              const fechaInicio = new Date(campana.fechaCampana);
+              const fechaReferencia = fechaFinExacta ? new Date(fechaFinExacta) : new Date();
+              const diasTranscurridos = Math.max(1, Math.ceil((fechaReferencia.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24)));
+              return enviadosFinales / diasTranscurridos;
+            })(), // Entregados por día = enviados / días transcurridos
             // Campos calculados adicionales
             inversionRealizada: (enviadosFinales * (storedCpl || 0)),
             inversionPendiente: (faltantesAEnviar * (storedCpl || 0)),
