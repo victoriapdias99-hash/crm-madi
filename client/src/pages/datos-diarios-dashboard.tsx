@@ -80,9 +80,10 @@ export default function DatosDiariosDashboard() {
     try {
       console.log(`🔽 Exportando CSV para campaña: ${campana.cliente}`);
       
-      const response = await apiRequest(`/api/export/campana-leads/${encodeURIComponent(campana.cliente)}`);
+      const response = await apiRequest(`/api/export/campana-leads/${encodeURIComponent(campana.cliente)}`, 'GET');
+      const data = await response.json();
       
-      const leads = response.leads || [];
+      const leads = data.leads || [];
       console.log(`📊 DEBUG: Recibidos ${leads.length} leads del endpoint`);
       console.log(`📋 DEBUG: Primeros 3 leads:`, leads.slice(0, 3));
       

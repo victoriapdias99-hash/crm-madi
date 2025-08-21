@@ -4,6 +4,15 @@
 This project is a real-time dashboard for Meta Ads lead management, specifically designed for the automotive sector in the Spanish market. Its primary purpose is to centralize and manage lead generation data from Meta Ads campaigns, integrating with Google Sheets for lead synchronization and directly with the Meta Ads API for campaign spending metrics. Key capabilities include real-time statistics, automated data synchronization, comprehensive lead tracking, and a full client management system (ABM). The business vision is to provide automotive businesses with a powerful tool for optimizing their Meta Ads campaigns and improving lead conversion efficiency.
 
 ## Recent Updates (August 2025)
+### CSV Export System Fixed ✅ (August 21, 2025)
+- **Critical JSON Parsing Bug Fixed**: Frontend was not parsing JSON response from export endpoint correctly
+- **API Response Handling**: Fixed `apiRequest` usage to properly await `response.json()` before accessing leads data
+- **Export Functionality Restored**: CSV downloads now include all filtered leads instead of just headers and "Sin leads disponibles"
+- **Data Integrity Verified**: Backend correctly returns 77 leads for VW 1 (Borussia), frontend now receives them properly
+- **Complete Lead Export**: CSV now contains all lead data: names, phones, emails, cities, origins, locations, client info
+- **Template String Bug Fixed**: Corrected CSV generation logic that was causing malformed output
+- **Production Ready**: Export system fully operational for all campaigns with accurate client-specific filtering
+
 ### Client-Specific Lead Filtering System Implemented ✅ (August 21, 2025)
 - **Critical Bug Fixed**: Resolved major filtering issue where campaigns counted all leads of same brand instead of client-specific leads
 - **Smart Commercial Name Filtering**: System now uses `nombreComercial` from client table instead of full `nombreCliente` for precise lead matching
