@@ -479,21 +479,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (const campana of campanas) {
         try {
-          // Obtener nombre del cliente para filtro preciso
+          // Obtener nombre comercial del cliente para filtro preciso
           const clienteData = await storage.getCliente(campana.clienteId);
-          const nombreCliente = clienteData?.nombreCliente || '';
+          const nombreComercial = clienteData?.nombreComercial || '';
           
-          // Contar leads desde PostgreSQL por marca Y cliente específico
+          // Si el nombre comercial está vacío o no hay datos de cliente en Google Sheets,
+          // filtrar solo por marca. Si hay nombre comercial, filtrar por marca Y cliente
+          let whereClause;
+          if (nombreComercial.trim() === '') {
+            // Solo filtro por marca si no hay nombre comercial
+            whereClause = sql`lower(${leads.campaignName}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
+                              AND ${leads.source} = 'google_sheets'
+                              AND date(${leads.leadDate}) >= ${campana.fechaCampana}
+                              ${campana.fechaFin ? sql`AND date(${leads.leadDate}) <= ${campana.fechaFin}` : sql``}`;
+          } else {
+            // Verificar si existen leads con el nombre comercial en la columna cliente
+            const testClienteCount = await db
+              .select({ count: count() })
+              .from(leads)
+              .where(
+                sql`lower(${leads.campaignName}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
+                    AND lower(${leads.cliente}) LIKE ${`%${nombreComercial.toLowerCase()}%`}
+                    AND ${leads.source} = 'google_sheets'`
+              );
+            
+            if (testClienteCount[0]?.count > 0) {
+              // Hay datos con nombre comercial, usar filtro completo
+              whereClause = sql`lower(${leads.campaignName}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
+                                AND lower(${leads.cliente}) LIKE ${`%${nombreComercial.toLowerCase()}%`}
+                                AND ${leads.source} = 'google_sheets'
+                                AND date(${leads.leadDate}) >= ${campana.fechaCampana}
+                                ${campana.fechaFin ? sql`AND date(${leads.leadDate}) <= ${campana.fechaFin}` : sql``}`;
+            } else {
+              // No hay datos con nombre comercial, usar solo marca
+              whereClause = sql`lower(${leads.campaignName}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
+                                AND ${leads.source} = 'google_sheets'
+                                AND date(${leads.leadDate}) >= ${campana.fechaCampana}
+                                ${campana.fechaFin ? sql`AND date(${leads.leadDate}) <= ${campana.fechaFin}` : sql``}`;
+            }
+          }
+          
+          // Contar leads con la condición apropiada
           const leadsCount = await db
             .select({ count: count() })
             .from(leads)
-            .where(
-              sql`lower(${leads.campaignName}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
-                  AND lower(${leads.cliente}) LIKE ${`%${nombreCliente.toLowerCase()}%`}
-                  AND ${leads.source} = 'google_sheets'
-                  AND date(${leads.leadDate}) >= ${campana.fechaCampana}
-                  ${campana.fechaFin ? sql`AND date(${leads.leadDate}) <= ${campana.fechaFin}` : sql``}`
-            );
+            .where(whereClause);
 
           const enviadosDB = leadsCount[0]?.count || 0;
           
