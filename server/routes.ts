@@ -537,19 +537,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Aplicar correcciones específicas (mantener la lógica actual)
           let enviadosFinales = enviadosDB;
-          const clienteNombre = `${campana.marca.toUpperCase()} ${campana.numeroCampana}`;
+          const clienteIdentificador = `${campana.marca.toUpperCase()} ${campana.numeroCampana}`;
+          const clienteNombreReal = clienteData?.nombreCliente || `${campana.marca.toUpperCase()} ${campana.numeroCampana}`;
           
           // Aplicar mismas correcciones que el sistema actual
-          if (clienteNombre.toLowerCase().includes('renault')) {
+          if (clienteIdentificador.toLowerCase().includes('renault')) {
             enviadosFinales = 45;
             console.log(`🚨 CORRECCIÓN DB: RENAULT ajustado a 45 datos`);
-          } else if (clienteNombre.toLowerCase().includes('novo group')) {
+          } else if (clienteNombreReal.toLowerCase().includes('novo group')) {
             enviadosFinales = 106;
             console.log(`🚨 CORRECCIÓN DB: NOVO GROUP ajustado a 106 datos`);
-          } else if (clienteNombre.toLowerCase().includes('grupo quijada') && clienteNombre.includes('peugeot')) {
+          } else if (clienteNombreReal.toLowerCase().includes('grupo quijada') && clienteIdentificador.includes('peugeot')) {
             enviadosFinales = 8;
             console.log(`🚨 CORRECCIÓN DB: GRUPO QUIJADA PEUGEOT ajustado a 8 datos`);
-          } else if (clienteNombre.toLowerCase().includes('grupo quijada') && clienteNombre.includes('citroen')) {
+          } else if (clienteNombreReal.toLowerCase().includes('grupo quijada') && clienteIdentificador.includes('citroen')) {
             enviadosFinales = 10;
             console.log(`🚨 CORRECCIÓN DB: GRUPO QUIJADA CITROEN ajustado a 10 datos`);
           }
@@ -562,14 +563,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const faltantesAEnviar = Math.max(0, cantidadSolicitados - enviadosFinales);
 
           // Obtener CPL desde la base de datos
-          const storedCpl = await storage.getCplByClienteAndCampana(clienteNombre, campana.numeroCampana);
+          const storedCpl = await storage.getCplByClienteAndCampana(clienteIdentificador, campana.numeroCampana);
 
           // Usar fecha fin de la campaña sin cálculo automático
           // Las fechas fin solo se deben calcular cuando realmente se completa la campaña
           let fechaFinExacta = campana.fechaFin;
 
           const record = {
-            cliente: clienteNombre,
+            cliente: clienteIdentificador, // Identificador técnico (JEEP 1, VW 1, etc.)
+            clienteNombre: clienteNombreReal, // Nombre real del cliente desde la base de datos
             zona: campana.zona,
             enviados: enviadosFinales,
             cantidadDatosSolicitados: cantidadSolicitados,
@@ -588,7 +590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
 
           processedData.push(record);
-          console.log(`✅ DB: ${clienteNombre} = ${enviadosFinales} enviados`);
+          console.log(`✅ DB: ${clienteIdentificador} = ${enviadosFinales} enviados`);
 
         } catch (campaignError) {
           console.error(`Error procesando campaña ${campana.numeroCampana}:`, campaignError);
@@ -948,6 +950,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           cpaValue = 0;
         }
         
+        console.log(`✅ MAPPING: Added campaign ${campana.numeroCampana} for client ${cliente.nombreCliente}`);
         mappedData.push({
           cliente: `${cliente.nombreCliente} - ${campana.marca}`,
           clienteNombre: cliente.nombreCliente,
