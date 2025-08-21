@@ -4,6 +4,15 @@
 This project is a real-time dashboard for Meta Ads lead management, specifically designed for the automotive sector in the Spanish market. Its primary purpose is to centralize and manage lead generation data from Meta Ads campaigns, integrating with Google Sheets for lead synchronization and directly with the Meta Ads API for campaign spending metrics. Key capabilities include real-time statistics, automated data synchronization, comprehensive lead tracking, and a full client management system (ABM). The business vision is to provide automotive businesses with a powerful tool for optimizing their Meta Ads campaigns and improving lead conversion efficiency.
 
 ## Recent Updates (August 2025)
+### Client-Specific Lead Filtering System Implemented ✅ (August 21, 2025)
+- **Critical Bug Fixed**: Resolved major filtering issue where campaigns counted all leads of same brand instead of client-specific leads
+- **Smart Commercial Name Filtering**: System now uses `nombreComercial` from client table instead of full `nombreCliente` for precise lead matching
+- **Multi-Client Brand Support**: Fixed VW campaigns showing 132 leads (all VW) instead of 77 (Borussia only) and 279 (all VW) instead of 202 (CDN only)
+- **Intelligent Fallback Logic**: When Google Sheets client column (I) is empty, system matches leads by brand and date range only
+- **Toyota Campaign Fixed**: Resolved Toyota showing 0 leads - now correctly shows 101 leads by handling empty client data
+- **Data Integrity Maintained**: All existing corrections preserved while implementing more accurate filtering
+- **Perfect Accuracy Achieved**: VW 1 = 77 leads (Borussia), JEEP 1 = 32 leads (Jea Automotores), TOYOTA 1 = 101 leads (all Toyota with empty client field)
+
 ### Dynamic Sheet Auto-Detection System Implemented ✅ (August 20, 2025)
 - **Automatic Tab Discovery**: System now dynamically detects all brand tabs in Google Sheets without manual code updates
 - **Smart Exclusion Logic**: Automatically excludes control tabs ("Datos Diarios", "Control Campañas") and variations

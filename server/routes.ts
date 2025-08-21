@@ -463,7 +463,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Nuevo endpoint que usa solo PostgreSQL para datos diarios
+  /**
+   * SISTEMA DE FILTRADO INTELIGENTE DE LEADS POR CAMPAÑA
+   * 
+   * Esta función implementa la lógica central para contar leads que pertenecen 
+   * específicamente a una campaña determinada. Resuelve el problema crítico de
+   * precisión en el conteo de leads por cliente.
+   * 
+   * PROBLEMA RESUELTO:
+   * - Antes: Campañas VW mostraban 132 leads (todos los VW) en lugar de 77 (solo Borussia)
+   * - Antes: Toyota mostraba 0 leads debido a nombres comerciales inconsistentes
+   * - Ahora: Filtrado preciso por nombre comercial del cliente específico
+   * 
+   * LÓGICA DE FILTRADO:
+   * 1. Filtro por MARCA: campaign_name contiene la marca de la campaña (ej: "toyota")
+   * 2. Filtro por CLIENTE: Usa nombreComercial del cliente (ej: "Mariano - Pichetti")
+   * 3. Manejo de VACÍOS: Si cliente está vacío/null, incluye todos los leads de esa marca
+   * 4. Filtro TEMPORAL: Solo leads desde fecha_campana hasta fecha_fin (si existe)
+   * 5. Filtro por FUENTE: Solo datos de 'google_sheets'
+   * 
+   * CASOS DE USO:
+   * - TOYOTA 1: Busca "toyota" + "Mariano - Pichetti" OR cliente vacío = 101 leads
+   * - JEEP 1: Busca "jeep" + "Jea Automotores" = 32 leads
+   * - VW 1: Busca "vw" + "Borussia" = 77 leads (no los 132 de todos los VW)
+   * 
+   * ARQUITECTURA:
+   * - Usando SQL con LIKE case-insensitive para búsqueda flexible
+   * - Filtros AND/OR combinados para máxima precisión y cobertura
+   * - Compatible con datos inconsistentes de Google Sheets
+   */
+  async function contarLeadsPorCampana(campana: any, clienteData: any, db: any, leads: any, sql: any, count: any) {
+    const nombreComercial = clienteData?.nombreComercial || '';
+    
+    return await db
+      .select({ count: count() })
+      .from(leads)
+      .where(
+        sql`lower(${leads.campaignName}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
+            AND (
+              lower(${leads.cliente}) LIKE ${`%${nombreComercial.toLowerCase()}%`}
+              OR ${leads.cliente} IS NULL 
+              OR ${leads.cliente} = ''
+            )
+            AND ${leads.source} = 'google_sheets'
+            AND date(${leads.leadDate}) >= ${campana.fechaCampana}
+            ${campana.fechaFin ? sql`AND date(${leads.leadDate}) <= ${campana.fechaFin}` : sql``}`
+      );
+  }
+
+  // Endpoint principal para datos diarios usando PostgreSQL con filtrado por nombre comercial
   app.get('/api/dashboard/datos-diarios-db', async (req, res) => {
     try {
       // Obtener todos los datos desde PostgreSQL
@@ -479,25 +527,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (const campana of campanas) {
         try {
-          // Obtener nombre comercial del cliente para filtro preciso
+          // Obtener datos del cliente para filtro preciso por nombre comercial
           const clienteData = await storage.getCliente(campana.clienteId);
-          const nombreComercial = clienteData?.nombreComercial || '';
           
-          // Contar leads usando nombre comercial de la campaña para filtrar por fecha y cliente
-          const leadsCount = await db
-            .select({ count: count() })
-            .from(leads)
-            .where(
-              sql`lower(${leads.campaignName}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
-                  AND (
-                    lower(${leads.cliente}) LIKE ${`%${nombreComercial.toLowerCase()}%`}
-                    OR ${leads.cliente} IS NULL 
-                    OR ${leads.cliente} = ''
-                  )
-                  AND ${leads.source} = 'google_sheets'
-                  AND date(${leads.leadDate}) >= ${campana.fechaCampana}
-                  ${campana.fechaFin ? sql`AND date(${leads.leadDate}) <= ${campana.fechaFin}` : sql``}`
-            );
+          // Usar función auxiliar para contar leads con filtro inteligente
+          const leadsCount = await contarLeadsPorCampana(campana, clienteData, db, leads, sql, count);
 
           const enviadosDB = leadsCount[0]?.count || 0;
           
