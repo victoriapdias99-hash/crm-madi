@@ -874,7 +874,7 @@ export default function DatosDiariosDashboard() {
                         </td>
                         <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
                           <div className="bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 p-2 rounded-lg">
-                            <span className="font-bold text-red-700 dark:text-red-300">{inversions.faltantes}</span>
+                            <span className="font-bold text-red-700 dark:text-red-300">{data.faltantes ?? 0}</span>
                           </div>
                         </td>
                         <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
