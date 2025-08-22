@@ -500,11 +500,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       .from(leads)
       .where(
         sql`lower(${leads.campaignName}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
-            AND (
-              lower(${leads.cliente}) LIKE ${`%${nombreComercial.toLowerCase()}%`}
-              OR ${leads.cliente} IS NULL 
-              OR ${leads.cliente} = ''
-            )
+            AND lower(${leads.cliente}) LIKE ${`%${nombreComercial.toLowerCase()}%`}
             AND ${leads.source} = 'google_sheets'
             AND date(${leads.leadDate}) >= ${campana.fechaCampana}
             ${campana.fechaFin ? sql`AND date(${leads.leadDate}) <= ${campana.fechaFin}` : sql``}`
