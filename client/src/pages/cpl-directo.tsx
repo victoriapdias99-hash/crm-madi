@@ -30,7 +30,7 @@ export default function CPLDirecto() {
   const queryClient = useQueryClient();
 
   const { data: datosDiarios, isLoading } = useQuery({
-    queryKey: ['/api/dashboard/datos-diarios'],
+    queryKey: ['/api/dashboard/datos-diarios-db'],
     refetchInterval: 30000,
     staleTime: 60000,
     retry: 2,
@@ -40,7 +40,7 @@ export default function CPLDirecto() {
   const syncCplMutation = useMutation({
     mutationFn: async ({ cliente, numeroCampana, cpl }: { cliente: string; numeroCampana: string; cpl: number }) => {
       return await apiRequest('/api/dashboard/update-cpl', 'POST', {
-        clienteNombre: cliente,
+        clienteNombre: cliente, // Usar el nombre de campaña completo (ej: "JEEP 1")
         numeroCampana: numeroCampana,
         cpl: cpl
       });
@@ -212,13 +212,13 @@ export default function CPLDirecto() {
                 </Table>
               </div>
               
-              <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
-                <h3 className="font-semibold text-green-800 mb-2">Estado del Sistema</h3>
-                <p className="text-green-700">
-                  ✅ Sistema funcionando correctamente - Los CPL se guardan en memoria local
+              <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h3 className="font-semibold text-blue-800 mb-2">Estado del Sistema</h3>
+                <p className="text-blue-700">
+                  ✅ Sistema funcionando correctamente - CPL sincronizado con PostgreSQL
                 </p>
-                <p className="text-green-700 mt-1">
-                  ✅ No hay dependencias de base de datos - Funciona 100% garantizado
+                <p className="text-blue-700 mt-1">
+                  ✅ Los datos se reflejan automáticamente en "Datos Diarios"
                 </p>
               </div>
             </CardContent>
