@@ -27,12 +27,38 @@ export default function CPLDirecto() {
   const [cplValues, setCplValues] = useState<Record<string, number>>({});
   const [savedCpls, setSavedCpls] = useState<Record<string, number>>({});
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: datosDiarios, isLoading } = useQuery({
     queryKey: ['/api/dashboard/datos-diarios'],
     refetchInterval: 30000,
     staleTime: 60000,
     retry: 2,
+  });
+
+  // Mutation para sincronizar CPL con la base de datos
+  const syncCplMutation = useMutation({
+    mutationFn: async ({ cliente, numeroCampana, cpl }: { cliente: string; numeroCampana: string; cpl: number }) => {
+      return await apiRequest('/api/dashboard/update-cpl', 'POST', {
+        clienteNombre: cliente,
+        numeroCampana: numeroCampana,
+        cpl: cpl
+      });
+    },
+    onSuccess: (_, { cliente, cpl }) => {
+      console.log(`✅ CPL sincronizado con base de datos: ${cliente} = ${cpl}`);
+      // Invalidar queries del dashboard para que se actualice automáticamente
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+    },
+    onError: (error, { cliente, cpl }) => {
+      console.error(`❌ Error sincronizando CPL con base de datos:`, error);
+      toast({
+        title: "Advertencia",
+        description: `CPL guardado localmente pero no se pudo sincronizar con la base de datos para ${cliente}`,
+        variant: "destructive",
+      });
+    }
   });
 
   const handleCplChange = (key: string, value: string) => {
@@ -45,10 +71,13 @@ export default function CPLDirecto() {
     const cpl = cplValues[key];
     
     if (cpl && cpl > 0) {
-      // Guardar usando la utilidad CPLStorage
+      // Guardar usando la utilidad CPLStorage (localStorage)
       CPLStorage.set(cliente, numeroCampana, cpl);
       cplStorage.set(key, cpl);
       setSavedCpls(prev => ({ ...prev, [key]: cpl }));
+      
+      // Sincronizar con la base de datos PostgreSQL
+      syncCplMutation.mutate({ cliente, numeroCampana, cpl });
       
       // Limpiar input
       setCplValues(prev => {
@@ -59,7 +88,7 @@ export default function CPLDirecto() {
       
       toast({
         title: "CPL Guardado",
-        description: `CPL de ARS $${cpl.toLocaleString('es-AR')} guardado para ${cliente}`,
+        description: `CPL de ARS $${cpl.toLocaleString('es-AR')} guardado y sincronizado para ${cliente}`,
       });
     } else {
       toast({
