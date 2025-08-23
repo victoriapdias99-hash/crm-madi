@@ -101,7 +101,17 @@ export default function CPLDirecto() {
 
   const getCplActual = (cliente: string, numeroCampana: string) => {
     const key = `${cliente}-${numeroCampana}`;
-    return savedCpls[key] || cplStorage.get(key) || CPLStorage.get(cliente, numeroCampana) || 0;
+    
+    // Primero buscar en datos en memoria
+    const localCpl = savedCpls[key] || cplStorage.get(key) || CPLStorage.get(cliente, numeroCampana);
+    if (localCpl > 0) return localCpl;
+    
+    // Si no hay en localStorage, buscar en los datos del dashboard (que vienen de la base de datos)
+    const datosCliente = datosDiarios?.find((data: any) => 
+      data.cliente === cliente && data.numeroCampana === numeroCampana
+    );
+    
+    return datosCliente?.cplGuardado || 0;
   };
 
   if (isLoading) {
