@@ -107,7 +107,8 @@ export default function CPLDirecto() {
     if (localCpl > 0) return localCpl;
     
     // Si no hay en localStorage, buscar en los datos del dashboard (que vienen de la base de datos)
-    const datosCliente = datosDiarios?.find((data: any) => 
+    const datosArray = Array.isArray(datosDiarios) ? datosDiarios : [];
+    const datosCliente = datosArray.find((data: any) => 
       data.cliente === cliente && data.numeroCampana === numeroCampana
     );
     
@@ -165,7 +166,7 @@ export default function CPLDirecto() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {datosDiarios?.map((data: any, index: number) => {
+                    {Array.isArray(datosDiarios) && datosDiarios.map((data: any, index: number) => {
                       const key = `${data.cliente}-${data.numeroCampana}`;
                       const cplActual = getCplActual(data.cliente, data.numeroCampana);
                       
