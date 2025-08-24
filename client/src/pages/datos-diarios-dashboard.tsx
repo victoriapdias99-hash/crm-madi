@@ -856,11 +856,10 @@ export default function DatosDiariosDashboard() {
                 </Select>
 
                 <Input
-                  type="month"
+                  type="date"
                   value={filtroFechaInicio}
                   onChange={(e) => setFiltroFechaInicio(e.target.value)}
                   className="w-44 bg-white/20 text-white border-white/30 hover:bg-white/30 placeholder:text-white/60 text-sm"
-                  placeholder="Fecha de inicio"
                   data-testid="filter-fecha-inicio"
                 />
 
