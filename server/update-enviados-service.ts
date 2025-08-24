@@ -84,53 +84,74 @@ export class UpdateEnviadosService {
   }
   
   private async calculateEnviadosFromSheets(campana: any, cliente: any, datosDiarios: any[]): Promise<number> {
-    // Replicar la misma lógica del endpoint datos-diarios para calcular enviados
-    console.log(`🧮 Calculando enviados para ${cliente.nombreCliente} desde Google Sheets`);
+    // NUEVA LÓGICA: Usar la misma función contarLeadsPorCampana que el endpoint principal
+    console.log(`🧮 Calculando enviados para ${cliente.nombreCliente} usando filtrado por campaña específica`);
     
-    // Filtrar datos para esta campaña específica
-    const datosParaCampana = datosDiarios.filter(dato => {
-      const clienteBajo = dato.cliente?.toLowerCase() || '';
-      const nombreClienteBajo = cliente.nombreCliente?.toLowerCase() || '';
+    try {
+      // Obtener todas las campañas para cálculo de fechas límite
+      const todasLasCampanas = await this.storage.getAllCampanasComerciales();
       
-      // Usar matching simple por nombre
-      return clienteBajo.includes(nombreClienteBajo.split(' ')[0]) || 
-             nombreClienteBajo.includes(clienteBajo.split(' ')[0]);
-    });
-    
-    console.log(`📋 Encontrados ${datosParaCampana.length} registros de datos para ${cliente.nombreCliente}`);
-    
-    // CRÍTICO: Aplicar correcciones PRIMERO, luego calcular o usar el valor corregido
-    const enviadosCorregidos = this.applyClientSpecificCorrections(cliente, campana, 0);
-    
-    // Si hay una corrección específica, usarla directamente
-    if (enviadosCorregidos > 0) {
-      console.log(`📊 Resultado: ${enviadosCorregidos} enviados para ${cliente.nombreCliente} (corrección específica aplicada)`);
-      return enviadosCorregidos;
-    }
-    
-    // Si no hay corrección específica, calcular normalmente
-    let enviadosCalculados = 0;
-    
-    // Para GRUPO QUIJADA: usar solo el dato específico de la marca
-    if (cliente.nombreCliente.toLowerCase().includes('grupo quijada')) {
-      for (const dato of datosParaCampana) {
-        const marcaCampana = campana.marca?.toLowerCase() || '';
-        const clienteDato = dato.cliente?.toLowerCase() || '';
+      // Importar dependencias de Drizzle
+      const { db } = await import('./db');
+      const { leads } = await import('../shared/schema');
+      const { count, sql } = await import('drizzle-orm');
+      
+      // Usar la misma función que el endpoint principal para garantizar consistencia
+      const nombreComercial = cliente?.nombreComercial || '';
+      
+      // CALCULAR FECHA_FIN AUTOMÁTICAMENTE si no existe (misma lógica que endpoint principal)
+      let fechaFinCalculada = campana.fechaFin;
+      
+      if (!fechaFinCalculada) {
+        // Buscar la siguiente campaña del mismo cliente para calcular fecha límite
+        const campanasDelCliente = todasLasCampanas
+          .filter(c => c.clienteId === campana.clienteId)
+          .sort((a, b) => new Date(a.fechaCampana).getTime() - new Date(b.fechaCampana).getTime());
         
-        if (clienteDato.includes(marcaCampana)) {
-          enviadosCalculados = dato.enviados || 0;
-          break;
+        const indiceCampanaActual = campanasDelCliente.findIndex(c => c.id === campana.id);
+        if (indiceCampanaActual !== -1 && indiceCampanaActual < campanasDelCliente.length - 1) {
+          // Hay una campaña siguiente, usar día anterior como límite
+          const siguienteCampana = campanasDelCliente[indiceCampanaActual + 1];
+          const fechaSiguiente = new Date(siguienteCampana.fechaCampana);
+          fechaSiguiente.setDate(fechaSiguiente.getDate() - 1); // Día anterior
+          fechaFinCalculada = fechaSiguiente.toISOString().split('T')[0];
+          
+          console.log(`🗓️ UPDATE-SERVICE AUTO-CALCULADO: ${campana.marca} ${campana.numeroCampana} hasta ${fechaFinCalculada} (día anterior a siguiente campaña)`);
         }
       }
-    } else {
-      // Para otros clientes: sumar todos los datos encontrados
-      for (const dato of datosParaCampana) {
-        enviadosCalculados += (dato.enviados || 0);
+      
+      // Ejecutar la misma query SQL que el endpoint principal
+      const leadsCount = await db
+        .select({ count: count() })
+        .from(leads)
+        .where(
+          sql`lower(${leads.campaignName}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
+              AND lower(${leads.cliente}) LIKE ${`%${nombreComercial.toLowerCase()}%`}
+              AND ${leads.source} = 'google_sheets'
+              AND date(${leads.leadDate}) >= ${campana.fechaCampana}
+              ${fechaFinCalculada ? sql`AND date(${leads.leadDate}) <= ${fechaFinCalculada}` : sql``}`
+        );
+      
+      const enviadosDB = leadsCount[0]?.count || 0;
+      
+      console.log(`📊 UPDATE-SERVICE: ${cliente.nombreCliente} Campaña ${campana.numeroCampana} = ${enviadosDB} enviados (filtrado por fechas)`);
+      
+      // CRÍTICO: Aplicar correcciones DESPUÉS del cálculo filtrado
+      const enviadosCorregidos = this.applyClientSpecificCorrections(cliente, campana, enviadosDB);
+      
+      // Si hay una corrección específica, usarla; sino usar el cálculo filtrado
+      if (enviadosCorregidos !== enviadosDB && enviadosCorregidos > 0) {
+        console.log(`📊 UPDATE-SERVICE RESULTADO: ${enviadosCorregidos} enviados para ${cliente.nombreCliente} (corrección específica aplicada)`);
+        return enviadosCorregidos;
       }
+      
+      console.log(`📊 UPDATE-SERVICE RESULTADO: ${enviadosDB} enviados para ${cliente.nombreCliente} (cálculo filtrado por fechas)`);
+      return enviadosDB;
+      
+    } catch (error) {
+      console.error(`❌ Error calculando enviados para ${cliente.nombreCliente}:`, error);
+      return 0;
     }
-    
-    console.log(`📊 Resultado: ${enviadosCalculados} enviados para ${cliente.nombreCliente} (cálculo normal)`);
-    return enviadosCalculados;
   }
   
   private applyClientSpecificCorrections(cliente: any, campana: any, enviados: number): number {
