@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -109,7 +110,8 @@ export default function MetaAdsDashboard() {
   const [campaignFilters, setCampaignFilters] = useState({
     fechaInicio: '',
     fechaFin: '',
-    nombreCampana: ''
+    nombreCampana: '',
+    rangoRapido: ''
   });
   
   // Estado para filtro de conjuntos de anuncios
@@ -133,6 +135,60 @@ export default function MetaAdsDashboard() {
     rangoRapido: 'ult7dias'
   });
   const [auditReport, setAuditReport] = useState<AuditReport | null>(null);
+
+  // Función para aplicar rango rápido para campañas
+  const applyCampaignQuickRange = (rangoRapido: string) => {
+    const now = new Date();
+    const today = format(now, 'yyyy-MM-dd');
+    const yesterday = format(subDays(now, 1), 'yyyy-MM-dd');
+    
+    let fechaInicio = '';
+    let fechaFin = '';
+    
+    switch (rangoRapido) {
+      case 'hoy':
+        fechaInicio = today;
+        fechaFin = today;
+        break;
+      case 'ayer':
+        fechaInicio = yesterday;
+        fechaFin = yesterday;
+        break;
+      case 'ayer_hoy':
+        fechaInicio = yesterday;
+        fechaFin = today;
+        break;
+      case 'ult7dias':
+        fechaInicio = format(subDays(now, 6), 'yyyy-MM-dd');
+        fechaFin = today;
+        break;
+      case 'ult14dias':
+        fechaInicio = format(subDays(now, 13), 'yyyy-MM-dd');
+        fechaFin = today;
+        break;
+      case 'ult30dias':
+        fechaInicio = format(subDays(now, 29), 'yyyy-MM-dd');
+        fechaFin = today;
+        break;
+      case 'ult6meses':
+        fechaInicio = format(subDays(now, 180), 'yyyy-MM-dd');
+        fechaFin = today;
+        break;
+      case 'ult1ano':
+        fechaInicio = format(subDays(now, 365), 'yyyy-MM-dd');
+        fechaFin = today;
+        break;
+      default:
+        return; // No cambiar fechas si es personalizado
+    }
+    
+    setCampaignFilters(prev => ({
+      ...prev,
+      rangoRapido,
+      fechaInicio,
+      fechaFin
+    }));
+  };
 
   // Función para aplicar rango rápido
   const applyQuickRange = (rangoRapido: string) => {
@@ -592,7 +648,7 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
             </CardTitle>
             
             {/* Filtros */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4 p-4 bg-gray-50 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-4 p-4 bg-gray-50 rounded-lg">
               <div>
                 <label className="block text-sm font-medium mb-2">Fecha Inicio</label>
                 <input
@@ -631,6 +687,27 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
                   onChange={(e) => setAdsetFilter(e.target.value)}
                   data-testid="filter-adset-name"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Rango Rápido</label>
+                <Select
+                  value={campaignFilters.rangoRapido}
+                  onValueChange={applyCampaignQuickRange}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Seleccionar período..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hoy">Hoy</SelectItem>
+                    <SelectItem value="ayer">Ayer</SelectItem>
+                    <SelectItem value="ayer_hoy">Ayer y Hoy</SelectItem>
+                    <SelectItem value="ult7dias">Últimos 7 días</SelectItem>
+                    <SelectItem value="ult14dias">Últimos 14 días</SelectItem>
+                    <SelectItem value="ult30dias">Últimos 30 días</SelectItem>
+                    <SelectItem value="ult6meses">Últimos 6 meses</SelectItem>
+                    <SelectItem value="ult1ano">Último año</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardHeader>
