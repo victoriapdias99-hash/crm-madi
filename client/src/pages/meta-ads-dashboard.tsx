@@ -584,8 +584,8 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
         </div>
 
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Stats Cards - Temporalmente ocultas */}
+        {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card className="shadow-lg hover:shadow-xl transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Gasto Total</CardTitle>
@@ -637,7 +637,7 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
               <p className="text-xs text-gray-500 mt-1">Costo por mil impresiones</p>
             </CardContent>
           </Card>
-        </div>
+        </div> */}
 
         {/* Campaigns Table */}
         <Card className="shadow-lg">
