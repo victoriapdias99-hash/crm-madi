@@ -1709,6 +1709,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`💰 FACTURACIÓN BRUTA CALCULADA: ${data.clienteNombre} = ${leadCount} leads × $${cplValue} CPL × ${ventaPorCampana} venta = $${totalFacturado.toFixed(2)}`);
         }
         
+        // LOGGING ESPECÍFICO PARA PEUGEOT
+        if (marca === 'Peugeot' || data.clienteNombre?.includes('ALBENS')) {
+          console.log(`🔍 PEUGEOT DEBUG: ${data.clienteNombre} #${data.numeroCampana} = ${leadCount} leads, CPL=${cplValue}, Venta=${ventaPorCampana}, Facturado=$${totalFacturado.toFixed(2)}`);
+        }
+        
         // NUEVA LÓGICA: Calcular CPA y usar gasto real de Meta Ads + 2% para inversión
         let cpaValue = 0;
         let inversionMetaAds = 0;
@@ -1774,6 +1779,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fechaCampana: data.fechaCampana || data.fecha || data.fechaInicio || new Date().toISOString().split('T')[0] // Agregar fecha para filtro de mes
         };
       }));
+      
+      // LOGGING RESUMEN POR MARCA - ESPECIAL PARA PEUGEOT
+      const resumenPorMarca = finanzasData.reduce((acc: any, item: any) => {
+        if (!acc[item.marca]) {
+          acc[item.marca] = { campanasCount: 0, totalLeads: 0, totalFacturado: 0 };
+        }
+        acc[item.marca].campanasCount += 1;
+        acc[item.marca].totalLeads += item.totalLeads || 0;
+        acc[item.marca].totalFacturado += item.totalFacturado || 0;
+        return acc;
+      }, {});
+      
+      console.log(`📊 RESUMEN FINANZAS POR MARCA:`);
+      Object.entries(resumenPorMarca).forEach(([marca, datos]: [string, any]) => {
+        console.log(`   ${marca}: ${datos.campanasCount} campañas, ${datos.totalLeads} leads totales, $${datos.totalFacturado.toFixed(2)} facturado total`);
+      });
       
       console.log(`📊 Finanzas: Mapeadas ${finanzasData.length} campañas con inversión real por campaña`);
       res.json(finanzasData);
