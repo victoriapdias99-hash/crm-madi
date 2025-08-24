@@ -656,11 +656,10 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
                         const nameMatch = !campaignFilters.nombreCampana || 
                           campaign.campaignName.toLowerCase().includes(campaignFilters.nombreCampana.toLowerCase());
                         
-                        // Filtro por fecha (si están definidas)
+                        // Filtro por fecha de inicio de campaña
                         let dateMatch = true;
                         if (campaignFilters.fechaInicio || campaignFilters.fechaFin) {
                           const campaignStart = new Date(campaign.dateStart);
-                          const campaignEnd = new Date(campaign.dateStop);
                           
                           if (campaignFilters.fechaInicio) {
                             const filterStart = new Date(campaignFilters.fechaInicio);
@@ -669,7 +668,7 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
                           
                           if (campaignFilters.fechaFin) {
                             const filterEnd = new Date(campaignFilters.fechaFin);
-                            dateMatch = dateMatch && campaignEnd <= filterEnd;
+                            dateMatch = dateMatch && campaignStart <= filterEnd;
                           }
                         }
                         
