@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Building2, Mail, Phone, MapPin, Globe, ArrowLeft } from "lucide-react";
+import { Plus, Edit, Trash2, Building2, Mail, Phone, MapPin, Globe, ArrowLeft, Search, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { 
@@ -29,12 +29,23 @@ import { useToast } from "@/hooks/use-toast";
 export default function ClientesManagement() {
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [filtroNombre, setFiltroNombre] = useState('');
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
   const { data: clientes = [], isLoading } = useQuery({
     queryKey: ['/api/clientes'],
   });
+
+  // Filtrar clientes por nombre
+  const clientesFiltrados = useMemo(() => {
+    if (!filtroNombre) return clientes;
+    
+    return clientes.filter((cliente: Cliente) => 
+      cliente.nombreCliente.toLowerCase().includes(filtroNombre.toLowerCase()) ||
+      cliente.nombreComercial.toLowerCase().includes(filtroNombre.toLowerCase())
+    );
+  }, [clientes, filtroNombre]);
 
   const createMutation = useMutation({
     mutationFn: async (data: InsertCliente) => {
@@ -491,8 +502,43 @@ export default function ClientesManagement() {
         </Dialog>
       </div>
 
+      {/* Filtro de búsqueda */}
+      <Card className="mb-6">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <Search className="h-4 w-4 text-gray-500" />
+            <div className="flex-1 relative">
+              <Input
+                type="text"
+                placeholder="Buscar cliente por nombre o nombre comercial..."
+                value={filtroNombre}
+                onChange={(e) => setFiltroNombre(e.target.value)}
+                className="pr-10"
+                data-testid="filter-cliente-nombre"
+              />
+              {filtroNombre && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setFiltroNombre('')}
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0 hover:bg-gray-100"
+                  data-testid="clear-filter-cliente"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+            {filtroNombre && (
+              <div className="text-sm text-gray-500">
+                {clientesFiltrados.length} de {clientes.length} clientes
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4">
-        {clientes && clientes.length > 0 ? clientes.map((cliente: Cliente) => (
+        {clientesFiltrados && clientesFiltrados.length > 0 ? clientesFiltrados.map((cliente: Cliente) => (
           <Card key={cliente.id} className="dashboard-card">
             <CardHeader className="pb-3">
               <div className="flex justify-between items-start">
@@ -617,6 +663,7 @@ export default function ClientesManagement() {
         )) : null}
       </div>
 
+      {/* Mensajes de estado */}
       {clientes && clientes.length === 0 && (
         <Card>
           <CardContent className="p-8 text-center">
@@ -628,6 +675,26 @@ export default function ClientesManagement() {
             <Button onClick={() => openDialog()} className="btn-gradient">
               <Plus className="w-4 h-4 mr-2" />
               Crear Primer Cliente
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+      
+      {filtroNombre && clientesFiltrados.length === 0 && clientes.length > 0 && (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <Search className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-lg font-medium mb-2">No se encontraron clientes</h3>
+            <p className="text-muted-foreground mb-4">
+              No hay clientes que coincidan con "<strong>{filtroNombre}</strong>"
+            </p>
+            <Button 
+              onClick={() => setFiltroNombre('')}
+              variant="outline"
+              className="hover:bg-primary hover:text-primary-foreground"
+            >
+              <X className="w-4 h-4 mr-2" />
+              Limpiar filtro
             </Button>
           </CardContent>
         </Card>
