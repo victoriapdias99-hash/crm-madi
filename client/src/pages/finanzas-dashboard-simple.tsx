@@ -354,7 +354,7 @@ export default function FinanzasDashboard() {
                   <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Leads</th>
                   <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPL</th>
                   <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">CPA Meta Ads</th>
-                  <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Venta %</th>
+                  <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Venta</th>
                   <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Inversión</th>
                   <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Ganancia</th>
                   <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">ROI</th>
@@ -379,7 +379,7 @@ export default function FinanzasDashboard() {
                         <span className="text-gray-400 text-sm">Calculando...</span>
                       )}
                     </td>
-                    <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{((finanza?.ventaPorCampana || 0) * 100).toFixed(1)}%</td>
+                    <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{formatCurrency(finanza?.totalFacturado || finanza?.facturacionBruta || 0)}</td>
                     <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">{formatCurrency(finanza?.inversionRealizada || 0)}</td>
                     <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
                       <span className={(finanza?.ganancia || 0) >= 0 ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
