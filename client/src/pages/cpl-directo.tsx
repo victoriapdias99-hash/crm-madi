@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Save, Loader2, DollarSign, CheckCircle } from "lucide-react";
+import { Save, Loader2, DollarSign, CheckCircle, Filter } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { Navigation } from "@/components/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -28,6 +29,12 @@ export default function CPLDirecto() {
   const [savedCpls, setSavedCpls] = useState<Record<string, number>>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Estados para filtros
+  const [filtroZona, setFiltroZona] = useState<string>('');
+  const [filtroMarca, setFiltroMarca] = useState<string>('');
+  const [filtroFechaInicio, setFiltroFechaInicio] = useState<string>('');
+  const [filtroFechaFin, setFiltroFechaFin] = useState<string>('');
 
   const { data: datosDiarios, isLoading } = useQuery({
     queryKey: ['/api/dashboard/datos-diarios-db'],
@@ -135,6 +142,60 @@ export default function CPLDirecto() {
     return datosCliente?.cplGuardado || 0;
   };
 
+  // Datos filtrados
+  const datosFiltrados = useMemo(() => {
+    if (!Array.isArray(datosDiarios)) return [];
+    
+    let filteredData = datosDiarios;
+    
+    // Filtro por zona
+    if (filtroZona) {
+      filteredData = filteredData.filter((data: any) => 
+        data.zona && data.zona.toLowerCase().includes(filtroZona.toLowerCase())
+      );
+    }
+    
+    // Filtro por marca
+    if (filtroMarca) {
+      filteredData = filteredData.filter((data: any) => {
+        const marca = data.cliente.match(/^([A-Z]+)/)?.[1] || data.cliente.split(' ')[0];
+        return marca === filtroMarca;
+      });
+    }
+    
+    // Filtro por fecha inicio
+    if (filtroFechaInicio) {
+      filteredData = filteredData.filter((data: any) => 
+        data.fechaCampana && data.fechaCampana >= filtroFechaInicio
+      );
+    }
+    
+    // Filtro por fecha fin
+    if (filtroFechaFin) {
+      filteredData = filteredData.filter((data: any) => 
+        data.fechaCampana && data.fechaCampana <= filtroFechaFin
+      );
+    }
+    
+    return filteredData;
+  }, [datosDiarios, filtroZona, filtroMarca, filtroFechaInicio, filtroFechaFin]);
+
+  // Opciones para filtros
+  const opcionesZona = useMemo(() => {
+    if (!Array.isArray(datosDiarios)) return [];
+    const zonas = [...new Set(datosDiarios.map((data: any) => data.zona).filter(Boolean))];
+    return zonas.sort();
+  }, [datosDiarios]);
+
+  const opcionesMarca = useMemo(() => {
+    if (!Array.isArray(datosDiarios)) return [];
+    const marcas = [...new Set(datosDiarios.map((data: any) => {
+      const marca = data.cliente.match(/^([A-Z]+)/)?.[1] || data.cliente.split(' ')[0];
+      return marca;
+    }).filter(Boolean))];
+    return marcas.sort();
+  }, [datosDiarios]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -170,6 +231,70 @@ export default function CPLDirecto() {
                 <DollarSign className="w-5 h-5" />
                 Actualizar CPL (Funciona sin base de datos)
               </CardTitle>
+              
+              {/* Controles de filtro */}
+              <div className="flex items-center gap-3 flex-wrap mt-4 p-4 bg-blue-50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  <span className="text-sm font-medium">Filtros:</span>
+                </div>
+                
+                <Select value={filtroZona || "all"} onValueChange={(value) => setFiltroZona(value === "all" ? "" : value)}>
+                  <SelectTrigger className="w-40 text-sm">
+                    <SelectValue placeholder="Todas las zonas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas las zonas</SelectItem>
+                    {opcionesZona.map(zona => (
+                      <SelectItem key={zona} value={zona}>{zona}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={filtroMarca || "all"} onValueChange={(value) => setFiltroMarca(value === "all" ? "" : value)}>
+                  <SelectTrigger className="w-40 text-sm">
+                    <SelectValue placeholder="Todas las marcas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas las marcas</SelectItem>
+                    {opcionesMarca.map(marca => (
+                      <SelectItem key={marca} value={marca}>{marca}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Input
+                  type="date"
+                  value={filtroFechaInicio}
+                  onChange={(e) => setFiltroFechaInicio(e.target.value)}
+                  className="w-44 text-sm"
+                  placeholder="Fecha inicio"
+                />
+
+                <Input
+                  type="date"
+                  value={filtroFechaFin}
+                  onChange={(e) => setFiltroFechaFin(e.target.value)}
+                  className="w-44 text-sm"
+                  placeholder="Fecha fin"
+                />
+
+                {(filtroZona || filtroMarca || filtroFechaInicio || filtroFechaFin) && (
+                  <Button
+                    onClick={() => {
+                      setFiltroZona('');
+                      setFiltroMarca('');
+                      setFiltroFechaInicio('');
+                      setFiltroFechaFin('');
+                    }}
+                    variant="secondary"
+                    size="sm"
+                    className="bg-red-500/80 hover:bg-red-600/80 text-white border-red-300 text-sm"
+                  >
+                    ✕ Limpiar filtros
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -186,7 +311,7 @@ export default function CPLDirecto() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {Array.isArray(datosDiarios) && datosDiarios.map((data: any, index: number) => {
+                    {datosFiltrados.map((data: any, index: number) => {
                       const key = `${data.cliente}-${data.numeroCampana}`;
                       const cplActual = getCplActual(data.cliente, data.numeroCampana);
                       const clienteInfo = getClienteInfo(data.cliente);
