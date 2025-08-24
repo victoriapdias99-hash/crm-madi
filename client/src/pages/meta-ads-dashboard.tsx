@@ -25,6 +25,8 @@ interface MetaCampaign {
   costPerResult?: number; // Coste por conversación/resultado directo de Meta Ads
   actions?: any;
   costPerActionType?: any;
+  effectiveStatus?: string; // Estado actual de la campaña (ACTIVE, PAUSED, etc.)
+  isActive?: boolean; // Helper para verificar si está activa
 }
 
 interface MetaAdset {
@@ -44,6 +46,8 @@ interface MetaAdset {
   costPerResult?: number;
   actions?: any;
   costPerActionType?: any;
+  effectiveStatus?: string; // Estado actual del adset (ACTIVE, PAUSED, etc.)
+  isActive?: boolean; // Helper para verificar si está activo
 }
 
 interface MetaStats {
@@ -811,8 +815,15 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
                               <div>al {format(new Date(campaign.dateStop), 'dd/MM/yyyy')}</div>
                             </td>
                             <td className="text-center p-3">
-                              <Badge variant="default" className="bg-green-100 text-green-800">
-                                Activa
+                              <Badge 
+                                variant="default" 
+                                className={
+                                  campaign.isActive 
+                                    ? "bg-green-100 text-green-800" 
+                                    : "bg-red-100 text-red-800"
+                                }
+                              >
+                                {campaign.isActive ? "Activa" : "Desactivado"}
                               </Badge>
                             </td>
                           </tr>

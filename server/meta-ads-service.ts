@@ -22,6 +22,8 @@ interface CampaignSpendData {
   costPerResult?: number; // Coste por conversación/resultado desde Meta Ads
   actions?: any; // Acciones/conversiones disponibles
   costPerActionType?: any; // Coste por tipo de acción
+  effectiveStatus?: string; // Estado actual de la campaña (ACTIVE, PAUSED, etc.)
+  isActive?: boolean; // Helper para verificar si está activa
 }
 
 interface AdsetSpendData {
@@ -41,6 +43,8 @@ interface AdsetSpendData {
   costPerResult?: number; // Coste por conversación/resultado desde Meta Ads
   actions?: any;
   costPerActionType?: any;
+  effectiveStatus?: string; // Estado actual del adset (ACTIVE, PAUSED, etc.)
+  isActive?: boolean; // Helper para verificar si está activo
 }
 
 interface BudgetData {
@@ -72,6 +76,9 @@ class MetaAdsService {
         until: new Date().toISOString().split('T')[0]
       };
 
+      // Primero obtener estado actual de todas las campañas
+      const campaignStatusData = await this.getCampaignStatuses();
+
       const fields = [
         'campaign_id',
         'campaign_name',
@@ -101,6 +108,9 @@ class MetaAdsService {
       
       if (response.data?.data) {
         const campaigns = response.data.data.map((campaign: any) => {
+          // Obtener estado actual de la campaña
+          const campaignStatus = campaignStatusData.find(cs => cs.id === campaign.campaign_id);
+          const isActive = campaignStatus?.effective_status === 'ACTIVE';
           // Extraer coste por resultado de Meta Ads
           let costPerResult = 0;
           
@@ -161,7 +171,9 @@ class MetaAdsService {
             lastUpdated: new Date(),
             costPerResult: costPerResult,
             actions: campaign.actions || [],
-            costPerActionType: campaign.cost_per_action_type || []
+            costPerActionType: campaign.cost_per_action_type || [],
+            effectiveStatus: campaignStatus?.effective_status || 'UNKNOWN',
+            isActive: isActive
           };
         });
 
@@ -178,6 +190,69 @@ class MetaAdsService {
     } catch (error) {
       console.error('Error fetching Meta Ads campaign data:', error);
       throw new Error(`Meta Ads API Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Obtiene el estado actual de todas las campañas
+   */
+  async getCampaignStatuses(): Promise<{ id: string; effective_status: string; name: string }[]> {
+    try {
+      const params = {
+        access_token: this.config.accessToken,
+        fields: 'id,name,effective_status,status',
+        limit: 100
+      };
+
+      const response = await axios.get(`${this.baseUrl}/${this.config.accountId}/campaigns`, { params });
+      
+      if (response.data?.data) {
+        return response.data.data.map((campaign: any) => ({
+          id: campaign.id,
+          name: campaign.name,
+          effective_status: campaign.effective_status,
+          status: campaign.status
+        }));
+      }
+
+      return [];
+    } catch (error) {
+      console.error('Error fetching campaign statuses:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Obtiene el estado actual de adsets de una campaña específica
+   */
+  async getAdsetStatuses(campaignName: string): Promise<{ id: string; effective_status: string; name: string }[]> {
+    try {
+      const params = {
+        access_token: this.config.accessToken,
+        fields: 'id,name,effective_status,status',
+        filtering: JSON.stringify([{
+          field: 'campaign.name',
+          operator: 'CONTAIN',
+          value: campaignName
+        }]),
+        limit: 100
+      };
+
+      const response = await axios.get(`${this.baseUrl}/${this.config.accountId}/adsets`, { params });
+      
+      if (response.data?.data) {
+        return response.data.data.map((adset: any) => ({
+          id: adset.id,
+          name: adset.name,
+          effective_status: adset.effective_status,
+          status: adset.status
+        }));
+      }
+
+      return [];
+    } catch (error) {
+      console.error('Error fetching adset statuses:', error);
+      return [];
     }
   }
 
@@ -212,6 +287,12 @@ class MetaAdsService {
         'cost_per_result'
       ].join(',');
 
+      // Obtener estado actual de adsets para la campaña si se especifica
+      let adsetStatusData: any[] = [];
+      if (filters.campaignName) {
+        adsetStatusData = await this.getAdsetStatuses(filters.campaignName);
+      }
+
       const params: any = {
         access_token: this.config.accessToken,
         fields: fields,
@@ -233,6 +314,10 @@ class MetaAdsService {
       
       if (response.data?.data) {
         const adsets = response.data.data.map((adset: any) => {
+          // Obtener estado actual del adset
+          const adsetStatus = adsetStatusData.find(ads => ads.id === adset.adset_id);
+          const isActive = adsetStatus?.effective_status === 'ACTIVE';
+          
           // Extraer coste por resultado de Meta Ads para adsets
           let costPerResult = 0;
           
@@ -285,7 +370,9 @@ class MetaAdsService {
             lastUpdated: new Date(),
             costPerResult: costPerResult,
             actions: adset.actions || [],
-            costPerActionType: adset.cost_per_action_type || []
+            costPerActionType: adset.cost_per_action_type || [],
+            effectiveStatus: adsetStatus?.effective_status || 'UNKNOWN',
+            isActive: isActive
           };
         });
 
