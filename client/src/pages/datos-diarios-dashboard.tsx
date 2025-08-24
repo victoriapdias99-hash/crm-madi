@@ -196,7 +196,7 @@ export default function DatosDiariosDashboard() {
 
   
   // PostgreSQL optimized query for fast data updates (3s vs 15s)
-  const { data: datosDiarios, isLoading, error, refetch } = useQuery({
+  const { data: datosDiarios, isLoading, error, refetch } = useQuery<DatosDiariosData[]>({
     queryKey: ['/api/dashboard/datos-diarios-db'],
     refetchInterval: 30 * 1000, // Refresh every 30 seconds (PostgreSQL is fast enough)
     staleTime: 10 * 1000, // Cache for 10 seconds for better performance
@@ -277,7 +277,11 @@ export default function DatosDiariosDashboard() {
 
   // Memoize filtered and sorted data for performance
   const campanasData = useMemo(() => {
-    if (!datosDiarios) return { campanasEnProceso: [], campanasFinalizadas: [] };
+    // Verificar que datosDiarios existe y es un array
+    if (!datosDiarios || !Array.isArray(datosDiarios)) {
+      console.warn('⚠️ datosDiarios is not an array:', datosDiarios);
+      return { campanasEnProceso: [], campanasFinalizadas: [] };
+    }
     
     measurePerformance('Data filtering and sorting', () => {
       // Performance optimization complete
@@ -287,18 +291,31 @@ export default function DatosDiariosDashboard() {
     
     // If showing duplicates only, filter to show campaigns with duplicate data
     if (showDuplicatesOnly) {
-      filteredData = datosDiarios.filter(data => {
+      filteredData = datosDiarios.filter((data: DatosDiariosData) => {
         const key = `${data.cliente}-${data.numeroCampana}`;
         return duplicatesData[key] > 0;
       });
     }
     
+    // Función segura para parsear fechas
+    const parseDate = (dateStr: string) => {
+      if (!dateStr || dateStr === 'null') return new Date(0); // Fecha por defecto muy antigua
+      
+      try {
+        const date = new Date(dateStr);
+        return isNaN(date.getTime()) ? new Date(0) : date;
+      } catch (error) {
+        console.warn('⚠️ Error parsing date:', dateStr);
+        return new Date(0);
+      }
+    };
+    
     const enProceso = filteredData
       .filter(data => data.porcentajeDatosEnviados < 100)
       .sort((a, b) => {
         // Ordenar por fecha de campaña: más reciente primero
-        const dateA = new Date(a.fechaCampana);
-        const dateB = new Date(b.fechaCampana);
+        const dateA = parseDate(a.fechaCampana);
+        const dateB = parseDate(b.fechaCampana);
         return dateB.getTime() - dateA.getTime(); // Descendente (más reciente primero)
       });
     
@@ -306,29 +323,30 @@ export default function DatosDiariosDashboard() {
       .filter(data => data.porcentajeDatosEnviados >= 100)
       .sort((a, b) => {
         // Ordenar campañas finalizadas también por fecha: más reciente primero
-        const dateA = new Date(a.fechaCampana);
-        const dateB = new Date(b.fechaCampana);
+        const dateA = parseDate(a.fechaCampana);
+        const dateB = parseDate(b.fechaCampana);
         return dateB.getTime() - dateA.getTime(); // Descendente (más reciente primero)
       });
     
+    console.log(`📊 Datos ordenados: ${enProceso.length} en proceso, ${finalizadas.length} finalizadas`);
+    
     return { campanasEnProceso: enProceso, campanasFinalizadas: finalizadas };
-  }, [datosDiarios, showDuplicatesOnly]);
+  }, [datosDiarios, showDuplicatesOnly, duplicatesData]);
 
-  const campanasEnProceso = campanasData.campanasEnProceso;
-  const campanasFinalizadas = campanasData.campanasFinalizadas;
+  const { campanasEnProceso, campanasFinalizadas } = campanasData;
 
-  const finalData: DatosDiariosData[] = datosDiarios || [];
+  const finalData: DatosDiariosData[] = Array.isArray(datosDiarios) ? datosDiarios : [];
   const finalIsLoading = isLoading;
 
   console.log('Dashboard loading state:', { isLoading, error, dataLength: finalData.length });
-  console.log('Performance data:', { campanasEnProceso: campanasEnProceso.length, campanasFinalizadas: campanasFinalizadas.length });
+  console.log('Performance data:', { campanasEnProceso: campanasEnProceso?.length || 0, campanasFinalizadas: campanasFinalizadas?.length || 0 });
   
   // Debug para verificar estado del query
   useEffect(() => {
     console.log('Component state update:', { 
       isLoading, 
       hasData: !!datosDiarios, 
-      dataLength: datosDiarios?.length,
+      dataLength: Array.isArray(datosDiarios) ? datosDiarios.length : 0,
       errorMessage: error?.message 
     });
   }, [isLoading, datosDiarios, error]);
@@ -500,7 +518,7 @@ export default function DatosDiariosDashboard() {
       const response = await apiRequest('/api/dashboard/mapear-campanas', 'POST');
       return response;
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       toast({
         title: "Mapeo Exitoso",
         description: `Se mapearon ${data.mapped || 0} campañas con datos diarios`,
