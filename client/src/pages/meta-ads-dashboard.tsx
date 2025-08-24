@@ -112,6 +112,12 @@ export default function MetaAdsDashboard() {
     nombreCampana: ''
   });
   
+  // Estado para filtros globales de fechas
+  const [globalDateFilters, setGlobalDateFilters] = useState({
+    fechaInicio: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
+    fechaFin: format(new Date(), 'yyyy-MM-dd')
+  });
+  
   // Estado para manejar campañas expandidas y sus adsets
   const [expandedCampaigns, setExpandedCampaigns] = useState<Set<string>>(new Set());
   const [campaignAdsets, setCampaignAdsets] = useState<Record<string, MetaAdset[]>>({});
@@ -168,23 +174,50 @@ export default function MetaAdsDashboard() {
   };
 
   const { data: metaStats, isLoading: statsLoading } = useQuery<MetaStats>({
-    queryKey: ['/api/meta-ads/stats'],
+    queryKey: ['/api/meta-ads/stats', globalDateFilters],
+    queryFn: async () => {
+      const timeRange = {
+        since: globalDateFilters.fechaInicio,
+        until: globalDateFilters.fechaFin
+      };
+      const response = await apiRequest(
+        `/api/meta-ads/stats?timeRange=${encodeURIComponent(JSON.stringify(timeRange))}`,
+        'GET'
+      );
+      return await response.json();
+    },
     refetchInterval: 300000, // Refresh every 5 minutes
   });
 
   const { data: campaigns, isLoading: campaignLoading } = useQuery<MetaCampaign[]>({
-    queryKey: ['/api/meta-ads/campaigns'],
+    queryKey: ['/api/meta-ads/campaigns', globalDateFilters],
+    queryFn: async () => {
+      const timeRange = {
+        since: globalDateFilters.fechaInicio,
+        until: globalDateFilters.fechaFin
+      };
+      const response = await apiRequest(
+        `/api/meta-ads/campaigns?timeRange=${encodeURIComponent(JSON.stringify(timeRange))}`,
+        'GET'
+      );
+      return await response.json();
+    },
     refetchInterval: 300000,
   });
   
   // Función para obtener adsets de una campaña
-  const fetchAdsets = async (campaignName: string) => {
+  const fetchAdsets = async (campaignName: string): Promise<MetaAdset[]> => {
     try {
+      const timeRange = {
+        since: globalDateFilters.fechaInicio,
+        until: globalDateFilters.fechaFin
+      };
       const response = await apiRequest(
-        `/api/meta-ads/adsets?campaignName=${encodeURIComponent(campaignName)}`,
-        { method: 'GET' }
+        `/api/meta-ads/adsets?campaignName=${encodeURIComponent(campaignName)}&timeRange=${encodeURIComponent(JSON.stringify(timeRange))}`,
+        'GET'
       );
-      return response as MetaAdset[];
+      const data = await response.json();
+      return data as MetaAdset[];
     } catch (error) {
       console.error('Error fetching adsets:', error);
       return [];
@@ -213,7 +246,8 @@ export default function MetaAdsDashboard() {
 
   const syncMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest('/api/meta-ads/sync', { method: 'POST' });
+      const response = await apiRequest('/api/meta-ads/sync', 'POST');
+      return await response.json();
     },
     onSuccess: () => {
       toast({
@@ -234,12 +268,13 @@ export default function MetaAdsDashboard() {
 
   const testConnectionMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest('/api/meta-ads/test-connection', { method: 'POST' });
+      const response = await apiRequest('/api/meta-ads/test-connection', 'POST');
+      return await response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       toast({
         title: "Conexión exitosa",
-        description: `Conectado a Meta Ads: ${data.accountName}`,
+        description: `Conectado a Meta Ads: ${data.accountName || 'Cuenta conectada'}`,
       });
     },
     onError: () => {
@@ -254,7 +289,8 @@ export default function MetaAdsDashboard() {
   // Mutación para generar informe de auditoría
   const generateReportMutation = useMutation({
     mutationFn: async (filters: AuditFilters) => {
-      return await apiRequest('/api/meta-ads/audit-report', 'POST', filters);
+      const response = await apiRequest('/api/meta-ads/audit-report', 'POST', filters);
+      return await response.json();
     },
     onSuccess: (data: AuditReport) => {
       console.log("🔍 AUDIT REPORT DATA RECEIVED:", data);
@@ -414,7 +450,7 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
       
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               Dashboard Meta Ads
@@ -423,6 +459,31 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
               Monitoreo en tiempo real de campañas publicitarias
             </p>
           </div>
+          
+          {/* Filtros de Fecha Globales */}
+          <div className="flex gap-4 items-end">
+            <div>
+              <label className="block text-sm font-medium mb-1">Desde</label>
+              <input
+                type="date"
+                className="p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                value={globalDateFilters.fechaInicio}
+                onChange={(e) => setGlobalDateFilters(prev => ({ ...prev, fechaInicio: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Hasta</label>
+              <input
+                type="date"
+                className="p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                value={globalDateFilters.fechaFin}
+                onChange={(e) => setGlobalDateFilters(prev => ({ ...prev, fechaFin: e.target.value }))}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between">
           
           <div className="flex gap-3">
             <Button
@@ -666,7 +727,7 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
                           </tr>
                         );
                         
-                        const adsetRows = [];
+                        const adsetRows: JSX.Element[] = [];
                         if (expandedCampaigns.has(campaign.campaignId) && campaignAdsets[campaign.campaignId]) {
                           campaignAdsets[campaign.campaignId].forEach((adset, index) => {
                             adsetRows.push(
