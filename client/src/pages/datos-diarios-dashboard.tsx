@@ -80,7 +80,7 @@ export default function DatosDiariosDashboard() {
   const [filtroFechaFin, setFiltroFechaFin] = useState<string>('');
   
   // Estado para filtro de Campañas Finalizadas
-  const [filtroMesFinalizadas, setFiltroMesFinalizadas] = useState<string>('');
+  const [filtroMesFinalizadas, setFiltroMesFinalizadas] = useState<string>('all');
 
   // Función para exportar una campaña individual a CSV
   const handleExportCampanaCSV = async (campana: DatosDiariosData) => {
@@ -375,7 +375,7 @@ export default function DatosDiariosDashboard() {
     let finalizadasData = filteredData.filter(data => data.porcentajeDatosEnviados >= 100);
     
     // Aplicar filtro de mes para campañas finalizadas
-    if (filtroMesFinalizadas) {
+    if (filtroMesFinalizadas && filtroMesFinalizadas !== 'all') {
       finalizadasData = finalizadasData.filter((data: DatosDiariosData) => 
         data.fechaCampana && data.fechaCampana.startsWith(filtroMesFinalizadas)
       );
@@ -1193,18 +1193,42 @@ export default function DatosDiariosDashboard() {
                   <span className="text-sm font-medium">Filtro de mes:</span>
                 </div>
                 
-                <Input
-                  type="month"
-                  value={filtroMesFinalizadas}
-                  onChange={(e) => setFiltroMesFinalizadas(e.target.value)}
-                  className="w-44 bg-white/20 text-white border-white/30 hover:bg-white/30 placeholder:text-white/60 text-sm"
-                  placeholder="Seleccionar mes"
-                  data-testid="filter-mes-finalizadas"
-                />
+                <Select value={filtroMesFinalizadas} onValueChange={setFiltroMesFinalizadas}>
+                  <SelectTrigger className="w-44 bg-white/20 text-white border-white/30 hover:bg-white/30 text-sm" data-testid="filter-mes-finalizadas">
+                    <SelectValue placeholder="Seleccionar mes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los meses</SelectItem>
+                    <SelectItem value="2025-01">Enero 2025</SelectItem>
+                    <SelectItem value="2025-02">Febrero 2025</SelectItem>
+                    <SelectItem value="2025-03">Marzo 2025</SelectItem>
+                    <SelectItem value="2025-04">Abril 2025</SelectItem>
+                    <SelectItem value="2025-05">Mayo 2025</SelectItem>
+                    <SelectItem value="2025-06">Junio 2025</SelectItem>
+                    <SelectItem value="2025-07">Julio 2025</SelectItem>
+                    <SelectItem value="2025-08">Agosto 2025</SelectItem>
+                    <SelectItem value="2025-09">Septiembre 2025</SelectItem>
+                    <SelectItem value="2025-10">Octubre 2025</SelectItem>
+                    <SelectItem value="2025-11">Noviembre 2025</SelectItem>
+                    <SelectItem value="2025-12">Diciembre 2025</SelectItem>
+                    <SelectItem value="2024-01">Enero 2024</SelectItem>
+                    <SelectItem value="2024-02">Febrero 2024</SelectItem>
+                    <SelectItem value="2024-03">Marzo 2024</SelectItem>
+                    <SelectItem value="2024-04">Abril 2024</SelectItem>
+                    <SelectItem value="2024-05">Mayo 2024</SelectItem>
+                    <SelectItem value="2024-06">Junio 2024</SelectItem>
+                    <SelectItem value="2024-07">Julio 2024</SelectItem>
+                    <SelectItem value="2024-08">Agosto 2024</SelectItem>
+                    <SelectItem value="2024-09">Septiembre 2024</SelectItem>
+                    <SelectItem value="2024-10">Octubre 2024</SelectItem>
+                    <SelectItem value="2024-11">Noviembre 2024</SelectItem>
+                    <SelectItem value="2024-12">Diciembre 2024</SelectItem>
+                  </SelectContent>
+                </Select>
 
-                {filtroMesFinalizadas && (
+                {filtroMesFinalizadas && filtroMesFinalizadas !== 'all' && (
                   <Button
-                    onClick={() => setFiltroMesFinalizadas('')}
+                    onClick={() => setFiltroMesFinalizadas('all')}
                     variant="secondary"
                     size="sm"
                     className="bg-red-500/80 hover:bg-red-600/80 text-white border-red-300 text-sm"
