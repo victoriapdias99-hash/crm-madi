@@ -524,24 +524,6 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
           </div>
         </div>
 
-        {/* Connection Status */}
-        <Card className="border-l-4 border-l-blue-500 shadow-lg">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`w-3 h-3 rounded-full ${metaStats?.isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-                <span className="font-medium">
-                  Estado: {metaStats?.isConnected ? 'Conectado' : 'Desconectado'}
-                </span>
-              </div>
-              {metaStats?.lastSync && (
-                <span className="text-sm text-gray-500">
-                  Última sincronización: {new Date(metaStats.lastSync).toLocaleString('es-AR')}
-                </span>
-              )}
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
