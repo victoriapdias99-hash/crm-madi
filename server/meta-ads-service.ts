@@ -104,20 +104,45 @@ class MetaAdsService {
           // Extraer coste por resultado de Meta Ads
           let costPerResult = 0;
           
-          // Intentar obtener cost_per_result directamente
-          if (campaign.cost_per_result) {
+          
+          // Intentar obtener cost_per_result directamente (nueva estructura de Meta Ads)
+          if (campaign.cost_per_result && Array.isArray(campaign.cost_per_result)) {
+            // Nueva estructura: array de objetos con indicator y values
+            const conversationAction = campaign.cost_per_result.find((item: any) =>
+              item.indicator?.includes('messaging_conversation') ||
+              item.indicator?.includes('total_messaging_connection') ||
+              item.indicator?.includes('lead')
+            );
+            
+            if (conversationAction && conversationAction.values && conversationAction.values[0]) {
+              const valueObj = conversationAction.values[0];
+              const value = valueObj.value || valueObj;
+              costPerResult = parseFloat(value);
+            }
+          }
+          // Fallback a estructura antigua si no es array
+          else if (campaign.cost_per_result && typeof campaign.cost_per_result === 'string' && campaign.cost_per_result !== "0") {
             costPerResult = parseFloat(campaign.cost_per_result || '0');
           }
           // Si no, intentar obtener de cost_per_action_type (conversaciones, leads, etc.)
           else if (campaign.cost_per_action_type && Array.isArray(campaign.cost_per_action_type)) {
-            // Buscar cost_per_lead, cost_per_conversion, o cost_per_messaging_conversation_started_7d
+            console.log(`🔍 DEBUG: Buscando cost_per_action_type para campaña ${campaign.campaign_name}`);
+            console.log('Available action types:', campaign.cost_per_action_type.map((a: any) => a.action_type));
+            
+            // Buscar cost_per_lead, cost_per_conversion, cost_per_messaging_conversation, etc.
             const leadCost = campaign.cost_per_action_type.find((action: any) => 
               action.action_type === 'lead' || 
               action.action_type === 'onsite_conversion.lead_grouping' ||
-              action.action_type === 'messaging_conversation_started_7d'
+              action.action_type === 'messaging_conversation_started_7d' ||
+              action.action_type === 'onsite_conversion.total_messaging_connection' ||
+              action.action_type === 'messaging_conversation' ||
+              action.action_type === 'conversion'
             );
             if (leadCost && leadCost.value) {
               costPerResult = parseFloat(leadCost.value);
+              console.log(`✅ Found cost per result: ${costPerResult} (type: ${leadCost.action_type})`);
+            } else {
+              console.log('⚠️ No matching cost_per_action_type found');
             }
           }
           
@@ -211,8 +236,22 @@ class MetaAdsService {
           // Extraer coste por resultado de Meta Ads para adsets
           let costPerResult = 0;
           
-          // Intentar obtener cost_per_result directamente
-          if (adset.cost_per_result) {
+          // Intentar obtener cost_per_result directamente (nueva estructura de Meta Ads)
+          if (adset.cost_per_result && Array.isArray(adset.cost_per_result)) {
+            // Nueva estructura: array de objetos con indicator y values
+            const conversationAction = adset.cost_per_result.find((item: any) =>
+              item.indicator?.includes('messaging_conversation') ||
+              item.indicator?.includes('total_messaging_connection') ||
+              item.indicator?.includes('lead')
+            );
+            
+            if (conversationAction && conversationAction.values && conversationAction.values[0]) {
+              const value = conversationAction.values[0].value || conversationAction.values[0];
+              costPerResult = parseFloat(value);
+            }
+          }
+          // Fallback a estructura antigua si no es array
+          else if (adset.cost_per_result && typeof adset.cost_per_result === 'string' && adset.cost_per_result !== "0") {
             costPerResult = parseFloat(adset.cost_per_result || '0');
           }
           // Si no, intentar obtener de cost_per_action_type
@@ -220,7 +259,10 @@ class MetaAdsService {
             const leadCost = adset.cost_per_action_type.find((action: any) => 
               action.action_type === 'lead' || 
               action.action_type === 'onsite_conversion.lead_grouping' ||
-              action.action_type === 'messaging_conversation_started_7d'
+              action.action_type === 'messaging_conversation_started_7d' ||
+              action.action_type === 'onsite_conversion.total_messaging_connection' ||
+              action.action_type === 'messaging_conversation' ||
+              action.action_type === 'conversion'
             );
             if (leadCost && leadCost.value) {
               costPerResult = parseFloat(leadCost.value);
