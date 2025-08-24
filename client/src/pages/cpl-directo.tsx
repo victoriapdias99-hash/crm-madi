@@ -36,6 +36,26 @@ export default function CPLDirecto() {
     retry: 2,
   });
 
+  // Mapeo de nombres de campañas a nombres de clientes reales
+  const getClienteInfo = (clienteCampana: string) => {
+    const clienteMapping: Record<string, { nombre: string; marca: string }> = {
+      'JEEP 1': { nombre: 'Jea Automotores', marca: 'JEEP' },
+      'TOYOTA 1': { nombre: 'Mariano - Pichetti', marca: 'TOYOTA' },
+      'VW 1': { nombre: 'Borussia', marca: 'VW' },
+      'FORD 1': { nombre: 'Ford Cliente', marca: 'FORD' },
+      'CITROEN 1': { nombre: 'AVEC - GRUPO QUIJADA', marca: 'CITROEN' },
+      'CITROEN 2': { nombre: 'AVEC - GRUPO QUIJADA', marca: 'CITROEN' },
+      'CHEVROLET 1': { nombre: 'Italy Autos', marca: 'CHEVROLET' },
+      'FIAT 1': { nombre: 'FIAT AUTOS DEL SOL', marca: 'FIAT' },
+      'RENAULT 1': { nombre: 'Javier Cagiao', marca: 'RENAULT' },
+    };
+
+    return clienteMapping[clienteCampana] || { 
+      nombre: clienteCampana, 
+      marca: clienteCampana.split(' ')[0] 
+    };
+  };
+
   // Mutation para sincronizar CPL con la base de datos
   const syncCplMutation = useMutation({
     mutationFn: async ({ cliente, numeroCampana, cpl }: { cliente: string; numeroCampana: string; cpl: number }) => {
@@ -169,14 +189,22 @@ export default function CPLDirecto() {
                     {Array.isArray(datosDiarios) && datosDiarios.map((data: any, index: number) => {
                       const key = `${data.cliente}-${data.numeroCampana}`;
                       const cplActual = getCplActual(data.cliente, data.numeroCampana);
+                      const clienteInfo = getClienteInfo(data.cliente);
                       
                       return (
                         <TableRow key={`${data.cliente}-${data.numeroCampana}-${index}`}>
                           <TableCell className="font-medium">
-                            {data.cliente}
+                            <div className="flex flex-col">
+                              <span className="text-sm font-semibold text-gray-900">
+                                {clienteInfo.nombre}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {clienteInfo.marca}
+                              </span>
+                            </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline">
+                            <Badge variant="outline" className="font-semibold">
                               #{data.numeroCampana}
                             </Badge>
                           </TableCell>
