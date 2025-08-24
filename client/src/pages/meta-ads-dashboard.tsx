@@ -112,6 +112,9 @@ export default function MetaAdsDashboard() {
     nombreCampana: ''
   });
   
+  // Estado para filtro de conjuntos de anuncios
+  const [adsetFilter, setAdsetFilter] = useState('');
+  
   // Estado para filtros globales de fechas
   const [globalDateFilters, setGlobalDateFilters] = useState({
     fechaInicio: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
@@ -589,7 +592,7 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
             </CardTitle>
             
             {/* Filtros */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 p-4 bg-gray-50 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4 p-4 bg-gray-50 rounded-lg">
               <div>
                 <label className="block text-sm font-medium mb-2">Fecha Inicio</label>
                 <input
@@ -616,6 +619,17 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
                   className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                   value={campaignFilters.nombreCampana}
                   onChange={(e) => setCampaignFilters(prev => ({ ...prev, nombreCampana: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Nombre de Conjunto</label>
+                <input
+                  type="text"
+                  placeholder="Buscar conjunto de anuncios..."
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                  value={adsetFilter}
+                  onChange={(e) => setAdsetFilter(e.target.value)}
+                  data-testid="filter-adset-name"
                 />
               </div>
             </div>
@@ -711,7 +725,14 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
                         
                         const adsetRows: JSX.Element[] = [];
                         if (expandedCampaigns.has(campaign.campaignId) && campaignAdsets[campaign.campaignId]) {
-                          campaignAdsets[campaign.campaignId].forEach((adset, index) => {
+                          campaignAdsets[campaign.campaignId]
+                            .filter((adset) => {
+                              // Filtrar por nombre de conjunto de anuncios
+                              const adsetNameMatch = !adsetFilter || 
+                                adset.adsetName.toLowerCase().includes(adsetFilter.toLowerCase());
+                              return adsetNameMatch;
+                            })
+                            .forEach((adset, index) => {
                             adsetRows.push(
                               <tr key={`${campaign.campaignId}-adset-${adset.adsetId}`} className="border-b border-gray-50 hover:bg-orange-25 bg-orange-10">
                                 <td className="p-3 pl-12">
