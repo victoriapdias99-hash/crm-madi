@@ -77,6 +77,7 @@ export default function DatosDiariosDashboard() {
   const [filtroZona, setFiltroZona] = useState<string>('');
   const [filtroMarca, setFiltroMarca] = useState<string>('');
   const [filtroFechaInicio, setFiltroFechaInicio] = useState<string>('');
+  const [filtroFechaFin, setFiltroFechaFin] = useState<string>('');
   
   // Estado para filtro de Campañas Finalizadas
   const [filtroMesFinalizadas, setFiltroMesFinalizadas] = useState<string>('');
@@ -329,7 +330,13 @@ export default function DatosDiariosDashboard() {
     
     if (filtroFechaInicio) {
       filteredData = filteredData.filter((data: DatosDiariosData) => 
-        data.fechaCampana && data.fechaCampana.startsWith(filtroFechaInicio)
+        data.fechaCampana && data.fechaCampana >= filtroFechaInicio
+      );
+    }
+    
+    if (filtroFechaFin) {
+      filteredData = filteredData.filter((data: DatosDiariosData) => 
+        data.fechaCampana && data.fechaCampana <= filtroFechaFin
       );
     }
     
@@ -387,7 +394,7 @@ export default function DatosDiariosDashboard() {
     console.log(`📊 Datos ordenados: ${enProceso.length} en proceso, ${finalizadas.length} finalizadas`);
     
     return { campanasEnProceso: enProceso, campanasFinalizadas: finalizadas };
-  }, [datosDiarios, showDuplicatesOnly, duplicatesData, sortByDate, filtroZona, filtroMarca, filtroFechaInicio, filtroMesFinalizadas]);
+  }, [datosDiarios, showDuplicatesOnly, duplicatesData, sortByDate, filtroZona, filtroMarca, filtroFechaInicio, filtroFechaFin, filtroMesFinalizadas]);
 
   const { campanasEnProceso, campanasFinalizadas } = campanasData;
 
@@ -863,12 +870,21 @@ export default function DatosDiariosDashboard() {
                   data-testid="filter-fecha-inicio"
                 />
 
-                {(filtroZona || filtroMarca || filtroFechaInicio) && (
+                <Input
+                  type="date"
+                  value={filtroFechaFin}
+                  onChange={(e) => setFiltroFechaFin(e.target.value)}
+                  className="w-44 bg-white/20 text-white border-white/30 hover:bg-white/30 placeholder:text-white/60 text-sm"
+                  data-testid="filter-fecha-fin"
+                />
+
+                {(filtroZona || filtroMarca || filtroFechaInicio || filtroFechaFin) && (
                   <Button
                     onClick={() => {
                       setFiltroZona('');
                       setFiltroMarca('');
                       setFiltroFechaInicio('');
+                      setFiltroFechaFin('');
                     }}
                     variant="secondary"
                     size="sm"
