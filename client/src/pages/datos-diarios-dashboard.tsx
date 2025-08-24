@@ -12,7 +12,6 @@ import { apiRequest } from "@/lib/queryClient";
 import { Navigation } from "@/components/navigation";
 import { CPLStorage } from "@/lib/cpl-storage";
 import { debounce, memoize, measurePerformance } from "@/lib/performance";
-import TestPanel from "@/components/test-panel";
 
 interface DatosDiariosData {
   cliente: string;
@@ -778,8 +777,6 @@ export default function DatosDiariosDashboard() {
           </div>
         </div>
 
-        {/* Panel de Pruebas Funcionales */}
-        {/* <TestPanel /> */}
 
         {/* Campañas en Proceso */}
         <Card className="border-0 shadow-2xl bg-gradient-to-r from-white via-amber-50 to-orange-50 dark:from-gray-800 dark:via-amber-900/10 dark:to-orange-900/10">
