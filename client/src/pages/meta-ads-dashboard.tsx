@@ -255,6 +255,9 @@ export default function MetaAdsDashboard() {
           until: globalDateFilters.fechaFin || undefined
         };
         url += `?timeRange=${encodeURIComponent(JSON.stringify(timeRange))}`;
+        console.log('🔍 ENVIANDO FILTROS DE FECHA STATS AL BACKEND:', timeRange);
+      } else {
+        console.log('⚠️ NO HAY FILTROS DE FECHA STATS - USANDO RANGO POR DEFECTO');
       }
       
       const response = await apiRequest(url, 'GET');
@@ -275,6 +278,9 @@ export default function MetaAdsDashboard() {
           until: globalDateFilters.fechaFin || undefined
         };
         url += `?timeRange=${encodeURIComponent(JSON.stringify(timeRange))}`;
+        console.log('🔍 ENVIANDO FILTROS DE FECHA CAMPAIGNS AL BACKEND:', timeRange);
+      } else {
+        console.log('⚠️ NO HAY FILTROS DE FECHA CAMPAIGNS - USANDO RANGO POR DEFECTO');
       }
       
       const response = await apiRequest(url, 'GET');
@@ -295,6 +301,9 @@ export default function MetaAdsDashboard() {
           until: globalDateFilters.fechaFin || undefined
         };
         url += `&timeRange=${encodeURIComponent(JSON.stringify(timeRange))}`;
+        console.log('🔍 ENVIANDO FILTROS DE FECHA ADSETS AL BACKEND:', timeRange, 'CAMPAÑA:', campaignName);
+      } else {
+        console.log('⚠️ NO HAY FILTROS DE FECHA ADSETS - USANDO RANGO POR DEFECTO', 'CAMPAÑA:', campaignName);
       }
       
       const response = await apiRequest(url, 'GET');

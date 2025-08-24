@@ -71,10 +71,22 @@ class MetaAdsService {
    */
   async getCampaignSpendData(timeRange?: { since: string; until: string }): Promise<CampaignSpendData[]> {
     try {
-      const defaultTimeRange = timeRange || {
-        since: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Últimos 30 días
-        until: new Date().toISOString().split('T')[0]
-      };
+      // Si no se proporciona timeRange, usar un rango por defecto
+      let effectiveTimeRange = timeRange;
+      if (!timeRange || (!timeRange.since && !timeRange.until)) {
+        effectiveTimeRange = {
+          since: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Últimos 30 días
+          until: new Date().toISOString().split('T')[0]
+        };
+      } else {
+        // Si se proporciona timeRange pero algún campo es undefined, usar valores por defecto específicos
+        effectiveTimeRange = {
+          since: timeRange.since || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          until: timeRange.until || new Date().toISOString().split('T')[0]
+        };
+      }
+      
+      console.log('📅 FILTROS DE FECHA META ADS:', effectiveTimeRange);
 
       // Primero obtener estado actual de todas las campañas
       const campaignStatusData = await this.getCampaignStatuses();
@@ -100,9 +112,11 @@ class MetaAdsService {
         access_token: this.config.accessToken,
         fields: fields,
         level: 'campaign',
-        time_range: JSON.stringify(defaultTimeRange),
+        time_range: JSON.stringify(effectiveTimeRange),
         limit: 100
       };
+      
+      console.log('📊 PARÁMETROS ENVIADOS A META ADS:', params);
 
       const response = await axios.get(`${this.baseUrl}/${this.config.accountId}/insights`, { params });
       
@@ -264,10 +278,21 @@ class MetaAdsService {
     dateRange?: { since: string; until: string };
   }): Promise<AdsetSpendData[]> {
     try {
-      const defaultTimeRange = filters.dateRange || {
-        since: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        until: new Date().toISOString().split('T')[0]
-      };
+      // Aplicar la misma lógica de filtros de fecha que en getCampaignSpendData
+      let effectiveTimeRange = filters.dateRange;
+      if (!filters.dateRange || (!filters.dateRange.since && !filters.dateRange.until)) {
+        effectiveTimeRange = {
+          since: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          until: new Date().toISOString().split('T')[0]
+        };
+      } else {
+        effectiveTimeRange = {
+          since: filters.dateRange.since || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          until: filters.dateRange.until || new Date().toISOString().split('T')[0]
+        };
+      }
+      
+      console.log('📅 FILTROS DE FECHA ADSETS:', effectiveTimeRange, 'CAMPAÑA:', filters.campaignName);
 
       const fields = [
         'adset_id',
@@ -297,9 +322,11 @@ class MetaAdsService {
         access_token: this.config.accessToken,
         fields: fields,
         level: 'adset',
-        time_range: JSON.stringify(defaultTimeRange),
+        time_range: JSON.stringify(effectiveTimeRange),
         limit: 100
       };
+      
+      console.log('📊 PARÁMETROS ADSETS ENVIADOS A META ADS:', params);
 
       // Si se especifica campaña, filtrar por nombre de campaña
       if (filters.campaignName) {
