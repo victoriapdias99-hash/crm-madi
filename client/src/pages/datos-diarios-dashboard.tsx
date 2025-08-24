@@ -78,6 +78,9 @@ export default function DatosDiariosDashboard() {
   const [filtroZona, setFiltroZona] = useState<string>('');
   const [filtroMarca, setFiltroMarca] = useState<string>('');
   const [filtroFechaInicio, setFiltroFechaInicio] = useState<string>('');
+  
+  // Estado para filtro de Campañas Finalizadas
+  const [filtroMesFinalizadas, setFiltroMesFinalizadas] = useState<string>('');
 
   // Función para exportar una campaña individual a CSV
   const handleExportCampanaCSV = async (campana: DatosDiariosData) => {
@@ -363,8 +366,16 @@ export default function DatosDiariosDashboard() {
           : dateA.getTime() - dateB.getTime(); // Ascendente (más antigua primero)
       });
     
-    const finalizadas = filteredData
-      .filter(data => data.porcentajeDatosEnviados >= 100)
+    let finalizadasData = filteredData.filter(data => data.porcentajeDatosEnviados >= 100);
+    
+    // Aplicar filtro de mes para campañas finalizadas
+    if (filtroMesFinalizadas) {
+      finalizadasData = finalizadasData.filter((data: DatosDiariosData) => 
+        data.fechaCampana && data.fechaCampana.startsWith(filtroMesFinalizadas)
+      );
+    }
+    
+    const finalizadas = finalizadasData
       .sort((a, b) => {
         // Ordenar campañas finalizadas también por fecha según el estado sortByDate
         const dateA = parseDate(a.fechaCampana);
@@ -377,7 +388,7 @@ export default function DatosDiariosDashboard() {
     console.log(`📊 Datos ordenados: ${enProceso.length} en proceso, ${finalizadas.length} finalizadas`);
     
     return { campanasEnProceso: enProceso, campanasFinalizadas: finalizadas };
-  }, [datosDiarios, showDuplicatesOnly, duplicatesData, sortByDate, filtroZona, filtroMarca, filtroFechaInicio]);
+  }, [datosDiarios, showDuplicatesOnly, duplicatesData, sortByDate, filtroZona, filtroMarca, filtroFechaInicio, filtroMesFinalizadas]);
 
   const { campanasEnProceso, campanasFinalizadas } = campanasData;
 
@@ -1152,15 +1163,46 @@ export default function DatosDiariosDashboard() {
         {/* Campañas Finalizadas */}
         <Card className="border-0 shadow-2xl bg-gradient-to-r from-white via-emerald-50 to-green-50 dark:from-gray-800 dark:via-emerald-900/10 dark:to-green-900/10">
           <CardHeader className="bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-t-lg">
-            <CardTitle className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                ✅
+            <div className="space-y-4">
+              <CardTitle className="flex items-center gap-3 flex-wrap">
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                  ✅
+                </div>
+                <span className="text-xl font-bold">Campañas Finalizadas</span>
+                <Badge variant="secondary" className="bg-white/20 text-white border-white/30 font-bold">
+                  {campanasFinalizadas.length} completadas
+                </Badge>
+              </CardTitle>
+              
+              {/* Control de filtro de mes */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  <span className="text-sm font-medium">Filtro de mes:</span>
+                </div>
+                
+                <Input
+                  type="month"
+                  value={filtroMesFinalizadas}
+                  onChange={(e) => setFiltroMesFinalizadas(e.target.value)}
+                  className="w-44 bg-white/20 text-white border-white/30 hover:bg-white/30 placeholder:text-white/60 text-sm"
+                  placeholder="Seleccionar mes"
+                  data-testid="filter-mes-finalizadas"
+                />
+
+                {filtroMesFinalizadas && (
+                  <Button
+                    onClick={() => setFiltroMesFinalizadas('')}
+                    variant="secondary"
+                    size="sm"
+                    className="bg-red-500/80 hover:bg-red-600/80 text-white border-red-300 text-sm"
+                    data-testid="button-clear-filter-finalizadas"
+                  >
+                    ✕ Limpiar filtro
+                  </Button>
+                )}
               </div>
-              <span className="text-xl font-bold">Campañas Finalizadas</span>
-              <Badge variant="secondary" className="bg-white/20 text-white border-white/30 font-bold">
-                {campanasFinalizadas.length} completadas
-              </Badge>
-            </CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
