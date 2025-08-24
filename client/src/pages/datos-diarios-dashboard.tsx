@@ -71,6 +71,7 @@ export default function DatosDiariosDashboard() {
   const [forceShowContent, setForceShowContent] = useState(false);
   const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
   const [exportingCSV, setExportingCSV] = useState(false);
+  const [sortByDate, setSortByDate] = useState<'desc' | 'asc'>('desc'); // Por defecto más reciente primero
 
   // Función para exportar una campaña individual a CSV
   const handleExportCampanaCSV = async (campana: DatosDiariosData) => {
@@ -313,25 +314,29 @@ export default function DatosDiariosDashboard() {
     const enProceso = filteredData
       .filter(data => data.porcentajeDatosEnviados < 100)
       .sort((a, b) => {
-        // Ordenar por fecha de campaña: más reciente primero
+        // Ordenar por fecha de campaña según el estado sortByDate
         const dateA = parseDate(a.fechaCampana);
         const dateB = parseDate(b.fechaCampana);
-        return dateB.getTime() - dateA.getTime(); // Descendente (más reciente primero)
+        return sortByDate === 'desc' 
+          ? dateB.getTime() - dateA.getTime() // Descendente (más reciente primero)
+          : dateA.getTime() - dateB.getTime(); // Ascendente (más antigua primero)
       });
     
     const finalizadas = filteredData
       .filter(data => data.porcentajeDatosEnviados >= 100)
       .sort((a, b) => {
-        // Ordenar campañas finalizadas también por fecha: más reciente primero
+        // Ordenar campañas finalizadas también por fecha según el estado sortByDate
         const dateA = parseDate(a.fechaCampana);
         const dateB = parseDate(b.fechaCampana);
-        return dateB.getTime() - dateA.getTime(); // Descendente (más reciente primero)
+        return sortByDate === 'desc' 
+          ? dateB.getTime() - dateA.getTime() // Descendente (más reciente primero)
+          : dateA.getTime() - dateB.getTime(); // Ascendente (más antigua primero)
       });
     
     console.log(`📊 Datos ordenados: ${enProceso.length} en proceso, ${finalizadas.length} finalizadas`);
     
     return { campanasEnProceso: enProceso, campanasFinalizadas: finalizadas };
-  }, [datosDiarios, showDuplicatesOnly, duplicatesData]);
+  }, [datosDiarios, showDuplicatesOnly, duplicatesData, sortByDate]);
 
   const { campanasEnProceso, campanasFinalizadas } = campanasData;
 
@@ -735,9 +740,15 @@ export default function DatosDiariosDashboard() {
               <Badge variant="secondary" className="bg-white/20 text-white border-white/30 font-bold">
                 {campanasEnProceso.length} en progreso
               </Badge>
-              <div className="bg-white/20 text-white border border-white/30 rounded px-3 py-1 text-sm">
-                📅 Ordenadas por fecha (más reciente primero)
-              </div>
+              <Button
+                onClick={() => setSortByDate(sortByDate === 'desc' ? 'asc' : 'desc')}
+                variant="secondary"
+                size="sm"
+                className="bg-white/20 text-white border border-white/30 hover:bg-white/30 transition-all duration-300 text-sm"
+                data-testid="button-sort-by-date"
+              >
+                📅 {sortByDate === 'desc' ? 'Más reciente primero ↓' : 'Más antigua primero ↑'}
+              </Button>
               <Button
                 onClick={async () => {
                   if (!showDuplicatesOnly) {
