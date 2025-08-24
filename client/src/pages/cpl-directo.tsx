@@ -33,6 +33,7 @@ export default function CPLDirecto() {
   // Estados para filtros
   const [filtroZona, setFiltroZona] = useState<string>('');
   const [filtroMarca, setFiltroMarca] = useState<string>('');
+  const [filtroCliente, setFiltroCliente] = useState<string>('');
   const [filtroFechaInicio, setFiltroFechaInicio] = useState<string>('');
   const [filtroFechaFin, setFiltroFechaFin] = useState<string>('');
 
@@ -162,6 +163,15 @@ export default function CPLDirecto() {
         return marca === filtroMarca;
       });
     }
+
+    // Filtro por cliente
+    if (filtroCliente) {
+      filteredData = filteredData.filter((data: any) => {
+        const clienteInfo = getClienteInfo(data.cliente);
+        return clienteInfo.nombre.toLowerCase().includes(filtroCliente.toLowerCase()) ||
+               data.cliente.toLowerCase().includes(filtroCliente.toLowerCase());
+      });
+    }
     
     // Filtro por fecha inicio
     if (filtroFechaInicio) {
@@ -178,7 +188,7 @@ export default function CPLDirecto() {
     }
     
     return filteredData;
-  }, [datosDiarios, filtroZona, filtroMarca, filtroFechaInicio, filtroFechaFin]);
+  }, [datosDiarios, filtroZona, filtroMarca, filtroCliente, filtroFechaInicio, filtroFechaFin]);
 
   // Opciones para filtros
   const opcionesZona = useMemo(() => {
@@ -194,6 +204,15 @@ export default function CPLDirecto() {
       return marca;
     }).filter(Boolean))];
     return marcas.sort();
+  }, [datosDiarios]);
+
+  const opcionesCliente = useMemo(() => {
+    if (!Array.isArray(datosDiarios)) return [];
+    const clientes = [...new Set(datosDiarios.map((data: any) => {
+      const clienteInfo = getClienteInfo(data.cliente);
+      return clienteInfo.nombre;
+    }).filter(Boolean))];
+    return clientes.sort();
   }, [datosDiarios]);
 
   if (isLoading) {
@@ -263,6 +282,18 @@ export default function CPLDirecto() {
                   </SelectContent>
                 </Select>
 
+                <Select value={filtroCliente || "all"} onValueChange={(value) => setFiltroCliente(value === "all" ? "" : value)}>
+                  <SelectTrigger className="w-48 text-sm">
+                    <SelectValue placeholder="Todos los clientes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los clientes</SelectItem>
+                    {opcionesCliente.map(cliente => (
+                      <SelectItem key={cliente} value={cliente}>{cliente}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
                 <Input
                   type="date"
                   value={filtroFechaInicio}
@@ -279,11 +310,12 @@ export default function CPLDirecto() {
                   placeholder="Fecha fin"
                 />
 
-                {(filtroZona || filtroMarca || filtroFechaInicio || filtroFechaFin) && (
+                {(filtroZona || filtroMarca || filtroCliente || filtroFechaInicio || filtroFechaFin) && (
                   <Button
                     onClick={() => {
                       setFiltroZona('');
                       setFiltroMarca('');
+                      setFiltroCliente('');
                       setFiltroFechaInicio('');
                       setFiltroFechaFin('');
                     }}
