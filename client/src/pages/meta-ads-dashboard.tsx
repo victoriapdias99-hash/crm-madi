@@ -15,21 +15,18 @@ interface MetaCampaign {
   campaignName: string;
   spend: number;
   accountCurrency: string;
-  impressions: number;
-  clicks: number;
   cpc: number;
   cpm: number;
   frequency: number;
   dateStart: string;
   dateStop: string;
   lastUpdated: Date;
+  results?: number; // Para calcular costo por resultado
 }
 
 interface MetaStats {
   totalSpend: number;
   totalCampaigns: number;
-  totalImpressions: number;
-  totalClicks: number;
   avgCPC: number;
   avgCPM: number;
   isConnected: boolean;
@@ -86,6 +83,13 @@ interface AuditFilters {
 export default function MetaAdsDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Estado para filtros de campañas
+  const [campaignFilters, setCampaignFilters] = useState({
+    fechaInicio: '',
+    fechaFin: '',
+    nombreCampana: ''
+  });
   
   // Estado para el módulo de auditoría
   const [auditFilters, setAuditFilters] = useState<AuditFilters>({
@@ -449,27 +453,27 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
 
           <Card className="shadow-lg hover:shadow-xl transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Impresiones</CardTitle>
+              <CardTitle className="text-sm font-medium">CPC Promedio</CardTitle>
               <TrendingUp className="h-4 w-4 text-purple-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-purple-600">
-                {metaStats ? formatNumber(metaStats.totalImpressions) : '0'}
+                {metaStats ? formatCurrency(metaStats.avgCPC) : '$0'}
               </div>
-              <p className="text-xs text-gray-500 mt-1">Total de visualizaciones</p>
+              <p className="text-xs text-gray-500 mt-1">Costo por clic</p>
             </CardContent>
           </Card>
 
           <Card className="shadow-lg hover:shadow-xl transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Clics Totales</CardTitle>
+              <CardTitle className="text-sm font-medium">CPM Promedio</CardTitle>
               <Users className="h-4 w-4 text-orange-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-orange-600">
-                {metaStats ? formatNumber(metaStats.totalClicks) : '0'}
+                {metaStats ? formatCurrency(metaStats.avgCPM) : '$0'}
               </div>
-              <p className="text-xs text-gray-500 mt-1">Interacciones totales</p>
+              <p className="text-xs text-gray-500 mt-1">Costo por mil impresiones</p>
             </CardContent>
           </Card>
         </div>
@@ -481,6 +485,38 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
               <BarChart3 className="h-5 w-5 text-blue-600" />
               Detalle de Campañas
             </CardTitle>
+            
+            {/* Filtros */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 p-4 bg-gray-50 rounded-lg">
+              <div>
+                <label className="block text-sm font-medium mb-2">Fecha Inicio</label>
+                <input
+                  type="date"
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                  value={campaignFilters.fechaInicio}
+                  onChange={(e) => setCampaignFilters(prev => ({ ...prev, fechaInicio: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Fecha Fin</label>
+                <input
+                  type="date"
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                  value={campaignFilters.fechaFin}
+                  onChange={(e) => setCampaignFilters(prev => ({ ...prev, fechaFin: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Nombre de Campaña</label>
+                <input
+                  type="text"
+                  placeholder="Buscar campaña..."
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                  value={campaignFilters.nombreCampana}
+                  onChange={(e) => setCampaignFilters(prev => ({ ...prev, nombreCampana: e.target.value }))}
+                />
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {campaigns && campaigns.length > 0 ? (
@@ -490,44 +526,78 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
                     <tr className="border-b border-gray-200">
                       <th className="text-left p-3 font-medium">Campaña</th>
                       <th className="text-center p-3 font-medium">Gasto</th>
-                      <th className="text-center p-3 font-medium">Impresiones</th>
-                      <th className="text-center p-3 font-medium">Clics</th>
+                      <th className="text-center p-3 font-medium">Costo por Resultado</th>
                       <th className="text-center p-3 font-medium">CPC</th>
                       <th className="text-center p-3 font-medium">CPM</th>
+                      <th className="text-center p-3 font-medium">Período</th>
                       <th className="text-center p-3 font-medium">Estado</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {campaigns.map((campaign) => (
-                      <tr key={campaign.campaignId} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="p-3">
-                          <div>
-                            <div className="font-medium">{campaign.campaignName}</div>
-                            <div className="text-sm text-gray-500">ID: {campaign.campaignId}</div>
-                          </div>
-                        </td>
-                        <td className="text-center p-3 font-medium text-green-600">
-                          {formatCurrency(campaign.spend, campaign.accountCurrency)}
-                        </td>
-                        <td className="text-center p-3">
-                          {formatNumber(campaign.impressions)}
-                        </td>
-                        <td className="text-center p-3">
-                          {formatNumber(campaign.clicks)}
-                        </td>
-                        <td className="text-center p-3">
-                          {formatCurrency(campaign.cpc, campaign.accountCurrency)}
-                        </td>
-                        <td className="text-center p-3">
-                          {formatCurrency(campaign.cpm, campaign.accountCurrency)}
-                        </td>
-                        <td className="text-center p-3">
-                          <Badge variant="default" className="bg-green-100 text-green-800">
-                            Activa
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
+                    {campaigns
+                      .filter(campaign => {
+                        // Filtro por nombre
+                        const nameMatch = !campaignFilters.nombreCampana || 
+                          campaign.campaignName.toLowerCase().includes(campaignFilters.nombreCampana.toLowerCase());
+                        
+                        // Filtro por fecha (si están definidas)
+                        let dateMatch = true;
+                        if (campaignFilters.fechaInicio || campaignFilters.fechaFin) {
+                          const campaignStart = new Date(campaign.dateStart);
+                          const campaignEnd = new Date(campaign.dateStop);
+                          
+                          if (campaignFilters.fechaInicio) {
+                            const filterStart = new Date(campaignFilters.fechaInicio);
+                            dateMatch = dateMatch && campaignStart >= filterStart;
+                          }
+                          
+                          if (campaignFilters.fechaFin) {
+                            const filterEnd = new Date(campaignFilters.fechaFin);
+                            dateMatch = dateMatch && campaignEnd <= filterEnd;
+                          }
+                        }
+                        
+                        return nameMatch && dateMatch;
+                      })
+                      .map((campaign) => {
+                        // Calcular costo por resultado (usando spend/results, o spend/1 si no hay resultados)
+                        const costPerResult = campaign.results && campaign.results > 0 
+                          ? campaign.spend / campaign.results 
+                          : campaign.spend;
+                        
+                        return (
+                          <tr key={campaign.campaignId} className="border-b border-gray-100 hover:bg-gray-50">
+                            <td className="p-3">
+                              <div>
+                                <div className="font-medium">{campaign.campaignName}</div>
+                                <div className="text-sm text-gray-500">ID: {campaign.campaignId}</div>
+                              </div>
+                            </td>
+                            <td className="text-center p-3 font-medium text-green-600">
+                              {formatCurrency(campaign.spend, campaign.accountCurrency)}
+                            </td>
+                            <td className="text-center p-3 font-medium text-purple-600">
+                              {formatCurrency(costPerResult, campaign.accountCurrency)}
+                            </td>
+                            <td className="text-center p-3">
+                              {formatCurrency(campaign.cpc, campaign.accountCurrency)}
+                            </td>
+                            <td className="text-center p-3">
+                              {formatCurrency(campaign.cpm, campaign.accountCurrency)}
+                            </td>
+                            <td className="text-center p-3 text-sm text-gray-600">
+                              <div>{format(new Date(campaign.dateStart), 'dd/MM/yyyy')}</div>
+                              <div>al {format(new Date(campaign.dateStop), 'dd/MM/yyyy')}</div>
+                            </td>
+                            <td className="text-center p-3">
+                              <Badge variant="default" className="bg-green-100 text-green-800">
+                                Activa
+                              </Badge>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    }
                   </tbody>
                 </table>
               </div>
