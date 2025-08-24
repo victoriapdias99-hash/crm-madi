@@ -797,9 +797,8 @@ export default function DatosDiariosDashboard() {
                         <td className="border border-amber-200 dark:border-amber-600 p-3">
                           <div className="space-y-1">
                             <div className="font-bold text-slate-800 dark:text-slate-200">{data.clienteNombre}</div>
-                            <div className="text-sm text-slate-600 dark:text-slate-400">{data.cliente}</div>
                             <div className="text-xs bg-gradient-to-r from-blue-500 to-purple-600 text-white px-2 py-1 rounded-full font-semibold w-fit">
-                              Campaña #{data.numeroCampana || 1}
+                              #{data.numeroCampana || 1}
                             </div>
                           </div>
                         </td>
@@ -1073,8 +1072,7 @@ export default function DatosDiariosDashboard() {
                         <td className="border border-gray-300 dark:border-gray-600 p-2">
                           <div>
                             <div className="font-medium">{data.clienteNombre}</div>
-                            <div className="text-sm text-gray-500">{data.cliente}</div>
-                            <div className="text-xs text-green-600 font-semibold">Campaña #{data.numeroCampana || 1}</div>
+                            <div className="text-xs text-green-600 font-semibold">#{data.numeroCampana || 1}</div>
                           </div>
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2">{data.zona}</td>
