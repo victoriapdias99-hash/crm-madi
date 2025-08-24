@@ -1673,11 +1673,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           c.numeroCampana?.toString() === data.numeroCampana?.toString()
         );
         
-        // Usar facturacionBruta de la campaña comercial si está disponible, sino usar ventaPorCampana
-        const totalFacturado = campanaComercial?.facturacionBruta 
-          ? parseFloat(campanaComercial.facturacionBruta.toString()) 
-          : ventaPorCampana;
-
         // Obtener CPL desde CPL Directo (no del dashboard datos-diarios)
         const cplDirecto = await storage.getCplByClienteAndCampana(
           data.clienteNombre, 
@@ -1701,6 +1696,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         const leadCount = data.enviados || 0;
+        
+        // CALCULAR FACTURACIÓN BRUTA: Leads × CPL × Venta por Campaña
+        let totalFacturado = 0;
+        if (campanaComercial?.facturacionBruta && parseFloat(campanaComercial.facturacionBruta.toString()) > 0) {
+          // Usar facturación bruta de la campaña comercial si está disponible y es mayor a 0
+          totalFacturado = parseFloat(campanaComercial.facturacionBruta.toString());
+          console.log(`💰 FACTURACIÓN BRUTA MANUAL: ${data.clienteNombre} = $${totalFacturado.toFixed(2)}`);
+        } else {
+          // Calcular automáticamente: Leads × CPL × Venta por Campaña
+          totalFacturado = leadCount * cplValue * ventaPorCampana;
+          console.log(`💰 FACTURACIÓN BRUTA CALCULADA: ${data.clienteNombre} = ${leadCount} leads × $${cplValue} CPL × ${ventaPorCampana} venta = $${totalFacturado.toFixed(2)}`);
+        }
         
         // NUEVA LÓGICA: Calcular CPA y usar gasto real de Meta Ads + 2% para inversión
         let cpaValue = 0;
