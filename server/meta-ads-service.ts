@@ -19,6 +19,9 @@ interface CampaignSpendData {
   dateStart: string;
   dateStop: string;
   lastUpdated: Date;
+  costPerResult?: number; // Coste por conversación/resultado desde Meta Ads
+  actions?: any; // Acciones/conversiones disponibles
+  costPerActionType?: any; // Coste por tipo de acción
 }
 
 interface AdsetSpendData {
@@ -77,7 +80,10 @@ class MetaAdsService {
         'cpm',
         'frequency',
         'date_start',
-        'date_stop'
+        'date_stop',
+        'actions',
+        'cost_per_action_type',
+        'cost_per_result'
       ].join(',');
 
       const params = {
@@ -91,20 +97,45 @@ class MetaAdsService {
       const response = await axios.get(`${this.baseUrl}/${this.config.accountId}/insights`, { params });
       
       if (response.data?.data) {
-        const campaigns = response.data.data.map((campaign: any) => ({
-          campaignId: campaign.campaign_id,
-          campaignName: campaign.campaign_name,
-          spend: parseFloat(campaign.spend || '0'),
-          accountCurrency: campaign.account_currency || 'USD',
-          impressions: parseInt(campaign.impressions || '0'),
-          clicks: parseInt(campaign.clicks || '0'),
-          cpc: parseFloat(campaign.cpc || '0'),
-          cpm: parseFloat(campaign.cpm || '0'),
-          frequency: parseFloat(campaign.frequency || '0'),
-          dateStart: campaign.date_start,
-          dateStop: campaign.date_stop,
-          lastUpdated: new Date()
-        }));
+        const campaigns = response.data.data.map((campaign: any) => {
+          // Extraer coste por resultado de Meta Ads
+          let costPerResult = 0;
+          
+          // Intentar obtener cost_per_result directamente
+          if (campaign.cost_per_result) {
+            costPerResult = parseFloat(campaign.cost_per_result || '0');
+          }
+          // Si no, intentar obtener de cost_per_action_type (conversaciones, leads, etc.)
+          else if (campaign.cost_per_action_type && Array.isArray(campaign.cost_per_action_type)) {
+            // Buscar cost_per_lead, cost_per_conversion, o cost_per_messaging_conversation_started_7d
+            const leadCost = campaign.cost_per_action_type.find((action: any) => 
+              action.action_type === 'lead' || 
+              action.action_type === 'onsite_conversion.lead_grouping' ||
+              action.action_type === 'messaging_conversation_started_7d'
+            );
+            if (leadCost && leadCost.value) {
+              costPerResult = parseFloat(leadCost.value);
+            }
+          }
+          
+          return {
+            campaignId: campaign.campaign_id,
+            campaignName: campaign.campaign_name,
+            spend: parseFloat(campaign.spend || '0'),
+            accountCurrency: campaign.account_currency || 'USD',
+            impressions: parseInt(campaign.impressions || '0'),
+            clicks: parseInt(campaign.clicks || '0'),
+            cpc: parseFloat(campaign.cpc || '0'),
+            cpm: parseFloat(campaign.cpm || '0'),
+            frequency: parseFloat(campaign.frequency || '0'),
+            dateStart: campaign.date_start,
+            dateStop: campaign.date_stop,
+            lastUpdated: new Date(),
+            costPerResult: costPerResult,
+            actions: campaign.actions || [],
+            costPerActionType: campaign.cost_per_action_type || []
+          };
+        });
 
         // Actualizar cache
         campaigns.forEach((campaign: CampaignSpendData) => {

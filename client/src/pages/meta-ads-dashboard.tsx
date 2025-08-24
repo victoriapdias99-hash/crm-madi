@@ -21,7 +21,9 @@ interface MetaCampaign {
   dateStart: string;
   dateStop: string;
   lastUpdated: Date;
-  results?: number; // Para calcular costo por resultado
+  costPerResult?: number; // Coste por conversación/resultado directo de Meta Ads
+  actions?: any;
+  costPerActionType?: any;
 }
 
 interface MetaStats {
@@ -526,7 +528,7 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
                     <tr className="border-b border-gray-200">
                       <th className="text-left p-3 font-medium">Campaña</th>
                       <th className="text-center p-3 font-medium">Gasto</th>
-                      <th className="text-center p-3 font-medium">Costo por Resultado</th>
+                      <th className="text-center p-3 font-medium">Coste por Conversación</th>
                       <th className="text-center p-3 font-medium">CPC</th>
                       <th className="text-center p-3 font-medium">CPM</th>
                       <th className="text-center p-3 font-medium">Período</th>
@@ -560,11 +562,6 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
                         return nameMatch && dateMatch;
                       })
                       .map((campaign) => {
-                        // Calcular costo por resultado (usando spend/results, o spend/1 si no hay resultados)
-                        const costPerResult = campaign.results && campaign.results > 0 
-                          ? campaign.spend / campaign.results 
-                          : campaign.spend;
-                        
                         return (
                           <tr key={campaign.campaignId} className="border-b border-gray-100 hover:bg-gray-50">
                             <td className="p-3">
@@ -577,7 +574,10 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
                               {formatCurrency(campaign.spend, campaign.accountCurrency)}
                             </td>
                             <td className="text-center p-3 font-medium text-purple-600">
-                              {formatCurrency(costPerResult, campaign.accountCurrency)}
+                              {campaign.costPerResult && campaign.costPerResult > 0 
+                                ? formatCurrency(campaign.costPerResult, campaign.accountCurrency)
+                                : <span className="text-gray-400">N/A</span>
+                              }
                             </td>
                             <td className="text-center p-3">
                               {formatCurrency(campaign.cpc, campaign.accountCurrency)}
