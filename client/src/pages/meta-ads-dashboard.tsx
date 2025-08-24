@@ -182,12 +182,19 @@ export default function MetaAdsDashboard() {
         return; // No cambiar fechas si es personalizado
     }
     
+    // Actualizar tanto los filtros de campaña como los filtros globales
     setCampaignFilters(prev => ({
       ...prev,
       rangoRapido,
       fechaInicio,
       fechaFin
     }));
+    
+    // CRÍTICO: También actualizar los filtros globales para que las consultas API usen el mismo rango
+    setGlobalDateFilters({
+      fechaInicio,
+      fechaFin
+    });
   };
 
   // Función para aplicar rango rápido
