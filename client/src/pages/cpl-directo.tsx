@@ -55,6 +55,7 @@ export default function CPLDirecto() {
       'CITROEN 2': { nombre: 'AVEC - GRUPO QUIJADA', marca: 'CITROEN' },
       'CHEVROLET 1': { nombre: 'Italy Autos', marca: 'CHEVROLET' },
       'FIAT 1': { nombre: 'FIAT AUTOS DEL SOL', marca: 'FIAT' },
+      'SOFIA 1': { nombre: 'SOFIA POUSARILLY', marca: 'FIAT' },
       'RENAULT 1': { nombre: 'Javier Cagiao', marca: 'RENAULT' },
     };
 
