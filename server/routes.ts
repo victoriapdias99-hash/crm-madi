@@ -492,8 +492,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * - Filtros AND/OR combinados para máxima precisión y cobertura
    * - Compatible con datos inconsistentes de Google Sheets
    */
-  async function contarLeadsPorCampana(campana: any, clienteData: any, db: any, leads: any, sql: any, count: any) {
+  async function contarLeadsPorCampana(campana: any, clienteData: any, db: any, leads: any, sql: any, count: any, todasLasCampanas: any[]) {
     const nombreComercial = clienteData?.nombreComercial || '';
+    
+    // NUEVA LÓGICA: Calcular fecha_fin automáticamente si no existe
+    let fechaFinCalculada = campana.fechaFin;
+    
+    if (!fechaFinCalculada) {
+      // Buscar la siguiente campaña del mismo cliente para calcular fecha límite
+      const campanasDelCliente = todasLasCampanas
+        .filter(c => c.clienteId === campana.clienteId)
+        .sort((a, b) => new Date(a.fechaCampana).getTime() - new Date(b.fechaCampana).getTime());
+      
+      const indiceCampanaActual = campanasDelCliente.findIndex(c => c.id === campana.id);
+      if (indiceCampanaActual !== -1 && indiceCampanaActual < campanasDelCliente.length - 1) {
+        // Hay una campaña siguiente, usar día anterior como límite
+        const siguienteCampana = campanasDelCliente[indiceCampanaActual + 1];
+        const fechaSiguiente = new Date(siguienteCampana.fechaCampana);
+        fechaSiguiente.setDate(fechaSiguiente.getDate() - 1); // Día anterior
+        fechaFinCalculada = fechaSiguiente.toISOString().split('T')[0];
+        
+        console.log(`🗓️ AUTO-CALCULADO: ${campana.marca} ${campana.numeroCampana} hasta ${fechaFinCalculada} (día anterior a siguiente campaña)`);
+      }
+    }
     
     return await db
       .select({ count: count() })
@@ -503,7 +524,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             AND lower(${leads.cliente}) LIKE ${`%${nombreComercial.toLowerCase()}%`}
             AND ${leads.source} = 'google_sheets'
             AND date(${leads.leadDate}) >= ${campana.fechaCampana}
-            ${campana.fechaFin ? sql`AND date(${leads.leadDate}) <= ${campana.fechaFin}` : sql``}`
+            ${fechaFinCalculada ? sql`AND date(${leads.leadDate}) <= ${fechaFinCalculada}` : sql``}`
       );
   }
 
@@ -527,7 +548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const clienteData = await storage.getCliente(campana.clienteId);
           
           // Usar función auxiliar para contar leads con filtro inteligente
-          const leadsCount = await contarLeadsPorCampana(campana, clienteData, db, leads, sql, count);
+          const leadsCount = await contarLeadsPorCampana(campana, clienteData, db, leads, sql, count, campanas);
 
           const enviadosDB = leadsCount[0]?.count || 0;
           
