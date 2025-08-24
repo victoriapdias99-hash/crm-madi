@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { RefreshCw, DollarSign, TrendingUp, Users, BarChart3, Settings, FileText, Activity, Download, Eye } from "lucide-react";
+import { RefreshCw, DollarSign, TrendingUp, Users, BarChart3, Settings, FileText, Activity, Download, Eye, ChevronDown, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Navigation } from "@/components/navigation";
@@ -22,6 +22,25 @@ interface MetaCampaign {
   dateStop: string;
   lastUpdated: Date;
   costPerResult?: number; // Coste por conversación/resultado directo de Meta Ads
+  actions?: any;
+  costPerActionType?: any;
+}
+
+interface MetaAdset {
+  adsetId: string;
+  adsetName: string;
+  campaignId: string;
+  campaignName: string;
+  spend: number;
+  accountCurrency: string;
+  impressions: number;
+  clicks: number;
+  cpc: number;
+  cpm: number;
+  dateStart: string;
+  dateStop: string;
+  lastUpdated: Date;
+  costPerResult?: number;
   actions?: any;
   costPerActionType?: any;
 }
@@ -93,6 +112,10 @@ export default function MetaAdsDashboard() {
     nombreCampana: ''
   });
   
+  // Estado para manejar campañas expandidas y sus adsets
+  const [expandedCampaigns, setExpandedCampaigns] = useState<Set<string>>(new Set());
+  const [campaignAdsets, setCampaignAdsets] = useState<Record<string, MetaAdset[]>>({});
+  
   // Estado para el módulo de auditoría
   const [auditFilters, setAuditFilters] = useState<AuditFilters>({
     fechaInicio: format(subDays(new Date(), 7), 'yyyy-MM-dd'),
@@ -153,6 +176,40 @@ export default function MetaAdsDashboard() {
     queryKey: ['/api/meta-ads/campaigns'],
     refetchInterval: 300000,
   });
+  
+  // Función para obtener adsets de una campaña
+  const fetchAdsets = async (campaignName: string) => {
+    try {
+      const response = await apiRequest(
+        `/api/meta-ads/adsets?campaignName=${encodeURIComponent(campaignName)}`,
+        { method: 'GET' }
+      );
+      return response as MetaAdset[];
+    } catch (error) {
+      console.error('Error fetching adsets:', error);
+      return [];
+    }
+  };
+  
+  // Función para expandir/contraer campaña
+  const toggleCampaign = async (campaignId: string, campaignName: string) => {
+    const newExpanded = new Set(expandedCampaigns);
+    
+    if (expandedCampaigns.has(campaignId)) {
+      // Contraer
+      newExpanded.delete(campaignId);
+      setExpandedCampaigns(newExpanded);
+    } else {
+      // Expandir y cargar adsets
+      newExpanded.add(campaignId);
+      setExpandedCampaigns(newExpanded);
+      
+      if (!campaignAdsets[campaignId]) {
+        const adsets = await fetchAdsets(campaignName);
+        setCampaignAdsets(prev => ({ ...prev, [campaignId]: adsets }));
+      }
+    }
+  };
 
   const syncMutation = useMutation({
     mutationFn: async () => {
@@ -526,7 +583,7 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="text-left p-3 font-medium">Campaña</th>
+                      <th className="text-left p-3 font-medium">Campaña / Conjunto de Anuncios</th>
                       <th className="text-center p-3 font-medium">Gasto</th>
                       <th className="text-center p-3 font-medium">Coste por Conversación</th>
                       <th className="text-center p-3 font-medium">CPC</th>
@@ -561,13 +618,25 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
                         
                         return nameMatch && dateMatch;
                       })
-                      .map((campaign) => {
-                        return (
-                          <tr key={campaign.campaignId} className="border-b border-gray-100 hover:bg-gray-50">
+                      .flatMap((campaign) => {
+                        const campaignRow = (
+                          <tr key={campaign.campaignId} className="border-b border-gray-100 hover:bg-gray-50 bg-blue-25">
                             <td className="p-3">
-                              <div>
-                                <div className="font-medium">{campaign.campaignName}</div>
-                                <div className="text-sm text-gray-500">ID: {campaign.campaignId}</div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => toggleCampaign(campaign.campaignId, campaign.campaignName)}
+                                  className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-200"
+                                >
+                                  {expandedCampaigns.has(campaign.campaignId) ? (
+                                    <ChevronDown className="h-4 w-4 text-blue-600" />
+                                  ) : (
+                                    <ChevronRight className="h-4 w-4 text-gray-500" />
+                                  )}
+                                </button>
+                                <div>
+                                  <div className="font-medium text-blue-700">📢 {campaign.campaignName}</div>
+                                  <div className="text-sm text-gray-500">ID: {campaign.campaignId}</div>
+                                </div>
                               </div>
                             </td>
                             <td className="text-center p-3 font-medium text-green-600">
@@ -596,6 +665,53 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
                             </td>
                           </tr>
                         );
+                        
+                        const adsetRows = [];
+                        if (expandedCampaigns.has(campaign.campaignId) && campaignAdsets[campaign.campaignId]) {
+                          campaignAdsets[campaign.campaignId].forEach((adset, index) => {
+                            adsetRows.push(
+                              <tr key={`${campaign.campaignId}-adset-${adset.adsetId}`} className="border-b border-gray-50 hover:bg-orange-25 bg-orange-10">
+                                <td className="p-3 pl-12">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 flex items-center justify-center">
+                                      <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+                                    </div>
+                                    <div>
+                                      <div className="font-medium text-orange-700">🎯 {adset.adsetName}</div>
+                                      <div className="text-xs text-gray-500">Adset ID: {adset.adsetId}</div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="text-center p-3 text-green-600">
+                                  {formatCurrency(adset.spend, adset.accountCurrency)}
+                                </td>
+                                <td className="text-center p-3 text-purple-600">
+                                  {adset.costPerResult && adset.costPerResult > 0 
+                                    ? formatCurrency(adset.costPerResult, adset.accountCurrency)
+                                    : <span className="text-gray-400">N/A</span>
+                                  }
+                                </td>
+                                <td className="text-center p-3">
+                                  {formatCurrency(adset.cpc, adset.accountCurrency)}
+                                </td>
+                                <td className="text-center p-3">
+                                  {formatCurrency(adset.cpm, adset.accountCurrency)}
+                                </td>
+                                <td className="text-center p-3 text-xs text-gray-600">
+                                  <div>{format(new Date(adset.dateStart), 'dd/MM/yyyy')}</div>
+                                  <div>al {format(new Date(adset.dateStop), 'dd/MM/yyyy')}</div>
+                                </td>
+                                <td className="text-center p-3">
+                                  <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                                    Conjunto
+                                  </Badge>
+                                </td>
+                              </tr>
+                            );
+                          });
+                        }
+                        
+                        return [campaignRow, ...adsetRows];
                       })
                     }
                   </tbody>

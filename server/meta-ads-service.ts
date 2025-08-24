@@ -38,6 +38,9 @@ interface AdsetSpendData {
   dateStart: string;
   dateStop: string;
   lastUpdated: Date;
+  costPerResult?: number; // Coste por conversación/resultado desde Meta Ads
+  actions?: any;
+  costPerActionType?: any;
 }
 
 interface BudgetData {
@@ -178,7 +181,10 @@ class MetaAdsService {
         'cpc',
         'cpm',
         'date_start',
-        'date_stop'
+        'date_stop',
+        'actions',
+        'cost_per_action_type',
+        'cost_per_result'
       ].join(',');
 
       const params: any = {
@@ -201,21 +207,45 @@ class MetaAdsService {
       const response = await axios.get(`${this.baseUrl}/${this.config.accountId}/insights`, { params });
       
       if (response.data?.data) {
-        const adsets = response.data.data.map((adset: any) => ({
-          adsetId: adset.adset_id,
-          adsetName: adset.adset_name,
-          campaignId: adset.campaign_id,
-          campaignName: adset.campaign_name,
-          spend: parseFloat(adset.spend || '0'),
-          accountCurrency: adset.account_currency || 'ARS',
-          impressions: parseInt(adset.impressions || '0'),
-          clicks: parseInt(adset.clicks || '0'),
-          cpc: parseFloat(adset.cpc || '0'),
-          cpm: parseFloat(adset.cpm || '0'),
-          dateStart: adset.date_start,
-          dateStop: adset.date_stop,
-          lastUpdated: new Date()
-        }));
+        const adsets = response.data.data.map((adset: any) => {
+          // Extraer coste por resultado de Meta Ads para adsets
+          let costPerResult = 0;
+          
+          // Intentar obtener cost_per_result directamente
+          if (adset.cost_per_result) {
+            costPerResult = parseFloat(adset.cost_per_result || '0');
+          }
+          // Si no, intentar obtener de cost_per_action_type
+          else if (adset.cost_per_action_type && Array.isArray(adset.cost_per_action_type)) {
+            const leadCost = adset.cost_per_action_type.find((action: any) => 
+              action.action_type === 'lead' || 
+              action.action_type === 'onsite_conversion.lead_grouping' ||
+              action.action_type === 'messaging_conversation_started_7d'
+            );
+            if (leadCost && leadCost.value) {
+              costPerResult = parseFloat(leadCost.value);
+            }
+          }
+          
+          return {
+            adsetId: adset.adset_id,
+            adsetName: adset.adset_name,
+            campaignId: adset.campaign_id,
+            campaignName: adset.campaign_name,
+            spend: parseFloat(adset.spend || '0'),
+            accountCurrency: adset.account_currency || 'ARS',
+            impressions: parseInt(adset.impressions || '0'),
+            clicks: parseInt(adset.clicks || '0'),
+            cpc: parseFloat(adset.cpc || '0'),
+            cpm: parseFloat(adset.cpm || '0'),
+            dateStart: adset.date_start,
+            dateStop: adset.date_stop,
+            lastUpdated: new Date(),
+            costPerResult: costPerResult,
+            actions: adset.actions || [],
+            costPerActionType: adset.cost_per_action_type || []
+          };
+        });
 
         return adsets;
       }
