@@ -119,8 +119,8 @@ export default function MetaAdsDashboard() {
   
   // Estado para filtros globales de fechas
   const [globalDateFilters, setGlobalDateFilters] = useState({
-    fechaInicio: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
-    fechaFin: format(new Date(), 'yyyy-MM-dd')
+    fechaInicio: '',
+    fechaFin: ''
   });
   
   // Estado para manejar campañas expandidas y sus adsets
@@ -235,14 +235,18 @@ export default function MetaAdsDashboard() {
   const { data: metaStats, isLoading: statsLoading } = useQuery<MetaStats>({
     queryKey: ['/api/meta-ads/stats', globalDateFilters],
     queryFn: async () => {
-      const timeRange = {
-        since: globalDateFilters.fechaInicio,
-        until: globalDateFilters.fechaFin
-      };
-      const response = await apiRequest(
-        `/api/meta-ads/stats?timeRange=${encodeURIComponent(JSON.stringify(timeRange))}`,
-        'GET'
-      );
+      let url = '/api/meta-ads/stats';
+      
+      // Solo agregar filtros de fecha si están definidos
+      if (globalDateFilters.fechaInicio || globalDateFilters.fechaFin) {
+        const timeRange = {
+          since: globalDateFilters.fechaInicio || undefined,
+          until: globalDateFilters.fechaFin || undefined
+        };
+        url += `?timeRange=${encodeURIComponent(JSON.stringify(timeRange))}`;
+      }
+      
+      const response = await apiRequest(url, 'GET');
       return await response.json();
     },
     refetchInterval: 300000, // Refresh every 5 minutes
@@ -251,14 +255,18 @@ export default function MetaAdsDashboard() {
   const { data: campaigns, isLoading: campaignLoading } = useQuery<MetaCampaign[]>({
     queryKey: ['/api/meta-ads/campaigns', globalDateFilters],
     queryFn: async () => {
-      const timeRange = {
-        since: globalDateFilters.fechaInicio,
-        until: globalDateFilters.fechaFin
-      };
-      const response = await apiRequest(
-        `/api/meta-ads/campaigns?timeRange=${encodeURIComponent(JSON.stringify(timeRange))}`,
-        'GET'
-      );
+      let url = '/api/meta-ads/campaigns';
+      
+      // Solo agregar filtros de fecha si están definidos
+      if (globalDateFilters.fechaInicio || globalDateFilters.fechaFin) {
+        const timeRange = {
+          since: globalDateFilters.fechaInicio || undefined,
+          until: globalDateFilters.fechaFin || undefined
+        };
+        url += `?timeRange=${encodeURIComponent(JSON.stringify(timeRange))}`;
+      }
+      
+      const response = await apiRequest(url, 'GET');
       return await response.json();
     },
     refetchInterval: 300000,
@@ -267,14 +275,18 @@ export default function MetaAdsDashboard() {
   // Función para obtener adsets de una campaña
   const fetchAdsets = async (campaignName: string): Promise<MetaAdset[]> => {
     try {
-      const timeRange = {
-        since: globalDateFilters.fechaInicio,
-        until: globalDateFilters.fechaFin
-      };
-      const response = await apiRequest(
-        `/api/meta-ads/adsets?campaignName=${encodeURIComponent(campaignName)}&timeRange=${encodeURIComponent(JSON.stringify(timeRange))}`,
-        'GET'
-      );
+      let url = `/api/meta-ads/adsets?campaignName=${encodeURIComponent(campaignName)}`;
+      
+      // Solo agregar filtros de fecha si están definidos
+      if (globalDateFilters.fechaInicio || globalDateFilters.fechaFin) {
+        const timeRange = {
+          since: globalDateFilters.fechaInicio || undefined,
+          until: globalDateFilters.fechaFin || undefined
+        };
+        url += `&timeRange=${encodeURIComponent(JSON.stringify(timeRange))}`;
+      }
+      
+      const response = await apiRequest(url, 'GET');
       const data = await response.json();
       return data as MetaAdset[];
     } catch (error) {
