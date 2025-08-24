@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Save, RefreshCw, Download } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, Save, RefreshCw, Download, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Navigation } from "@/components/navigation";
@@ -72,6 +73,11 @@ export default function DatosDiariosDashboard() {
   const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
   const [exportingCSV, setExportingCSV] = useState(false);
   const [sortByDate, setSortByDate] = useState<'desc' | 'asc'>('desc'); // Por defecto más reciente primero
+  
+  // Estados para filtros de Campañas en Proceso
+  const [filtroZona, setFiltroZona] = useState<string>('');
+  const [filtroMarca, setFiltroMarca] = useState<string>('');
+  const [filtroFechaInicio, setFiltroFechaInicio] = useState<string>('');
 
   // Función para exportar una campaña individual a CSV
   const handleExportCampanaCSV = async (campana: DatosDiariosData) => {
@@ -276,6 +282,23 @@ export default function DatosDiariosDashboard() {
     }
   };
 
+  // Extraer valores únicos para filtros
+  const opcionesZona = useMemo(() => {
+    if (!datosDiarios || !Array.isArray(datosDiarios)) return [];
+    const zonas = [...new Set(datosDiarios.map((data: DatosDiariosData) => data.zona).filter(Boolean))];
+    return zonas.sort();
+  }, [datosDiarios]);
+
+  const opcionesMarca = useMemo(() => {
+    if (!datosDiarios || !Array.isArray(datosDiarios)) return [];
+    const marcas = [...new Set(datosDiarios.map((data: DatosDiariosData) => {
+      // Extraer marca del nombre del cliente (ej: "JEEP 1" -> "JEEP")
+      const match = data.cliente.match(/^([A-Z]+)/);
+      return match ? match[1] : data.cliente.split(' ')[0];
+    }).filter(Boolean))];
+    return marcas.sort();
+  }, [datosDiarios]);
+
   // Memoize filtered and sorted data for performance
   const campanasData = useMemo(() => {
     // Verificar que datosDiarios existe y es un array
@@ -290,9 +313,27 @@ export default function DatosDiariosDashboard() {
     
     let filteredData = datosDiarios;
     
+    // Aplicar filtros de zona, marca y fecha de inicio
+    if (filtroZona) {
+      filteredData = filteredData.filter((data: DatosDiariosData) => data.zona === filtroZona);
+    }
+    
+    if (filtroMarca) {
+      filteredData = filteredData.filter((data: DatosDiariosData) => {
+        const marca = data.cliente.match(/^([A-Z]+)/)?.[1] || data.cliente.split(' ')[0];
+        return marca === filtroMarca;
+      });
+    }
+    
+    if (filtroFechaInicio) {
+      filteredData = filteredData.filter((data: DatosDiariosData) => 
+        data.fechaCampana && data.fechaCampana.startsWith(filtroFechaInicio)
+      );
+    }
+    
     // If showing duplicates only, filter to show campaigns with duplicate data
     if (showDuplicatesOnly) {
-      filteredData = datosDiarios.filter((data: DatosDiariosData) => {
+      filteredData = filteredData.filter((data: DatosDiariosData) => {
         const key = `${data.cliente}-${data.numeroCampana}`;
         return duplicatesData[key] > 0;
       });
@@ -336,7 +377,7 @@ export default function DatosDiariosDashboard() {
     console.log(`📊 Datos ordenados: ${enProceso.length} en proceso, ${finalizadas.length} finalizadas`);
     
     return { campanasEnProceso: enProceso, campanasFinalizadas: finalizadas };
-  }, [datosDiarios, showDuplicatesOnly, duplicatesData, sortByDate]);
+  }, [datosDiarios, showDuplicatesOnly, duplicatesData, sortByDate, filtroZona, filtroMarca, filtroFechaInicio]);
 
   const { campanasEnProceso, campanasFinalizadas } = campanasData;
 
@@ -732,47 +773,106 @@ export default function DatosDiariosDashboard() {
         {/* Campañas en Proceso */}
         <Card className="border-0 shadow-2xl bg-gradient-to-r from-white via-amber-50 to-orange-50 dark:from-gray-800 dark:via-amber-900/10 dark:to-orange-900/10">
           <CardHeader className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-t-lg">
-            <CardTitle className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                🚀
-              </div>
-              <span className="text-xl font-bold">Campañas en Proceso</span>
-              <Badge variant="secondary" className="bg-white/20 text-white border-white/30 font-bold">
-                {campanasEnProceso.length} en progreso
-              </Badge>
-              <Button
-                onClick={() => setSortByDate(sortByDate === 'desc' ? 'asc' : 'desc')}
-                variant="secondary"
-                size="sm"
-                className="bg-white/20 text-white border border-white/30 hover:bg-white/30 transition-all duration-300 text-sm"
-                data-testid="button-sort-by-date"
-              >
-                📅 {sortByDate === 'desc' ? 'Más reciente primero ↓' : 'Más antigua primero ↑'}
-              </Button>
-              <Button
-                onClick={async () => {
-                  if (!showDuplicatesOnly) {
-                    await detectAllDuplicates();
-                  }
-                  setShowDuplicatesOnly(!showDuplicatesOnly);
-                }}
-                variant="secondary"
-                size="sm"
-                disabled={isLoadingDuplicates}
-                className={`border-white/30 hover:bg-white/30 transition-all duration-300 ${
-                  showDuplicatesOnly 
-                    ? 'bg-red-500/80 text-white border-red-300' 
-                    : 'bg-white/20 text-white'
-                }`}
-              >
-                {isLoadingDuplicates ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  '🔍 '
+            <div className="space-y-4">
+              <CardTitle className="flex items-center gap-3 flex-wrap">
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                  🚀
+                </div>
+                <span className="text-xl font-bold">Campañas en Proceso</span>
+                <Badge variant="secondary" className="bg-white/20 text-white border-white/30 font-bold">
+                  {campanasEnProceso.length} en progreso
+                </Badge>
+                <Button
+                  onClick={() => setSortByDate(sortByDate === 'desc' ? 'asc' : 'desc')}
+                  variant="secondary"
+                  size="sm"
+                  className="bg-white/20 text-white border border-white/30 hover:bg-white/30 transition-all duration-300 text-sm"
+                  data-testid="button-sort-by-date"
+                >
+                  📅 {sortByDate === 'desc' ? 'Más reciente primero ↓' : 'Más antigua primero ↑'}
+                </Button>
+                <Button
+                  onClick={async () => {
+                    if (!showDuplicatesOnly) {
+                      await detectAllDuplicates();
+                    }
+                    setShowDuplicatesOnly(!showDuplicatesOnly);
+                  }}
+                  variant="secondary"
+                  size="sm"
+                  disabled={isLoadingDuplicates}
+                  className={`border-white/30 hover:bg-white/30 transition-all duration-300 ${
+                    showDuplicatesOnly 
+                      ? 'bg-red-500/80 text-white border-red-300' 
+                      : 'bg-white/20 text-white'
+                  }`}
+                >
+                  {isLoadingDuplicates ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    '🔍 '
+                  )}
+                  Datos Duplicados {showDuplicatesOnly ? '(Activo)' : ''}
+                </Button>
+              </CardTitle>
+              
+              {/* Controles de filtro */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  <span className="text-sm font-medium">Filtros:</span>
+                </div>
+                
+                <Select value={filtroZona || "all"} onValueChange={(value) => setFiltroZona(value === "all" ? "" : value)}>
+                  <SelectTrigger className="w-40 bg-white/20 text-white border-white/30 hover:bg-white/30 text-sm" data-testid="filter-zona">
+                    <SelectValue placeholder="Todas las zonas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas las zonas</SelectItem>
+                    {opcionesZona.map(zona => (
+                      <SelectItem key={zona} value={zona}>{zona}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={filtroMarca || "all"} onValueChange={(value) => setFiltroMarca(value === "all" ? "" : value)}>
+                  <SelectTrigger className="w-40 bg-white/20 text-white border-white/30 hover:bg-white/30 text-sm" data-testid="filter-marca">
+                    <SelectValue placeholder="Todas las marcas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas las marcas</SelectItem>
+                    {opcionesMarca.map(marca => (
+                      <SelectItem key={marca} value={marca}>{marca}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Input
+                  type="month"
+                  value={filtroFechaInicio}
+                  onChange={(e) => setFiltroFechaInicio(e.target.value)}
+                  className="w-44 bg-white/20 text-white border-white/30 hover:bg-white/30 placeholder:text-white/60 text-sm"
+                  placeholder="Fecha de inicio"
+                  data-testid="filter-fecha-inicio"
+                />
+
+                {(filtroZona || filtroMarca || filtroFechaInicio) && (
+                  <Button
+                    onClick={() => {
+                      setFiltroZona('');
+                      setFiltroMarca('');
+                      setFiltroFechaInicio('');
+                    }}
+                    variant="secondary"
+                    size="sm"
+                    className="bg-red-500/80 hover:bg-red-600/80 text-white border-red-300 text-sm"
+                    data-testid="button-clear-filters"
+                  >
+                    ✕ Limpiar filtros
+                  </Button>
                 )}
-                Datos Duplicados {showDuplicatesOnly ? '(Activo)' : ''}
-              </Button>
-            </CardTitle>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
