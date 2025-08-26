@@ -158,8 +158,8 @@ class GoogleSheetsService {
       return [];
     }
 
-    // TESTING: Solo sincronizar Ford para pruebas controladas
-    const sheetNames = ['Ford'];
+    // TESTING: Solo sincronizar Jeep para pruebas controladas
+    const sheetNames = ['Jeep'];
     const allLeads: SheetLead[] = [];
 
     console.log(`📊 Sincronizando ${sheetNames.length} pestañas automáticamente: ${sheetNames.join(', ')}`);
