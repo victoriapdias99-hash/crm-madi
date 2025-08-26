@@ -754,7 +754,6 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
                       <th className="text-center p-3 font-medium">Coste por Conversación</th>
                       <th className="text-center p-3 font-medium">CPC</th>
                       <th className="text-center p-3 font-medium">CPM</th>
-                      <th className="text-center p-3 font-medium">Período</th>
                       <th className="text-center p-3 font-medium">Estado</th>
                     </tr>
                   </thead>
@@ -819,10 +818,6 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
                             <td className="text-center p-3">
                               {formatCurrency(campaign.cpm, campaign.accountCurrency)}
                             </td>
-                            <td className="text-center p-3 text-sm text-gray-600">
-                              <div>{format(new Date(campaign.dateStart), 'dd/MM/yyyy')}</div>
-                              <div>al {format(new Date(campaign.dateStop), 'dd/MM/yyyy')}</div>
-                            </td>
                             <td className="text-center p-3">
                               <Badge 
                                 variant="default" 
@@ -876,10 +871,6 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
                                 <td className="text-center p-3">
                                   {formatCurrency(adset.cpm, adset.accountCurrency)}
                                 </td>
-                                <td className="text-center p-3 text-xs text-gray-600">
-                                  <div>{format(new Date(adset.dateStart), 'dd/MM/yyyy')}</div>
-                                  <div>al {format(new Date(adset.dateStop), 'dd/MM/yyyy')}</div>
-                                </td>
                                 <td className="text-center p-3">
                                   <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
                                     Conjunto
@@ -921,22 +912,7 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
             <div className="space-y-4">
               {/* Filtros */}
               <div className="space-y-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
-                {/* Filtros de Rango Rápido */}
-                <div>
-                  <label className="block text-sm font-medium mb-2">Período</label>
-                  <select
-                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    value={auditFilters.rangoRapido}
-                    onChange={(e) => applyQuickRange(e.target.value)}
-                  >
-                    <option value="hoy">Hoy</option>
-                    <option value="ayer">Ayer</option>
-                    <option value="ult7dias">Últimos 7 días</option>
-                    <option value="ult14dias">Últimos 14 días</option>
-                    <option value="ult30dias">Últimos 30 días</option>
-                    <option value="personalizado">Personalizado</option>
-                  </select>
-                </div>
+
                 
                 {/* Filtros de Fecha Personalizada */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
