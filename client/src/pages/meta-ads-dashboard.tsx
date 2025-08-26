@@ -23,6 +23,7 @@ interface MetaCampaign {
   dateStop: string;
   lastUpdated: Date;
   costPerResult?: number; // Coste por conversación/resultado directo de Meta Ads
+  results?: number; // Cantidad de resultados/conversiones
   actions?: any;
   costPerActionType?: any;
   effectiveStatus?: string; // Estado actual de la campaña (ACTIVE, PAUSED, etc.)
@@ -44,6 +45,7 @@ interface MetaAdset {
   dateStop: string;
   lastUpdated: Date;
   costPerResult?: number;
+  results?: number; // Cantidad de resultados/conversiones
   actions?: any;
   costPerActionType?: any;
   effectiveStatus?: string; // Estado actual del adset (ACTIVE, PAUSED, etc.)
@@ -752,6 +754,7 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
                       <th className="text-left p-3 font-medium">Campaña / Conjunto de Anuncios</th>
                       <th className="text-center p-3 font-medium">Gasto</th>
                       <th className="text-center p-3 font-medium">Coste por Conversación</th>
+                      <th className="text-center p-3 font-medium">Cantidad de Resultados</th>
                       <th className="text-center p-3 font-medium">CPC</th>
                       <th className="text-center p-3 font-medium">CPM</th>
                       <th className="text-center p-3 font-medium">Estado</th>
@@ -812,6 +815,12 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
                                 : <span className="text-gray-400">N/A</span>
                               }
                             </td>
+                            <td className="text-center p-3 font-medium text-blue-600">
+                              {campaign.results && campaign.results > 0 
+                                ? formatNumber(campaign.results)
+                                : <span className="text-gray-400">0</span>
+                              }
+                            </td>
                             <td className="text-center p-3">
                               {formatCurrency(campaign.cpc, campaign.accountCurrency)}
                             </td>
@@ -863,6 +872,12 @@ Informe generado automáticamente por el Sistema de Gestión de Campañas Meta A
                                   {adset.costPerResult && adset.costPerResult > 0 
                                     ? formatCurrency(adset.costPerResult, adset.accountCurrency)
                                     : <span className="text-gray-400">N/A</span>
+                                  }
+                                </td>
+                                <td className="text-center p-3 text-blue-600">
+                                  {adset.results && adset.results > 0 
+                                    ? formatNumber(adset.results)
+                                    : <span className="text-gray-400">0</span>
                                   }
                                 </td>
                                 <td className="text-center p-3">

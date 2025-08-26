@@ -20,6 +20,7 @@ interface CampaignSpendData {
   dateStop: string;
   lastUpdated: Date;
   costPerResult?: number; // Coste por conversación/resultado desde Meta Ads
+  results?: number; // Cantidad de resultados/conversiones
   actions?: any; // Acciones/conversiones disponibles
   costPerActionType?: any; // Coste por tipo de acción
   effectiveStatus?: string; // Estado actual de la campaña (ACTIVE, PAUSED, etc.)
@@ -41,6 +42,7 @@ interface AdsetSpendData {
   dateStop: string;
   lastUpdated: Date;
   costPerResult?: number; // Coste por conversación/resultado desde Meta Ads
+  results?: number; // Cantidad de resultados/conversiones
   actions?: any;
   costPerActionType?: any;
   effectiveStatus?: string; // Estado actual del adset (ACTIVE, PAUSED, etc.)
@@ -170,6 +172,23 @@ class MetaAdsService {
             }
           }
           
+          // Extraer cantidad de resultados (conversiones/leads)
+          let results = 0;
+          if (campaign.actions && Array.isArray(campaign.actions)) {
+            const resultsAction = campaign.actions.find((action: any) => 
+              action.action_type === 'lead' || 
+              action.action_type === 'onsite_conversion.lead_grouping' ||
+              action.action_type === 'messaging_conversation_started_7d' ||
+              action.action_type === 'onsite_conversion.total_messaging_connection' ||
+              action.action_type === 'messaging_conversation' ||
+              action.action_type === 'conversion' ||
+              action.action_type === 'omni_initiated_checkout'
+            );
+            if (resultsAction && resultsAction.value) {
+              results = parseInt(resultsAction.value);
+            }
+          }
+          
           return {
             campaignId: campaign.campaign_id,
             campaignName: campaign.campaign_name,
@@ -184,6 +203,7 @@ class MetaAdsService {
             dateStop: campaign.date_stop,
             lastUpdated: new Date(),
             costPerResult: costPerResult,
+            results: results,
             actions: campaign.actions || [],
             costPerActionType: campaign.cost_per_action_type || [],
             effectiveStatus: campaignStatus?.effective_status || 'UNKNOWN',
@@ -381,6 +401,23 @@ class MetaAdsService {
             }
           }
           
+          // Extraer cantidad de resultados (conversiones/leads) para adsets
+          let results = 0;
+          if (adset.actions && Array.isArray(adset.actions)) {
+            const resultsAction = adset.actions.find((action: any) => 
+              action.action_type === 'lead' || 
+              action.action_type === 'onsite_conversion.lead_grouping' ||
+              action.action_type === 'messaging_conversation_started_7d' ||
+              action.action_type === 'onsite_conversion.total_messaging_connection' ||
+              action.action_type === 'messaging_conversation' ||
+              action.action_type === 'conversion' ||
+              action.action_type === 'omni_initiated_checkout'
+            );
+            if (resultsAction && resultsAction.value) {
+              results = parseInt(resultsAction.value);
+            }
+          }
+          
           return {
             adsetId: adset.adset_id,
             adsetName: adset.adset_name,
@@ -396,6 +433,7 @@ class MetaAdsService {
             dateStop: adset.date_stop,
             lastUpdated: new Date(),
             costPerResult: costPerResult,
+            results: results,
             actions: adset.actions || [],
             costPerActionType: adset.cost_per_action_type || [],
             effectiveStatus: adsetStatus?.effective_status || 'UNKNOWN',
