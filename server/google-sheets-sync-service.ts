@@ -61,37 +61,42 @@ export class GoogleSheetsSyncService {
         const existingMetaIds = new Set(existingLeads.map(lead => lead.metaLeadId));
         
         for (const sheetLead of allLeads) {
-          // Limpiar y normalizar datos del cliente
-          const clienteNormalizado = this.normalizeClienteName(sheetLead.cliente || '');
-          const marcaNormalizada = this.detectMarcaFromData(sheetLead);
-          
-          // Crear un ID único que incluya información del cliente para mejor rastreo de duplicados
-          const cleanPhone = (sheetLead.phone || '').replace(/\s/g, '');
-          const cleanTimestamp = this.parseAndValidateTimestamp(sheetLead.timestamp);
-          const uniqueId = `${marcaNormalizada}-${clienteNormalizado}-${cleanTimestamp}-${cleanPhone}`;
-          
-          // Convertir lead de Google Sheets al formato de base de datos (mapear a campos correctos)
-          const dbLead = {
-            metaLeadId: uniqueId,
-            firstName: sheetLead.name || '',
-            lastName: '', // Google Sheets no tiene apellido separado
-            phone: sheetLead.phone || '',
-            email: sheetLead.email || '',
-            campaignName: sheetLead.campaign || marcaNormalizada,
-            leadDate: this.parseValidDate(sheetLead.timestamp),
-            city: sheetLead.city || '',
-            origen: sheetLead.origen || '',
-            localizacion: sheetLead.localizacion || '',
-            cliente: clienteNormalizado,
-            status: 'new',
-            source: 'google_sheets'
-          };
-          
-          // Verificar si el lead ya existe
-          if (!existingMetaIds.has(dbLead.metaLeadId)) {
-            await storage.createLead(dbLead);
-            existingMetaIds.add(dbLead.metaLeadId);
-            newLeadsCount++;
+          try {
+            // Limpiar y normalizar datos del cliente
+            const clienteNormalizado = this.normalizeClienteName(sheetLead.cliente || '');
+            const marcaNormalizada = this.detectMarcaFromData(sheetLead);
+            
+            // Crear un ID único que incluya información del cliente para mejor rastreo de duplicados
+            const cleanPhone = (sheetLead.phone || '').replace(/\s/g, '');
+            const cleanTimestamp = this.parseAndValidateTimestamp(sheetLead.timestamp);
+            const uniqueId = `${marcaNormalizada}-${clienteNormalizado}-${cleanTimestamp}-${cleanPhone}`;
+            
+            // Convertir lead de Google Sheets al formato de base de datos (mapear a campos correctos)
+            const dbLead = {
+              metaLeadId: uniqueId,
+              firstName: sheetLead.name || '',
+              lastName: '', // Google Sheets no tiene apellido separado
+              phone: sheetLead.phone || '',
+              email: sheetLead.email || '',
+              campaignName: sheetLead.campaign || marcaNormalizada,
+              leadDate: this.parseValidDate(sheetLead.timestamp),
+              city: sheetLead.city || '',
+              origen: sheetLead.origen || '',
+              localizacion: sheetLead.localizacion || '',
+              cliente: clienteNormalizado,
+              status: 'new',
+              source: 'google_sheets'
+            };
+            
+            // Verificar si el lead ya existe
+            if (!existingMetaIds.has(dbLead.metaLeadId)) {
+              await storage.createLead(dbLead);
+              existingMetaIds.add(dbLead.metaLeadId);
+              newLeadsCount++;
+            }
+          } catch (error) {
+            console.warn(`⚠️  Error procesando lead individual, continuando: ${error.message}`);
+            // Continuar con el siguiente lead en lugar de fallar toda la sincronización
           }
         }
         
