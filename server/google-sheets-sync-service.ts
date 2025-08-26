@@ -52,10 +52,38 @@ export class GoogleSheetsSyncService {
       console.log(`📥 Obtenidos ${allLeads.length} leads desde Google Sheets con columnas G, H, I`);
       
       if (allLeads.length > 0) {
-        // USAR DIRECTAMENTE handleSheetSync que ya funciona perfectamente
-        const routesModule = await import('./routes');
-        await routesModule.handleSheetSync(allLeads);
-        console.log('✅ Sincronización incremental completada - datos preservados');
+        // USAR MÉTODO ALTERNATIVO: Insertar datos directamente usando storage
+        const { storage } = await import('./storage');
+        let newLeadsCount = 0;
+        
+        // Obtener leads existentes para evitar duplicados
+        const existingLeads = await storage.getLeads({ limit: 10000 });
+        const existingMetaIds = new Set(existingLeads.map(lead => lead.metaLeadId));
+        
+        for (const sheetLead of allLeads) {
+          // Convertir lead de Google Sheets al formato de base de datos
+          const dbLead = {
+            metaLeadId: `sheet-${sheetLead.fecha}-${sheetLead.telefono}`,
+            nombreCompleto: sheetLead.nombre || '',
+            telefono: sheetLead.telefono || '',
+            email: sheetLead.email || '',
+            campaignName: sheetLead.campaign_name || 'Unknown',
+            leadDate: new Date(sheetLead.fecha || Date.now()),
+            ciudad: sheetLead.ciudad || '',
+            origen: sheetLead.origen || '',
+            localizacion: sheetLead.localizacion || '',
+            cliente: sheetLead.cliente || ''
+          };
+          
+          // Verificar si el lead ya existe
+          if (!existingMetaIds.has(dbLead.metaLeadId)) {
+            await storage.createLead(dbLead);
+            existingMetaIds.add(dbLead.metaLeadId);
+            newLeadsCount++;
+          }
+        }
+        
+        console.log(`✅ Sincronización incremental completada: ${newLeadsCount} nuevos leads agregados`);
       }
       
       // Marcar sincronización completa
