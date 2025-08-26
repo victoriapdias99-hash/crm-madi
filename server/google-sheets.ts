@@ -158,8 +158,8 @@ class GoogleSheetsService {
       return [];
     }
 
-    // NUEVA FUNCIONALIDAD: Detección automática de pestañas
-    const sheetNames = await this.getAvailableSheetNames();
+    // TESTING: Solo sincronizar Ford para pruebas controladas
+    const sheetNames = ['Ford'];
     const allLeads: SheetLead[] = [];
 
     console.log(`📊 Sincronizando ${sheetNames.length} pestañas automáticamente: ${sheetNames.join(', ')}`);

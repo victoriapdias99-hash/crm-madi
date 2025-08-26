@@ -19,18 +19,17 @@ export class GoogleSheetsSyncService {
    * Inicializa el sistema de sincronización automática cada 15 minutos
    */
   public startAutoSync() {
-    console.log('🚀 Iniciando sincronización automática de Google Sheets cada 15 minutos');
+    console.log('🚀 SINCRONIZACIÓN AUTOMÁTICA PAUSADA PARA TESTING');
+    console.log('⏸️  Auto-sync deshabilitado temporalmente para pruebas controladas');
     
-    // Ejecutar sincronización inicial
-    this.performSync();
-
-    // Programar sincronización cada 15 minutos usando node-cron
-    cron.schedule('*/15 * * * *', () => {
-      console.log('⏰ Ejecutando sincronización programada de Google Sheets (cada 15 min)...');
-      this.performSync();
-    });
+    // Comentamos la sincronización inicial y el cron para testing
+    // this.performSync();
+    // cron.schedule('*/15 * * * *', () => {
+    //   console.log('⏰ Ejecutando sincronización programada de Google Sheets (cada 15 min)...');
+    //   this.performSync();
+    // });
     
-    console.log('📊 Próxima sincronización automática en 15 minutos');
+    console.log('🧪 Modo testing activado - sincronización manual únicamente');
   }
 
   /**
