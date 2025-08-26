@@ -61,18 +61,30 @@ export class GoogleSheetsSyncService {
         const existingMetaIds = new Set(existingLeads.map(lead => lead.metaLeadId));
         
         for (const sheetLead of allLeads) {
-          // Convertir lead de Google Sheets al formato de base de datos
+          // Limpiar y normalizar datos del cliente
+          const clienteNormalizado = this.normalizeClienteName(sheetLead.cliente || '');
+          const marcaNormalizada = this.detectMarcaFromData(sheetLead);
+          
+          // Crear un ID único que incluya información del cliente para mejor rastreo de duplicados
+          const cleanPhone = (sheetLead.phone || '').replace(/\s/g, '');
+          const cleanTimestamp = sheetLead.timestamp.split(' ')[0]; // Solo la fecha
+          const uniqueId = `${marcaNormalizada}-${clienteNormalizado}-${cleanTimestamp}-${cleanPhone}`;
+          
+          // Convertir lead de Google Sheets al formato de base de datos (mapear a campos correctos)
           const dbLead = {
-            metaLeadId: `sheet-${sheetLead.fecha}-${sheetLead.telefono}`,
-            nombreCompleto: sheetLead.nombre || '',
-            telefono: sheetLead.telefono || '',
+            metaLeadId: uniqueId,
+            firstName: sheetLead.name || '',
+            lastName: '', // Google Sheets no tiene apellido separado
+            phone: sheetLead.phone || '',
             email: sheetLead.email || '',
-            campaignName: sheetLead.campaign_name || 'Unknown',
-            leadDate: new Date(sheetLead.fecha || Date.now()),
-            ciudad: sheetLead.ciudad || '',
+            campaignName: sheetLead.campaign || marcaNormalizada,
+            leadDate: new Date(sheetLead.timestamp || Date.now()),
+            city: sheetLead.city || '',
             origen: sheetLead.origen || '',
             localizacion: sheetLead.localizacion || '',
-            cliente: sheetLead.cliente || ''
+            cliente: clienteNormalizado,
+            status: 'new',
+            source: 'google_sheets'
           };
           
           // Verificar si el lead ya existe
@@ -349,6 +361,55 @@ export class GoogleSheetsSyncService {
       console.error('❌ Error obteniendo estado de sincronización:', error);
       return null;
     }
+  }
+
+  /**
+   * Normaliza el nombre del cliente para crear metaLeadId consistente
+   */
+  private normalizeClienteName(clienteName: string): string {
+    if (!clienteName || clienteName.trim() === '') {
+      return 'SIN_CLIENTE';
+    }
+    
+    // Convertir a mayúsculas y remover caracteres especiales
+    return clienteName
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9\s]/g, '') // Remover caracteres especiales
+      .replace(/\s+/g, '_') // Reemplazar espacios con guiones bajos
+      .substring(0, 20); // Limitar longitud
+  }
+
+  /**
+   * Detecta la marca desde los datos del lead
+   */
+  private detectMarcaFromData(leadData: any): string {
+    // Buscar en diferentes campos posibles
+    const checkFields = [
+      leadData.campaign, // Campo correcto para SheetLead
+      leadData.marca,
+      leadData.brand,
+      leadData.ad_name,
+      leadData.source,
+      leadData.hoja // Nombre de la pestaña de Google Sheets
+    ];
+    
+    for (const field of checkFields) {
+      if (field) {
+        const fieldStr = field.toString().toUpperCase();
+        if (fieldStr.includes('FIAT')) return 'FIAT';
+        if (fieldStr.includes('PEUGEOT')) return 'PEUGEOT';
+        if (fieldStr.includes('TOYOTA')) return 'TOYOTA';
+        if (fieldStr.includes('CHEVROLET') || fieldStr.includes('CHEVY')) return 'CHEVROLET';
+        if (fieldStr.includes('RENAULT')) return 'RENAULT';
+        if (fieldStr.includes('CITROEN') || fieldStr.includes('CITROËN')) return 'CITROEN';
+        if (fieldStr.includes('VW') || fieldStr.includes('VOLKSWAGEN')) return 'VW';
+        if (fieldStr.includes('JEEP')) return 'JEEP';
+        if (fieldStr.includes('FORD')) return 'FORD';
+      }
+    }
+    
+    return 'GENERAL'; // Default si no se puede detectar
   }
 
   /**
