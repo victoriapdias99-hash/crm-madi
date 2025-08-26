@@ -67,7 +67,7 @@ export class GoogleSheetsSyncService {
           
           // Crear un ID único que incluya información del cliente para mejor rastreo de duplicados
           const cleanPhone = (sheetLead.phone || '').replace(/\s/g, '');
-          const cleanTimestamp = sheetLead.timestamp.split(' ')[0]; // Solo la fecha
+          const cleanTimestamp = this.parseAndValidateTimestamp(sheetLead.timestamp);
           const uniqueId = `${marcaNormalizada}-${clienteNormalizado}-${cleanTimestamp}-${cleanPhone}`;
           
           // Convertir lead de Google Sheets al formato de base de datos (mapear a campos correctos)
@@ -78,7 +78,7 @@ export class GoogleSheetsSyncService {
             phone: sheetLead.phone || '',
             email: sheetLead.email || '',
             campaignName: sheetLead.campaign || marcaNormalizada,
-            leadDate: new Date(sheetLead.timestamp || Date.now()),
+            leadDate: this.parseValidDate(sheetLead.timestamp),
             city: sheetLead.city || '',
             origen: sheetLead.origen || '',
             localizacion: sheetLead.localizacion || '',
@@ -427,6 +427,42 @@ export class GoogleSheetsSyncService {
       return isNaN(date.getTime()) ? null : date;
     } catch {
       return null;
+    }
+  }
+
+  /**
+   * Valida y parsea timestamp para metaLeadId (solo fecha)
+   */
+  private parseAndValidateTimestamp(timestamp: string): string {
+    if (!timestamp) return new Date().toISOString().split('T')[0];
+    
+    try {
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) {
+        return new Date().toISOString().split('T')[0];
+      }
+      return date.toISOString().split('T')[0];
+    } catch {
+      return new Date().toISOString().split('T')[0];
+    }
+  }
+
+  /**
+   * Valida y parsea fecha para la base de datos
+   */
+  private parseValidDate(dateStr: string): Date {
+    if (!dateStr) return new Date();
+    
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) {
+        console.warn(`⚠️  Fecha inválida encontrada: ${dateStr}, usando fecha actual`);
+        return new Date();
+      }
+      return date;
+    } catch (error) {
+      console.warn(`⚠️  Error parseando fecha: ${dateStr}, usando fecha actual`, error);
+      return new Date();
     }
   }
 
