@@ -112,10 +112,10 @@ export default function MetaAdsDashboard() {
   
   // Estado para filtros de campañas
   const [campaignFilters, setCampaignFilters] = useState({
-    fechaInicio: '',
-    fechaFin: '',
+    fechaInicio: format(new Date(), 'yyyy-MM-dd'),
+    fechaFin: format(new Date(), 'yyyy-MM-dd'),
     nombreCampana: '',
-    rangoRapido: ''
+    rangoRapido: 'hoy'
   });
   
   // Estado para filtro de conjuntos de anuncios
@@ -123,8 +123,8 @@ export default function MetaAdsDashboard() {
   
   // Estado para filtros globales de fechas
   const [globalDateFilters, setGlobalDateFilters] = useState({
-    fechaInicio: '',
-    fechaFin: ''
+    fechaInicio: format(new Date(), 'yyyy-MM-dd'),
+    fechaFin: format(new Date(), 'yyyy-MM-dd')
   });
   
   // Estado para manejar campañas expandidas y sus adsets
