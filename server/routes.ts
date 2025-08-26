@@ -368,6 +368,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test endpoint to verify Citroen sheet data
+  app.get('/api/sync/verify-citroen-sheet', async (req, res) => {
+    try {
+      console.log('🔍 Verificando datos de pestaña Citroen en Google Sheets...');
+      
+      const citroенData = await googleSheetsService.getSheetData('Citroen');
+      
+      console.log(`📊 Datos encontrados en Citroen sheet: ${citroенData.length} leads`);
+      
+      // Analizar por fechas recientes
+      const recentData = citroенData.filter(lead => {
+        try {
+          const leadDate = new Date(lead.timestamp);
+          const now = new Date();
+          const daysDiff = (now.getTime() - leadDate.getTime()) / (1000 * 60 * 60 * 24);
+          return daysDiff <= 30; // Últimos 30 días
+        } catch (e) {
+          return false;
+        }
+      });
+      
+      res.json({
+        success: true,
+        totalLeads: citroенData.length,
+        recentLeads: recentData.length,
+        sampleData: citroенData.slice(0, 5),
+        dateRange: {
+          oldest: citroенData.length > 0 ? citroенData[citroенData.length - 1].timestamp : null,
+          newest: citroенData.length > 0 ? citroенData[0].timestamp : null
+        }
+      });
+      
+    } catch (error) {
+      console.error('Error verificando Citroen sheet:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Dashboard analytics routes
   app.get('/api/dashboard/stats', async (req, res) => {
     try {
