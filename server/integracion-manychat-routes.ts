@@ -108,9 +108,16 @@ export function registerIntegracionManychatRoutes(app: Express) {
     try {
       const { webhookUrl } = req.params;
       
-      // Buscar el webhook por URL
-      const webhook = await storage.getManychatWebhookByUrl(webhookUrl);
-      if (!webhook || !webhook.activo) {
+      // Buscar el webhook por URL - comparar con el final de la URL almacenada
+      const allWebhooks = await storage.getAllManychatWebhooks();
+      console.log(`🔍 Buscando webhook para: ${webhookUrl}`);
+      console.log(`📋 Webhooks disponibles:`, allWebhooks.map(w => ({ id: w.id, marca: w.marca, url: w.webhookUrl, activo: w.activo })));
+      
+      const webhook = allWebhooks.find(w => 
+        w.activo && w.webhookUrl.includes(webhookUrl)
+      );
+      
+      if (!webhook) {
         console.warn(`❌ Webhook no encontrado o inactivo: ${webhookUrl}`);
         return res.status(404).json({ error: 'Webhook no encontrado o inactivo' });
       }
