@@ -20,6 +20,7 @@ import ReportesDashboard from "@/pages/reportes-dashboard-simple";
 import ReportesGraficos from "@/pages/reportes-graficos";
 import CPLSimple from "@/pages/cpl-simple";
 import CPLDirecto from "@/pages/cpl-directo";
+import IntegracionManychat from "@/pages/integracion-manychat";
 
 function Router() {
   return (
@@ -42,6 +43,7 @@ function Router() {
       <Route path="/reportes-graficos" component={ReportesGraficos} />
       <Route path="/cpl-simple" component={CPLSimple} />
       <Route path="/cpl-directo" component={CPLDirecto} />
+      <Route path="/integracion-manychat" component={IntegracionManychat} />
       <Route path="/login" component={Login} />
       <Route path="/leads/:id" component={LeadDetails} />
       <Route component={NotFound} />

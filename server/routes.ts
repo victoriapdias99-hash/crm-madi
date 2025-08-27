@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { googleSheetsService, type SheetLead } from "./google-sheets";
 import { AnalistaFuncional } from "./analista-funcional";
 import { registerMetaAdsRoutes } from "./meta-ads-routes";
+import { registerIntegracionManychatRoutes } from "./integracion-manychat-routes";
 import { MetaAdsService } from "./meta-ads-service";
 import { UpdateEnviadosService } from "./update-enviados-service";
 import { centralizedDataService } from "./centralized-data-service";
@@ -2171,6 +2172,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Registrar rutas de Meta Ads (módulo de prueba)
   registerMetaAdsRoutes(app);
+  
+  // Registrar rutas de Integración Manychat v2
+  registerIntegracionManychatRoutes(app);
 
   // Campaign routes
   app.get('/api/campaigns', async (req, res) => {

@@ -223,6 +223,43 @@ export const enviadosMetrics = pgTable("enviados_metrics", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Tabla para configurar webhooks de Manychat por marca
+export const manychatWebhooks = pgTable("manychat_webhooks", {
+  id: serial("id").primaryKey(),
+  marca: text("marca").notNull(), // Chevrolet AMBA, Toyota Nacional, etc.
+  webhookUrl: text("webhook_url").notNull().unique(),
+  localizacionField: text("localizacion_field").notNull(), // Campo para localización configurable
+  clienteField: text("cliente_field").notNull(), // Campo para cliente configurable
+  activo: boolean("activo").notNull().default(true),
+  descripcion: text("descripcion"), // Descripción opcional del webhook
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Tabla para almacenar datos recibidos de webhooks de Manychat - "Integración de Manychat"
+export const integracionManychat = pgTable("integracion_manychat", {
+  id: serial("id").primaryKey(),
+  webhookId: integer("webhook_id").references(() => manychatWebhooks.id),
+  
+  // Datos del lead según la estructura de Manychat
+  fecha: timestamp("fecha").notNull(), // Fecha (A)
+  nombre: text("nombre").notNull(), // Nombre (B) - Subscriber: Name
+  telefono: text("telefono").notNull(), // Teléfono (C) - whatsapp_phone
+  localidad: text("localidad"), // Localidad (D) - Campo configurable
+  modelo: text("modelo"), // Modelo (E) - Custom fields - mappable: Auto
+  horarioComentarios: text("horario_comentarios"), // Horario/Comentarios (F) - Custom fields - mappable: Comentario
+  origen: text("origen").notNull().default("Whatsapp"), // Origen (G) - Siempre "Whatsapp"
+  localizacion: text("localizacion"), // Localización (H) - Campo configurable
+  
+  // Metadatos del webhook
+  marca: text("marca").notNull(), // Marca del webhook que lo recibió
+  rawData: jsonb("raw_data"), // Datos originales del webhook para debugging
+  
+  // Fechas de control
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Zod schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -310,6 +347,29 @@ export const insertEnviadosMetricsSchema = createInsertSchema(enviadosMetrics).p
   fechaInicio: true,
   fechaFin: true,
   lastCalculatedAt: true,
+});
+
+export const insertManychatWebhookSchema = createInsertSchema(manychatWebhooks).pick({
+  marca: true,
+  webhookUrl: true,
+  localizacionField: true,
+  clienteField: true,
+  activo: true,
+  descripcion: true,
+});
+
+export const insertIntegracionManychatSchema = createInsertSchema(integracionManychat).pick({
+  webhookId: true,
+  fecha: true,
+  nombre: true,
+  telefono: true,
+  localidad: true,
+  modelo: true,
+  horarioComentarios: true,
+  origen: true,
+  localizacion: true,
+  marca: true,
+  rawData: true,
 });
 
 // Types
@@ -420,6 +480,12 @@ export type InsertSyncControl = z.infer<typeof insertSyncControlSchema>;
 
 export type EnviadosMetrics = typeof enviadosMetrics.$inferSelect;
 export type InsertEnviadosMetrics = z.infer<typeof insertEnviadosMetricsSchema>;
+
+export type ManychatWebhook = typeof manychatWebhooks.$inferSelect;
+export type InsertManychatWebhook = z.infer<typeof insertManychatWebhookSchema>;
+
+export type IntegracionManychat = typeof integracionManychat.$inferSelect;
+export type InsertIntegracionManychat = z.infer<typeof insertIntegracionManychatSchema>;
 
 export const CAMPAIGN_STATUS = {
   ACTIVE: 'active',

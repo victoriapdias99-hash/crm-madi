@@ -1,6 +1,6 @@
 import { 
   users, campaigns, leads, dailyStats, leadNotes, clientes, campanasComerciales, dashboardManualValues,
-  googleSheetsData, syncControl, enviadosMetrics,
+  googleSheetsData, syncControl, enviadosMetrics, manychatWebhooks, integracionManychat,
   type User, type InsertUser,
   type Campaign, type InsertCampaign,
   type Lead, type InsertLead,
@@ -10,7 +10,9 @@ import {
   type CampanaComercial, type InsertCampanaComercial,
   type GoogleSheetsData, type InsertGoogleSheetsData,
   type SyncControl, type InsertSyncControl,
-  type EnviadosMetrics, type InsertEnviadosMetrics
+  type EnviadosMetrics, type InsertEnviadosMetrics,
+  type ManychatWebhook, type InsertManychatWebhook,
+  type IntegracionManychat, type InsertIntegracionManychat
 } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -87,6 +89,19 @@ export interface IStorage {
   // Enviados metrics operations
   getEnviadosMetrics(clienteNombre?: string): Promise<EnviadosMetrics[]>;
   updateEnviadosMetrics(clienteNombre: string, numeroCampana: string, datosEnviados: number): Promise<void>;
+  
+  // Manychat webhook operations
+  getAllManychatWebhooks(): Promise<ManychatWebhook[]>;
+  getManychatWebhook(id: number): Promise<ManychatWebhook | undefined>;
+  getManychatWebhookByUrl(webhookUrl: string): Promise<ManychatWebhook | undefined>;
+  createManychatWebhook(webhook: InsertManychatWebhook): Promise<ManychatWebhook>;
+  updateManychatWebhook(id: number, updates: Partial<ManychatWebhook>): Promise<ManychatWebhook | undefined>;
+  deleteManychatWebhook(id: number): Promise<boolean>;
+  
+  // Integración Manychat operations
+  getAllIntegracionManychat(filters?: { webhookId?: number; marca?: string; limit?: number }): Promise<IntegracionManychat[]>;
+  getIntegracionManychat(id: number): Promise<IntegracionManychat | undefined>;
+  createIntegracionManychat(integracion: InsertIntegracionManychat): Promise<IntegracionManychat>;
 }
 
 export class MemStorage implements IStorage {
@@ -1430,6 +1445,86 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return created;
     }
+  }
+
+  // ===== MANYCHAT INTEGRATION OPERATIONS =====
+  
+  // Manychat webhook operations
+  async getAllManychatWebhooks(): Promise<ManychatWebhook[]> {
+    return await db.select().from(manychatWebhooks).orderBy(manychatWebhooks.marca);
+  }
+
+  async getManychatWebhook(id: number): Promise<ManychatWebhook | undefined> {
+    const [webhook] = await db.select().from(manychatWebhooks)
+      .where(eq(manychatWebhooks.id, id));
+    return webhook || undefined;
+  }
+
+  async getManychatWebhookByUrl(webhookUrl: string): Promise<ManychatWebhook | undefined> {
+    const [webhook] = await db.select().from(manychatWebhooks)
+      .where(eq(manychatWebhooks.webhookUrl, webhookUrl));
+    return webhook || undefined;
+  }
+
+  async createManychatWebhook(webhook: InsertManychatWebhook): Promise<ManychatWebhook> {
+    const [newWebhook] = await db.insert(manychatWebhooks)
+      .values({
+        ...webhook,
+        updatedAt: new Date()
+      })
+      .returning();
+    return newWebhook;
+  }
+
+  async updateManychatWebhook(id: number, updates: Partial<ManychatWebhook>): Promise<ManychatWebhook | undefined> {
+    const [updated] = await db.update(manychatWebhooks)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(eq(manychatWebhooks.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteManychatWebhook(id: number): Promise<boolean> {
+    const result = await db.delete(manychatWebhooks)
+      .where(eq(manychatWebhooks.id, id));
+    return result.count > 0;
+  }
+
+  // Integración Manychat operations
+  async getAllIntegracionManychat(filters?: { webhookId?: number; marca?: string; limit?: number }): Promise<IntegracionManychat[]> {
+    let query = db.select().from(integracionManychat);
+
+    if (filters?.webhookId) {
+      query = query.where(eq(integracionManychat.webhookId, filters.webhookId));
+    }
+    if (filters?.marca) {
+      query = query.where(eq(integracionManychat.marca, filters.marca));
+    }
+
+    if (filters?.limit) {
+      query = query.limit(filters.limit);
+    }
+
+    return await query.orderBy(integracionManychat.createdAt);
+  }
+
+  async getIntegracionManychat(id: number): Promise<IntegracionManychat | undefined> {
+    const [integracion] = await db.select().from(integracionManychat)
+      .where(eq(integracionManychat.id, id));
+    return integracion || undefined;
+  }
+
+  async createIntegracionManychat(integracion: InsertIntegracionManychat): Promise<IntegracionManychat> {
+    const [newIntegracion] = await db.insert(integracionManychat)
+      .values({
+        ...integracion,
+        updatedAt: new Date()
+      })
+      .returning();
+    return newIntegracion;
   }
 }
 
