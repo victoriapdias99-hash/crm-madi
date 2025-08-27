@@ -101,7 +101,66 @@ export function registerIntegracionManychatRoutes(app: Express) {
     }
   });
 
-  // ===== WEBHOOK DATA RECEIVER ENDPOINT =====
+  // ===== WEBHOOK DATA RECEIVER ENDPOINTS =====
+  
+  // Webhook directo de Manychat (sin Make.com)
+  app.post('/webhook/manychat-direct', async (req, res) => {
+    try {
+      console.log('📱 Webhook DIRECTO de Manychat recibido');
+      console.log('📥 Datos recibidos:', JSON.stringify(req.body, null, 2));
+      
+      // Procesar datos directos de Manychat
+      const manychatData = req.body;
+      
+      // Buscar webhook activo por defecto (podríamos usar el primer activo)
+      const webhooks = await storage.getAllManychatWebhooks();
+      const activeWebhook = webhooks.find(w => w.activo);
+      
+      if (!activeWebhook) {
+        console.warn('❌ No hay webhooks activos configurados');
+        return res.status(400).json({ error: 'No hay webhooks activos configurados' });
+      }
+      
+      // Procesar datos directos de Manychat
+      const leadData = {
+        webhookId: activeWebhook.id,
+        fecha: new Date(),
+        nombre: `${manychatData.first_name || ''} ${manychatData.last_name || ''}`.trim() || 
+                manychatData.subscriber?.name || 
+                manychatData.name || 
+                'No especificado',
+        telefono: manychatData.phone || manychatData.whatsapp_phone || 'No especificado',
+        localidad: activeWebhook.localizacionField,
+        modelo: manychatData.custom_fields?.auto || manychatData.auto || '',
+        horarioComentarios: manychatData.custom_fields?.comentario || 
+                           manychatData.comentario || 
+                           manychatData.mensaje || '',
+        origen: 'Whatsapp',
+        localizacion: activeWebhook.clienteField,
+        marca: activeWebhook.marca,
+        rawData: manychatData
+      };
+
+      const validatedData = insertIntegracionManychatSchema.parse(leadData);
+      const createdIntegracion = await storage.createIntegracionManychat(validatedData);
+      
+      console.log(`✅ Lead DIRECTO de Manychat registrado: ${leadData.nombre} - ${leadData.telefono} (${activeWebhook.marca})`);
+      
+      res.json({
+        success: true,
+        message: 'Datos de Manychat procesados correctamente (directo)',
+        leadId: createdIntegracion.id,
+        source: 'manychat-direct'
+      });
+
+    } catch (error) {
+      console.error('❌ Error procesando webhook directo de Manychat:', error);
+      res.status(500).json({
+        error: 'Error procesando datos directos de Manychat',
+        details: error instanceof Error ? error.message : 'Error desconocido'
+      });
+    }
+  });
   
   // Recibir datos de webhook de Manychat (endpoint público que Make.com llama)
   app.post('/webhook/manychat/:webhookUrl', async (req, res) => {

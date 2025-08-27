@@ -2175,6 +2175,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Registrar rutas de Integración Manychat v2
   registerIntegracionManychatRoutes(app);
+  
+  // Registrar rutas directas de Manychat
+  try {
+    const { registerManychatDirectRoutes } = await import('./manychat-service');
+    registerManychatDirectRoutes(app);
+    console.log('✅ Rutas directas de Manychat registradas');
+  } catch (error) {
+    console.warn('⚠️ Error registrando rutas directas de Manychat:', error);
+  }
 
   // Campaign routes
   app.get('/api/campaigns', async (req, res) => {
