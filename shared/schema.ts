@@ -281,6 +281,37 @@ export const insertLeadNoteSchema = createInsertSchema(leadNotes).pick({
   type: true,
 });
 
+export const insertGoogleSheetsDataSchema = createInsertSchema(googleSheetsData).pick({
+  nombreCompleto: true,
+  telefono: true,
+  email: true,
+  marca: true,
+  cliente: true,
+  provincia: true,
+  localidad: true,
+  fechaLead: true,
+  fechaIngreso: true,
+  sourceSheet: true,
+  rowNumber: true,
+});
+
+export const insertSyncControlSchema = createInsertSchema(syncControl).pick({
+  tableName: true,
+  lastSyncAt: true,
+  recordCount: true,
+  syncStatus: true,
+  errorMessage: true,
+});
+
+export const insertEnviadosMetricsSchema = createInsertSchema(enviadosMetrics).pick({
+  clienteNombre: true,
+  numeroCampana: true,
+  datosEnviados: true,
+  fechaInicio: true,
+  fechaFin: true,
+  lastCalculatedAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
