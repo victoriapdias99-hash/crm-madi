@@ -60,12 +60,18 @@ export default function IntegracionManychat() {
   // Queries
   const { data: webhooks = [], isLoading: loadingWebhooks } = useQuery({
     queryKey: ['/api/integracion-manychat/webhooks'],
-    queryFn: () => apiRequest('/api/integracion-manychat/webhooks')
+    queryFn: async () => {
+      const response = await apiRequest('/api/integracion-manychat/webhooks');
+      return Array.isArray(response) ? response : [];
+    }
   });
 
   const { data: integraciones = [], isLoading: loadingIntegraciones } = useQuery({
     queryKey: ['/api/integracion-manychat/datos'],
-    queryFn: () => apiRequest('/api/integracion-manychat/datos?limit=50')
+    queryFn: async () => {
+      const response = await apiRequest('/api/integracion-manychat/datos?limit=50');
+      return Array.isArray(response) ? response : [];
+    }
   });
 
   // Mutations

@@ -1451,7 +1451,7 @@ export class DatabaseStorage implements IStorage {
   
   // Manychat webhook operations
   async getAllManychatWebhooks(): Promise<ManychatWebhook[]> {
-    return await db.select().from(manychatWebhooks).orderBy(manychatWebhooks.marca);
+    return await db.select().from(manychatWebhooks).orderBy(manychatWebhooks.marca ?? manychatWebhooks.id);
   }
 
   async getManychatWebhook(id: number): Promise<ManychatWebhook | undefined> {
@@ -1508,7 +1508,7 @@ export class DatabaseStorage implements IStorage {
       query = query.limit(filters.limit);
     }
 
-    return await query.orderBy(integracionManychat.createdAt);
+    return await query.orderBy(integracionManychat.createdAt ?? integracionManychat.id);
   }
 
   async getIntegracionManychat(id: number): Promise<IntegracionManychat | undefined> {
