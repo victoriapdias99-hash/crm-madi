@@ -60,27 +60,38 @@ export default function IntegracionManychat() {
   // Queries
   const { data: webhooks = [], isLoading: loadingWebhooks } = useQuery({
     queryKey: ['/api/integracion-manychat/webhooks'],
-    queryFn: async () => {
-      const response = await apiRequest('/api/integracion-manychat/webhooks');
-      return Array.isArray(response) ? response : [];
+    queryFn: async (): Promise<ManychatWebhook[]> => {
+      const response = await fetch('/api/integracion-manychat/webhooks');
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
     }
   });
 
   const { data: integraciones = [], isLoading: loadingIntegraciones } = useQuery({
     queryKey: ['/api/integracion-manychat/datos'],
-    queryFn: async () => {
-      const response = await apiRequest('/api/integracion-manychat/datos?limit=50');
-      return Array.isArray(response) ? response : [];
+    queryFn: async (): Promise<IntegracionManychat[]> => {
+      const response = await fetch('/api/integracion-manychat/datos?limit=50');
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
     }
   });
 
   // Mutations
   const createWebhookMutation = useMutation({
-    mutationFn: (webhook: any) => apiRequest('/api/integracion-manychat/webhooks', {
-      method: 'POST',
-      body: JSON.stringify(webhook),
-      headers: { 'Content-Type': 'application/json' }
-    }),
+    mutationFn: async (webhook: any) => {
+      const response = await fetch('/api/integracion-manychat/webhooks', {
+        method: 'POST',
+        body: JSON.stringify(webhook),
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }));
+        throw new Error(errorData.error || `Error ${response.status}`);
+      }
+      
+      return response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/integracion-manychat/webhooks'] });
       toast({ description: 'Webhook creado correctamente' });
@@ -95,6 +106,7 @@ export default function IntegracionManychat() {
       });
     },
     onError: (error: any) => {
+      console.error('Error creating webhook:', error);
       toast({
         variant: 'destructive',
         description: `Error al crear webhook: ${error.message}`
@@ -103,9 +115,12 @@ export default function IntegracionManychat() {
   });
 
   const deleteWebhookMutation = useMutation({
-    mutationFn: (id: number) => apiRequest(`/api/integracion-manychat/webhooks/${id}`, {
-      method: 'DELETE'
-    }),
+    mutationFn: async (id: number) => {
+      const response = await fetch(`/api/integracion-manychat/webhooks/${id}`, {
+        method: 'DELETE'
+      });
+      return response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/integracion-manychat/webhooks'] });
       toast({ description: 'Webhook eliminado correctamente' });
@@ -119,12 +134,14 @@ export default function IntegracionManychat() {
   });
 
   const toggleWebhookMutation = useMutation({
-    mutationFn: ({ id, activo }: { id: number; activo: boolean }) => 
-      apiRequest(`/api/integracion-manychat/webhooks/${id}`, {
+    mutationFn: async ({ id, activo }: { id: number; activo: boolean }) => {
+      const response = await fetch(`/api/integracion-manychat/webhooks/${id}`, {
         method: 'PUT',
         body: JSON.stringify({ activo }),
         headers: { 'Content-Type': 'application/json' }
-      }),
+      });
+      return response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/integracion-manychat/webhooks'] });
       toast({ description: 'Estado del webhook actualizado' });
@@ -173,7 +190,7 @@ export default function IntegracionManychat() {
     totalWebhooks: webhooks.length,
     activeWebhooks: webhooks.filter((w: ManychatWebhook) => w.activo).length,
     totalLeads: integraciones.length,
-    marcasActivas: [...new Set(webhooks.filter((w: ManychatWebhook) => w.activo).map((w: ManychatWebhook) => w.marca))].length
+    marcasActivas: Array.from(new Set(webhooks.filter((w: ManychatWebhook) => w.activo).map((w: ManychatWebhook) => w.marca))).length
   };
 
   return (
@@ -265,7 +282,7 @@ export default function IntegracionManychat() {
                         Nuevo Webhook
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-lg">
+                    <DialogContent className="max-w-lg bg-white dark:bg-gray-800 border shadow-lg">
                       <DialogHeader>
                         <DialogTitle>Crear Nuevo Webhook</DialogTitle>
                       </DialogHeader>
