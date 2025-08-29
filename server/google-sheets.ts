@@ -71,8 +71,8 @@ class GoogleSheetsService {
       timestamp: row[0] || new Date().toISOString(),           // Fecha
       name: row[1] || '',                                      // Nombre
       phone: row[2] || '',                                     // Telefono
-      email: row[3] || '',                                     // Email (opcional)
-      city: row[3] || '',                                      // Localidad (mismo que email en algunas sheets)
+      email: '',                                               // Email vacío (no existe en Google Sheets)
+      city: row[3] || '',                                      // Localidad (columna D)
       modelo: row[4] || '',                                    // Modelo
       comentarioHorario: row[5] || '',                         // Horario/Comentarios
       // Columnas G, H, I según tu orden
