@@ -71,52 +71,66 @@ export class CentralizedDataService {
   }
 
   /**
-   * Sincroniza datos de Google Sheets y los almacena en la base de datos
+   * Sincroniza datos de Google Sheets usando el sistema refactorizado
    */
   private async syncGoogleSheetsData(): Promise<number> {
     try {
-      // Obtener datos frescos de Google Sheets
-      const datosDiarios = await googleSheetsService.getDatosDiariosData();
-      const leads = await googleSheetsService.getAllLeadsFromSheets();
+      console.log('🔄 Iniciando sincronización usando sistema refactorizado...');
       
-      // Limpiar datos antiguos de Google Sheets en BD
-      await storage.clearGoogleSheetsData();
+      // Usar el nuevo sistema de sincronización refactorizado
+      const { SyncFactory } = await import('./sync/infrastructure/config/SyncFactory');
+      const syncFullUseCase = SyncFactory.createSyncFullUseCase();
       
-      // Insertar datos frescos en BD
-      let recordsInserted = 0;
+      const result = await syncFullUseCase.execute({
+        forceFullSync: true,
+        includeDashboardUpdate: false,
+        includeMetricsUpdate: false,
+        validateData: true,
+        skipDuplicateDetection: false,
+        batchSize: 100,
+        concurrency: 3
+      });
       
-      // Almacenar datos diarios
-      for (const dato of datosDiarios) {
-        await storage.createGoogleSheetsData({
-          cliente: dato.cliente,
-          marca: this.extractMarcaFromCliente(dato.cliente),
-          fecha: new Date().toISOString().split('T')[0],
-          datosEnviados: dato.enviados || 0,
-          sourceSheet: 'datos-diarios',
-          rawData: JSON.stringify(dato)
-        });
-        recordsInserted++;
+      if (result.success) {
+        console.log(`✅ Sistema refactorizado procesó ${result.leadsProcessed} leads`);
+        return result.leadsProcessed;
+      } else {
+        console.error('❌ Error en sincronización refactorizada:', result.error);
+        return 0;
       }
-      
-      // Almacenar leads
-      for (const lead of leads) {
-        await storage.createGoogleSheetsData({
-          cliente: lead.cliente || 'Unknown',
-          marca: lead.marca || this.extractMarcaFromCliente(lead.cliente || ''),
-          fecha: new Date().toISOString().split('T')[0],
-          datosEnviados: 1, // cada lead cuenta como 1 enviado
-          sourceSheet: lead.marca || 'unknown',
-          rawData: JSON.stringify(lead)
-        });
-        recordsInserted++;
-      }
-      
-      console.log(`📊 Almacenados ${recordsInserted} registros de Google Sheets en BD`);
-      return recordsInserted;
       
     } catch (error) {
-      console.error('Error sincronizando Google Sheets:', error);
-      return 0;
+      console.error('Error usando sistema refactorizado:', error);
+      
+      // Fallback: usar solo datos diarios si el sistema refactorizado falla
+      try {
+        const datosDiarios = await googleSheetsService.getDatosDiariosData();
+        
+        // Limpiar datos antiguos de Google Sheets en BD
+        await storage.clearGoogleSheetsData();
+        
+        let recordsInserted = 0;
+        
+        // Almacenar datos diarios como fallback
+        for (const dato of datosDiarios) {
+          await storage.createGoogleSheetsData({
+            cliente: dato.cliente,
+            marca: this.extractMarcaFromCliente(dato.cliente),
+            fecha: new Date().toISOString().split('T')[0],
+            datosEnviados: dato.enviados || 0,
+            sourceSheet: 'datos-diarios',
+            rawData: JSON.stringify(dato)
+          });
+          recordsInserted++;
+        }
+        
+        console.log(`📊 Fallback: Almacenados ${recordsInserted} registros de datos diarios`);
+        return recordsInserted;
+        
+      } catch (fallbackError) {
+        console.error('Error en fallback de datos diarios:', fallbackError);
+        return 0;
+      }
     }
   }
 

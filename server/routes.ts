@@ -177,40 +177,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
   }
 
-  // Handle Google Sheets sync
-  async function handleSheetSync(leads: SheetLead[]) {
-    try {
-      let newLeadsCount = 0;
-      
-      // Get all existing leads to check for duplicates
-      const existingLeads = await storage.getLeads({ limit: 10000 });
-      const existingMetaIds = new Set(existingLeads.map(lead => lead.metaLeadId));
-      
-      for (const sheetLead of leads) {
-        const dbLead = convertSheetLeadToDbLead(sheetLead);
-        
-        // Check if lead already exists by unique metaLeadId
-        if (!existingMetaIds.has(dbLead.metaLeadId)) {
-          await storage.createLead(dbLead);
-          existingMetaIds.add(dbLead.metaLeadId); // Add to set to prevent duplicates in same batch
-          newLeadsCount++;
-        }
-      }
 
-      if (newLeadsCount > 0) {
-        console.log(`Added ${newLeadsCount} new leads from Google Sheets`);
-        
-        // Broadcast update to dashboard
-        const stats = await getRealtimeStats();
-        broadcastDashboardUpdate(stats);
-      }
-    } catch (error) {
-      console.error('Error handling sheet sync:', error);
-    }
-  }
-
-  // Start Google Sheets periodic sync (already initialized in index.ts)
-  // googleSheetsService.startPeriodicSync(handleSheetSync);
+  // Sistema refactorizado de sincronización activo en /api/sync/*
 
   // Auth routes
   app.post('/api/login', async (req, res) => {
@@ -237,43 +205,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Test endpoint to verify Citroen sheet data
-  app.get('/api/sync/verify-citroen-sheet', async (req, res) => {
-    try {
-      console.log('🔍 Verificando datos de pestaña Citroen en Google Sheets...');
-      
-      const citroенData = await googleSheetsService.getSheetData('Citroen');
-      
-      console.log(`📊 Datos encontrados en Citroen sheet: ${citroенData.length} leads`);
-      
-      // Analizar por fechas recientes
-      const recentData = citroенData.filter(lead => {
-        try {
-          const leadDate = new Date(lead.timestamp);
-          const now = new Date();
-          const daysDiff = (now.getTime() - leadDate.getTime()) / (1000 * 60 * 60 * 24);
-          return daysDiff <= 30; // Últimos 30 días
-        } catch (e) {
-          return false;
-        }
-      });
-      
-      res.json({
-        success: true,
-        totalLeads: citroенData.length,
-        recentLeads: recentData.length,
-        sampleData: citroенData.slice(0, 5),
-        dateRange: {
-          oldest: citroенData.length > 0 ? citroенData[citroенData.length - 1].timestamp : null,
-          newest: citroенData.length > 0 ? citroенData[0].timestamp : null
-        }
-      });
-      
-    } catch (error) {
-      console.error('Error verificando Citroen sheet:', error);
-      res.status(500).json({ error: error.message });
-    }
-  });
 
   // Dashboard analytics routes
   app.get('/api/dashboard/stats', async (req, res) => {
@@ -325,50 +256,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Endpoint para sincronización manual (refactorizado) con nuevas columnas
-  app.post('/api/dashboard/sync-all-sheets', async (req, res) => {
-    try {
-      const startTime = Date.now();
-      console.log('🔄 Iniciando sincronización manual COMPLETA con nuevas columnas...');
-      
-      // 1. Ejecutar sincronización completa de todas las hojas de Google Sheets
-      console.log('📊 Sincronizando datos desde Google Sheets con columnas G, H, I...');
-      const { googleSheetsService } = await import('./google-sheets');
-      const allLeads = await googleSheetsService.getAllLeadsFromSheets();
-      console.log(`📥 Obtenidos ${allLeads.length} leads desde Google Sheets`);
-      
-      if (allLeads.length > 0) {
-        // 2. Convertir y guardar en base de datos usando el sistema existente
-        await handleSheetSync(allLeads);
-        console.log('✅ Datos sincronizados en PostgreSQL con nuevas columnas');
-        
-        // 3. Actualizar métricas del dashboard
-        const stats = await getRealtimeStats();
-        broadcastDashboardUpdate(stats);
-        console.log('📊 Dashboard actualizado con nuevos datos');
-      }
-      
-      const duration = Date.now() - startTime;
-      
-      res.json({
-        success: true,
-        message: `Sincronización manual completada: ${allLeads.length} leads procesados`,
-        leadsProcessed: allLeads.length,
-        duration: `${duration}ms`,
-        timestamp: new Date().toISOString(),
-        note: "Datos actualizados con columnas origen, localización y cliente",
-        architecture: "Refactored sync service ready for CRM-wide reuse"
-      });
-      
-    } catch (error) {
-      console.error('Error in manual sync:', error);
-      res.status(500).json({ 
-        success: false, 
-        error: 'Error en sincronización manual',
-        details: error?.message || 'Error desconocido' 
-      });
-    }
-  });
 
   /**
    * SISTEMA DE FILTRADO INTELIGENTE DE LEADS POR CAMPAÑA
@@ -1423,10 +1310,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('🔄 Iniciando actualización completa de datos...');
       
-      // 1. Forzar actualización de Google Sheets
-      console.log('📊 Sincronizando datos desde Google Sheets...');
-      const freshLeads = await googleSheetsService.getAllLeadsFromSheets();
-      console.log(`✅ Obtenidos ${freshLeads.length} leads actualizados desde Google Sheets`);
+      // 1. Usar sistema refactorizado para sincronización
+      console.log('📊 Sincronizando datos usando sistema refactorizado...');
+      const { SyncFactory } = await import('./sync/infrastructure/config/SyncFactory');
+      const syncFullUseCase = SyncFactory.createSyncFullUseCase();
+      const syncResult = await syncFullUseCase.execute({
+        forceFullSync: true,
+        includeDashboardUpdate: true,
+        includeMetricsUpdate: true,
+        validateData: true,
+        skipDuplicateDetection: false,
+        batchSize: 100,
+        concurrency: 3
+      });
+      console.log(`✅ Sistema refactorizado procesó ${syncResult.leadsProcessed} leads`);
       
       // 2. Actualizar datos de Meta Ads si está disponible
       console.log('📱 Actualizando datos de Meta Ads...');
@@ -2286,13 +2183,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/sheets/sync', async (req, res) => {
     try {
       console.log('Manual Google Sheets sync requested');
-      const leads = await googleSheetsService.getAllLeadsFromSheets();
-      await handleSheetSync(leads);
+      
+      // Usar sistema refactorizado
+      const { SyncFactory } = await import('./sync/infrastructure/config/SyncFactory');
+      const syncFullUseCase = SyncFactory.createSyncFullUseCase();
+      const syncResult = await syncFullUseCase.execute({
+        forceFullSync: true,
+        includeDashboardUpdate: true,
+        includeMetricsUpdate: false,
+        validateData: true,
+        skipDuplicateDetection: false,
+        batchSize: 100,
+        concurrency: 3
+      });
       
       res.json({
-        success: true,
-        message: `Synced ${leads.length} leads from Google Sheets`,
-        leadsCount: leads.length
+        success: syncResult.success,
+        message: syncResult.success ? `Synced ${syncResult.leadsProcessed} leads using refactored system` : syncResult.error,
+        leadsCount: syncResult.leadsProcessed,
+        stats: syncResult.stats
       });
     } catch (error) {
       console.error('Manual sync error:', error);
@@ -2751,21 +2660,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/sync/force', async (req, res) => {
-    try {
-      // Utilizar el sistema de sincronización refactorizado
-      const syncServiceModule = await import('./sync-service');
-      const result = await syncServiceModule.syncService.executeSyncFull();
-      
-      res.json({ 
-        message: result.success ? 'Sync forced successfully' : 'Sync completed with warnings',
-        details: result
-      });
-    } catch (error) {
-      console.error('Error forcing sync:', error);
-      res.status(500).json({ error: 'Failed to force sync' });
-    }
-  });
 
   app.get('/api/enviados/database/:cliente', async (req, res) => {
     try {
@@ -2863,42 +2757,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Endpoint para sincronización específica por hojas
-  app.post('/api/sync/sheets/:sheetNames', async (req, res) => {
-    try {
-      const { syncService } = await import('./sync-service');
-      const sheetNames = req.params.sheetNames.split(',');
-      
-      const options = {
-        forceFullSync: true,
-        includeDashboardUpdate: true,
-        includeMetricsUpdate: true,
-        specificSheets: sheetNames
-      };
-      
-      const result = await syncService.executeFullSync(options);
-      
-      res.json({
-        success: result.success,
-        message: result.success ? 
-          `Sincronización específica completada: ${result.leadsProcessed} leads de hojas [${sheetNames.join(', ')}]` : 
-          'Error en sincronización específica',
-        sheetsProcessed: sheetNames,
-        leadsProcessed: result.leadsProcessed,
-        duration: `${result.duration}ms`,
-        timestamp: result.timestamp,
-        details: result.details,
-        error: result.error
-      });
-      
-    } catch (error) {
-      console.error('Error in specific sheets sync:', error);
-      res.status(500).json({ 
-        success: false, 
-        error: 'Error ejecutando sincronización específica',
-        details: error?.message 
-      });
-    }
-  });
 
   // ========== REGISTRO DE RUTAS DEL SISTEMA REFACTORIZADO ==========
   
@@ -2922,5 +2780,5 @@ export async function registerRoutes(app: Express): Promise<Server> {
 }
 
 // Exportar funciones para uso en otros servicios
-export { broadcastDashboardUpdate, getRealtimeStats, handleSheetSync };
+export { broadcastDashboardUpdate, getRealtimeStats };
 
