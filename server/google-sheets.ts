@@ -151,6 +151,45 @@ class GoogleSheetsService {
     }
   }
 
+  /**
+   * Obtiene todos los leads de todas las pestañas de marcas disponibles
+   * Utilizado por el sistema de sincronización refactorizado
+   */
+  async getAllLeadsFromSheets(): Promise<SheetLead[]> {
+    if (!this.sheets) {
+      console.log('Google Sheets API not configured');
+      return [];
+    }
+
+    try {
+      console.log('🔄 GoogleSheetsService: Obteniendo todas las pestañas disponibles...');
+      
+      // Obtener nombres de todas las pestañas disponibles
+      const sheetNames = await this.getAvailableSheetNames();
+      console.log(`📋 GoogleSheetsService: Encontradas ${sheetNames.length} pestañas para sincronizar: ${sheetNames.join(', ')}`);
+      
+      const allLeads: SheetLead[] = [];
+      
+      // Obtener datos de cada pestaña
+      for (const sheetName of sheetNames) {
+        try {
+          console.log(`🔄 GoogleSheetsService: Procesando pestaña "${sheetName}"...`);
+          const sheetLeads = await this.getSheetData(sheetName);
+          allLeads.push(...sheetLeads);
+          console.log(`✅ GoogleSheetsService: ${sheetLeads.length} leads obtenidos de "${sheetName}"`);
+        } catch (error) {
+          console.warn(`⚠️ GoogleSheetsService: Error obteniendo datos de "${sheetName}":`, error.message);
+          // Continuar con otras pestañas aunque una falle
+        }
+      }
+      
+      console.log(`📥 GoogleSheetsService: Total de ${allLeads.length} leads obtenidos de ${sheetNames.length} pestañas`);
+      return allLeads;
+    } catch (error) {
+      console.error('Error obteniendo todos los leads de Google Sheets:', error);
+      return [];
+    }
+  }
 
   // Nueva función para sincronizar TODAS las pestañas de marcas a PostgreSQL (DETECCIÓN AUTOMÁTICA)
 
