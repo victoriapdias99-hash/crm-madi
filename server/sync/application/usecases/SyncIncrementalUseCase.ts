@@ -3,7 +3,6 @@ import { SyncResult } from '../../domain/entities/SyncResult';
 import { ISyncRepository } from '../../domain/interfaces/ISyncRepository';
 import { ISheetsGateway } from '../../domain/interfaces/ISheetsGateway';
 import { LeadProcessor } from '../../domain/services/LeadProcessor';
-import { DuplicateDetector } from '../../domain/services/DuplicateDetector';
 
 /**
  * Caso de uso para sincronización incremental
@@ -13,8 +12,7 @@ export class SyncIncrementalUseCase {
   constructor(
     private syncRepository: ISyncRepository,
     private sheetsGateway: ISheetsGateway,
-    private leadProcessor: LeadProcessor,
-    private duplicateDetector: DuplicateDetector
+    private leadProcessor: LeadProcessor
   ) {}
 
   async execute(options: SyncOptions = {}): Promise<SyncResult> {
@@ -51,20 +49,8 @@ export class SyncIncrementalUseCase {
       const syncLeads = rawLeads.map(raw => this.leadProcessor.convertRawToSyncLead(raw));
       const processedLeads = this.leadProcessor.processLeadsBatch(syncLeads);
 
-      // Detectar duplicados si no está deshabilitado
-      let finalLeads = processedLeads;
-      if (!options.skipDuplicateDetection) {
-        const recentLeads = await this.getRecentLeads(cutoffTime);
-        finalLeads = this.duplicateDetector.detectDuplicatesAgainstExisting(
-          processedLeads, 
-          recentLeads
-        );
-      }
-
-      // Guardar leads válidos (y no duplicados solo si la verificación está activa)
-      const validLeads = options.skipDuplicateDetection 
-        ? finalLeads.filter(lead => lead.isValid)
-        : finalLeads.filter(lead => lead.isValid && !lead.isDuplicate);
+      // Guardar todos los leads válidos
+      const validLeads = processedLeads.filter(lead => lead.isValid);
       const savedCount = await this.syncRepository.createLeadsBatch(validLeads);
 
       // Actualizar estado final
@@ -80,10 +66,10 @@ export class SyncIncrementalUseCase {
         newLeads: savedCount,
         updatedLeads: 0,
         skippedLeads: rawLeads.length - savedCount,
-        duplicatesFound: finalLeads.filter(l => l.isDuplicate).length,
-        validationErrors: finalLeads.filter(l => !l.isValid).length,
+        duplicatesFound: 0,
+        validationErrors: processedLeads.filter(l => !l.isValid).length,
         sheetsProcessed: options.specificSheets || ['incremental_sync'],
-        clientsMatched: this.calculateClientsMatched(finalLeads)
+        clientsMatched: this.calculateClientsMatched(processedLeads)
       };
 
       return this.createResult(

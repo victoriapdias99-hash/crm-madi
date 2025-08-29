@@ -3,7 +3,6 @@ import { SyncResult, SyncDetails } from '../../domain/entities/SyncResult';
 import { ISyncRepository } from '../../domain/interfaces/ISyncRepository';
 import { ISheetsGateway } from '../../domain/interfaces/ISheetsGateway';
 import { LeadProcessor } from '../../domain/services/LeadProcessor';
-import { DuplicateDetector } from '../../domain/services/DuplicateDetector';
 import { ClientMatcher } from '../../domain/services/ClientMatcher';
 
 /**
@@ -15,7 +14,6 @@ export class SyncFullUseCase {
     private syncRepository: ISyncRepository,
     private sheetsGateway: ISheetsGateway,
     private leadProcessor: LeadProcessor,
-    private duplicateDetector: DuplicateDetector,
     private clientMatcher: ClientMatcher
   ) {}
 
@@ -52,28 +50,12 @@ export class SyncFullUseCase {
       
       console.log(`🔄 Procesados ${processedLeads.length} leads`);
 
-      // 3. Detectar duplicados si no está deshabilitado
-      let finalLeads = processedLeads;
-      if (!options.skipDuplicateDetection) {
-        await this.syncRepository.updateSyncStatus({
-          currentOperation: 'Detectando duplicados'
-        });
-
-        const existingLeads = await this.syncRepository.getLeads({ limit: 10000 });
-        finalLeads = this.duplicateDetector.detectDuplicatesAgainstExisting(
-          processedLeads, 
-          existingLeads
-        );
-        
-        console.log(`🔍 Detectados duplicados en ${finalLeads.filter(l => l.isDuplicate).length} leads`);
-      }
-
-      // 4. Guardar leads válidos
+      // 3. Guardar todos los leads válidos
       await this.syncRepository.updateSyncStatus({
         currentOperation: 'Guardando en base de datos'
       });
 
-      const validLeads = finalLeads.filter(lead => lead.isValid && !lead.isDuplicate);
+      const validLeads = processedLeads.filter(lead => lead.isValid);
       const savedCount = await this.syncRepository.createLeadsBatch(validLeads);
       
       console.log(`✅ Guardados ${savedCount} leads nuevos en PostgreSQL`);
@@ -87,7 +69,7 @@ export class SyncFullUseCase {
       });
 
       // 6. Calcular estadísticas
-      const details = this.calculateSyncDetails(finalLeads, rawLeads, options);
+      const details = this.calculateSyncDetails(processedLeads, rawLeads, options);
 
       console.log('✅ Sincronización completa exitosa');
 
@@ -128,10 +110,10 @@ export class SyncFullUseCase {
     rawLeads: any[], 
     options: SyncOptions
   ): SyncDetails {
-    const newLeads = processedLeads.filter(l => l.isValid && !l.isDuplicate).length;
-    const duplicatesFound = processedLeads.filter(l => l.isDuplicate).length;
+    const newLeads = processedLeads.filter(l => l.isValid).length;
+    const duplicatesFound = 0;
     const validationErrors = processedLeads.filter(l => !l.isValid).length;
-    const skippedLeads = rawLeads.length - newLeads - duplicatesFound;
+    const skippedLeads = rawLeads.length - newLeads;
 
     // Calcular clientes matched
     const clientsMatched: Record<string, number> = {};
@@ -149,7 +131,7 @@ export class SyncFullUseCase {
       newLeads,
       updatedLeads: 0, // Por ahora no actualizamos leads existentes
       skippedLeads,
-      duplicatesFound,
+      duplicatesFound: 0,
       validationErrors,
       sheetsProcessed,
       clientsMatched

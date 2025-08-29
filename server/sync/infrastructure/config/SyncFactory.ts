@@ -5,7 +5,6 @@ import { SyncSpecificSheetsUseCase } from '../../application/usecases/SyncSpecif
 import { PostgresSyncRepository } from '../repositories/PostgresSyncRepository';
 import { GoogleSheetsGateway } from '../gateways/GoogleSheetsGateway';
 import { LeadProcessor } from '../../domain/services/LeadProcessor';
-import { DuplicateDetector } from '../../domain/services/DuplicateDetector';
 import { ClientMatcher } from '../../domain/services/ClientMatcher';
 
 /**
@@ -16,7 +15,6 @@ export class SyncFactory {
   private static syncRepository: PostgresSyncRepository | null = null;
   private static sheetsGateway: GoogleSheetsGateway | null = null;
   private static leadProcessor: LeadProcessor | null = null;
-  private static duplicateDetector: DuplicateDetector | null = null;
   private static clientMatcher: ClientMatcher | null = null;
 
   /**
@@ -42,7 +40,6 @@ export class SyncFactory {
       this.getSyncRepository(),
       this.getSheetsGateway(),
       this.getLeadProcessor(),
-      this.getDuplicateDetector(),
       this.getClientMatcher()
     );
   }
@@ -54,8 +51,7 @@ export class SyncFactory {
     return new SyncIncrementalUseCase(
       this.getSyncRepository(),
       this.getSheetsGateway(),
-      this.getLeadProcessor(),
-      this.getDuplicateDetector()
+      this.getLeadProcessor()
     );
   }
 
@@ -67,7 +63,6 @@ export class SyncFactory {
       this.getSyncRepository(),
       this.getSheetsGateway(),
       this.getLeadProcessor(),
-      this.getDuplicateDetector(),
       this.getClientMatcher()
     );
   }
@@ -104,15 +99,6 @@ export class SyncFactory {
     return this.leadProcessor;
   }
 
-  /**
-   * Obtiene instancia singleton del detector de duplicados
-   */
-  static getDuplicateDetector(): DuplicateDetector {
-    if (!this.duplicateDetector) {
-      this.duplicateDetector = new DuplicateDetector();
-    }
-    return this.duplicateDetector;
-  }
 
   /**
    * Obtiene instancia singleton del matcher de clientes
@@ -131,7 +117,6 @@ export class SyncFactory {
     this.syncRepository = null;
     this.sheetsGateway = null;
     this.leadProcessor = null;
-    this.duplicateDetector = null;
     this.clientMatcher = null;
   }
 }
