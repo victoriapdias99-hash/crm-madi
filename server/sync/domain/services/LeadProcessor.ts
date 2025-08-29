@@ -1,4 +1,5 @@
 import { RawSheetLead, SyncLead, ProcessedSyncLead } from '../entities/SyncLead';
+import { nanoid } from 'nanoid';
 
 /**
  * Servicio de dominio para procesamiento de leads
@@ -75,13 +76,14 @@ export class LeadProcessor {
   // ========== MÉTODOS PRIVADOS DE PROCESAMIENTO ==========
 
   private generateMetaLeadId(rawLead: RawSheetLead): string {
-    // Generar ID único mejorado con información del cliente
-    const cliente = this.normalizeClientName(rawLead.cliente || '');
-    const telefono = this.sanitizePhone(rawLead.phone);
-    const campaign = this.sanitizeCampaignName(rawLead.campaign);
+    // Generar ID único garantizado con nanoid + timestamp
+    const timestamp = Date.now();
+    const uniqueId = nanoid(12); // 12 caracteres únicos
+    const cliente = this.normalizeClientName(rawLead.cliente || '').substring(0, 10);
+    const campaign = this.sanitizeCampaignName(rawLead.campaign).substring(0, 15);
     
-    const uniqueId = `SHEET_${telefono}_${cliente}_${campaign}`.replace(/[^a-zA-Z0-9_]/g, '_');
-    return uniqueId.substring(0, 100); // Limitar longitud
+    // Formato: SHEET_[timestamp]_[nanoid]_[cliente]_[campaign]
+    return `SHEET_${timestamp}_${uniqueId}_${cliente}_${campaign}`;
   }
 
   private sanitizeName(name: string): string {

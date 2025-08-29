@@ -51,15 +51,20 @@ export class SyncIncrementalUseCase {
       const syncLeads = rawLeads.map(raw => this.leadProcessor.convertRawToSyncLead(raw));
       const processedLeads = this.leadProcessor.processLeadsBatch(syncLeads);
 
-      // Detectar duplicados solo contra leads recientes para mejor performance
-      const recentLeads = await this.getRecentLeads(cutoffTime);
-      const finalLeads = this.duplicateDetector.detectDuplicatesAgainstExisting(
-        processedLeads, 
-        recentLeads
-      );
+      // Detectar duplicados si no está deshabilitado
+      let finalLeads = processedLeads;
+      if (!options.skipDuplicateDetection) {
+        const recentLeads = await this.getRecentLeads(cutoffTime);
+        finalLeads = this.duplicateDetector.detectDuplicatesAgainstExisting(
+          processedLeads, 
+          recentLeads
+        );
+      }
 
-      // Guardar solo leads válidos y no duplicados
-      const validLeads = finalLeads.filter(lead => lead.isValid && !lead.isDuplicate);
+      // Guardar leads válidos (y no duplicados solo si la verificación está activa)
+      const validLeads = options.skipDuplicateDetection 
+        ? finalLeads.filter(lead => lead.isValid)
+        : finalLeads.filter(lead => lead.isValid && !lead.isDuplicate);
       const savedCount = await this.syncRepository.createLeadsBatch(validLeads);
 
       // Actualizar estado final

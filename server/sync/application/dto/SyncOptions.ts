@@ -45,7 +45,7 @@ export function mapSyncRequestToOptions(request: SyncRequestDto): SyncOptions {
     specificSheets: request.sheets ? request.sheets.split(',').map(s => s.trim()) : undefined,
     since: request.since ? new Date(request.since) : undefined,
     validateData: request.validateData !== 'false', // true por defecto
-    skipDuplicateDetection: false,
+    skipDuplicateDetection: true, // Desactivar verificación de duplicados por defecto
     batchSize: 100,
     concurrency: 3
   };

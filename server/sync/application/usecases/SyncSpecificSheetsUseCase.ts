@@ -101,15 +101,26 @@ export class SyncSpecificSheetsUseCase {
       const syncLeads = allRawLeads.map(raw => this.leadProcessor.convertRawToSyncLead(raw));
       const processedLeads = this.leadProcessor.processLeadsBatch(syncLeads);
 
-      // Detectar duplicados
-      const existingLeads = await this.syncRepository.getLeads({ limit: 10000 });
-      const finalLeads = this.duplicateDetector.detectDuplicatesAgainstExisting(
-        processedLeads,
-        existingLeads
-      );
+      // Detectar duplicados si no está deshabilitado
+      let finalLeads = processedLeads;
+      if (!options.skipDuplicateDetection) {
+        await this.syncRepository.updateSyncStatus({
+          currentOperation: 'Detectando duplicados'
+        });
+        
+        const existingLeads = await this.syncRepository.getLeads({ limit: 10000 });
+        finalLeads = this.duplicateDetector.detectDuplicatesAgainstExisting(
+          processedLeads,
+          existingLeads
+        );
+        
+        console.log(`🔍 Detectados duplicados en ${finalLeads.filter(l => l.isDuplicate).length} leads`);
+      }
 
-      // Guardar leads válidos
-      const validLeads = finalLeads.filter(lead => lead.isValid && !lead.isDuplicate);
+      // Guardar leads válidos (y no duplicados solo si la verificación está activa)
+      const validLeads = options.skipDuplicateDetection 
+        ? finalLeads.filter(lead => lead.isValid)
+        : finalLeads.filter(lead => lead.isValid && !lead.isDuplicate);
       const savedCount = await this.syncRepository.createLeadsBatch(validLeads);
 
       // Actualizar estado final
