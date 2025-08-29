@@ -67,8 +67,8 @@ class GoogleSheetsService {
     return {
       timestamp: row[0] || new Date().toISOString(),
       name: row[1] || '',
-      email: row[2] || '',
-      phone: row[3] || '',
+      email: row[3] || '',
+      phone: row[2] || '',
       city: row[4] || '',
       interest: row[5] || '',
       budget: row[5] || '',
