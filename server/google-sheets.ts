@@ -73,12 +73,12 @@ class GoogleSheetsService {
       phone: row[2] || '',                                     // Telefono
       email: '',                                               // Email vacío (no existe en Google Sheets)
       city: row[3] || '',                                      // Localidad (columna D)
-      modelo: row[4] || '',                                    // Modelo
-      comentarioHorario: row[5] || '',                         // Horario/Comentarios
-      // Columnas G, H, I según tu orden
-      origen: row[6] || '',                                    // ORIGEN
-      localizacion: row[7] || '',                              // LOCALIZACION  
-      cliente: row[8] || '',                                   // CLIENTE
+      modelo: row[4] || '',                                    // Modelo (E)
+      comentarioHorario: row[5] || '',                         // Horario/Comentarios (F)
+      // Columnas G, H, I según tu orden - CORRECCIÓN DEL MAPEO
+      origen: row[6] || '',                                    // ORIGEN (G)
+      localizacion: row[7] || '',                              // LOCALIZACION (H)
+      cliente: row[8] || '',                                   // CLIENTE (I)
       // Campos del sistema
       interest: '',
       budget: '',
