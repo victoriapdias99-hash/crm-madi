@@ -97,7 +97,7 @@ class GoogleSheetsService {
     try {
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: `${sheetName}!A:I`, // Columnas A-I para incluir origen, localización y cliente
+        range: `${sheetName}!A:L`, // Ampliando a L para capturar todas las columnas
       });
 
       const rows = response.data.values || [];
