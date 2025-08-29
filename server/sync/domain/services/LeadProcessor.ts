@@ -19,6 +19,8 @@ export class LeadProcessor {
       telefono: this.sanitizePhone(rawLead.phone),
       email: this.sanitizeEmail(rawLead.email),
       ciudad: this.sanitizeCity(rawLead.city),
+      modelo: rawLead.modelo || '',
+      comentarioHorario: rawLead.comentarioHorario || '',
       marca: this.extractBrand(rawLead.campaign),
       origen: rawLead.origen || '',
       localizacion: rawLead.localizacion || '',

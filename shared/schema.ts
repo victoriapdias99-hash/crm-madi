@@ -72,7 +72,9 @@ export const opLead = pgTable("op_lead", {
   nombre: text("nombre").notNull(), // Con fallback 'S/N' 
   telefono: text("telefono").notNull(), // Siempre normalizado
   email: text("email"), // Opcional, siempre aceptado
-  ciudad: text("ciudad"),
+  ciudad: text("ciudad"), // También llamada "Localidad"
+  modelo: text("modelo"), // Modelo del auto
+  comentarioHorario: text("comentario_horario"), // Horario de contacto / Comentarios
   
   // Datos específicos de Google Sheets (columnas G, H, I)
   origen: text("origen"), // WhatsApp, Instagram, etc.

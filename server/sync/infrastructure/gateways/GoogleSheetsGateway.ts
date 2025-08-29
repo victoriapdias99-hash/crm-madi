@@ -176,9 +176,11 @@ export class GoogleSheetsGateway implements ISheetsGateway {
       city: lead.city || lead.ciudad || '',
       interest: lead.interest || lead.interes || '',
       budget: lead.budget || lead.presupuesto || '',
-      origen: lead.origen || '',      // Columna G
-      localizacion: lead.localizacion || '', // Columna H
-      cliente: lead.cliente || '',      // Columna I
+      modelo: lead.modelo || '',                    // Modelo del auto
+      comentarioHorario: lead.comentarioHorario || '', // Horario/Comentarios
+      origen: lead.origen || '',                    // ORIGEN
+      localizacion: lead.localizacion || '',        // LOCALIZACION
+      cliente: lead.cliente || '',                  // CLIENTE
       source: lead.source || 'google_sheets',
       campaign: lead.campaign || lead.campana || '',
       cost: lead.cost || lead.costo || '0'

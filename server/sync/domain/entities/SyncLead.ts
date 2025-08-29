@@ -11,6 +11,8 @@ export interface SyncLead {
   telefono: string;
   email: string;
   ciudad: string;
+  modelo: string;                   // Modelo del auto
+  comentarioHorario: string;        // Horario/Comentarios
   
   // Metadatos de origen
   marca: string;
@@ -53,6 +55,8 @@ export interface RawSheetLead {
   city: string;
   interest: string;
   budget: string;
+  modelo: string;                   // Modelo del auto
+  comentarioHorario: string;        // Horario/Comentarios
   origen: string;      // Columna G
   localizacion: string; // Columna H
   cliente: string;     // Columna I

@@ -9,7 +9,10 @@ interface SheetLead {
   city: string;
   interest: string;
   budget: string;
-  // Nuevas columnas desde Google Sheets
+  // Nuevos campos agregados
+  modelo: string;                    // Modelo del auto
+  comentarioHorario: string;         // Horario/Comentarios
+  // Columnas desde Google Sheets (G, H, I)
   origen: string;
   localizacion: string;
   cliente: string;
@@ -65,20 +68,23 @@ class GoogleSheetsService {
     if (!this.isValidRow(row)) return null;
 
     return {
-      timestamp: row[0] || new Date().toISOString(),
-      name: row[1] || '',
-      email: row[3] || '',
-      phone: row[2] || '',
-      city: row[4] || '',
-      interest: row[5] || '',
-      budget: row[5] || '',
-      // Nuevas columnas G, H, I
-      origen: row[6] || '',      // Columna G
-      localizacion: row[7] || '', // Columna H  
-      cliente: row[8] || '',      // Columna I
+      timestamp: row[0] || new Date().toISOString(),           // Fecha
+      name: row[1] || '',                                      // Nombre
+      phone: row[2] || '',                                     // Telefono
+      email: row[3] || '',                                     // Email (opcional)
+      city: row[3] || '',                                      // Localidad (mismo que email en algunas sheets)
+      modelo: row[4] || '',                                    // Modelo
+      comentarioHorario: row[5] || '',                         // Horario/Comentarios
+      // Columnas G, H, I según tu orden
+      origen: row[6] || '',                                    // ORIGEN
+      localizacion: row[7] || '',                              // LOCALIZACION  
+      cliente: row[8] || '',                                   // CLIENTE
+      // Campos del sistema
+      interest: '',
+      budget: '',
       source: 'google_sheets',
       campaign: sheetName,
-      cost: row[9] || '0'
+      cost: '0'
     };
   }
 
