@@ -63,6 +63,33 @@ export const leads = pgTable("leads", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Leads de Google Sheets (tabla optimizada para sincronización)
+export const opLead = pgTable("op_lead", {
+  id: serial("id").primaryKey(),
+  metaLeadId: text("meta_lead_id").unique().notNull(), // ID único garantizado
+  
+  // Información básica del lead
+  nombre: text("nombre").notNull(), // Con fallback 'S/N' 
+  telefono: text("telefono").notNull(), // Siempre normalizado
+  email: text("email"), // Opcional, siempre aceptado
+  ciudad: text("ciudad"),
+  
+  // Datos específicos de Google Sheets (columnas G, H, I)
+  origen: text("origen"), // WhatsApp, Instagram, etc.
+  localizacion: text("localizacion"), // Ubicación geográfica
+  cliente: text("cliente"), // Cliente específico
+  
+  // Metadatos de campaña
+  marca: text("marca").notNull(), // Fiat, Toyota, VW, etc.
+  campaign: text("campaign").notNull(), // Nombre de campaña original
+  
+  // Sistema
+  source: text("source").notNull().default("google_sheets"),
+  fechaCreacion: timestamp("fecha_creacion").notNull(), // Fecha original del lead
+  createdAt: timestamp("created_at").defaultNow(), // Fecha de inserción en DB
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Estadísticas diarias
 export const dailyStats = pgTable("daily_stats", {
   id: serial("id").primaryKey(),
@@ -299,6 +326,25 @@ export const insertLeadSchema = createInsertSchema(leads).pick({
   cost: true,
   leadDate: true,
 });
+
+// Schema para op_lead (Google Sheets)
+export const insertOpLeadSchema = createInsertSchema(opLead).pick({
+  metaLeadId: true,
+  nombre: true,
+  telefono: true,
+  email: true,
+  ciudad: true,
+  origen: true,
+  localizacion: true,
+  cliente: true,
+  marca: true,
+  campaign: true,
+  fechaCreacion: true,
+  source: true
+});
+
+export type InsertOpLead = z.infer<typeof insertOpLeadSchema>;
+export type SelectOpLead = typeof opLead.$inferSelect;
 
 export const insertDailyStatsSchema = createInsertSchema(dailyStats).pick({
   date: true,

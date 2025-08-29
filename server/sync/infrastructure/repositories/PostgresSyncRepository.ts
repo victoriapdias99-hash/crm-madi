@@ -1,6 +1,9 @@
 import { ISyncRepository } from '../../domain/interfaces/ISyncRepository';
 import { SyncLead, ProcessedSyncLead } from '../../domain/entities/SyncLead';
 import { SyncStatus } from '../../domain/entities/SyncResult';
+import { db } from '../../../db';
+import { opLead, insertOpLeadSchema, InsertOpLead } from '@shared/schema';
+import { sql } from 'drizzle-orm';
 
 /**
  * Implementación de repositorio para PostgreSQL usando el storage existente
@@ -25,31 +28,48 @@ export class PostgresSyncRepository implements ISyncRepository {
   }
 
   async getLeads(options?: { limit?: number; offset?: number }): Promise<SyncLead[]> {
-    await this.ensureStorageInitialized();
-    
     try {
-      const leads = await this.storage.getLeads({
-        limit: options?.limit || 1000,
-        offset: options?.offset || 0
-      });
+      // Obtener leads de la nueva tabla op_lead
+      const leads = await db.select()
+        .from(opLead)
+        .limit(options?.limit || 1000)
+        .offset(options?.offset || 0)
+        .orderBy(sql`${opLead.createdAt} DESC`);
 
-      // Mapear desde el formato del storage al formato de SyncLead
-      return leads.map(this.mapStorageLeadToSyncLead);
+      // Mapear desde el formato de op_lead al formato de SyncLead
+      return leads.map(this.mapOpLeadToSyncLead);
     } catch (error) {
-      console.error('Error getting leads from repository:', error);
+      console.error('Error getting leads from op_lead table:', error);
       return [];
     }
   }
 
   async createLead(lead: ProcessedSyncLead): Promise<SyncLead> {
-    await this.ensureStorageInitialized();
-    
     try {
-      const storageLeadData = this.mapSyncLeadToStorageFormat(lead);
-      const createdLead = await this.storage.createLead(storageLeadData);
-      return this.mapStorageLeadToSyncLead(createdLead);
+      // Mapear ProcessedSyncLead a InsertOpLead
+      const opLeadData: InsertOpLead = {
+        metaLeadId: lead.metaLeadId,
+        nombre: lead.nombre,
+        telefono: lead.normalizedPhone || lead.telefono,
+        email: lead.normalizedEmail || lead.email || null,
+        ciudad: lead.ciudad || null,
+        origen: lead.origen || null,
+        localizacion: lead.localizacion || null,
+        cliente: lead.normalizedClient || lead.cliente || null,
+        marca: lead.marca,
+        campaign: lead.campaign,
+        fechaCreacion: new Date(lead.fechaCreacion),
+        source: 'google_sheets'
+      };
+      
+      // Insertar en la nueva tabla op_lead
+      const result = await db.insert(opLead).values(opLeadData).returning();
+      const createdOpLead = result[0];
+      
+      // Mapear de vuelta a SyncLead
+      return this.mapOpLeadToSyncLead(createdOpLead);
     } catch (error) {
-      console.error('Error creating lead in repository:', error);
+      console.error('Error creating lead in op_lead table:', error);
       throw new Error(`Failed to create lead: ${error.message}`);
     }
   }
@@ -133,14 +153,14 @@ export class PostgresSyncRepository implements ISyncRepository {
   }
 
   async getLeadsCount(): Promise<number> {
-    await this.ensureStorageInitialized();
-    
     try {
-      const leads = await this.storage.getLeads({ limit: 1 });
-      // El storage actual no tiene un count directo, así que esta es una aproximación
-      return leads.length > 0 ? 10000 : 0; // Placeholder - necesitaría implementación real
+      // Contar leads en la nueva tabla op_lead
+      const result = await db.select({ count: sql<number>`count(*)` })
+        .from(opLead);
+      
+      return result[0]?.count || 0;
     } catch (error) {
-      console.error('Error getting leads count:', error);
+      console.error('Error getting op_lead count:', error);
       return 0;
     }
   }
@@ -190,23 +210,37 @@ export class PostgresSyncRepository implements ISyncRepository {
   }
 
   async findDuplicatesByMetaId(metaIds: string[]): Promise<SyncLead[]> {
-    await this.ensureStorageInitialized();
-    
     try {
-      const leads = await this.storage.getLeads({ limit: 10000 });
+      // Buscar en la nueva tabla op_lead por metaLeadId
+      const duplicates = await db.select()
+        .from(opLead)
+        .where(sql`${opLead.metaLeadId} IN ${sql.raw(`(${metaIds.map(id => `'${id}'`).join(', ')})`)}`);
       
-      const duplicates = leads.filter(lead => 
-        metaIds.includes(lead.metaLeadId || '')
-      );
-      
-      return duplicates.map(this.mapStorageLeadToSyncLead);
+      return duplicates.map(this.mapOpLeadToSyncLead);
     } catch (error) {
-      console.error('Error finding duplicates by metaId:', error);
+      console.error('Error finding duplicates by metaId in op_lead:', error);
       return [];
     }
   }
 
   // ========== MÉTODOS PRIVADOS DE MAPPING ==========
+
+  private mapOpLeadToSyncLead(opLeadData: any): SyncLead {
+    return {
+      metaLeadId: opLeadData.metaLeadId,
+      nombre: opLeadData.nombre,
+      telefono: opLeadData.telefono,
+      email: opLeadData.email || '',
+      ciudad: opLeadData.ciudad || '',
+      marca: opLeadData.marca,
+      origen: opLeadData.origen || '',
+      localizacion: opLeadData.localizacion || '',
+      cliente: opLeadData.cliente || '',
+      fechaCreacion: opLeadData.fechaCreacion.toISOString(),
+      source: opLeadData.source,
+      campaign: opLeadData.campaign
+    };
+  }
 
   private mapStorageLeadToSyncLead(storageLead: any): SyncLead {
     return {
