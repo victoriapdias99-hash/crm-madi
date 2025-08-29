@@ -2180,38 +2180,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/sheets/sync', async (req, res) => {
-    try {
-      console.log('Manual Google Sheets sync requested');
-      
-      // Usar sistema refactorizado
-      const { SyncFactory } = await import('./sync/infrastructure/config/SyncFactory');
-      const syncFullUseCase = SyncFactory.createSyncFullUseCase();
-      const syncResult = await syncFullUseCase.execute({
-        forceFullSync: true,
-        includeDashboardUpdate: true,
-        includeMetricsUpdate: false,
-        validateData: true,
-        skipDuplicateDetection: false,
-        batchSize: 100,
-        concurrency: 3
-      });
-      
-      res.json({
-        success: syncResult.success,
-        message: syncResult.success ? `Synced ${syncResult.leadsProcessed} leads using refactored system` : syncResult.error,
-        leadsCount: syncResult.leadsProcessed,
-        stats: syncResult.stats
-      });
-    } catch (error) {
-      console.error('Manual sync error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to sync Google Sheets',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
 
   app.get('/api/sheets/preview', async (req, res) => {
     try {
