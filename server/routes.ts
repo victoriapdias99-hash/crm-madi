@@ -20,156 +20,24 @@ import {
   createCampanaComercialSchema
 } from "@shared/schema";
 
-// Sistema avanzado de matching de nombres de clientes
-interface ClientMatchingRule {
-  clienteNombre: string[];
-  googleSheetsNames: string[];
-  matchType: 'exact' | 'contains' | 'startsWith' | 'endsWith' | 'includes' | 'custom';
-  customMatcher?: (clienteName: string, dataName: string) => boolean;
-}
+// LEGACY CODE REMOVED: ClientMatchingSystem migrado al nuevo sistema refactorizado
+// Ver: server/sync/domain/services/ClientMatcher.ts
 
-class ClientMatchingSystem {
-  private rules: ClientMatchingRule[] = [
-    // ITALY AUTOS
-    {
-      clienteNombre: ['italy autos'],
-      googleSheetsNames: ['chevrolet - italy'],
-      matchType: 'exact'
-    },
-    // NOVO GROUP (buscar en datos de Fiat)
-    {
-      clienteNombre: ['novo group'],
-      googleSheetsNames: ['fiat autos del sol', 'novo', 'pamela'],
-      matchType: 'contains'
-    },
-    // RENAULT (múltiples variaciones)
-    {
-      clienteNombre: ['renault', 'renault - javier cagiao'],
-      googleSheetsNames: ['renault'],
-      matchType: 'exact'
-    },
-    // PEUGEOT ALBENS
-    {
-      clienteNombre: ['peugeot albens'],
-      googleSheetsNames: ['peugeot albens', 'albens'],
-      matchType: 'contains'
-    },
-    // GRUPO QUIJADA (incluyendo AVEC)
-    {
-      clienteNombre: ['grupo quijada', 'avec - grupo quijada'],
-      googleSheetsNames: ['grupo quijada - peugeot', 'grupo quijada - citroen', 'avec - grupo quijada'],
-      matchType: 'contains'
-    },
-    // Regla genérica para nombres similares
-    {
-      clienteNombre: ['*'],
-      googleSheetsNames: ['*'],
-      matchType: 'custom',
-      customMatcher: (clienteName: string, dataName: string) => {
-        // Extrae palabras clave principales
-        const clienteWords = clienteName.split(/[-\s]+/).filter(word => word.length > 2);
-        const dataWords = dataName.split(/[-\s]+/).filter(word => word.length > 2);
-        
-        // Busca coincidencia de al menos 2 palabras
-        const matches = clienteWords.filter(word => 
-          dataWords.some(dWord => dWord.includes(word) || word.includes(dWord))
-        );
-        
-        return matches.length >= Math.min(2, clienteWords.length);
-      }
-    }
-  ];
-
-  isMatch(clienteName: string, dataName: string): boolean {
-    const clienteNameLower = clienteName.toLowerCase().trim();
-    const dataNameLower = dataName.toLowerCase().trim();
-
-    // Verificar reglas específicas primero
-    for (const rule of this.rules) {
-      if (rule.clienteNombre.includes('*')) continue; // Saltar regla genérica
-      
-      const matchesClientName = rule.clienteNombre.some(name => 
-        name === clienteNameLower || clienteNameLower.includes(name)
-      );
-      
-      if (!matchesClientName) continue;
-
-      // Verificar si coincide con algún nombre en Google Sheets
-      for (const sheetName of rule.googleSheetsNames) {
-        let isRuleMatch = false;
-        
-        switch (rule.matchType) {
-          case 'exact':
-            isRuleMatch = dataNameLower === sheetName;
-            break;
-          case 'contains':
-            isRuleMatch = dataNameLower.includes(sheetName) || sheetName.includes(dataNameLower);
-            break;
-          case 'startsWith':
-            isRuleMatch = dataNameLower.startsWith(sheetName);
-            break;
-          case 'endsWith':
-            isRuleMatch = dataNameLower.endsWith(sheetName);
-            break;
-          case 'includes':
-            isRuleMatch = dataNameLower.includes(sheetName);
-            break;
-        }
-        
-        if (isRuleMatch) return true;
-      }
-    }
-
-    // Aplicar regla genérica como último recurso
-    const genericRule = this.rules.find(rule => rule.clienteNombre.includes('*'));
-    if (genericRule && genericRule.customMatcher) {
-      return genericRule.customMatcher(clienteNameLower, dataNameLower);
-    }
-
-    return false;
-  }
-
-  // Método para agregar nuevas reglas dinámicamente
-  addRule(rule: ClientMatchingRule): void {
-    this.rules.unshift(rule); // Agregar al inicio para prioridad
-  }
-
-  // Método para debug - ver qué regla hizo match
-  findMatchingRule(clienteName: string, dataName: string): ClientMatchingRule | null {
-    const clienteNameLower = clienteName.toLowerCase().trim();
-    const dataNameLower = dataName.toLowerCase().trim();
-
-    for (const rule of this.rules) {
-      if (rule.clienteNombre.includes('*')) continue;
-      
-      const matchesClientName = rule.clienteNombre.some(name => 
-        name === clienteNameLower || clienteNameLower.includes(name)
-      );
-      
-      if (matchesClientName) {
-        for (const sheetName of rule.googleSheetsNames) {
-          let isRuleMatch = false;
-          
-          switch (rule.matchType) {
-            case 'exact':
-              isRuleMatch = dataNameLower === sheetName;
-              break;
-            case 'contains':
-              isRuleMatch = dataNameLower.includes(sheetName) || sheetName.includes(dataNameLower);
-              break;
-          }
-          
-          if (isRuleMatch) return rule;
-        }
-      }
-    }
-    
+// Función helper para usar el nuevo ClientMatcher
+function getClientMatcher() {
+  try {
+    const { SyncFactory } = require('./sync/infrastructure/config/SyncFactory');
+    return SyncFactory.getClientMatcher();
+  } catch (error) {
+    console.error('Error loading ClientMatcher:', error);
     return null;
   }
 }
 
+// Métodos addRule y findMatchingRule removidos - usar ClientMatcher del nuevo sistema
+
 // Instancia global del sistema de matching
-const clientMatchingSystem = new ClientMatchingSystem();
+// ClientMatchingSystem removido - usar nuevo sistema refactorizado
 
 interface WebSocketWithData extends WebSocket {
   userId?: number;
@@ -710,7 +578,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const nombreClienteBajo = cliente.nombreCliente.toLowerCase();
           
           // Usar el sistema de matching avanzado
-          const esMatch = clientMatchingSystem.isMatch(nombreClienteBajo, clienteBajo);
+          // Usar el nuevo sistema refactorizado
+          const clientMatcher = getClientMatcher();
+          const esMatch = clientMatcher ? clientMatcher.isMatch(nombreClienteBajo, clienteBajo) : false;
           
           if (esMatch) {
             datosParaCampana.push(dato);
@@ -1950,7 +1820,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API para gestionar el sistema de matching de clientes
   app.get('/api/client-matching/rules', async (req, res) => {
     try {
-      const rules = (clientMatchingSystem as any).rules || [];
+      // Usar el nuevo sistema refactorizado
+      const clientMatcher = getClientMatcher();
+      const rules = clientMatcher ? clientMatcher.getAllRules() : [];
       res.json(rules);
     } catch (error) {
       console.error('Error getting matching rules:', error);
@@ -1966,8 +1838,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'clienteName and dataName are required' });
       }
       
-      const isMatch = clientMatchingSystem.isMatch(clienteName, dataName);
-      const matchingRule = clientMatchingSystem.findMatchingRule(clienteName, dataName);
+      // Usar el nuevo sistema refactorizado
+      const clientMatcher = getClientMatcher();
+      const isMatch = clientMatcher ? clientMatcher.isMatch(clienteName, dataName) : false;
+      const matchingRule = clientMatcher ? clientMatcher.findMatchingRule(clienteName, dataName) : null;
       
       res.json({
         isMatch,
@@ -1991,7 +1865,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Invalid rule format' });
       }
       
-      clientMatchingSystem.addRule(rule);
+      // Usar el nuevo sistema refactorizado
+      const clientMatcher = getClientMatcher();
+      if (clientMatcher) {
+        clientMatcher.addRule(rule);
+      } else {
+        throw new Error('ClientMatcher no disponible');
+      }
       
       res.json({ success: true, message: 'Rule added successfully' });
     } catch (error) {
