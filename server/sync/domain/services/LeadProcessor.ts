@@ -40,23 +40,15 @@ export class LeadProcessor {
     const normalizedEmail = this.normalizeEmail(syncLead.email);
     const normalizedClient = this.normalizeClientName(syncLead.cliente);
     
-    // Validaciones de negocio
-    if (!this.isValidPhone(normalizedPhone)) {
-      validationErrors.push('Teléfono inválido');
-    }
+    // Normalizar nombre: usar 'S/N' si está vacío
+    const normalizedName = syncLead.nombre?.trim() || 'S/N';
     
-    if (syncLead.email && !this.isValidEmail(normalizedEmail)) {
-      validationErrors.push('Email inválido');
-    }
-    
-    if (!syncLead.nombre?.trim()) {
-      validationErrors.push('Nombre requerido');
-    }
-    
-    const isValid = validationErrors.length === 0;
+    // Aceptar TODOS los leads sin validaciones de rechazo
+    const isValid = true;
     
     return {
       ...syncLead,
+      nombre: normalizedName,
       normalizedPhone,
       normalizedEmail,
       normalizedClient,
