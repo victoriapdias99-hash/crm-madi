@@ -69,26 +69,8 @@ app.use((req, res, next) => {
     console.error('❌ Error iniciando servicio Manychat:', (error as Error)?.message || 'Error desconocido');
   }
 
-  // Inicializar sincronización automática de Google Sheets
-  try {
-    const { GoogleSheetsSyncService } = await import('./google-sheets-sync-service');
-    const googleSheetsModule = await import('./google-sheets');
-    
-    // Crear un adaptador simple para el servicio
-    const sheetsServiceAdapter = {
-      fetchDataFromSheets: async () => {
-        // Usar la función existente de sincronización
-        console.log('🔄 Adaptador: obteniendo datos de Google Sheets...');
-        return []; // Placeholder, se implementará correctamente en el servicio
-      }
-    };
-    
-    const syncService = new GoogleSheetsSyncService(sheetsServiceAdapter);
-    syncService.startAutoSync();
-    console.log('✅ Sincronización automática Google Sheets iniciada (cada 15 minutos)');
-  } catch (error) {
-    console.error('❌ Error iniciando sincronización Google Sheets:', (error as Error)?.message || 'Error desconocido');
-  }
+  // NOTA: Sincronización automática ahora manejada por el sistema refactorizado
+  console.log('🧪 Modo testing activado - sincronización manual únicamente');
 
   const server = await registerRoutes(app);
 

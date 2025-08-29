@@ -2753,21 +2753,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/sync/force', async (req, res) => {
     try {
-      const { GoogleSheetsSyncService } = await import('./google-sheets-sync-service');
+      // Utilizar el sistema de sincronización refactorizado
+      const syncServiceModule = await import('./sync-service');
+      const result = await syncServiceModule.syncService.executeSyncFull();
       
-      // Crear adaptador que usa el servicio existente
-      const sheetsServiceAdapter = {
-        fetchDataFromSheets: async () => {
-          // Llamar directamente a getAllLeadsFromSheets que es el método correcto
-          const allLeads = await googleSheetsService.getAllLeadsFromSheets();
-          return allLeads || [];
-        }
-      };
-      
-      const syncService = new GoogleSheetsSyncService(sheetsServiceAdapter);
-      await syncService.performSync();
-      
-      res.json({ message: 'Sync forced successfully' });
+      res.json({ 
+        message: result.success ? 'Sync forced successfully' : 'Sync completed with warnings',
+        details: result
+      });
     } catch (error) {
       console.error('Error forcing sync:', error);
       res.status(500).json({ error: 'Failed to force sync' });

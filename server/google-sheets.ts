@@ -669,33 +669,6 @@ class GoogleSheetsService {
     }
   }
 
-  async startPeriodicSync(callback: (leads: SheetLead[]) => void) {
-    if (!this.sheets) {
-      console.log('Google Sheets API not configured, skipping periodic sync');
-      return;
-    }
-
-    // Sync every 5 minutes
-    cron.schedule('*/5 * * * *', async () => {
-      console.log('Syncing data from Google Sheets...');
-      try {
-        const leads = await this.getAllLeadsFromSheets();
-        callback(leads);
-        console.log(`Synced ${leads.length} leads from Google Sheets`);
-      } catch (error) {
-        console.error('Error during periodic sync:', error);
-      }
-    });
-
-    // Initial sync
-    try {
-      const leads = await this.getAllLeadsFromSheets();
-      callback(leads);
-      console.log(`Initial sync: ${leads.length} leads from Google Sheets`);
-    } catch (error) {
-      console.error('Error during initial sync:', error);
-    }
-  }
 
   /**
    * Obtiene datos específicos de una pestaña de marca
