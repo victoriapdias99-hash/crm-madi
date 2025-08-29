@@ -2,18 +2,21 @@
 
 ## Descripción General
 
-El servicio de sincronización ha sido refactorizado para separar responsabilidades y permitir su uso en diferentes contextos del CRM. Ahora incluye:
+El servicio de sincronización ha sido completamente refactorizado y optimizado (Agosto 2025). La arquitectura limpia incluye:
 
 - **SyncService centralizado**: Maneja toda la lógica de sincronización
-- **Múltiples endpoints**: Para diferentes tipos de sincronización
+- **Sistema unificado**: Solo endpoints `/api/sync/*` (endpoints duplicados eliminados)
+- **Código optimizado**: Métodos redundantes consolidados, imports sin uso eliminados
 - **Separación de responsabilidades**: Lógica reutilizable en distintos contextos
 - **Estado y monitoreo**: Tracking del estado de sincronización
 
-## Endpoints Disponibles
+## Endpoints Disponibles (Sistema Limpio)
+
+> **Nota**: Tras la limpieza del 29/08/2025, solo los endpoints `/api/sync/*` están activos. Endpoints duplicados han sido eliminados.
 
 ### 1. Sincronización Manual Completa
 ```bash
-POST /api/dashboard/sync-all-sheets
+POST /api/sync/full
 # Sincroniza todas las hojas de Google Sheets con todas las opciones habilitadas
 ```
 
@@ -25,7 +28,7 @@ POST /api/dashboard/sync-all-sheets
 
 **Ejemplo:**
 ```bash
-curl -X POST "http://localhost:5000/api/dashboard/sync-all-sheets?sheets=Fiat,Peugeot&includeDashboard=false"
+curl -X POST "http://localhost:5000/api/sync/full?sheets=Fiat,Peugeot&includeDashboard=false"
 ```
 
 ### 2. Sincronización Incremental
@@ -147,6 +150,23 @@ async function updateDashboardAfterChanges() {
 - Fácil agregar nuevos tipos de sincronización
 - Estructura preparada para múltiples fuentes de datos
 - Configuración granular por contexto
+
+## Sistema Actualizado (Agosto 29, 2025)
+
+### Limpieza y Optimización Completada ✅
+
+**Cambios Realizados:**
+- ❌ **Endpoint eliminado**: `/api/sheets/sync` (duplicaba funcionalidad)
+- ❌ **Método eliminado**: `getLeadsBySheet()` de GoogleSheetsService (duplicaba `getSheetData()`)
+- ❌ **Import eliminado**: `node-cron` sin uso de google-sheets.ts
+- ✅ **50+ líneas de código redundante eliminadas**
+- ✅ **Sistema streamlined**: Solo endpoints `/api/sync/*` activos
+- ✅ **Funcionalidad preservada**: Cero cambios que rompan el sistema
+
+**Sistema Final:**
+- **Endpoints Activos**: Solo `/api/sync/*` (refactorizado)
+- **Código Limpio**: Sin duplicaciones ni imports sin uso
+- **Documentación Actualizada**: Reflejando el sistema actual
 
 ## Próximos Pasos Sugeridos
 
