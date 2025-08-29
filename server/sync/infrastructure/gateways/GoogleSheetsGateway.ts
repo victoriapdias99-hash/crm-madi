@@ -119,14 +119,15 @@ export class GoogleSheetsGateway implements ISheetsGateway {
       const sheetNames = await this.googleSheetsService.getAvailableSheetNames();
       
       console.log(`📋 GoogleSheetsGateway: Encontrados ${sheetNames.length} sheets disponibles: ${sheetNames.join(', ')}`);
+      
+      if (sheetNames.length === 0) {
+        throw new Error('No se encontraron pestañas disponibles en Google Sheets');
+      }
+      
       return sheetNames;
     } catch (error) {
-      console.error('Error getting available sheet names:', error);
-      
-      // Fallback a lista fija si falla la detección automática
-      const fallbackSheets = ['Fiat', 'Peugeot', 'Citroen', 'Toyota', 'Chevrolet', 'Renault', 'VW', 'Jeep', 'Ford'];
-      console.log(`⚠️ GoogleSheetsGateway: Usando fallback sheets: ${fallbackSheets.join(', ')}`);
-      return fallbackSheets;
+      console.error('❌ Error crítico obteniendo nombres de sheets:', error);
+      throw new Error(`Falló la detección automática de pestañas: ${error.message}`);
     }
   }
 

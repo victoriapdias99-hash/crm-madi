@@ -20,18 +20,8 @@ export const SYNC_CONFIG = {
   ENABLE_DEBUG_LOGGING: process.env.NODE_ENV === 'development',
   LOG_SYNC_PERFORMANCE: true,
   
-  // Sheets
-  AVAILABLE_SHEETS: [
-    'Fiat',
-    'Peugeot', 
-    'Citroen',
-    'Toyota',
-    'Chevrolet',
-    'Renault',
-    'VW',
-    'Jeep',
-    'Ford'
-  ],
+  // Sheets - DETECCIÓN AUTOMÁTICA (sin lista fija)
+  // Las pestañas se detectan automáticamente usando Google Sheets API
   
   // Columnas de Google Sheets
   SHEET_COLUMNS: {
@@ -124,10 +114,8 @@ export const validateConfig = (): boolean => {
     return false;
   }
   
-  if (config.AVAILABLE_SHEETS.length === 0) {
-    console.error('❌ Config error: AVAILABLE_SHEETS cannot be empty');
-    return false;
-  }
+  // NOTA: Ya no validamos AVAILABLE_SHEETS porque se detectan automáticamente
+  // Las pestañas se obtienen dinámicamente de Google Sheets API
   
   console.log('✅ Sync configuration validated successfully');
   return true;

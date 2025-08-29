@@ -2900,6 +2900,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== REGISTRO DE RUTAS DEL SISTEMA REFACTORIZADO ==========
+  
+  // Importar y registrar rutas del sync refactorizado
+  try {
+    console.log('🔄 Registrando rutas del sistema de sincronización refactorizado...');
+    const { createSyncRoutes, syncLoggingMiddleware } = await import('./sync/presentation/routes/sync-routes');
+    
+    // Aplicar middleware específico de sync
+    app.use('/api/sync', syncLoggingMiddleware);
+    
+    // Registrar todas las rutas de sync (/api/sync/*)
+    app.use('/api/sync', createSyncRoutes());
+    
+    console.log('✅ Rutas del sistema refactorizado registradas: /api/sync/*');
+  } catch (error) {
+    console.error('❌ Error registrando rutas del sistema refactorizado:', error);
+  }
+
   return httpServer;
 }
 
