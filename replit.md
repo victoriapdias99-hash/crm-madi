@@ -4,6 +4,15 @@
 This project is a real-time dashboard for Meta Ads lead management, specifically designed for the automotive sector in the Spanish market. Its primary purpose is to centralize and manage lead generation data from Meta Ads campaigns, integrating with Google Sheets for lead synchronization and directly with the Meta Ads API for campaign spending metrics. Key capabilities include real-time statistics, automated data synchronization, comprehensive lead tracking, and a full client management system (ABM). The business vision is to provide automotive businesses with a powerful tool for optimizing their Meta Ads campaigns and improving lead conversion efficiency.
 
 ## Recent Updates (August 2025)
+### Google Sheets Synchronization System Cleanup ✅ (August 29, 2025)
+- **Duplicate Endpoints Removed**: Eliminated redundant `/api/sheets/sync` endpoint that duplicated functionality of the refactored system
+- **Method Consolidation**: Removed duplicate `getLeadsBySheet()` method from GoogleSheetsService, keeping only `getSheetData()` as the main method
+- **Import Cleanup**: Removed unused `node-cron` import from google-sheets.ts (cron job was previously removed)
+- **System Streamlined**: Google Sheets synchronization now uses exclusively the refactored `/api/sync/*` endpoints for all operations
+- **Code Quality Improved**: Eliminated approximately 50 lines of redundant code without affecting functionality
+- **Zero Breaking Changes**: All existing functionality preserved while removing duplicate processes
+- **Production Validated**: System tested and confirmed working correctly after cleanup
+
 ### Enhanced MetaLeadId with Client Information System Implemented ✅ (August 26, 2025)
 - **Critical Field Mapping Fixed**: Resolved synchronization issues where Google Sheets fields were incorrectly mapped (sheetLead.telefono vs sheetLead.phone)
 - **Enhanced MetaLeadId Format**: Upgraded from simple format to comprehensive identifier including client information for superior duplicate detection
@@ -60,9 +69,9 @@ This project is a real-time dashboard for Meta Ads lead management, specifically
   - Column I (cliente): Specific client associated with lead
 - **Refactored Sync Service**: Created centralized `SyncService` with separation of responsibilities for CRM-wide reuse
 - **Multiple Sync Endpoints**: Added specialized endpoints for different synchronization contexts:
-  - `/api/dashboard/sync-all-sheets`: Full manual synchronization with options
+  - `/api/sync/full`: Full manual synchronization with options (refactored system)
   - `/api/sync/incremental`: Incremental sync for new data only
-  - `/api/sync/status`: Real-time sync status monitoring
+  - `/api/sync/status`: Real-time sync status monitoring  
   - `/api/sync/sheets/:sheetNames`: Brand-specific synchronization
 - **Enhanced Configurability**: Flexible sync options (forceFullSync, includeDashboard, includeMetrics, specificSheets)
 - **Data Validation**: System now captures and validates new column data from 3,955+ leads with extended metadata
