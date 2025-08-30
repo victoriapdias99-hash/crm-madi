@@ -139,14 +139,14 @@ export class SyncSmartUseCase {
         
         console.log(`📊 ${sheetName}: ${currentCount}/${totalCount} registros`);
         
-        // Si está incompleta, añadir a la lista de procesamiento
-        if (currentCount < totalCount) {
-          incompleteSheets.push({
-            name: sheetName,
-            currentCount,
-            totalCount
-          });
-        }
+        // SIEMPRE procesar todas las marcas para detectar registros nuevos
+        // No importa si DB tiene más registros que Google Sheets (duplicados anteriores)
+        incompleteSheets.push({
+          name: sheetName,
+          currentCount,
+          totalCount
+        });
+        console.log(`🔄 ${sheetName} agregada a procesamiento para verificar registros nuevos`);
       }
 
       const totalPending = incompleteSheets.reduce((sum, sheet) => sum + (sheet.totalCount - sheet.currentCount), 0);

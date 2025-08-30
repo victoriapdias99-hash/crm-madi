@@ -2744,41 +2744,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.error('❌ Error registrando rutas del sistema refactorizado:', error);
   }
 
-  // ========== ENDPOINT TEMPORAL DE DEPURACIÓN ==========
-  app.get('/api/debug/peugeot-raw', async (req, res) => {
-    try {
-      console.log('🔍 DEBUG: Obteniendo datos raw de Peugeot...');
-      
-      // Obtener datos directamente del servicio de Google Sheets
-      const rawData = await googleSheetsService.getSheetData('Peugeot');
-      
-      // Obtener los últimos 10 registros
-      const lastRecords = rawData.slice(-10);
-      
-      console.log(`📊 DEBUG: ${rawData.length} registros totales, mostrando últimos 10`);
-      
-      res.json({
-        totalRecords: rawData.length,
-        lastRecords: lastRecords.map((record, index) => ({
-          index: rawData.length - 10 + index,
-          timestamp: record.timestamp,
-          name: record.name,
-          phone: record.phone,
-          city: record.city,
-          modelo: record.modelo,
-          comentarioHorario: record.comentarioHorario,
-          origen: record.origen,
-          localizacion: record.localizacion,
-          cliente: record.cliente,
-          isValidRow: !!(record.timestamp && record.name) // Simular validación
-        }))
-      });
-      
-    } catch (error) {
-      console.error('❌ Error en debug Peugeot:', error);
-      res.status(500).json({ error: 'Error obteniendo datos de debug', details: error.message });
-    }
-  });
 
   return httpServer;
 }
