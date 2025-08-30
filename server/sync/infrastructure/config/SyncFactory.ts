@@ -2,6 +2,7 @@ import { SyncController } from '../../presentation/controllers/SyncController';
 import { SyncFullUseCase } from '../../application/usecases/SyncFullUseCase';
 import { SyncIncrementalUseCase } from '../../application/usecases/SyncIncrementalUseCase';
 import { SyncSpecificSheetsUseCase } from '../../application/usecases/SyncSpecificSheetsUseCase';
+import { SyncSmartUseCase } from '../../application/usecases/SyncSmartUseCase';
 import { PostgresSyncRepository } from '../repositories/PostgresSyncRepository';
 import { GoogleSheetsGateway } from '../gateways/GoogleSheetsGateway';
 import { LeadProcessor } from '../../domain/services/LeadProcessor';
@@ -24,11 +25,13 @@ export class SyncFactory {
     const syncFullUseCase = this.createSyncFullUseCase();
     const syncIncrementalUseCase = this.createSyncIncrementalUseCase();
     const syncSpecificSheetsUseCase = this.createSyncSpecificSheetsUseCase();
+    const syncSmartUseCase = this.createSyncSmartUseCase();
 
     return new SyncController(
       syncFullUseCase,
       syncIncrementalUseCase,
-      syncSpecificSheetsUseCase
+      syncSpecificSheetsUseCase,
+      syncSmartUseCase
     );
   }
 
@@ -64,6 +67,17 @@ export class SyncFactory {
       this.getSheetsGateway(),
       this.getLeadProcessor(),
       this.getClientMatcher()
+    );
+  }
+
+  /**
+   * Crea caso de uso para sincronización inteligente
+   */
+  static createSyncSmartUseCase(): SyncSmartUseCase {
+    return new SyncSmartUseCase(
+      this.getSyncRepository(),
+      this.getSheetsGateway(),
+      this.getLeadProcessor()
     );
   }
 

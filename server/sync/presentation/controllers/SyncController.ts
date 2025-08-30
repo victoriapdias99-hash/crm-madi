@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { SyncFullUseCase } from '../../application/usecases/SyncFullUseCase';
 import { SyncIncrementalUseCase } from '../../application/usecases/SyncIncrementalUseCase';
 import { SyncSpecificSheetsUseCase } from '../../application/usecases/SyncSpecificSheetsUseCase';
+import { SyncSmartUseCase } from '../../application/usecases/SyncSmartUseCase';
 import { mapSyncRequestToOptions, SyncRequestDto } from '../../application/dto/SyncOptions';
 import { mapSyncResultToResponse } from '../../application/dto/SyncResultDto';
 
@@ -13,7 +14,8 @@ export class SyncController {
   constructor(
     private syncFullUseCase: SyncFullUseCase,
     private syncIncrementalUseCase: SyncIncrementalUseCase,
-    private syncSpecificSheetsUseCase: SyncSpecificSheetsUseCase
+    private syncSpecificSheetsUseCase: SyncSpecificSheetsUseCase,
+    private syncSmartUseCase: SyncSmartUseCase
   ) {}
 
   /**
@@ -68,6 +70,38 @@ export class SyncController {
       res.status(statusCode).json(response);
     } catch (error: any) {
       console.error('❌ SyncController: Error en sincronización incremental:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error interno del servidor',
+        error: error.message,
+        timestamp: new Date().toISOString(),
+        leadsProcessed: 0,
+        duration: 0,
+        durationFormatted: '0s'
+      });
+    }
+  }
+
+  /**
+   * POST /api/sync/smart
+   * Sincronización inteligente que continúa desde donde se quedó cada marca
+   */
+  async syncSmart(req: Request, res: Response): Promise<void> {
+    try {
+      const requestDto: SyncRequestDto = req.body;
+      const options = mapSyncRequestToOptions(requestDto);
+      
+      console.log('🧠 SyncController: Iniciando sincronización inteligente...', options);
+      
+      const result = await this.syncSmartUseCase.execute(options);
+      const response = mapSyncResultToResponse(result);
+      
+      console.log(`${result.success ? '✅' : '❌'} SyncController: Sincronización inteligente ${result.success ? 'exitosa' : 'fallida'}`);
+      
+      const statusCode = result.success ? 200 : 500;
+      res.status(statusCode).json(response);
+    } catch (error: any) {
+      console.error('❌ SyncController: Error en sincronización inteligente:', error);
       res.status(500).json({
         success: false,
         message: 'Error interno del servidor',

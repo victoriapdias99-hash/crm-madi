@@ -31,6 +31,14 @@ export function createSyncRoutes(): Router {
   });
 
   /**
+   * POST /api/sync/smart
+   * Sincronización inteligente que continúa desde donde se quedó cada marca
+   */
+  router.post('/smart', (req, res) => {
+    syncController.syncSmart(req, res);
+  });
+
+  /**
    * POST /api/sync/sheets/:sheetNames
    * Sincronización de sheets específicos (separados por coma)
    * Ejemplo: /api/sync/sheets/Fiat,Peugeot,Toyota
