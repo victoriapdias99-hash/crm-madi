@@ -4,18 +4,23 @@ import { ISyncRepository } from '../../domain/interfaces/ISyncRepository';
 import { ISheetsGateway } from '../../domain/interfaces/ISheetsGateway';
 import { LeadProcessor } from '../../domain/services/LeadProcessor';
 import { ClientMatcher } from '../../domain/services/ClientMatcher';
+import { DuplicateDetector } from '../../domain/services/DuplicateDetector';
 
 /**
  * Caso de uso para sincronización de sheets específicos
  * Permite sincronizar solo pestañas seleccionadas de Google Sheets
  */
 export class SyncSpecificSheetsUseCase {
+  private duplicateDetector: DuplicateDetector;
+  
   constructor(
     private syncRepository: ISyncRepository,
     private sheetsGateway: ISheetsGateway,
     private leadProcessor: LeadProcessor,
     private clientMatcher: ClientMatcher
-  ) {}
+  ) {
+    this.duplicateDetector = new DuplicateDetector();
+  }
 
   async execute(sheetNames: string[], options: SyncOptions = {}): Promise<SyncResult> {
     const startTime = Date.now();
@@ -99,9 +104,34 @@ export class SyncSpecificSheetsUseCase {
       const syncLeads = allRawLeads.map(raw => this.leadProcessor.convertRawToSyncLead(raw));
       const processedLeads = this.leadProcessor.processLeadsBatch(syncLeads);
 
-      // Guardar todos los leads válidos
+      // Filtrar duplicados usando DuplicateDetector mejorado
+      await this.syncRepository.updateSyncStatus({
+        currentOperation: 'Detectando duplicados'
+      });
+      
       const validLeads = processedLeads.filter(lead => lead.isValid);
-      const savedCount = await this.syncRepository.createLeadsBatch(validLeads);
+      
+      // Obtener leads existentes para detección de duplicados
+      const existingLeads = await this.syncRepository.getLeads({ limit: 200000 });
+      console.log(`🔍 Comparando contra ${existingLeads.length} leads existentes`);
+      
+      // Detectar duplicados usando el sistema mejorado
+      const leadsWithDuplicates = this.duplicateDetector.detectDuplicatesAgainstExisting(
+        validLeads,
+        existingLeads
+      );
+      
+      const newLeads = leadsWithDuplicates.filter(lead => !lead.isDuplicate);
+      const duplicatesDetected = leadsWithDuplicates.length - newLeads.length;
+      
+      console.log(`📊 De ${validLeads.length} leads válidos: ${newLeads.length} nuevos, ${duplicatesDetected} duplicados detectados`);
+
+      // Guardar solo los leads nuevos
+      await this.syncRepository.updateSyncStatus({
+        currentOperation: 'Guardando en base de datos'
+      });
+      
+      const savedCount = await this.syncRepository.createLeadsBatch(newLeads);
 
       // Actualizar estado final
       await this.syncRepository.updateSyncStatus({
@@ -116,8 +146,8 @@ export class SyncSpecificSheetsUseCase {
       const details = {
         newLeads: savedCount,
         updatedLeads: 0,
-        skippedLeads: allRawLeads.length - savedCount,
-        duplicatesFound: 0,
+        skippedLeads: allRawLeads.length - validLeads.length,
+        duplicatesFound: duplicatesDetected,
         validationErrors: processedLeads.filter(l => !l.isValid).length,
         sheetsProcessed: validSheets,
         clientsMatched: this.calculateClientsMatched(processedLeads),

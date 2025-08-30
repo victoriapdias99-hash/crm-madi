@@ -4,18 +4,23 @@ import { ISyncRepository } from '../../domain/interfaces/ISyncRepository';
 import { ISheetsGateway } from '../../domain/interfaces/ISheetsGateway';
 import { LeadProcessor } from '../../domain/services/LeadProcessor';
 import { ClientMatcher } from '../../domain/services/ClientMatcher';
+import { DuplicateDetector } from '../../domain/services/DuplicateDetector';
 
 /**
  * Caso de uso para sincronización completa
  * Orquesta el proceso completo de sincronización desde Google Sheets
  */
 export class SyncFullUseCase {
+  private duplicateDetector: DuplicateDetector;
+  
   constructor(
     private syncRepository: ISyncRepository,
     private sheetsGateway: ISheetsGateway,
     private leadProcessor: LeadProcessor,
     private clientMatcher: ClientMatcher
-  ) {}
+  ) {
+    this.duplicateDetector = new DuplicateDetector();
+  }
 
   async execute(options: SyncOptions = {}): Promise<SyncResult> {
     const startTime = Date.now();
@@ -50,13 +55,34 @@ export class SyncFullUseCase {
       
       console.log(`🔄 Procesados ${processedLeads.length} leads`);
 
-      // 3. Guardar todos los leads válidos
+      // 3. Filtrar duplicados usando el DuplicateDetector mejorado
+      await this.syncRepository.updateSyncStatus({
+        currentOperation: 'Detectando duplicados'
+      });
+
+      const validLeads = processedLeads.filter(lead => lead.isValid);
+      
+      // Obtener todos los leads existentes para detección de duplicados
+      const existingLeads = await this.syncRepository.getLeads({ limit: 200000 });
+      console.log(`🔍 Comparando contra ${existingLeads.length} leads existentes`);
+      
+      // Detectar duplicados usando el sistema mejorado
+      const leadsWithDuplicates = this.duplicateDetector.detectDuplicatesAgainstExisting(
+        validLeads,
+        existingLeads
+      );
+      
+      const newLeads = leadsWithDuplicates.filter(lead => !lead.isDuplicate);
+      const duplicatesDetected = leadsWithDuplicates.length - newLeads.length;
+      
+      console.log(`📊 De ${validLeads.length} leads válidos: ${newLeads.length} nuevos, ${duplicatesDetected} duplicados detectados`);
+
+      // 4. Guardar solo los leads nuevos
       await this.syncRepository.updateSyncStatus({
         currentOperation: 'Guardando en base de datos'
       });
 
-      const validLeads = processedLeads.filter(lead => lead.isValid);
-      const savedCount = await this.syncRepository.createLeadsBatch(validLeads);
+      const savedCount = await this.syncRepository.createLeadsBatch(newLeads);
       
       console.log(`✅ Guardados ${savedCount} leads nuevos en PostgreSQL`);
 
@@ -68,8 +94,8 @@ export class SyncFullUseCase {
         progress: undefined
       });
 
-      // 6. Calcular estadísticas
-      const details = this.calculateSyncDetails(processedLeads, rawLeads, options);
+      // 6. Calcular estadísticas con duplicados detectados
+      const details = this.calculateSyncDetails(processedLeads, rawLeads, options, duplicatesDetected);
 
       console.log('✅ Sincronización completa exitosa');
 
@@ -108,12 +134,14 @@ export class SyncFullUseCase {
   private calculateSyncDetails(
     processedLeads: any[], 
     rawLeads: any[], 
-    options: SyncOptions
+    options: SyncOptions,
+    duplicatesDetected: number = 0
   ): SyncDetails {
-    const newLeads = processedLeads.filter(l => l.isValid).length;
-    const duplicatesFound = 0;
+    const validLeads = processedLeads.filter(l => l.isValid).length;
+    const newLeads = validLeads - duplicatesDetected;
+    const duplicatesFound = duplicatesDetected;
     const validationErrors = processedLeads.filter(l => !l.isValid).length;
-    const skippedLeads = rawLeads.length - newLeads;
+    const skippedLeads = rawLeads.length - validLeads;
 
     // Calcular clientes matched
     const clientsMatched: Record<string, number> = {};
@@ -131,7 +159,7 @@ export class SyncFullUseCase {
       newLeads,
       updatedLeads: 0, // Por ahora no actualizamos leads existentes
       skippedLeads,
-      duplicatesFound: 0,
+      duplicatesFound,
       validationErrors,
       sheetsProcessed,
       clientsMatched
