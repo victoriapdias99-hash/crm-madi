@@ -20,6 +20,9 @@ export interface SyncLead {
   localizacion: string;  // Ubicación geográfica
   cliente: string;       // Cliente específico asociado
   
+  // Control de sincronización
+  googleSheetsRowNumber?: number;   // Número de fila exacto en Google Sheets
+  
   // Información temporal
   fechaCreacion: string;
   
@@ -60,6 +63,7 @@ export interface RawSheetLead {
   origen: string;      // Columna G
   localizacion: string; // Columna H
   cliente: string;     // Columna I
+  googleSheetsRowNumber?: number;   // Número de fila exacto en Google Sheets
   source: string;
   campaign: string;
   cost: string;

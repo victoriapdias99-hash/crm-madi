@@ -25,6 +25,7 @@ export class LeadProcessor {
       origen: rawLead.origen || '',
       localizacion: rawLead.localizacion || '',
       cliente: rawLead.cliente || '',
+      googleSheetsRowNumber: rawLead.googleSheetsRowNumber,
       fechaCreacion: this.parseTimestamp(rawLead.timestamp),
       source: 'google_sheets',
       campaign: rawLead.campaign

@@ -58,6 +58,7 @@ export class PostgresSyncRepository implements ISyncRepository {
         cliente: lead.normalizedClient || lead.cliente || null,
         marca: lead.marca,
         campaign: lead.campaign,
+        googleSheetsRowNumber: lead.googleSheetsRowNumber || null,
         fechaCreacion: new Date(lead.fechaCreacion),
         source: 'google_sheets'
       };

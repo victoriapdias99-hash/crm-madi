@@ -181,6 +181,7 @@ export class GoogleSheetsGateway implements ISheetsGateway {
       origen: lead.origen || '',                    // ORIGEN
       localizacion: lead.localizacion || '',        // LOCALIZACION
       cliente: lead.cliente || '',                  // CLIENTE
+      googleSheetsRowNumber: lead.googleSheetsRowNumber, // Número de fila de Google Sheets
       source: lead.source || 'google_sheets',
       campaign: lead.campaign || lead.campana || '',
       cost: lead.cost || lead.costo || '0'

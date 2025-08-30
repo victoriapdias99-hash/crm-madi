@@ -85,6 +85,9 @@ export const opLead = pgTable("op_lead", {
   marca: text("marca").notNull(), // Fiat, Toyota, VW, etc.
   campaign: text("campaign").notNull(), // Nombre de campaña original
   
+  // Control de sincronización con Google Sheets
+  googleSheetsRowNumber: integer("google_sheets_row_number"), // Número de fila exacto en Google Sheets
+  
   // Sistema
   source: text("source").notNull().default("google_sheets"),
   fechaCreacion: timestamp("fecha_creacion").notNull(), // Fecha original del lead
@@ -341,6 +344,7 @@ export const insertOpLeadSchema = createInsertSchema(opLead).pick({
   cliente: true,
   marca: true,
   campaign: true,
+  googleSheetsRowNumber: true,
   fechaCreacion: true,
   source: true
 });

@@ -16,6 +16,7 @@ interface SheetLead {
   origen: string;
   localizacion: string;
   cliente: string;
+  googleSheetsRowNumber?: number;    // Número de fila exacto en Google Sheets
   source: string;
   campaign: string;
   cost: string;
@@ -64,7 +65,7 @@ class GoogleSheetsService {
     return row && row.length >= 2 && row[0] && row[1];
   }
 
-  private parseRowToLead(row: any[], sheetName: string): SheetLead | null {
+  private parseRowToLead(row: any[], sheetName: string, rowIndex: number): SheetLead | null {
     if (!this.isValidRow(row)) return null;
 
     return {
@@ -79,6 +80,7 @@ class GoogleSheetsService {
       origen: row[6] || '',                                    // ORIGEN (G)
       localizacion: row[7] || '',                              // LOCALIZACION (H)
       cliente: row[8] || '',                                   // CLIENTE (I)
+      googleSheetsRowNumber: rowIndex + 1,                     // Número de fila (1-indexed como Google Sheets)
       // Campos del sistema
       interest: '',
       budget: '',
@@ -105,7 +107,7 @@ class GoogleSheetsService {
 
       // Skip header row (index 0)
       for (let i = 1; i < rows.length; i++) {
-        const lead = this.parseRowToLead(rows[i], sheetName);
+        const lead = this.parseRowToLead(rows[i], sheetName, i);
         if (lead) {
           leads.push(lead);
         }
