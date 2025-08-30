@@ -3,17 +3,22 @@ import { SyncResult, SyncDetails } from '../../domain/entities/SyncResult';
 import { ISyncRepository } from '../../domain/interfaces/ISyncRepository';
 import { ISheetsGateway } from '../../domain/interfaces/ISheetsGateway';
 import { LeadProcessor } from '../../domain/services/LeadProcessor';
+import { DuplicateDetector } from '../../domain/services/DuplicateDetector';
 
 /**
  * Caso de uso para sincronización inteligente
  * Analiza el estado actual y continúa desde donde se quedó cada marca
  */
 export class SyncSmartUseCase {
+  private duplicateDetector: DuplicateDetector;
+  
   constructor(
     private syncRepository: ISyncRepository,
     private sheetsGateway: ISheetsGateway,
     private leadProcessor: LeadProcessor
-  ) {}
+  ) {
+    this.duplicateDetector = new DuplicateDetector();
+  }
 
   async execute(options: SyncOptions = {}): Promise<SyncResult> {
     const startTime = Date.now();
@@ -81,7 +86,7 @@ export class SyncSmartUseCase {
             console.log(`ℹ️ ${incompleteSheet.name}: No hay nuevos registros para guardar`);
           }
           
-          details.sheetsProcessed.push(incompleteSheet.name);
+          details.sheetsProcessed?.push(incompleteSheet.name);
         }
       }
 
@@ -99,7 +104,7 @@ export class SyncSmartUseCase {
         true, 
         totalProcessed, 
         startTime, 
-        `Sincronización inteligente completada: ${details.sheetsProcessed.length} marcas actualizadas`,
+        `Sincronización inteligente completada: ${details.sheetsProcessed?.length || 0} marcas actualizadas`,
         details
       );
 
@@ -199,42 +204,52 @@ export class SyncSmartUseCase {
    */
   private async filterExistingLeads(validLeads: any[], brandName: string): Promise<any[]> {
     try {
-      // Obtener leads existentes de la marca
-      const existingLeads = await this.syncRepository.getLeads({ limit: 100000 });
-      const existingBrandLeads = existingLeads.filter(lead => 
-        lead.marca?.toUpperCase() === brandName.toUpperCase()
+      // Obtener leads existentes de la marca con googleSheetsRowNumber usando el nuevo método
+      const existingLeads = await (this.syncRepository as any).getExistingLeadsByBrand(brandName);
+      
+      console.log(`🔍 Encontrados ${existingLeads.length} leads existentes para marca ${brandName}`);
+      
+      // Usar DuplicateDetector mejorado para detectar duplicados
+      const leadsWithDuplicates = this.duplicateDetector.detectDuplicatesAgainstExisting(
+        validLeads, 
+        existingLeads
       );
+      
+      // Filtrar solo los leads que NO son duplicados
+      const newLeads = leadsWithDuplicates.filter(lead => !lead.isDuplicate);
+      const duplicatesCount = leadsWithDuplicates.length - newLeads.length;
+      
+      console.log(`📊 De ${validLeads.length} leads: ${newLeads.length} nuevos, ${duplicatesCount} duplicados detectados`);
+      
+      // Log detallado de duplicados por tipo
+      if (duplicatesCount > 0) {
+        const duplicatesByPhone = leadsWithDuplicates.filter(l => 
+          l.isDuplicate && existingLeads.some((e: any) => 
+            e.telefono && l.normalizedPhone && 
+            e.telefono.replace(/[^\d+]/g, '') === l.normalizedPhone
+          )
+        ).length;
+        
+        const duplicatesByMetaId = leadsWithDuplicates.filter(l => 
+          l.isDuplicate && existingLeads.some((e: any) => e.metaLeadId === l.metaLeadId)
+        ).length;
+        
+        const duplicatesByRowNumber = leadsWithDuplicates.filter(l => {
+          if (!l.isDuplicate || !l.googleSheetsRowNumber || !l.marca) return false;
+          const rowKey = `${l.marca.toUpperCase()}_${l.googleSheetsRowNumber}`;
+          return existingLeads.some((e: any) => 
+            e.googleSheetsRowNumber && e.marca && 
+            `${e.marca.toUpperCase()}_${e.googleSheetsRowNumber}` === rowKey
+          );
+        }).length;
+        
+        console.log(`📈 Duplicados: ${duplicatesByPhone} por teléfono, ${duplicatesByMetaId} por metaLeadId, ${duplicatesByRowNumber} por número de fila`);
+      }
 
-      // Crear sets de MetaLeadIds y teléfonos existentes para comparación rápida
-      const existingMetaIds = new Set(existingBrandLeads.map(lead => lead.metaLeadId));
-      const existingPhones = new Set(
-        existingBrandLeads
-          .map(lead => lead.telefono?.replace(/\D/g, ''))
-          .filter(phone => phone && phone.length > 8)
-      );
-
-      // Filtrar leads que no existen
-      const newLeads = validLeads.filter(lead => {
-        // Verificar por MetaLeadId
-        if (existingMetaIds.has(lead.metaLeadId)) {
-          return false;
-        }
-
-        // Verificar por teléfono normalizado
-        const normalizedPhone = lead.telefono?.replace(/\D/g, '');
-        if (normalizedPhone && normalizedPhone.length > 8 && existingPhones.has(normalizedPhone)) {
-          return false;
-        }
-
-        return true;
-      });
-
-      console.log(`🔍 ${brandName}: ${validLeads.length} leads válidos, ${newLeads.length} realmente nuevos`);
       return newLeads;
-
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error filtering existing leads for ${brandName}:`, error);
-      return validLeads; // En caso de error, devolver todos para no perder datos
+      return validLeads; // En caso de error, devolver todos los leads válidos
     }
   }
 

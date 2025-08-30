@@ -69,7 +69,7 @@ export class PostgresSyncRepository implements ISyncRepository {
       
       // Mapear de vuelta a SyncLead
       return this.mapOpLeadToSyncLead(createdOpLead);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating lead in op_lead table:', error);
       throw new Error(`Failed to create lead: ${error.message}`);
     }
@@ -99,7 +99,7 @@ export class PostgresSyncRepository implements ISyncRepository {
     
     try {
       const leads = await this.storage.getLeads({ limit: 10000 });
-      const matchingLead = leads.find(lead => 
+      const matchingLead = leads.find((lead: any) => 
         lead.phone === phone || 
         this.normalizePhone(lead.phone || '') === this.normalizePhone(phone)
       );
@@ -116,7 +116,7 @@ export class PostgresSyncRepository implements ISyncRepository {
     
     try {
       const leads = await this.storage.getLeads({ limit: 10000 });
-      const matchingLead = leads.find(lead => lead.metaLeadId === metaLeadId);
+      const matchingLead = leads.find((lead: any) => lead.metaLeadId === metaLeadId);
       
       return matchingLead ? this.mapStorageLeadToSyncLead(matchingLead) : null;
     } catch (error) {
@@ -140,14 +140,14 @@ export class PostgresSyncRepository implements ISyncRepository {
           try {
             await this.createLead(lead);
             createdCount++;
-          } catch (error) {
+          } catch (error: any) {
             console.warn(`Failed to create lead ${lead.metaLeadId}:`, error.message);
           }
         }
       }
       
       return createdCount;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating leads batch:', error);
       throw new Error(`Failed to create leads batch: ${error.message}`);
     }
@@ -198,12 +198,12 @@ export class PostgresSyncRepository implements ISyncRepository {
       const normalizedPhones = phones.map(p => this.normalizePhone(p));
       const leads = await this.storage.getLeads({ limit: 10000 });
       
-      const duplicates = leads.filter(lead => {
+      const duplicates = leads.filter((lead: any) => {
         const leadPhone = this.normalizePhone(lead.phone || '');
         return normalizedPhones.includes(leadPhone);
       });
       
-      return duplicates.map(this.mapStorageLeadToSyncLead);
+      return duplicates.map((lead: any) => this.mapStorageLeadToSyncLead(lead));
     } catch (error) {
       console.error('Error finding duplicates by phone:', error);
       return [];
@@ -224,6 +224,52 @@ export class PostgresSyncRepository implements ISyncRepository {
     }
   }
 
+  /**
+   * Busca duplicados por marca y número de fila de Google Sheets
+   * Esto evita reinsertar leads de la misma fila de la misma hoja
+   */
+  async findDuplicatesByRowNumber(marca: string, googleSheetsRowNumbers: number[]): Promise<SyncLead[]> {
+    try {
+      if (!marca || googleSheetsRowNumbers.length === 0) {
+        return [];
+      }
+
+      // Buscar en la tabla op_lead por marca y googleSheetsRowNumber
+      const duplicates = await db.select()
+        .from(opLead)
+        .where(sql`${opLead.marca} = ${marca.toUpperCase()} AND ${opLead.googleSheetsRowNumber} IN ${sql.raw(`(${googleSheetsRowNumbers.join(', ')})`)}`);      
+      
+      console.log(`🔍 Encontrados ${duplicates.length} duplicados por fila para marca ${marca}: filas [${googleSheetsRowNumbers.join(', ')}]`);
+      return duplicates.map(this.mapOpLeadToSyncLead);
+    } catch (error) {
+      console.error(`Error finding duplicates by row number for ${marca}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Obtiene todos los leads existentes con googleSheetsRowNumber para una marca específica
+   * Útil para detección rápida de duplicados antes de la sincronización
+   */
+  async getExistingLeadsByBrand(marca: string): Promise<SyncLead[]> {
+    try {
+      if (!marca) {
+        return [];
+      }
+
+      const existingLeads = await db.select()
+        .from(opLead)
+        .where(sql`${opLead.marca} = ${marca.toUpperCase()} AND ${opLead.googleSheetsRowNumber} IS NOT NULL`)
+        .orderBy(sql`${opLead.googleSheetsRowNumber} ASC`);
+      
+      console.log(`📊 Encontrados ${existingLeads.length} leads existentes con googleSheetsRowNumber para marca ${marca}`);
+      return existingLeads.map(this.mapOpLeadToSyncLead);
+    } catch (error) {
+      console.error(`Error getting existing leads by brand ${marca}:`, error);
+      return [];
+    }
+  }
+
   // ========== MÉTODOS PRIVADOS DE MAPPING ==========
 
   private mapOpLeadToSyncLead(opLeadData: any): SyncLead {
@@ -233,10 +279,13 @@ export class PostgresSyncRepository implements ISyncRepository {
       telefono: opLeadData.telefono,
       email: opLeadData.email || '',
       ciudad: opLeadData.ciudad || '',
+      modelo: opLeadData.modelo || '',
+      comentarioHorario: opLeadData.comentarioHorario || '',
       marca: opLeadData.marca,
       origen: opLeadData.origen || '',
       localizacion: opLeadData.localizacion || '',
       cliente: opLeadData.cliente || '',
+      googleSheetsRowNumber: opLeadData.googleSheetsRowNumber,
       fechaCreacion: opLeadData.fechaCreacion.toISOString(),
       source: opLeadData.source,
       campaign: opLeadData.campaign
@@ -250,10 +299,13 @@ export class PostgresSyncRepository implements ISyncRepository {
       telefono: storageLead.phone || '',
       email: storageLead.email || '',
       ciudad: storageLead.city || '',
+      modelo: storageLead.modelo || '',
+      comentarioHorario: storageLead.comentarioHorario || '',
       marca: storageLead.campaignName || '',
       origen: storageLead.origen || '',
       localizacion: storageLead.localizacion || '',
       cliente: storageLead.cliente || '',
+      googleSheetsRowNumber: storageLead.googleSheetsRowNumber,
       fechaCreacion: storageLead.leadDate ? storageLead.leadDate.toISOString() : new Date().toISOString(),
       source: storageLead.source || 'google_sheets',
       campaign: storageLead.campaignName || ''
