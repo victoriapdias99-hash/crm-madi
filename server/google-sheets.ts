@@ -61,9 +61,15 @@ class GoogleSheetsService {
   }
 
   private isValidRow(row: any[]): boolean {
-    // Permitir todas las filas que no estén completamente vacías
-    // Si hay al menos una celda con datos, procesaremos la fila con S/D para campos vacíos
-    return row && row.length >= 1 && row.some(cell => cell && cell.toString().trim());
+    // Validación mejorada: acepta filas que tengan algún dato válido o útil
+    if (!row || row.length < 1) return false;
+    
+    // Verificar si hay al menos una celda con contenido útil
+    return row.some(cell => {
+      if (!cell) return false;
+      const cellStr = cell.toString().trim();
+      return cellStr.length > 0 && cellStr !== '';
+    });
   }
 
   private parseRowToLead(row: any[], sheetName: string, rowIndex: number): SheetLead | null {
