@@ -364,6 +364,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     console.log(`🗺️ ZONA: ${localizacionFiltro} para ${campana.marca} ${campana.numeroCampana}`);
+    console.log(`🔍 FILTROS: marca='%${campana.marca.toLowerCase()}%', cliente='%${nombreComercial.toLowerCase()}%', zona='${localizacionFiltro}', fecha>='${campana.fechaCampana}'`);
     
     return await db
       .select({ count: count() })
