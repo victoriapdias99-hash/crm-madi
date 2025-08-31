@@ -286,6 +286,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * - Filtros AND/OR combinados para máxima precisión y cobertura
    * - Compatible con datos inconsistentes de Google Sheets
    */
+  async function contarDuplicadosPorCampana(campana: any, clienteData: any, db: any, opLeadsRepTable: any, sql: any, todasLasCampanas: any[]) {
+    const nombreComercial = clienteData?.nombreComercial || '';
+    
+    // Mapear zona del cliente a localización en op_leads_rep
+    const zonaCliente = clienteData?.zonas?.[0] || '';
+    let localizacionFiltro = '';
+    
+    switch(zonaCliente.toUpperCase()) {
+      case 'NACIONAL':
+        localizacionFiltro = 'Pais';
+        break;
+      case 'AMBA':
+        localizacionFiltro = 'Amba';
+        break;
+      case 'CORDOBA':
+        localizacionFiltro = 'Cordoba';
+        break;
+      case 'TUCUMAN':
+        localizacionFiltro = 'Tucuman';
+        break;
+      case 'RESISTENCIA':
+        localizacionFiltro = 'Resistencia';
+        break;
+      case 'MENDOZA':
+        localizacionFiltro = 'Mendoza';
+        break;
+      case 'SANTA FE':
+        localizacionFiltro = 'Santa Fe';
+        break;
+      default:
+        localizacionFiltro = zonaCliente || 'Pais'; // Fallback
+    }
+    
+    // NUEVA LÓGICA: Calcular fecha_fin automáticamente si no existe
+    let fechaFinCalculada = campana.fechaFin;
+    
+    if (!fechaFinCalculada) {
+      // Buscar la siguiente campaña del mismo cliente para calcular fecha límite
+      const campanasDelCliente = todasLasCampanas
+        .filter(c => c.clienteId === campana.clienteId)
+        .sort((a, b) => new Date(a.fechaCampana).getTime() - new Date(b.fechaCampana).getTime());
+      
+      const indiceCampanaActual = campanasDelCliente.findIndex(c => c.id === campana.id);
+      if (indiceCampanaActual !== -1 && indiceCampanaActual < campanasDelCliente.length - 1) {
+        // Hay una campaña siguiente, usar día anterior como límite
+        const siguienteCampana = campanasDelCliente[indiceCampanaActual + 1];
+        const fechaSiguiente = new Date(siguienteCampana.fechaCampana);
+        fechaSiguiente.setDate(fechaSiguiente.getDate() - 1); // Día anterior
+        fechaFinCalculada = fechaSiguiente.toISOString().split('T')[0];
+      }
+    }
+    
+    return await db
+      .select({ totalDuplicados: sql<number>`SUM(${opLeadsRepTable.cantidadDuplicados})` })
+      .from(opLeadsRepTable)
+      .where(
+        sql`lower(${opLeadsRepTable.campaign}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
+            AND lower(${opLeadsRepTable.cliente}) LIKE ${`%${nombreComercial.toLowerCase()}%`}
+            AND ${opLeadsRepTable.localizacion} = ${localizacionFiltro}
+            AND ${opLeadsRepTable.source} = 'google_sheets'
+            AND date(${opLeadsRepTable.fechaCreacion}) >= ${campana.fechaCampana}
+            ${fechaFinCalculada ? sql`AND date(${opLeadsRepTable.fechaCreacion}) <= ${fechaFinCalculada}` : sql``}`
+      );
+  }
+
   async function contarLeadsPorCampana(campana: any, clienteData: any, db: any, opLeadsRepTable: any, sql: any, count: any, todasLasCampanas: any[]) {
     const nombreComercial = clienteData?.nombreComercial || '';
     
@@ -378,6 +443,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const leadsCount = await contarLeadsPorCampana(campana, clienteData, db, opLeadsRep, sql, count, campanas);
 
           const enviadosDB = leadsCount[0]?.count || 0;
+
+          // Contar duplicados con los mismos filtros que la campaña
+          const duplicadosResult = await contarDuplicadosPorCampana(campana, clienteData, db, opLeadsRep, sql, campanas);
+          const totalDuplicados = duplicadosResult?.[0]?.totalDuplicados || 0;
           
           // Aplicar correcciones específicas (mantener la lógica actual)
           let enviadosFinales = enviadosDB;
@@ -440,7 +509,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Campos calculados adicionales
             inversionRealizada: (enviadosFinales * (storedCpl || 0)),
             inversionPendiente: (faltantesAEnviar * (storedCpl || 0)),
-            estado: porcentajeDatosEnviados >= 100 ? 'Finalizada' : 'En proceso'
+            estado: porcentajeDatosEnviados >= 100 ? 'Finalizada' : 'En proceso',
+            duplicados: totalDuplicados
           };
 
           processedData.push(record);

@@ -246,34 +246,7 @@ export default function DatosDiariosDashboard() {
 
 
 
-  // State for duplicates data
-  const [duplicatesData, setDuplicatesData] = useState<Record<string, number>>({});
-  const [isLoadingDuplicates, setIsLoadingDuplicates] = useState(false);
 
-  // Function to detect duplicates for all campaigns using optimized endpoint
-  const detectAllDuplicates = async () => {
-    setIsLoadingDuplicates(true);
-
-    try {
-      const response = await fetch('/api/dashboard/duplicados');
-      if (response.ok) {
-        const duplicatesMap = await response.json();
-        console.log('🔍 Duplicates detection completed from op_leads_rep:', duplicatesMap);
-        setDuplicatesData(duplicatesMap);
-      } else {
-        throw new Error('Failed to fetch duplicates data');
-      }
-    } catch (error) {
-      console.error('Error in duplicates detection:', error);
-      toast({
-        title: "Error",
-        description: "No se pudieron detectar los duplicados",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoadingDuplicates(false);
-    }
-  };
 
   // Extraer valores únicos para filtros
   const opcionesZona = useMemo(() => {
@@ -333,8 +306,7 @@ export default function DatosDiariosDashboard() {
     // If showing duplicates only, filter to show campaigns with duplicate data
     if (showDuplicatesOnly) {
       filteredData = filteredData.filter((data: DatosDiariosData) => {
-        const key = `${data.cliente}-${data.numeroCampana}`;
-        return duplicatesData[key] > 0;
+        return (data.duplicados || 0) > 0;
       });
     }
     
@@ -384,7 +356,7 @@ export default function DatosDiariosDashboard() {
     console.log(`📊 Datos ordenados: ${enProceso.length} en proceso, ${finalizadas.length} finalizadas`);
     
     return { campanasEnProceso: enProceso, campanasFinalizadas: finalizadas };
-  }, [datosDiarios, showDuplicatesOnly, duplicatesData, sortByDate, filtroZona, filtroMarca, filtroFechaInicio, filtroFechaFin, filtroMesFinalizadas]);
+  }, [datosDiarios, showDuplicatesOnly, sortByDate, filtroZona, filtroMarca, filtroFechaInicio, filtroFechaFin, filtroMesFinalizadas]);
 
   const { campanasEnProceso, campanasFinalizadas } = campanasData;
 
@@ -405,11 +377,6 @@ export default function DatosDiariosDashboard() {
   }, [isLoading, datosDiarios, error]);
 
   // Cargar duplicados automáticamente cuando se cargan los datos
-  useEffect(() => {
-    if (datosDiarios && Array.isArray(datosDiarios) && datosDiarios.length > 0 && Object.keys(duplicatesData).length === 0) {
-      detectAllDuplicates();
-    }
-  }, [datosDiarios]);
 
   // Forzar mostrar contenido después de 8 segundos
   useEffect(() => {
@@ -804,27 +771,19 @@ export default function DatosDiariosDashboard() {
                   📅 {sortByDate === 'desc' ? 'Más reciente primero ↓' : 'Más antigua primero ↑'}
                 </Button>
                 <Button
-                  onClick={async () => {
-                    if (!showDuplicatesOnly) {
-                      await detectAllDuplicates();
-                    }
+                  onClick={() => {
                     setShowDuplicatesOnly(!showDuplicatesOnly);
                   }}
                   variant="secondary"
                   size="sm"
-                  disabled={isLoadingDuplicates}
+                  disabled={false}
                   className={`border-white/30 hover:bg-white/30 transition-all duration-300 ${
                     showDuplicatesOnly 
                       ? 'bg-red-500/80 text-white border-red-300' 
                       : 'bg-white/20 text-white'
                   }`}
                 >
-                  {isLoadingDuplicates ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    '🔍 '
-                  )}
-                  Datos Duplicados {showDuplicatesOnly ? '(Activo)' : ''}
+                  🔍 Datos Duplicados {showDuplicatesOnly ? '(Activo)' : ''}
                 </Button>
               </CardTitle>
               
@@ -975,7 +934,7 @@ export default function DatosDiariosDashboard() {
                         <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
                           <div className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 p-2 rounded-lg">
                             <span className="font-bold text-orange-700 dark:text-orange-300">
-                              {duplicatesData[`${data.marca} ${data.numeroCampana}-${data.numeroCampana}`] || 0}
+                              {data.duplicados || 0}
                             </span>
                           </div>
                         </td>
@@ -1046,9 +1005,9 @@ export default function DatosDiariosDashboard() {
                           <td className="border border-red-200 dark:border-red-600 p-3 text-center">
                             <div className="bg-gradient-to-r from-red-100 to-pink-100 dark:from-red-800/50 dark:to-pink-800/50 p-2 rounded-lg">
                               <span className="font-bold text-red-700 dark:text-red-300">
-                                {duplicatesData[uniqueKey] || 0}
+                                {data.duplicados || 0}
                               </span>
-                              {duplicatesData[uniqueKey] > 0 && (
+                              {(data.duplicados || 0) > 0 && (
                                 <div className="text-xs text-red-500 mt-1">teléfonos</div>
                               )}
                             </div>
@@ -1126,8 +1085,7 @@ export default function DatosDiariosDashboard() {
                           <div className="bg-gradient-to-r from-red-100 to-pink-100 dark:from-red-800/50 dark:to-pink-800/50 p-2 rounded-lg">
                             <span className="font-bold text-red-700 dark:text-red-300">
                               {campanasEnProceso.reduce((sum: number, data: DatosDiariosData) => {
-                                const key = `${data.cliente}-${data.numeroCampana}`;
-                                return sum + (duplicatesData[key] || 0);
+                                return sum + (data.duplicados || 0);
                               }, 0)}
                             </span>
                             <div className="text-xs text-red-500 mt-1">Total</div>
@@ -1300,7 +1258,7 @@ export default function DatosDiariosDashboard() {
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
                           <div className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 p-2 rounded-lg">
                             <span className="font-bold text-orange-700 dark:text-orange-300">
-                              {duplicatesData[`${data.marca} ${data.numeroCampana}-${data.numeroCampana}`] || 0}
+                              {data.duplicados || 0}
                             </span>
                           </div>
                         </td>
