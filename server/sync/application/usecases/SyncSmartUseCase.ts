@@ -64,8 +64,8 @@ export class SyncSmartUseCase {
           progress: { current: totalProcessed, total: brandAnalysis.totalPending, stage: 'syncing' }
         });
 
-        // Obtener datos específicos de esta marca
-        const rawLeads = await this.sheetsGateway.getLeadsFromSheets([incompleteSheet.name]);
+        // Obtener solo las filas nuevas de esta marca (incremental)
+        const rawLeads = await this.getNewRowsOnly(incompleteSheet.name);
         
         if (rawLeads.length > 0) {
           // Procesar y guardar leads
@@ -139,26 +139,38 @@ export class SyncSmartUseCase {
         console.log(`📋 Marcas disponibles en Google Sheets: ${availableSheets.join(', ')}`);
       }
 
-      // 2. Para cada marca, obtener conteos actuales y totales
-      const incompleteSheets: Array<{name: string, currentCount: number, totalCount: number}> = [];
+      // 2. Para cada marca, verificar si hay filas nuevas desde el último row procesado
+      const incompleteSheets: Array<{name: string, currentCount: number, totalCount: number, lastRow: number, newRows: number}> = [];
       
       for (const sheetName of availableSheets) {
+        // Obtener último row procesado
+        const lastProcessedRow = await this.getLastProcessedRow(sheetName);
+        
         // Contar registros actuales en op_lead
         const currentCount = await this.getCurrentBrandCount(sheetName);
         
         // Contar registros totales en Google Sheets  
         const totalCount = await this.getTotalBrandCount(sheetName);
         
-        console.log(`📊 ${sheetName}: ${currentCount}/${totalCount} registros`);
+        // Verificar si hay filas nuevas
+        const newRowsAvailable = totalCount > lastProcessedRow;
+        const newRowsCount = Math.max(0, totalCount - lastProcessedRow);
         
-        // SIEMPRE procesar todas las marcas para detectar registros nuevos
-        // No importa si DB tiene más registros que Google Sheets (duplicados anteriores)
-        incompleteSheets.push({
-          name: sheetName,
-          currentCount,
-          totalCount
-        });
-        console.log(`🔄 ${sheetName} agregada a procesamiento para verificar registros nuevos`);
+        console.log(`📊 ${sheetName}: ${currentCount} en BD, última fila: ${lastProcessedRow}, total en Sheets: ${totalCount}, nuevas: ${newRowsCount}`);
+        
+        // Solo agregar marcas que tienen filas nuevas
+        if (newRowsAvailable && newRowsCount > 0) {
+          incompleteSheets.push({
+            name: sheetName,
+            currentCount,
+            totalCount,
+            lastRow: lastProcessedRow,
+            newRows: newRowsCount
+          });
+          console.log(`🔄 ${sheetName} agregada: ${newRowsCount} filas nuevas desde fila ${lastProcessedRow}`);
+        } else {
+          console.log(`✅ ${sheetName} está actualizada - no hay filas nuevas`);
+        }
       }
 
       const totalPending = incompleteSheets.reduce((sum, sheet) => sum + (sheet.totalCount - sheet.currentCount), 0);
@@ -172,6 +184,21 @@ export class SyncSmartUseCase {
     } catch (error) {
       console.error('Error analyzing brand status:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Obtiene el último número de fila procesado para una marca
+   */
+  private async getLastProcessedRow(brandName: string): Promise<number> {
+    try {
+      const normalizedBrand = brandName.toUpperCase();
+      const lastRow = await (this.syncRepository as any).getLastProcessedRowByBrand(normalizedBrand);
+      console.log(`📊 ${brandName}: última fila procesada = ${lastRow}`);
+      return lastRow;
+    } catch (error) {
+      console.error(`Error getting last processed row for brand ${brandName}:`, error);
+      return 0;
     }
   }
 
@@ -190,6 +217,27 @@ export class SyncSmartUseCase {
     } catch (error) {
       console.error(`Error getting current count for brand ${brandName}:`, error);
       return 0;
+    }
+  }
+
+  /**
+   * Obtiene solo las filas nuevas desde el último row procesado
+   */
+  private async getNewRowsOnly(sheetName: string): Promise<any[]> {
+    try {
+      const lastProcessedRow = await this.getLastProcessedRow(sheetName);
+      const allLeads = await this.sheetsGateway.getLeadsFromSheets([sheetName]);
+      
+      // Filtrar solo filas nuevas (mayores al último row procesado)
+      const newRows = allLeads.filter(lead => 
+        lead.googleSheetsRowNumber && lead.googleSheetsRowNumber > lastProcessedRow
+      );
+      
+      console.log(`🆕 ${sheetName}: ${newRows.length} filas nuevas desde la fila ${lastProcessedRow}`);
+      return newRows;
+    } catch (error) {
+      console.error(`Error getting new rows for sheet ${sheetName}:`, error);
+      return [];
     }
   }
 

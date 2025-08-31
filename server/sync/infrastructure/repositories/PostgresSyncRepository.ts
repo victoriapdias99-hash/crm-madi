@@ -248,6 +248,29 @@ export class PostgresSyncRepository implements ISyncRepository {
   }
 
   /**
+   * Obtiene el último número de fila procesado para una marca específica
+   * Usado para sincronización incremental - solo procesar filas nuevas
+   */
+  async getLastProcessedRowByBrand(marca: string): Promise<number> {
+    try {
+      if (!marca) {
+        return 0;
+      }
+
+      const result = await db.select({ maxRow: sql<number>`MAX(${opLead.googleSheetsRowNumber})` })
+        .from(opLead)
+        .where(sql`${opLead.marca} = ${marca.toUpperCase()} AND ${opLead.googleSheetsRowNumber} IS NOT NULL`);
+      
+      const maxRow = result[0]?.maxRow || 0;
+      console.log(`🔢 Última fila procesada para ${marca}: ${maxRow}`);
+      return maxRow;
+    } catch (error) {
+      console.error(`Error getting last processed row for brand ${marca}:`, error);
+      return 0;
+    }
+  }
+
+  /**
    * Obtiene todos los leads existentes con googleSheetsRowNumber para una marca específica
    * Útil para detección rápida de duplicados antes de la sincronización
    */
