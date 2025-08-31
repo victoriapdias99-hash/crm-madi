@@ -57,6 +57,25 @@ Preferred communication style: Simple, everyday language.
 - **Technical Details**: Modified `analyzeBrandStatus()` in `SyncSmartUseCase.ts` to use row-to-row comparison instead of count-to-row comparison
 - **Verification**: Successfully processed previously missed row 411 for CHEVROLET brand (Jorge Fernández)
 
+### Dashboard Data Query Fix (August 31, 2025)
+- **Critical Issue Resolved**: Fixed dashboard showing 0 "enviados" for ALL campaigns despite having real data in op_leads_rep view
+- **Root Causes Identified**:
+  1. **SQL Parameter Errors**: Drizzle ORM was generating invalid `$1, $2` parameters causing "there is no parameter $1" errors
+  2. **Zone Mapping Missing**: Campaign zones ('NACIONAL', 'AMBA', 'Córdoba') weren't mapped to data localization values ('Pais', 'Amba', 'Cordoba')  
+  3. **Client Name Normalization**: Commercial names needed underscore normalization to match synchronized data format
+- **Solutions Implemented**:
+  - **Replaced SQL templates** with individual Drizzle operators (`ilike()`, `eq()`, `gte()`, `lte()`, `and()`) for reliable query execution
+  - **Added zone mapping system**: `'NACIONAL' → 'Pais'`, `'AMBA' → 'Amba'`, `'Córdoba' → 'Cordoba'`, `'Santa Fe' → 'Santa Fe'`
+  - **Implemented client name normalization**: Spaces → underscores, special characters removed, matching sync process
+- **Results Achieved**:
+  - **Sofia Pousarilly (Fiat)**: 0 → **116 enviados** ✅
+  - **Ford Giorgi**: 0 → **21 enviados** ✅
+  - **Borussia (VW)**: 0 → **176 enviados** ✅
+  - **Peugeot campaigns**: 0 → **179, 187, 166, 171, 141, 43, 428 enviados** ✅
+  - **Dashboard status**: Now shows **22 in progress, 7 finalized** with real data
+- **Technical Impact**: All dashboard campaign data now reflects actual lead counts from the deduplicated op_leads_rep view
+- **Status**: Fully operational, all campaigns displaying accurate enviados counts
+
 ## External Dependencies
 - **@neondatabase/serverless**: PostgreSQL driver
 - **drizzle-orm**: ORM for database interaction
