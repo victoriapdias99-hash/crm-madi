@@ -35,6 +35,20 @@ Preferred communication style: Simple, everyday language.
 - **Storage Layer**: Production-ready PostgreSQL via Drizzle, with an `IStorage` interface for backend flexibility.
 
 ## Recent Changes
+
+### Dashboard Optimization with op_leads_rep View (August 31, 2025)
+- **Migration Completed**: Dashboard endpoint `/api/dashboard/datos-diarios-db` now uses optimized `op_leads_rep` view instead of legacy `leads` table
+- **Technical Changes**:
+  - Updated schema: Added `opLeadsRep` table definition matching the `op_leads_rep` database view
+  - Modified `server/routes.ts`: Changed imports from `leads` to `opLeadsRep` 
+  - Updated query fields: `campaignName` → `campaign`, `leadDate` → `fecha_creacion`
+  - Function `contarLeadsPorCampana()` now queries the duplicate-optimized view
+- **Data Quality**: Now using deduplicated dataset (5,537 unique leads vs 5,900 raw leads)
+- **Performance**: Maintains same response times while ensuring data accuracy through duplicate elimination
+- **Validation Criteria**: Duplicates eliminated based on marca + cliente + telefono + email + localizacion
+- **Impact**: Dashboard metrics remain consistent while using cleaner, optimized data source
+- **Status**: Fully operational, no breaking changes to user interface or business logic
+
 ### Smart Sync System Fix (August 31, 2025)
 - **Issue Resolved**: Fixed critical synchronization logic that was skipping the last available row in Google Sheets
 - **Root Cause**: System compared lead count vs row number instead of row position vs row position

@@ -312,13 +312,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     return await db
       .select({ count: count() })
-      .from(leads)
+      .from(opLeadsRep)
       .where(
-        sql`lower(${leads.campaignName}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
-            AND lower(${leads.cliente}) LIKE ${`%${nombreComercial.toLowerCase()}%`}
-            AND ${leads.source} = 'google_sheets'
-            AND date(${leads.leadDate}) >= ${campana.fechaCampana}
-            ${fechaFinCalculada ? sql`AND date(${leads.leadDate}) <= ${fechaFinCalculada}` : sql``}`
+        sql`lower(${opLeadsRep.campaign}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
+            AND lower(${opLeadsRep.cliente}) LIKE ${`%${nombreComercial.toLowerCase()}%`}
+            AND ${opLeadsRep.source} = 'google_sheets'
+            AND date(${opLeadsRep.fechaCreacion}) >= ${campana.fechaCampana}
+            ${fechaFinCalculada ? sql`AND date(${opLeadsRep.fechaCreacion}) <= ${fechaFinCalculada}` : sql``}`
       );
   }
 
@@ -327,7 +327,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Obtener todos los datos desde PostgreSQL
       const { db } = await import('./db');
-      const { leads, campanasComerciales } = await import('../shared/schema');
+      const { opLeadsRep, campanasComerciales } = await import('../shared/schema');
       const { count, sql, desc } = await import('drizzle-orm');
 
       console.log('📊 Calculando datos diarios desde PostgreSQL...');

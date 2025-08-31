@@ -95,6 +95,29 @@ export const opLead = pgTable("op_lead", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Vista optimizada de leads sin duplicados (op_leads_rep)
+export const opLeadsRep = pgTable("op_leads_rep", {
+  id: serial("id").primaryKey(),
+  metaLeadId: text("meta_lead_id").unique().notNull(),
+  nombre: text("nombre").notNull(),
+  telefono: text("telefono").notNull(),
+  email: text("email"),
+  ciudad: text("ciudad"),
+  modelo: text("modelo"),
+  comentarioHorario: text("comentario_horario"),
+  origen: text("origen"),
+  localizacion: text("localizacion"),
+  cliente: text("cliente"),
+  marca: text("marca").notNull(),
+  campaign: text("campaign").notNull(),
+  googleSheetsRowNumber: integer("google_sheets_row_number"),
+  source: text("source").notNull().default("google_sheets"),
+  fechaCreacion: timestamp("fecha_creacion").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  cantidadDuplicados: integer("cantidad_duplicados"),
+});
+
 // Estadísticas diarias
 export const dailyStats = pgTable("daily_stats", {
   id: serial("id").primaryKey(),
