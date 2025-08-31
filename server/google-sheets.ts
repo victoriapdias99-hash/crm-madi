@@ -61,8 +61,9 @@ class GoogleSheetsService {
   }
 
   private isValidRow(row: any[]): boolean {
-    // Check if row has at least name and email
-    return row && row.length >= 2 && row[0] && row[1];
+    // Permitir todas las filas que no estén completamente vacías
+    // Si hay al menos una celda con datos, procesaremos la fila con S/D para campos vacíos
+    return row && row.length >= 1 && row.some(cell => cell && cell.toString().trim());
   }
 
   private parseRowToLead(row: any[], sheetName: string, rowIndex: number): SheetLead | null {

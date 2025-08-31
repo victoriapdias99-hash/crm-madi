@@ -170,20 +170,20 @@ export class GoogleSheetsGateway implements ISheetsGateway {
   private mapToRawSheetLeads(leads: any[]): RawSheetLead[] {
     return leads.map(lead => ({
       timestamp: lead.timestamp || new Date().toISOString(),
-      name: lead.name || lead.nombre || '',
-      email: lead.email || '',
-      phone: lead.phone || lead.telefono || '',
-      city: lead.city || lead.ciudad || '',
-      interest: lead.interest || lead.interes || '',
-      budget: lead.budget || lead.presupuesto || '',
-      modelo: lead.modelo || '',                    // Modelo del auto
-      comentarioHorario: lead.comentarioHorario || '', // Horario/Comentarios
-      origen: lead.origen || '',                    // ORIGEN
-      localizacion: lead.localizacion || '',        // LOCALIZACION
-      cliente: lead.cliente || '',                  // CLIENTE
+      name: lead.name || lead.nombre || 'S/D',
+      email: lead.email || 'S/D',
+      phone: lead.phone || lead.telefono || 'S/D',
+      city: lead.city || lead.ciudad || 'S/D',
+      interest: lead.interest || lead.interes || 'S/D',
+      budget: lead.budget || lead.presupuesto || 'S/D',
+      modelo: lead.modelo || 'S/D',                    // Modelo del auto
+      comentarioHorario: lead.comentarioHorario || 'S/D', // Horario/Comentarios
+      origen: lead.origen || 'S/D',                    // ORIGEN
+      localizacion: lead.localizacion || 'S/D',        // LOCALIZACION
+      cliente: lead.cliente || 'S/D',                  // CLIENTE
       googleSheetsRowNumber: lead.googleSheetsRowNumber, // Número de fila de Google Sheets
       source: lead.source || 'google_sheets',
-      campaign: lead.campaign || lead.campana || '',
+      campaign: lead.campaign || lead.campana || 'S/D',
       cost: lead.cost || lead.costo || '0'
     }));
   }

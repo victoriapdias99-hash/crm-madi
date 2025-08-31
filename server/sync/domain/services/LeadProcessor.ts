@@ -19,12 +19,12 @@ export class LeadProcessor {
       telefono: this.sanitizePhone(rawLead.phone),
       email: this.sanitizeEmail(rawLead.email),
       ciudad: this.sanitizeCity(rawLead.city),
-      modelo: rawLead.modelo || '',
-      comentarioHorario: rawLead.comentarioHorario || '',
+      modelo: rawLead.modelo || 'S/D',
+      comentarioHorario: rawLead.comentarioHorario || 'S/D',
       marca: this.extractBrand(rawLead.campaign),
-      origen: rawLead.origen || '',
-      localizacion: rawLead.localizacion || '',
-      cliente: rawLead.cliente || '',
+      origen: rawLead.origen || 'S/D',
+      localizacion: rawLead.localizacion || 'S/D',
+      cliente: rawLead.cliente || 'S/D',
       googleSheetsRowNumber: rawLead.googleSheetsRowNumber,
       fechaCreacion: this.parseTimestamp(rawLead.timestamp),
       source: 'google_sheets',
@@ -43,8 +43,8 @@ export class LeadProcessor {
     const normalizedEmail = this.normalizeEmail(syncLead.email);
     const normalizedClient = this.normalizeClientName(syncLead.cliente);
     
-    // Normalizar nombre: usar 'S/N' si está vacío
-    const normalizedName = syncLead.nombre?.trim() || 'S/N';
+    // Normalizar nombre: usar 'S/D' si está vacío
+    const normalizedName = syncLead.nombre?.trim() || 'S/D';
     
     // Aceptar TODOS los leads sin validaciones de rechazo
     const isValid = true;
@@ -82,19 +82,23 @@ export class LeadProcessor {
   }
 
   private sanitizeName(name: string): string {
-    return (name || '').trim().replace(/\s+/g, ' ');
+    const cleaned = (name || '').trim().replace(/\s+/g, ' ');
+    return cleaned || 'S/D';
   }
 
   private sanitizePhone(phone: string): string {
-    return (phone || '').replace(/[^\d+]/g, '');
+    const cleaned = (phone || '').replace(/[^\d+]/g, '');
+    return cleaned || 'S/D';
   }
 
   private sanitizeEmail(email: string): string {
-    return (email || '').trim().toLowerCase();
+    const cleaned = (email || '').trim().toLowerCase();
+    return cleaned || 'S/D';
   }
 
   private sanitizeCity(city: string): string {
-    return (city || '').trim();
+    const cleaned = (city || '').trim();
+    return cleaned || 'S/D';
   }
 
   private sanitizeCampaignName(campaign: string): string {
