@@ -331,13 +331,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   async function contarLeadsPorCampana(campana: any, clienteData: any, db: any, opLeadsRepTable: any, sql: any, count: any, todasLasCampanas: any[]) {
-    // Normalizar nombre comercial igual que en la sincronización
+    // USAR SOLO EL NOMBRE COMERCIAL (como está en los datos sincronizados)
     const nombreComercialRaw = clienteData?.nombreComercial || '';
-    const nombreComercial = nombreComercialRaw
-      .toLowerCase()
-      .trim()
-      .replace(/[^\w\s]/g, '') // Remover caracteres especiales
-      .replace(/\s+/g, '_');   // Reemplazar espacios con _
+    const nombreComercial = nombreComercialRaw.toLowerCase().trim();
     
     // Usar zona directamente de la campaña
     const localizacionFiltro = campana.zona || 'Pais';
@@ -367,34 +363,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log(`🔍 FILTROS: marca='%${campana.marca.toLowerCase()}%', cliente='%${nombreComercial.toLowerCase()}%', zona='${localizacionFiltro}', fecha>='${campana.fechaCampana}'`);
     
     try {
-      // Usar SQL directo para evitar problemas con Drizzle
-      const queryText = `
-        SELECT COUNT(*) as count
-        FROM op_leads_rep 
-        WHERE 
-            lower(campaign) LIKE $1
-            AND lower(cliente) LIKE $2
-            AND localizacion = $3
-            AND source = 'google_sheets'
-            AND date(fecha_creacion) >= $4
-            ${fechaFinCalculada ? 'AND date(fecha_creacion) <= $5' : ''}
-      `;
+      // Volver a Drizzle pero con sintaxis correcta
+      const result = await db
+        .select({ count: count() })
+        .from(opLeadsRepTable)
+        .where(
+          sql`lower(${opLeadsRepTable.campaign}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
+              AND lower(${opLeadsRepTable.cliente}) LIKE ${`%${nombreComercial}%`}
+              AND ${opLeadsRepTable.localizacion} = ${localizacionFiltro}
+              AND ${opLeadsRepTable.source} = 'google_sheets'
+              AND date(${opLeadsRepTable.fechaCreacion}) >= ${campana.fechaCampana}
+              ${fechaFinCalculada ? sql`AND date(${opLeadsRepTable.fechaCreacion}) <= ${fechaFinCalculada}` : sql``}`
+        );
       
-      const params = [
-        `%${campana.marca.toLowerCase()}%`,
-        `%${nombreComercial.toLowerCase()}%`, 
-        localizacionFiltro,
-        campana.fechaCampana
-      ];
-      
-      if (fechaFinCalculada) {
-        params.push(fechaFinCalculada);
-      }
-      
-      const result = await db.execute(sql.raw(queryText, params));
-      console.log(`✅ SQL QUERY OK: ${campana.marca} ${campana.numeroCampana} result:`, result);
-      
-      return [{ count: parseInt(result.rows[0].count) }];
+      console.log(`✅ DRIZZLE OK: ${campana.marca} ${campana.numeroCampana} = ${result[0]?.count || 0}`);
+      return result;
       
     } catch (error) {
       console.error(`❌ QUERY ERROR: ${campana.marca} ${campana.numeroCampana}:`, error);
