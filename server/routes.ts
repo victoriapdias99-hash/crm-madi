@@ -295,8 +295,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       .replace(/[^\w\s]/g, '') // Remover caracteres especiales
       .replace(/\s+/g, '_');   // Reemplazar espacios con _
     
-    // Usar zona directamente de la campaña
-    const localizacionFiltro = campana.zona || 'Pais';
+    // MAPEO CORRECTO: Zona de campaña → Localización en datos sincronizados
+    const mapeoZonas = {
+      'NACIONAL': 'Pais',
+      'AMBA': 'Amba', 
+      'Córdoba': 'Cordoba',
+      'Santa Fe': 'Santa Fe'
+    };
+    const localizacionFiltro = mapeoZonas[campana.zona] || campana.zona || 'Pais';
     
     // NUEVA LÓGICA: Calcular fecha_fin automáticamente si no existe
     let fechaFinCalculada = campana.fechaFin;
@@ -339,8 +345,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       .replace(/[^\w\s]/g, '') // Remover caracteres especiales
       .replace(/\s+/g, '_');   // Reemplazar espacios con _
     
-    // Usar zona directamente de la campaña
-    const localizacionFiltro = campana.zona || 'Pais';
+    // MAPEO CORRECTO: Zona de campaña → Localización en datos sincronizados
+    const mapeoZonas = {
+      'NACIONAL': 'Pais',
+      'AMBA': 'Amba', 
+      'Córdoba': 'Cordoba',
+      'Santa Fe': 'Santa Fe'
+    };
+    const localizacionFiltro = mapeoZonas[campana.zona] || campana.zona || 'Pais';
     
     // NUEVA LÓGICA: Calcular fecha_fin automáticamente si no existe
     let fechaFinCalculada = campana.fechaFin;
