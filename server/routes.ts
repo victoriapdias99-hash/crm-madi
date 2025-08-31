@@ -287,7 +287,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * - Compatible con datos inconsistentes de Google Sheets
    */
   async function contarDuplicadosPorCampana(campana: any, clienteData: any, db: any, opLeadsRepTable: any, sql: any, todasLasCampanas: any[]) {
-    const nombreComercial = clienteData?.nombreComercial || '';
+    // Normalizar nombre comercial igual que en la sincronización
+    const nombreComercialRaw = clienteData?.nombreComercial || '';
+    const nombreComercial = nombreComercialRaw
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s]/g, '') // Remover caracteres especiales
+      .replace(/\s+/g, '_');   // Reemplazar espacios con _
     
     // Usar zona directamente de la campaña
     const localizacionFiltro = campana.zona || 'Pais';
@@ -325,7 +331,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   async function contarLeadsPorCampana(campana: any, clienteData: any, db: any, opLeadsRepTable: any, sql: any, count: any, todasLasCampanas: any[]) {
-    const nombreComercial = clienteData?.nombreComercial || '';
+    // Normalizar nombre comercial igual que en la sincronización
+    const nombreComercialRaw = clienteData?.nombreComercial || '';
+    const nombreComercial = nombreComercialRaw
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s]/g, '') // Remover caracteres especiales
+      .replace(/\s+/g, '_');   // Reemplazar espacios con _
     
     // Usar zona directamente de la campaña
     const localizacionFiltro = campana.zona || 'Pais';
