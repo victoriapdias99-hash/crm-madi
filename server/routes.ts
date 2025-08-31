@@ -289,6 +289,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   async function contarLeadsPorCampana(campana: any, clienteData: any, db: any, opLeadsRepTable: any, sql: any, count: any, todasLasCampanas: any[]) {
     const nombreComercial = clienteData?.nombreComercial || '';
     
+    // Mapear zona del cliente a localización en op_leads_rep
+    const zonaCliente = clienteData?.zonas?.[0] || '';
+    let localizacionFiltro = '';
+    
+    switch(zonaCliente.toUpperCase()) {
+      case 'NACIONAL':
+        localizacionFiltro = 'Pais';
+        break;
+      case 'AMBA':
+        localizacionFiltro = 'Amba';
+        break;
+      case 'CORDOBA':
+        localizacionFiltro = 'Cordoba';
+        break;
+      case 'TUCUMAN':
+        localizacionFiltro = 'Tucuman';
+        break;
+      case 'RESISTENCIA':
+        localizacionFiltro = 'Resistencia';
+        break;
+      case 'MENDOZA':
+        localizacionFiltro = 'Mendoza';
+        break;
+      case 'SANTA FE':
+        localizacionFiltro = 'Santa Fe';
+        break;
+      default:
+        localizacionFiltro = zonaCliente || 'Pais'; // Fallback
+    }
+    
     // NUEVA LÓGICA: Calcular fecha_fin automáticamente si no existe
     let fechaFinCalculada = campana.fechaFin;
     
@@ -310,12 +340,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
     
+    console.log(`🗺️ ZONA: ${zonaCliente} → ${localizacionFiltro} para ${campana.marca} ${campana.numeroCampana}`);
+    
     return await db
       .select({ count: count() })
       .from(opLeadsRepTable)
       .where(
         sql`lower(${opLeadsRepTable.campaign}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
             AND lower(${opLeadsRepTable.cliente}) LIKE ${`%${nombreComercial.toLowerCase()}%`}
+            AND ${opLeadsRepTable.localizacion} = ${localizacionFiltro}
             AND ${opLeadsRepTable.source} = 'google_sheets'
             AND date(${opLeadsRepTable.fechaCreacion}) >= ${campana.fechaCampana}
             ${fechaFinCalculada ? sql`AND date(${opLeadsRepTable.fechaCreacion}) <= ${fechaFinCalculada}` : sql``}`
