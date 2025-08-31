@@ -250,36 +250,26 @@ export default function DatosDiariosDashboard() {
   const [duplicatesData, setDuplicatesData] = useState<Record<string, number>>({});
   const [isLoadingDuplicates, setIsLoadingDuplicates] = useState(false);
 
-  // Function to detect duplicates for all campaigns
+  // Function to detect duplicates for all campaigns using optimized endpoint
   const detectAllDuplicates = async () => {
-    if (!datosDiarios) return;
-
     setIsLoadingDuplicates(true);
-    const duplicatesMap: Record<string, number> = {};
 
     try {
-      const duplicatesPromises = datosDiarios.map(async (campaign) => {
-        try {
-          const response = await fetch(`/api/leads/duplicates?cliente=${encodeURIComponent(campaign.cliente)}&campaña=${campaign.numeroCampana}`);
-          if (response.ok) {
-            const duplicates = await response.json();
-            const key = `${campaign.cliente}-${campaign.numeroCampana}`;
-            duplicatesMap[key] = duplicates.length;
-            return { campaign, duplicatesCount: duplicates.length };
-          }
-          return { campaign, duplicatesCount: 0 };
-        } catch (error) {
-          console.error(`Error detecting duplicates for ${campaign.cliente}:`, error);
-          return { campaign, duplicatesCount: 0 };
-        }
-      });
-      
-      await Promise.all(duplicatesPromises);
-      setDuplicatesData(duplicatesMap);
-      
-      console.log('🔍 Duplicates detection completed:', duplicatesMap);
+      const response = await fetch('/api/dashboard/duplicados');
+      if (response.ok) {
+        const duplicatesMap = await response.json();
+        console.log('🔍 Duplicates detection completed from op_leads_rep:', duplicatesMap);
+        setDuplicatesData(duplicatesMap);
+      } else {
+        throw new Error('Failed to fetch duplicates data');
+      }
     } catch (error) {
       console.error('Error in duplicates detection:', error);
+      toast({
+        title: "Error",
+        description: "No se pudieron detectar los duplicados",
+        variant: "destructive",
+      });
     } finally {
       setIsLoadingDuplicates(false);
     }

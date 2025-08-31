@@ -427,6 +427,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint optimizado para obtener duplicados desde op_leads_rep
+  app.get('/api/dashboard/duplicados', async (req, res) => {
+    try {
+      const { db } = await import('./db');
+      const { opLeadsRep } = await import('../shared/schema');
+      const { sql } = await import('drizzle-orm');
+
+      console.log('🔍 Obteniendo duplicados desde op_leads_rep...');
+
+      // Agrupar por marca + cliente para mapear a las campañas del dashboard
+      const duplicadosData = await db.select({
+        marca: opLeadsRep.marca,
+        cliente: opLeadsRep.cliente,
+        totalDuplicados: sql<number>`SUM(${opLeadsRep.cantidadDuplicados})`,
+        registrosConDuplicados: sql<number>`COUNT(CASE WHEN ${opLeadsRep.cantidadDuplicados} > 0 THEN 1 END)`
+      })
+      .from(opLeadsRep)
+      .where(sql`${opLeadsRep.cantidadDuplicados} IS NOT NULL`)
+      .groupBy(opLeadsRep.marca, opLeadsRep.cliente);
+
+      // Transformar a formato compatible con el dashboard
+      const duplicadosMap: Record<string, number> = {};
+      
+      duplicadosData.forEach(item => {
+        // Crear clave usando el formato del dashboard: MARCA numeroCampana (ej: "TOYOTA 1")
+        const clienteIdentificador = `${item.marca.toUpperCase()} 1`; // Asumir campaña 1 por defecto
+        duplicadosMap[`${clienteIdentificador}-1`] = item.totalDuplicados || 0;
+      });
+
+      console.log(`✅ Duplicados procesados: ${Object.keys(duplicadosMap).length} campañas con datos`);
+      res.json(duplicadosMap);
+
+    } catch (error) {
+      console.error('Error obteniendo duplicados desde op_leads_rep:', error);
+      res.status(500).json({ error: 'Failed to fetch duplicates data' });
+    }
+  });
+
   app.get('/api/dashboard/datos-diarios', async (req, res) => {
     try {
       // Obtener datos reales desde la hoja "Datos Diarios"
