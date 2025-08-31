@@ -219,26 +219,26 @@ export default function DatosDiariosDashboard() {
     refetchOnReconnect: true,
   });
 
-  // Mutation para sincronizar todas las pestañas
+  // Mutation para sincronizar todas las pestañas con Smart Sync
   const syncAllSheetsMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('/api/dashboard/sync-all-sheets', 'POST');
+      const response = await apiRequest('/api/sync/smart', 'POST');
       return response.json();
     },
     onSuccess: (data) => {
       toast({
-        title: "Sincronización completada",
-        description: data.message || "Todas las pestañas han sido sincronizadas correctamente",
+        title: "Sincronización inteligente completada",
+        description: data.message || "Sincronización smart ejecutada correctamente",
       });
       // Invalidar queries para refrescar datos (ahora usando PostgreSQL)
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
     },
     onError: (error: any) => {
-      console.error('Error en sincronización:', error);
+      console.error('Error en sincronización smart:', error);
       toast({
-        title: "Error en sincronización",
-        description: error.message || "No se pudieron sincronizar las pestañas",
+        title: "Error en sincronización inteligente",
+        description: error.message || "No se pudo ejecutar la sincronización smart",
         variant: "destructive",
       });
     }
