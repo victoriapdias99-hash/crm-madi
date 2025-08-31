@@ -1,12 +1,10 @@
 /**
- * Punto de entrada principal del sistema de sincronización refactorizado
+ * Punto de entrada principal del sistema de sincronización inteligente
  * Exporta todas las interfaces públicas y utilidades del módulo sync
  */
 
-// ========== CASOS DE USO ==========
-export { SyncFullUseCase } from './application/usecases/SyncFullUseCase';
-export { SyncIncrementalUseCase } from './application/usecases/SyncIncrementalUseCase';
-export { SyncSpecificSheetsUseCase } from './application/usecases/SyncSpecificSheetsUseCase';
+// ========== CASO DE USO PRINCIPAL ==========
+export { SyncSmartUseCase } from './application/usecases/SyncSmartUseCase';
 
 // ========== CONTROLADOR ==========
 export { SyncController } from './presentation/controllers/SyncController';
@@ -18,7 +16,7 @@ export { createSyncRoutes, syncLoggingMiddleware } from './presentation/routes/s
 export { SyncFactory } from './infrastructure/config/SyncFactory';
 
 // ========== ADAPTADOR DE COMPATIBILIDAD ==========
-export { LegacySyncAdapter, legacySyncAdapter } from './infrastructure/adapters/LegacySyncAdapter';
+// Nota: LegacySyncAdapter eliminado - solo sincronización inteligente
 
 // ========== ENTIDADES DE DOMINIO ==========
 export type { SyncLead, ProcessedSyncLead, RawSheetLead } from './domain/entities/SyncLead';
@@ -47,19 +45,18 @@ export { GoogleSheetsGateway, getGoogleSheetsGateway } from './infrastructure/ga
 // ========== CONFIGURACIÓN ==========
 export { SYNC_CONFIG, getEnvironmentConfig, validateConfig, syncLogger } from './infrastructure/config/sync-config';
 
-// ========== UTILIDADES DE COMPATIBILIDAD ==========
+// ========== UTILIDADES ==========
 
 // Importaciones necesarias para las funciones utilitarias
 import { validateConfig as validateSyncConfig, SYNC_CONFIG as CONFIG } from './infrastructure/config/sync-config';
 import { SyncFactory } from './infrastructure/config/SyncFactory';
 import { createSyncRoutes } from './presentation/routes/sync-routes';
-import { legacySyncAdapter } from './infrastructure/adapters/LegacySyncAdapter';
 
 /**
  * Función de conveniencia para inicializar el sistema de sync
  */
 export function initializeSyncSystem() {
-  console.log('🚀 Inicializando sistema de sincronización refactorizado...');
+  console.log('🚀 Inicializando sistema de sincronización inteligente...');
   
   // Validar configuración
   const isConfigValid = validateSyncConfig();
@@ -71,20 +68,15 @@ export function initializeSyncSystem() {
   
   return {
     controller: SyncFactory.createSyncController(),
-    routes: createSyncRoutes(),
-    legacyAdapter: legacySyncAdapter
+    routes: createSyncRoutes()
   };
 }
 
 /**
- * Función de conveniencia para obtener instancias de casos de uso
+ * Función simplificada para obtener el caso de uso principal
  */
-export function getSyncUseCases() {
-  return {
-    full: SyncFactory.createSyncFullUseCase(),
-    incremental: SyncFactory.createSyncIncrementalUseCase(),
-    specific: SyncFactory.createSyncSpecificSheetsUseCase()
-  };
+export function getSyncUseCase() {
+  return SyncFactory.createSyncSmartUseCase();
 }
 
 /**

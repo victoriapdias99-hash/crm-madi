@@ -1,10 +1,8 @@
 import { Router } from 'express';
-import { SyncController } from '../controllers/SyncController';
 import { SyncFactory } from '../../infrastructure/config/SyncFactory';
 
 /**
- * Rutas específicas para funcionalidad de sincronización
- * Separadas del routes.ts principal para mantener modularidad
+ * Rutas simplificadas para sincronización inteligente de Google Sheets
  */
 export function createSyncRoutes(): Router {
   const router = Router();
@@ -12,39 +10,14 @@ export function createSyncRoutes(): Router {
   // Inicializar dependencias usando factory
   const syncController = SyncFactory.createSyncController();
 
-  // ========== RUTAS DE SINCRONIZACIÓN ==========
-
-  /**
-   * POST /api/sync/full
-   * Sincronización completa de todos los datos desde Google Sheets
-   */
-  router.post('/full', (req, res) => {
-    syncController.syncFull(req, res);
-  });
-
-  /**
-   * POST /api/sync/incremental
-   * Sincronización incremental desde última actualización
-   */
-  router.post('/incremental', (req, res) => {
-    syncController.syncIncremental(req, res);
-  });
+  // ========== RUTA PRINCIPAL DE SINCRONIZACIÓN ==========
 
   /**
    * POST /api/sync/smart
-   * Sincronización inteligente que continúa desde donde se quedó cada marca
+   * Sincronización inteligente que analiza automáticamente qué datos sincronizar
    */
   router.post('/smart', (req, res) => {
     syncController.syncSmart(req, res);
-  });
-
-  /**
-   * POST /api/sync/sheets/:sheetNames
-   * Sincronización de sheets específicos (separados por coma)
-   * Ejemplo: /api/sync/sheets/Fiat,Peugeot,Toyota
-   */
-  router.post('/sheets/:sheetNames', (req, res) => {
-    syncController.syncSpecificSheets(req, res);
   });
 
   // ========== RUTAS DE INFORMACIÓN ==========
@@ -55,15 +28,6 @@ export function createSyncRoutes(): Router {
    */
   router.get('/sheets/available', (req, res) => {
     syncController.getAvailableSheets(req, res);
-  });
-
-  /**
-   * POST /api/sync/sheets/validate
-   * Valida que los sheets especificados existen
-   * Body: { sheetNames: string[] }
-   */
-  router.post('/sheets/validate', (req, res) => {
-    syncController.validateSheets(req, res);
   });
 
   /**
