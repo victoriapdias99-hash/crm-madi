@@ -289,35 +289,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   async function contarDuplicadosPorCampana(campana: any, clienteData: any, db: any, opLeadsRepTable: any, sql: any, todasLasCampanas: any[]) {
     const nombreComercial = clienteData?.nombreComercial || '';
     
-    // Mapear zona del cliente a localización en op_leads_rep
-    const zonaCliente = clienteData?.zonas?.[0] || '';
-    let localizacionFiltro = '';
-    
-    switch(zonaCliente.toUpperCase()) {
-      case 'NACIONAL':
-        localizacionFiltro = 'Pais';
-        break;
-      case 'AMBA':
-        localizacionFiltro = 'Amba';
-        break;
-      case 'CORDOBA':
-        localizacionFiltro = 'Cordoba';
-        break;
-      case 'TUCUMAN':
-        localizacionFiltro = 'Tucuman';
-        break;
-      case 'RESISTENCIA':
-        localizacionFiltro = 'Resistencia';
-        break;
-      case 'MENDOZA':
-        localizacionFiltro = 'Mendoza';
-        break;
-      case 'SANTA FE':
-        localizacionFiltro = 'Santa Fe';
-        break;
-      default:
-        localizacionFiltro = zonaCliente || 'Pais'; // Fallback
-    }
+    // Usar zona directamente de la campaña
+    const localizacionFiltro = campana.zona || 'Pais';
     
     // NUEVA LÓGICA: Calcular fecha_fin automáticamente si no existe
     let fechaFinCalculada = campana.fechaFin;
@@ -354,35 +327,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   async function contarLeadsPorCampana(campana: any, clienteData: any, db: any, opLeadsRepTable: any, sql: any, count: any, todasLasCampanas: any[]) {
     const nombreComercial = clienteData?.nombreComercial || '';
     
-    // Mapear zona del cliente a localización en op_leads_rep
-    const zonaCliente = clienteData?.zonas?.[0] || '';
-    let localizacionFiltro = '';
-    
-    switch(zonaCliente.toUpperCase()) {
-      case 'NACIONAL':
-        localizacionFiltro = 'Pais';
-        break;
-      case 'AMBA':
-        localizacionFiltro = 'Amba';
-        break;
-      case 'CORDOBA':
-        localizacionFiltro = 'Cordoba';
-        break;
-      case 'TUCUMAN':
-        localizacionFiltro = 'Tucuman';
-        break;
-      case 'RESISTENCIA':
-        localizacionFiltro = 'Resistencia';
-        break;
-      case 'MENDOZA':
-        localizacionFiltro = 'Mendoza';
-        break;
-      case 'SANTA FE':
-        localizacionFiltro = 'Santa Fe';
-        break;
-      default:
-        localizacionFiltro = zonaCliente || 'Pais'; // Fallback
-    }
+    // Usar zona directamente de la campaña
+    const localizacionFiltro = campana.zona || 'Pais';
     
     // NUEVA LÓGICA: Calcular fecha_fin automáticamente si no existe
     let fechaFinCalculada = campana.fechaFin;
@@ -405,7 +351,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
     
-    console.log(`🗺️ ZONA: ${zonaCliente} → ${localizacionFiltro} para ${campana.marca} ${campana.numeroCampana}`);
+    console.log(`🗺️ ZONA: ${localizacionFiltro} para ${campana.marca} ${campana.numeroCampana}`);
     
     return await db
       .select({ count: count() })
