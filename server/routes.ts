@@ -366,17 +366,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log(`🗺️ ZONA: ${localizacionFiltro} para ${campana.marca} ${campana.numeroCampana}`);
     console.log(`🔍 FILTROS: marca='%${campana.marca.toLowerCase()}%', cliente='%${nombreComercial.toLowerCase()}%', zona='${localizacionFiltro}', fecha>='${campana.fechaCampana}'`);
     
-    return await db
-      .select({ count: count() })
-      .from(opLeadsRepTable)
-      .where(
-        sql`lower(${opLeadsRepTable.campaign}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
-            AND lower(${opLeadsRepTable.cliente}) LIKE ${`%${nombreComercial.toLowerCase()}%`}
-            AND ${opLeadsRepTable.localizacion} = ${localizacionFiltro}
-            AND ${opLeadsRepTable.source} = 'google_sheets'
-            AND date(${opLeadsRepTable.fechaCreacion}) >= ${campana.fechaCampana}
-            ${fechaFinCalculada ? sql`AND date(${opLeadsRepTable.fechaCreacion}) <= ${fechaFinCalculada}` : sql``}`
-      );
+    try {
+      // Usar SQL directo para evitar problemas con Drizzle
+      const queryText = `
+        SELECT COUNT(*) as count
+        FROM op_leads_rep 
+        WHERE 
+            lower(campaign) LIKE $1
+            AND lower(cliente) LIKE $2
+            AND localizacion = $3
+            AND source = 'google_sheets'
+            AND date(fecha_creacion) >= $4
+            ${fechaFinCalculada ? 'AND date(fecha_creacion) <= $5' : ''}
+      `;
+      
+      const params = [
+        `%${campana.marca.toLowerCase()}%`,
+        `%${nombreComercial.toLowerCase()}%`, 
+        localizacionFiltro,
+        campana.fechaCampana
+      ];
+      
+      if (fechaFinCalculada) {
+        params.push(fechaFinCalculada);
+      }
+      
+      const result = await db.execute(sql.raw(queryText, params));
+      console.log(`✅ SQL QUERY OK: ${campana.marca} ${campana.numeroCampana} result:`, result);
+      
+      return [{ count: parseInt(result.rows[0].count) }];
+      
+    } catch (error) {
+      console.error(`❌ QUERY ERROR: ${campana.marca} ${campana.numeroCampana}:`, error);
+      return [{ count: 0 }];
+    }
   }
 
   // Endpoint principal para datos diarios usando PostgreSQL con filtrado por nombre comercial
