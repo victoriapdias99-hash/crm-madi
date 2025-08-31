@@ -33,7 +33,7 @@ export class SyncSmartUseCase {
       });
 
       // 1. Analizar estado actual de cada marca
-      const brandAnalysis = await this.analyzeBrandStatus();
+      const brandAnalysis = await this.analyzeBrandStatus(options.specificSheets);
       console.log('📊 Análisis de marcas completado:', brandAnalysis);
 
       if (brandAnalysis.incompleteSheets.length === 0) {
@@ -126,11 +126,18 @@ export class SyncSmartUseCase {
   /**
    * Analiza el estado actual de cada marca en la base de datos vs Google Sheets
    */
-  private async analyzeBrandStatus() {
+  private async analyzeBrandStatus(specificSheets?: string[]) {
     try {
-      // 1. Obtener marcas disponibles en Google Sheets
-      const availableSheets = await this.sheetsGateway.getAvailableSheetNames();
-      console.log(`📋 Marcas disponibles en Google Sheets: ${availableSheets.join(', ')}`);
+      // 1. Obtener marcas disponibles en Google Sheets o usar las específicas
+      let availableSheets: string[];
+      
+      if (specificSheets && specificSheets.length > 0) {
+        availableSheets = specificSheets;
+        console.log(`📋 Procesando marcas específicas: ${availableSheets.join(', ')}`);
+      } else {
+        availableSheets = await this.sheetsGateway.getAvailableSheetNames();
+        console.log(`📋 Marcas disponibles en Google Sheets: ${availableSheets.join(', ')}`);
+      }
 
       // 2. Para cada marca, obtener conteos actuales y totales
       const incompleteSheets: Array<{name: string, currentCount: number, totalCount: number}> = [];
