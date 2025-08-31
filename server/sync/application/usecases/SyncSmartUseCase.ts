@@ -186,17 +186,20 @@ export class SyncSmartUseCase {
         // Contar registros actuales en op_lead
         const currentCount = await this.getCurrentBrandCount(sheetName);
         
-        // Contar registros totales en Google Sheets  
-        const totalCount = await this.getTotalBrandCount(sheetName);
+        // Obtener última fila disponible en Google Sheets (número de fila, no cantidad)
+        const lastAvailableRow = await this.getLastAvailableRow(sheetName);
         
-        // Verificar si hay filas nuevas
-        const newRowsAvailable = totalCount > lastProcessedRow;
-        const newRowsCount = Math.max(0, totalCount - lastProcessedRow);
+        // Verificar si hay filas nuevas (comparar fila vs fila)
+        const newRowsAvailable = lastAvailableRow > lastProcessedRow;
+        const newRowsCount = Math.max(0, lastAvailableRow - lastProcessedRow);
         
-        console.log(`📊 ${sheetName}: ${currentCount} en BD, última fila: ${lastProcessedRow}, total en Sheets: ${totalCount}, nuevas: ${newRowsCount}`);
+        console.log(`📊 ${sheetName}: ${currentCount} en BD, última fila procesada: ${lastProcessedRow}, última fila disponible: ${lastAvailableRow}, nuevas: ${newRowsCount}`);
         
         // Solo agregar marcas que tienen filas nuevas
         if (newRowsAvailable && newRowsCount > 0) {
+          // Para mantener compatibilidad con el resto del código, aún necesitamos totalCount
+          const totalCount = await this.getTotalBrandCount(sheetName);
+          
           incompleteSheets.push({
             name: sheetName,
             currentCount,
@@ -287,6 +290,27 @@ export class SyncSmartUseCase {
       return leads.length;
     } catch (error) {
       console.error(`Error getting total count for sheet ${sheetName}:`, error);
+      return 0;
+    }
+  }
+
+  /**
+   * Obtiene el número de la última fila disponible con datos en Google Sheets
+   */
+  private async getLastAvailableRow(sheetName: string): Promise<number> {
+    try {
+      const leads = await this.sheetsGateway.getLeadsFromSheets([sheetName]);
+      
+      if (leads.length === 0) {
+        return 1; // Solo header, última fila de datos sería 1 (pero no hay datos)
+      }
+      
+      // Encontrar la fila más alta con datos
+      const maxRow = Math.max(...leads.map(lead => lead.googleSheetsRowNumber || 0));
+      console.log(`📊 ${sheetName}: última fila disponible con datos = ${maxRow}`);
+      return maxRow;
+    } catch (error) {
+      console.error(`Error getting last available row for sheet ${sheetName}:`, error);
       return 0;
     }
   }
