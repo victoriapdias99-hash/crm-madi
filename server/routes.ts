@@ -287,7 +287,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * - Compatible con datos inconsistentes de Google Sheets
    */
   async function contarDuplicadosPorCampana(campana: any, clienteData: any, db: any, opLeadsRepTable: any, sql: any, todasLasCampanas: any[]) {
-    // Normalizar nombre comercial igual que en la sincronización
+    // NORMALIZAR nombre comercial igual que en la sincronización (espacios → underscores)
     const nombreComercialRaw = clienteData?.nombreComercial || '';
     const nombreComercial = nombreComercialRaw
       .toLowerCase()
@@ -331,9 +331,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   async function contarLeadsPorCampana(campana: any, clienteData: any, db: any, opLeadsRepTable: any, sql: any, count: any, todasLasCampanas: any[]) {
-    // USAR SOLO EL NOMBRE COMERCIAL (como está en los datos sincronizados)
+    // NORMALIZAR nombre comercial igual que en la sincronización (espacios → underscores)
     const nombreComercialRaw = clienteData?.nombreComercial || '';
-    const nombreComercial = nombreComercialRaw.toLowerCase().trim();
+    const nombreComercial = nombreComercialRaw
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s]/g, '') // Remover caracteres especiales
+      .replace(/\s+/g, '_');   // Reemplazar espacios con _
     
     // Usar zona directamente de la campaña
     const localizacionFiltro = campana.zona || 'Pais';
@@ -360,21 +364,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     console.log(`🗺️ ZONA: ${localizacionFiltro} para ${campana.marca} ${campana.numeroCampana}`);
-    console.log(`🔍 FILTROS: marca='%${campana.marca.toLowerCase()}%', cliente='%${nombreComercial.toLowerCase()}%', zona='${localizacionFiltro}', fecha>='${campana.fechaCampana}'`);
+    console.log(`🔍 FILTROS: marca='%${campana.marca.toLowerCase()}%', cliente='%${nombreComercial}%', zona='${localizacionFiltro}', fecha>='${campana.fechaCampana}'`);
     
     try {
-      // Volver a Drizzle pero con sintaxis correcta
+      // Usar operadores Drizzle individuales para evitar problemas de parámetros
+      const { ilike, eq, gte, lte, and } = await import('drizzle-orm');
+      
+      let conditions = [
+        ilike(opLeadsRepTable.campaign, `%${campana.marca.toLowerCase()}%`),
+        ilike(opLeadsRepTable.cliente, `%${nombreComercial}%`),
+        eq(opLeadsRepTable.localizacion, localizacionFiltro),
+        eq(opLeadsRepTable.source, 'google_sheets'),
+        gte(sql`date(${opLeadsRepTable.fechaCreacion})`, campana.fechaCampana)
+      ];
+      
+      if (fechaFinCalculada) {
+        conditions.push(lte(sql`date(${opLeadsRepTable.fechaCreacion})`, fechaFinCalculada));
+      }
+      
       const result = await db
         .select({ count: count() })
         .from(opLeadsRepTable)
-        .where(
-          sql`lower(${opLeadsRepTable.campaign}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
-              AND lower(${opLeadsRepTable.cliente}) LIKE ${`%${nombreComercial}%`}
-              AND ${opLeadsRepTable.localizacion} = ${localizacionFiltro}
-              AND ${opLeadsRepTable.source} = 'google_sheets'
-              AND date(${opLeadsRepTable.fechaCreacion}) >= ${campana.fechaCampana}
-              ${fechaFinCalculada ? sql`AND date(${opLeadsRepTable.fechaCreacion}) <= ${fechaFinCalculada}` : sql``}`
-        );
+        .where(and(...conditions));
       
       console.log(`✅ DRIZZLE OK: ${campana.marca} ${campana.numeroCampana} = ${result[0]?.count || 0}`);
       return result;
