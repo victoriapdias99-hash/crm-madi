@@ -388,7 +388,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Usar función auxiliar para contar leads con filtro inteligente
           const leadsCount = await contarLeadsPorCampana(campana, clienteData, db, opLeadsRep, sql, count, campanas);
 
+          console.log(`🔍 DEBUG ${campana.marca} ${campana.numeroCampana}: leadsCount =`, JSON.stringify(leadsCount, null, 2));
           const enviadosDB = leadsCount[0]?.count || 0;
+          console.log(`🔍 DEBUG ${campana.marca} ${campana.numeroCampana}: enviadosDB = ${enviadosDB}`);
 
           // Contar duplicados con los mismos filtros que la campaña
           const duplicadosResult = await contarDuplicadosPorCampana(campana, clienteData, db, opLeadsRep, sql, campanas);
