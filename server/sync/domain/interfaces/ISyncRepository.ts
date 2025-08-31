@@ -24,4 +24,7 @@ export interface ISyncRepository {
   // Búsqueda de duplicados
   findDuplicatesByPhone(phones: string[]): Promise<SyncLead[]>;
   findDuplicatesByMetaId(metaIds: string[]): Promise<SyncLead[]>;
+  
+  // Limpieza de duplicados
+  cleanDuplicatesForBrand?(marca: string): Promise<number>;
 }

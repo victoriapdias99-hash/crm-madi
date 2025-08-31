@@ -271,6 +271,74 @@ export class PostgresSyncRepository implements ISyncRepository {
   }
 
   /**
+   * Limpia duplicados para una marca específica basado en marca + google_sheets_row_number
+   * Mantiene solo el registro más reciente para cada combinación única
+   */
+  async cleanDuplicatesForBrand(marca: string): Promise<number> {
+    try {
+      if (!marca) {
+        console.log('⚠️ No se puede limpiar duplicados: marca vacía');
+        return 0;
+      }
+
+      const normalizedBrand = marca.toUpperCase();
+      
+      // Buscar duplicados: más de 1 registro con la misma marca + google_sheets_row_number
+      const duplicateRows = await db.select({
+        marca: opLead.marca,
+        googleSheetsRowNumber: opLead.googleSheetsRowNumber,
+        count: sql<number>`COUNT(*) as count`,
+        minId: sql<number>`MIN(${opLead.id}) as min_id`
+      })
+      .from(opLead)
+      .where(sql`${opLead.marca} = ${normalizedBrand} AND ${opLead.googleSheetsRowNumber} IS NOT NULL`)
+      .groupBy(opLead.marca, opLead.googleSheetsRowNumber)
+      .having(sql`COUNT(*) > 1`);
+      
+      if (duplicateRows.length === 0) {
+        console.log(`✅ ${marca}: No hay duplicados para limpiar`);
+        return 0;
+      }
+      
+      console.log(`🧽 ${marca}: Encontrados ${duplicateRows.length} grupos de duplicados`);
+      
+      let totalDeleted = 0;
+      
+      // Para cada grupo de duplicados, eliminar todos excepto el más reciente (ID mayor)
+      for (const duplicateGroup of duplicateRows) {
+        const { googleSheetsRowNumber } = duplicateGroup;
+        
+        // Obtener todos los IDs del grupo ordenados por ID descendente (más reciente primero)
+        const groupRecords = await db.select({ id: opLead.id })
+          .from(opLead)
+          .where(sql`${opLead.marca} = ${normalizedBrand} AND ${opLead.googleSheetsRowNumber} = ${googleSheetsRowNumber}`)
+          .orderBy(sql`${opLead.id} DESC`);
+        
+        // Mantener el primero (más reciente) y eliminar los demás
+        const idsToDelete = groupRecords.slice(1).map(record => record.id);
+        
+        if (idsToDelete.length > 0) {
+          const deleteResult = await db.delete(opLead)
+            .where(sql`${opLead.id} IN ${sql.raw(`(${idsToDelete.join(', ')})`)}`)
+            .returning({ deletedId: opLead.id });
+          
+          const deletedCount = deleteResult.length;
+          totalDeleted += deletedCount;
+          
+          console.log(`🗑️ ${marca} fila ${googleSheetsRowNumber}: Eliminados ${deletedCount} duplicados, mantenido ID ${groupRecords[0].id}`);
+        }
+      }
+      
+      console.log(`✨ ${marca}: Limpieza completada - ${totalDeleted} duplicados eliminados`);
+      return totalDeleted;
+      
+    } catch (error) {
+      console.error(`Error cleaning duplicates for brand ${marca}:`, error);
+      return 0;
+    }
+  }
+
+  /**
    * Obtiene todos los leads existentes con googleSheetsRowNumber para una marca específica
    * Útil para detección rápida de duplicados antes de la sincronización
    */

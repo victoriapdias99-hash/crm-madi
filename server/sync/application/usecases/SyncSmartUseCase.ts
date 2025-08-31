@@ -38,8 +38,27 @@ export class SyncSmartUseCase {
 
       if (brandAnalysis.incompleteSheets.length === 0) {
         console.log('✅ Todas las marcas están completamente sincronizadas');
+        
+        // Ejecutar limpieza de duplicados para todas las marcas disponibles
+        console.log('🧽 Ejecutando limpieza de duplicados para todas las marcas...');
+        let totalDuplicatesRemoved = 0;
+        
+        for (const sheetName of brandAnalysis.availableSheets) {
+          console.log(`🧽 Limpiando duplicados para marca ${sheetName}...`);
+          const duplicatesRemoved = await (this.syncRepository as any).cleanDuplicatesForBrand(sheetName);
+          totalDuplicatesRemoved += duplicatesRemoved;
+          if (duplicatesRemoved > 0) {
+            console.log(`✨ ${sheetName}: ${duplicatesRemoved} duplicados eliminados`);
+          }
+        }
+        
         await this.syncRepository.updateSyncStatus({ isRunning: false });
-        return this.createResult(true, 0, startTime, 'Todas las marcas ya están sincronizadas');
+        
+        const message = totalDuplicatesRemoved > 0 
+          ? `Todas las marcas sincronizadas - ${totalDuplicatesRemoved} duplicados eliminados`
+          : 'Todas las marcas ya están sincronizadas';
+          
+        return this.createResult(true, totalDuplicatesRemoved, startTime, message);
       }
 
       console.log(`🔄 Marcas que necesitan sincronización: ${brandAnalysis.incompleteSheets.map(s => s.name).join(', ')}`);
@@ -87,7 +106,25 @@ export class SyncSmartUseCase {
           }
           
           details.sheetsProcessed?.push(incompleteSheet.name);
+          
+          // Limpiar duplicados automáticamente después de procesar la marca
+          console.log(`🧽 Limpiando duplicados para marca ${incompleteSheet.name}...`);
+          const duplicatesRemoved = await (this.syncRepository as any).cleanDuplicatesForBrand(incompleteSheet.name);
+          if (duplicatesRemoved > 0) {
+            console.log(`✨ ${incompleteSheet.name}: ${duplicatesRemoved} duplicados eliminados`);
+          }
+        } else {
+          console.log(`ℹ️ ${incompleteSheet.name}: No hay nuevos registros para guardar`);
+          
+          // También limpiar duplicados aunque no haya nuevos registros
+          console.log(`🧽 Limpiando duplicados para marca ${incompleteSheet.name}...`);
+          const duplicatesRemoved = await (this.syncRepository as any).cleanDuplicatesForBrand(incompleteSheet.name);
+          if (duplicatesRemoved > 0) {
+            console.log(`✨ ${incompleteSheet.name}: ${duplicatesRemoved} duplicados eliminados`);
+          }
         }
+        
+        details.sheetsProcessed?.push(incompleteSheet.name);
       }
 
       // 3. Actualizar estado final
