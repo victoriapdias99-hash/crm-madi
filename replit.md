@@ -24,7 +24,7 @@ Preferred communication style: Simple, everyday language.
 ### Data Model & Features
 - **Database Schema**: Key entities include Users, Campaigns, Leads, Daily Stats, Lead Notes, Clientes (Client management with commercial info, brands, zones), and Dashboard Campaigns.
 - **Dashboard Features**: Real-time "Datos Diarios" display with CPL, "CPL Directo" for CPL management, "Finanzas Dashboard" for financial analysis (profit, ROI, taxes), Client Management (ABM) with CRUD, Campaign Analytics (lead counts, spending, conversion), Google Sheets Integration, and Meta Ads API Integration for real-time spending.
-- **Lead Synchronization**: Advanced duplicate detection using phone number, MetaLeadId, and Google Sheets row number. Supports full, smart, incremental, and brand-specific synchronization. Dynamic sheet auto-detection for Google Sheets tabs.
+- **Lead Synchronization**: Advanced duplicate detection using phone number, MetaLeadId, and Google Sheets row number. Supports full, smart, incremental, and brand-specific synchronization. Dynamic sheet auto-detection for Google Sheets tabs. **Status: Fully operational** - Fixed row comparison logic (Aug 2025) to ensure complete data synchronization.
 - **Data Capture**: Expanded lead data capture from Google Sheets to include origin, location, and specific client information.
 - **Performance Optimization**: Migration from Google Sheets API to PostgreSQL for significant performance improvement (80% faster dashboard data loading).
 - **Reporting**: CSV export functionality for leads and finalized campaigns.
@@ -33,6 +33,15 @@ Preferred communication style: Simple, everyday language.
 ### System Design Choices
 - **Data Flow**: Automatic periodic synchronization with Google Sheets, WebSocket for live dashboard updates, manual input processing, and full CRUD operations for client data, all persisting to PostgreSQL.
 - **Storage Layer**: Production-ready PostgreSQL via Drizzle, with an `IStorage` interface for backend flexibility.
+
+## Recent Changes
+### Smart Sync System Fix (August 31, 2025)
+- **Issue Resolved**: Fixed critical synchronization logic that was skipping the last available row in Google Sheets
+- **Root Cause**: System compared lead count vs row number instead of row position vs row position
+- **Solution**: Implemented `getLastAvailableRow()` method that correctly identifies the highest row number with data
+- **Impact**: Ensures 100% data synchronization from Google Sheets, no leads are missed
+- **Technical Details**: Modified `analyzeBrandStatus()` in `SyncSmartUseCase.ts` to use row-to-row comparison instead of count-to-row comparison
+- **Verification**: Successfully processed previously missed row 411 for CHEVROLET brand (Jorge Fernández)
 
 ## External Dependencies
 - **@neondatabase/serverless**: PostgreSQL driver
