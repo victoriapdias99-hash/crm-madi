@@ -286,7 +286,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * - Filtros AND/OR combinados para máxima precisión y cobertura
    * - Compatible con datos inconsistentes de Google Sheets
    */
-  async function contarLeadsPorCampana(campana: any, clienteData: any, db: any, leads: any, sql: any, count: any, todasLasCampanas: any[]) {
+  async function contarLeadsPorCampana(campana: any, clienteData: any, db: any, opLeadsRepTable: any, sql: any, count: any, todasLasCampanas: any[]) {
     const nombreComercial = clienteData?.nombreComercial || '';
     
     // NUEVA LÓGICA: Calcular fecha_fin automáticamente si no existe
@@ -312,13 +312,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     return await db
       .select({ count: count() })
-      .from(opLeadsRep)
+      .from(opLeadsRepTable)
       .where(
-        sql`lower(${opLeadsRep.campaign}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
-            AND lower(${opLeadsRep.cliente}) LIKE ${`%${nombreComercial.toLowerCase()}%`}
-            AND ${opLeadsRep.source} = 'google_sheets'
-            AND date(${opLeadsRep.fechaCreacion}) >= ${campana.fechaCampana}
-            ${fechaFinCalculada ? sql`AND date(${opLeadsRep.fechaCreacion}) <= ${fechaFinCalculada}` : sql``}`
+        sql`lower(${opLeadsRepTable.campaign}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
+            AND lower(${opLeadsRepTable.cliente}) LIKE ${`%${nombreComercial.toLowerCase()}%`}
+            AND ${opLeadsRepTable.source} = 'google_sheets'
+            AND date(${opLeadsRepTable.fechaCreacion}) >= ${campana.fechaCampana}
+            ${fechaFinCalculada ? sql`AND date(${opLeadsRepTable.fechaCreacion}) <= ${fechaFinCalculada}` : sql``}`
       );
   }
 
@@ -342,7 +342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const clienteData = await storage.getCliente(campana.clienteId);
           
           // Usar función auxiliar para contar leads con filtro inteligente
-          const leadsCount = await contarLeadsPorCampana(campana, clienteData, db, leads, sql, count, campanas);
+          const leadsCount = await contarLeadsPorCampana(campana, clienteData, db, opLeadsRep, sql, count, campanas);
 
           const enviadosDB = leadsCount[0]?.count || 0;
           
