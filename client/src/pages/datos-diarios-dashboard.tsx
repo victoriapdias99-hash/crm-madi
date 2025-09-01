@@ -35,6 +35,9 @@ interface DatosDiariosData {
   cantidadSolicitada: number;
   diasProcesados: number;
   estadoCampana: string;
+  duplicados?: number;
+  faltantes?: number;
+  esSuperior100?: boolean;
 }
 
 // Función utilitaria para formatear fechas con hora exacta
@@ -251,17 +254,19 @@ export default function DatosDiariosDashboard() {
   // Extraer valores únicos para filtros
   const opcionesZona = useMemo(() => {
     if (!datosDiarios || !Array.isArray(datosDiarios)) return [];
-    const zonas = [...new Set(datosDiarios.map((data: DatosDiariosData) => data.zona).filter(Boolean))];
+    const zonasSet = new Set(datosDiarios.map((data: DatosDiariosData) => data.zona).filter(Boolean));
+    const zonas = Array.from(zonasSet);
     return zonas.sort();
   }, [datosDiarios]);
 
   const opcionesMarca = useMemo(() => {
     if (!datosDiarios || !Array.isArray(datosDiarios)) return [];
-    const marcas = [...new Set(datosDiarios.map((data: DatosDiariosData) => {
+    const marcasSet = new Set(datosDiarios.map((data: DatosDiariosData) => {
       // Extraer marca del nombre del cliente (ej: "JEEP 1" -> "JEEP")
       const match = data.cliente.match(/^([A-Z]+)/);
       return match ? match[1] : data.cliente.split(' ')[0];
-    }).filter(Boolean))];
+    }).filter(Boolean));
+    const marcas = Array.from(marcasSet);
     return marcas.sort();
   }, [datosDiarios]);
 
@@ -606,7 +611,7 @@ export default function DatosDiariosDashboard() {
         clienteIndex: index, 
         cpl,
         clienteNombre: data.cliente,
-        numeroCampana: data.numeroCampana
+        numeroCampana: data.numeroCampana.toString()
       });
       // Clear the input after saving
       setCplValues(prev => {
@@ -683,13 +688,13 @@ export default function DatosDiariosDashboard() {
     unifiedUpdateMutation.mutate();
   };
 
-  if (finalIsLoading && !finalData) {
+  if (finalIsLoading && !datosDiarios) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-blue-900/20 flex items-center justify-center">
         <div className="text-center space-y-4">
           <Loader2 className="h-12 w-12 animate-spin mx-auto text-blue-600" />
           <p className="text-lg font-semibold text-blue-900 dark:text-blue-100">Cargando datos diarios...</p>
-          <p className="text-sm text-blue-700 dark:text-blue-300">Procesando {finalData?.length || 0} registros</p>
+          <p className="text-sm text-blue-700 dark:text-blue-300">Procesando registros...</p>
           <div className="mt-4 text-xs text-gray-500">
             Backend Status: {error ? 'Error' : 'OK'} | Loading: {isLoading ? 'Yes' : 'No'}
           </div>

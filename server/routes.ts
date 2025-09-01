@@ -296,13 +296,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       .replace(/\s+/g, '_');   // Reemplazar espacios con _
     
     // MAPEO CORRECTO: Zona de campaña → Localización en datos sincronizados
-    const mapeoZonas = {
+    const mapeoZonas: Record<string, string> = {
       'NACIONAL': 'Pais',
       'AMBA': 'Amba', 
       'Córdoba': 'Cordoba',
       'Santa Fe': 'Santa Fe'
     };
-    const localizacionFiltro = mapeoZonas[campana.zona] || campana.zona || 'Pais';
+    const localizacionFiltro = mapeoZonas[campana.zona as keyof typeof mapeoZonas] || campana.zona || 'Pais';
     
     // NUEVA LÓGICA: Calcular fecha_fin automáticamente si no existe
     let fechaFinCalculada = campana.fechaFin;
@@ -346,13 +346,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       .replace(/\s+/g, '_');   // Reemplazar espacios con _
     
     // MAPEO CORRECTO: Zona de campaña → Localización en datos sincronizados
-    const mapeoZonas = {
+    const mapeoZonas: Record<string, string> = {
       'NACIONAL': 'Pais',
       'AMBA': 'Amba', 
       'Córdoba': 'Cordoba',
       'Santa Fe': 'Santa Fe'
     };
-    const localizacionFiltro = mapeoZonas[campana.zona] || campana.zona || 'Pais';
+    const localizacionFiltro = mapeoZonas[campana.zona as keyof typeof mapeoZonas] || campana.zona || 'Pais';
     
     // NUEVA LÓGICA: Calcular fecha_fin automáticamente si no existe
     let fechaFinCalculada = campana.fechaFin;
@@ -492,7 +492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             entregadosPorDia: (() => {
               // Calcular días transcurridos desde fecha de campaña hasta hoy o fecha fin
               const fechaInicio = new Date(campana.fechaCampana);
-              const fechaReferencia = fechaFinExacta ? new Date(fechaFinExacta) : new Date();
+              const fechaReferencia = fechaFinExacta && fechaFinExacta !== null ? new Date(fechaFinExacta) : new Date();
               const diasTranscurridos = Math.max(1, Math.ceil((fechaReferencia.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24)));
               return enviadosFinales / diasTranscurridos;
             })(), // Entregados por día = enviados / días transcurridos
