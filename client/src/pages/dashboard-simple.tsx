@@ -4,7 +4,7 @@ import { Navigation } from '@/components/navigation';
 interface DashboardData {
   cliente: string;
   clienteNombre: string;
-  carna: string;
+  marca: string;
   zona: string;
   numeroCampana: string;
   enviados: number;
@@ -203,7 +203,7 @@ export default function DashboardSimple() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Carna</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Marca</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Zona</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Enviados</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
@@ -275,7 +275,7 @@ export default function DashboardSimple() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Carna</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Marca</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Zona</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Enviados</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
