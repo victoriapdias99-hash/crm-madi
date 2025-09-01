@@ -605,6 +605,15 @@ export default function DatosDiariosDashboard() {
       'RENAULT': 'Renault'
     };
     
+    // Buscar marcas conocidas en cualquier parte del nombre (case insensitive)
+    const nombreUpper = clienteNombre.toUpperCase();
+    for (const [key, value] of Object.entries(marcaMap)) {
+      if (nombreUpper.includes(key)) {
+        return value;
+      }
+    }
+    
+    // Si no encuentra marca conocida, usar la primera palabra
     const match = clienteNombre.match(/^([A-Z]+)/);
     const marcaKey = match ? match[1] : clienteNombre.split(' ')[0].toUpperCase();
     return marcaMap[marcaKey] || marcaKey;
