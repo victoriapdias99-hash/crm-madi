@@ -16,6 +16,7 @@ import { debounce, memoize, measurePerformance } from "@/lib/performance";
 interface DatosDiariosData {
   cliente: string;
   clienteNombre: string;
+  carna: string;
   zona: string;
   diasData: number[];
   enviados: number;
@@ -590,6 +591,25 @@ export default function DatosDiariosDashboard() {
     };
   }), []);
 
+  // Función para extraer marca del nombre del cliente
+  const extractMarca = (clienteNombre: string): string => {
+    const marcaMap: Record<string, string> = {
+      'PEUGEOT': 'Peugeot',
+      'TOYOTA': 'Toyota',
+      'VW': 'Volkswagen',
+      'FIAT': 'Fiat',
+      'FORD': 'Ford',
+      'JEEP': 'Jeep',
+      'CHEVROLET': 'Chevrolet',
+      'CITROEN': 'Citroën',
+      'RENAULT': 'Renault'
+    };
+    
+    const match = clienteNombre.match(/^([A-Z]+)/);
+    const marcaKey = match ? match[1] : clienteNombre.split(' ')[0].toUpperCase();
+    return marcaMap[marcaKey] || marcaKey;
+  };
+
   // Debounced CPL input handling for better performance
   const handleCplChange = useCallback(
     debounce((index: number, value: string) => {
@@ -864,6 +884,7 @@ export default function DatosDiariosDashboard() {
                 <thead>
                   <tr className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20">
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-left font-semibold text-amber-900 dark:text-amber-100">Cliente</th>
+                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-left font-semibold text-amber-900 dark:text-amber-100">Carna</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-left font-semibold text-amber-900 dark:text-amber-100">Zona</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Fecha de Inicio</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Enviados</th>
@@ -914,6 +935,11 @@ export default function DatosDiariosDashboard() {
                             <div className="text-xs bg-gradient-to-r from-blue-500 to-purple-600 text-white px-2 py-1 rounded-full font-semibold w-fit">
                               #{data.numeroCampana || 1}
                             </div>
+                          </div>
+                        </td>
+                        <td className="border border-amber-200 dark:border-amber-600 p-3">
+                          <div className="bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 p-2 rounded-lg text-center">
+                            <span className="font-semibold text-indigo-700 dark:text-indigo-300">{extractMarca(data.cliente)}</span>
                           </div>
                         </td>
                         <td className="border border-amber-200 dark:border-amber-600 p-3 font-medium text-slate-700 dark:text-slate-300">{data.zona}</td>
@@ -1071,7 +1097,7 @@ export default function DatosDiariosDashboard() {
                   {/* Fila de Totales - Campañas en Proceso */}
                   {campanasEnProceso.length > 0 && (
                     <tr className="bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-800/50 dark:to-orange-800/50 border-t-4 border-amber-500">
-                      <td colSpan={showDuplicatesOnly ? 12 : 11} className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100 text-lg">
+                      <td colSpan={showDuplicatesOnly ? 13 : 12} className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100 text-lg">
                         TOTAL CAMPAÑAS EN PROCESO
                       </td>
                       <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
@@ -1214,6 +1240,7 @@ export default function DatosDiariosDashboard() {
                 <thead>
                   <tr className="bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20">
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-left font-semibold text-emerald-900 dark:text-emerald-100">Cliente</th>
+                    <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-left font-semibold text-emerald-900 dark:text-emerald-100">Carna</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-left font-semibold text-emerald-900 dark:text-emerald-100">Zona</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Fecha de Inicio</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Enviados</th>
@@ -1249,6 +1276,11 @@ export default function DatosDiariosDashboard() {
                           <div>
                             <div className="font-medium">{data.clienteNombre}</div>
                             <div className="text-xs text-green-600 font-semibold">#{data.numeroCampana || 1}</div>
+                          </div>
+                        </td>
+                        <td className="border border-gray-300 dark:border-gray-600 p-2">
+                          <div className="bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 p-2 rounded-lg text-center">
+                            <span className="font-semibold text-indigo-700 dark:text-indigo-300">{extractMarca(data.cliente)}</span>
                           </div>
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2">{data.zona}</td>
@@ -1367,7 +1399,7 @@ export default function DatosDiariosDashboard() {
                   {/* Fila de Totales - Campañas Finalizadas */}
                   {campanasFinalizadas.length > 0 && (
                     <tr className="bg-gradient-to-r from-emerald-100 to-green-100 dark:from-emerald-800/50 dark:to-green-800/50 border-t-4 border-emerald-500">
-                      <td colSpan={11} className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-bold text-emerald-900 dark:text-emerald-100 text-lg">
+                      <td colSpan={12} className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-bold text-emerald-900 dark:text-emerald-100 text-lg">
                         TOTAL CAMPAÑAS FINALIZADAS
                       </td>
                       <td className="border border-emerald-200 dark:border-emerald-600 p-3 text-center">

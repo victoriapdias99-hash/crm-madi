@@ -4,6 +4,7 @@ import { Navigation } from '@/components/navigation';
 interface DashboardData {
   cliente: string;
   clienteNombre: string;
+  carna: string;
   zona: string;
   numeroCampana: string;
   enviados: number;
@@ -23,6 +24,25 @@ interface DashboardData {
   diasProcesados: number;
   estadoCampana: string;
 }
+
+// Función para extraer marca del nombre del cliente
+const extractMarca = (clienteNombre: string): string => {
+  const marcaMap: Record<string, string> = {
+    'PEUGEOT': 'Peugeot',
+    'TOYOTA': 'Toyota',
+    'VW': 'Volkswagen',
+    'FIAT': 'Fiat',
+    'FORD': 'Ford',
+    'JEEP': 'Jeep',
+    'CHEVROLET': 'Chevrolet',
+    'CITROEN': 'Citroën',
+    'RENAULT': 'Renault'
+  };
+  
+  const match = clienteNombre.match(/^([A-Z]+)/);
+  const marcaKey = match ? match[1] : clienteNombre.split(' ')[0].toUpperCase();
+  return marcaMap[marcaKey] || marcaKey;
+};
 
 export default function DashboardSimple() {
   const [data, setData] = useState<DashboardData[]>([]);
@@ -183,6 +203,7 @@ export default function DashboardSimple() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Carna</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Zona</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Enviados</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
@@ -199,6 +220,11 @@ export default function DashboardSimple() {
                         <div>
                           <div className="font-medium text-gray-900">{item.clienteNombre}</div>
                           <div className="text-sm text-gray-500">Campaña #{item.numeroCampana}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="bg-indigo-50 p-2 rounded text-center">
+                          <span className="font-semibold text-indigo-700">{extractMarca(item.cliente)}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.zona}</td>
@@ -249,6 +275,7 @@ export default function DashboardSimple() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Carna</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Zona</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Enviados</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
@@ -264,6 +291,11 @@ export default function DashboardSimple() {
                         <div>
                           <div className="font-medium text-gray-900">{item.clienteNombre}</div>
                           <div className="text-sm text-gray-500">Campaña #{item.numeroCampana}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="bg-indigo-50 p-2 rounded text-center">
+                          <span className="font-semibold text-indigo-700">{extractMarca(item.cliente)}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.zona}</td>
