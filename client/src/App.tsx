@@ -12,6 +12,7 @@ import DatosDiariosMatching from "@/pages/datos-diarios-matching";
 import Login from "@/pages/login";
 import LeadDetails from "@/pages/lead-details";
 import ClientesManagement from "@/pages/clientes-management";
+import ClientesOpLeads from "@/pages/clientes-op-leads";
 import CampanasManagement from "@/pages/campanas-management";
 import MetaAdsDashboard from "@/pages/meta-ads-dashboard";
 import MetaAdsConfig from "@/pages/meta-ads-config";
@@ -33,6 +34,7 @@ function Router() {
 
       <Route path="/matching" component={DatosDiariosMatching} />
       <Route path="/clientes" component={ClientesManagement} />
+      <Route path="/clientes-op-leads" component={ClientesOpLeads} />
       <Route path="/campanas" component={CampanasManagement} />
       <Route path="/meta-ads" component={MetaAdsDashboard} />
       <Route path="/meta-ads-dashboard" component={MetaAdsDashboard} />

@@ -2857,6 +2857,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Endpoint para sincronización específica por hojas
 
+  // Endpoint para vista de clientes de op_leads
+  app.get('/api/op-leads/clientes', async (req, res) => {
+    try {
+      const { db } = await import('./db');
+      const { sql } = await import('drizzle-orm');
+      
+      console.log('📊 Obteniendo listado de clientes desde vista_clientes_op_leads...');
+      
+      const clientesData = await db.execute(sql`
+        SELECT * FROM vista_clientes_op_leads
+        ORDER BY total_leads DESC, cliente ASC
+      `);
+      
+      res.json({
+        clientes: clientesData.rows,
+        totalClientes: clientesData.rows.length,
+        timestamp: new Date()
+      });
+      
+    } catch (error) {
+      console.error('Error obteniendo listado de clientes op_leads:', error);
+      res.status(500).json({ error: 'Error obteniendo listado de clientes' });
+    }
+  });
+
   // ========== REGISTRO DE RUTAS DEL SISTEMA REFACTORIZADO ==========
   
   // Importar y registrar rutas del sync refactorizado
