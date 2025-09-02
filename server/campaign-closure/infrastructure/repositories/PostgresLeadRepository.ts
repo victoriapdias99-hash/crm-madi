@@ -245,8 +245,14 @@ export class PostgresLeadRepository implements ILeadRepository {
       return parts.slice(3).join('_').toLowerCase();
     }
     
-    // Fallback: normalizar espacios a guiones bajos
-    return clientName.replace(/\s+/g, '_').toLowerCase();
+    // Normalizar IGUAL que en la sincronización:
+    // 1. Remover caracteres especiales (incluye guiones)
+    // 2. Reemplazar espacios con underscores  
+    return clientName
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s]/g, '') // Remover guiones y caracteres especiales
+      .replace(/\s+/g, '_');   // Reemplazar espacios con _
   }
 
   /**
