@@ -31,6 +31,19 @@ export interface AvailableLead {
 }
 
 /**
+ * Detalle de campaña cerrada
+ */
+export interface ClosedCampaignDetail {
+  campaignId: number;
+  clientName: string;
+  brandName: string;
+  leadsAssigned: number;
+  targetLeads: number;
+  closureDate: Date;
+  finalLeadDate: Date;
+}
+
+/**
  * Resultado de procesamiento por cliente
  */
 export interface ClientProcessingResult {

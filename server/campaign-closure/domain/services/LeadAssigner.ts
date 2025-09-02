@@ -64,7 +64,7 @@ export class LeadAssigner {
       }
 
       // Asignar leads a la campaña
-      const assignedCount = await this.leadRepository.assignLeadsToCampaign(leadIds, campaignId);
+      const assignedCount = await this.leadRepository.assignLeadsToCampaign(leadsToAssign, campaignId);
 
       const finalLeadDate = leadsToAssign.length > 0 
         ? leadsToAssign[leadsToAssign.length - 1].fechaCreacion 

@@ -118,6 +118,7 @@ export const opLeadsRep = pgTable("op_leads_rep", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   cantidadDuplicados: integer("cantidad_duplicados"),
+  duplicateIds: integer("duplicate_ids").array(), // ✅ Array de IDs de duplicados
 });
 
 // Estadísticas diarias

@@ -126,22 +126,20 @@ export class CampaignProcessor {
         campaign.zone
       );
 
-      // Tomar solo los leads necesarios, ordenados por fecha (más antiguos primero)
-      const leadsToProcess = availableLeads
+      // Tomar solo los leads únicos necesarios, ordenados por fecha (más antiguos primero)
+      const uniqueLeadsToProcess = availableLeads
         .sort((a, b) => a.fechaCreacion.getTime() - b.fechaCreacion.getTime())
         .slice(0, leadsToAssign);
-
-      const leadIds = leadsToProcess.map(lead => lead.id);
       
-      // Asignar leads a la campaña
-      const assignedCount = await this.leadRepository.assignLeadsToCampaign(leadIds, campaign.id);
+      // Asignar leads únicos (con sus duplicados) a la campaña
+      const assignedCount = await this.leadRepository.assignLeadsToCampaign(uniqueLeadsToProcess, campaign.id);
       
       console.log(`✅ Asignados ${assignedCount} leads a campaña ${campaign.id}`);
 
       // Verificar si se alcanzó la meta (leads actuales + recién asignados)
       const totalLeads = currentAssignedLeads + assignedCount;
       if (totalLeads >= campaign.targetLeads) {
-        const finalLeadDate = leadsToProcess[leadsToProcess.length - 1].fechaCreacion;
+        const finalLeadDate = uniqueLeadsToProcess[uniqueLeadsToProcess.length - 1].fechaCreacion;
         await this.campaignRepository.closeCampaign(campaign.id, finalLeadDate);
 
         console.log(`🎯 Campaña ${campaign.id} cerrada. Fecha final: ${finalLeadDate.toISOString()}`);

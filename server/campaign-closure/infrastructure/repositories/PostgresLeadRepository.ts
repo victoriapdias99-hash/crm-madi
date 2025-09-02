@@ -32,39 +32,68 @@ export class PostgresLeadRepository implements ILeadRepository {
 
   /**
    * Obtiene leads únicos disponibles para un cliente específico (usando op_leads_rep)
+   * NUEVO: Retorna leads únicos con sus duplicate_ids para asignación precisa
    */
   async getAvailableLeadsForClient(clientName: string, brandName: string, zone: string): Promise<AvailableLead[]> {
     await this.ensureDbInitialized();
     
     try {
-
-      
       // Normalizar nombres para matching
       const normalizedClient = this.normalizeClientName(clientName);
       const normalizedBrand = brandName.toLowerCase();
       const normalizedZone = this.normalizeZoneName(zone);
 
-      console.log(`🔍 Buscando leads NO asignados para: cliente=${normalizedClient}, marca=${normalizedBrand}, zona=${normalizedZone}`);
+      console.log(`🔍 Buscando leads únicos NO asignados desde op_leads_rep: cliente=${normalizedClient}, marca=${normalizedBrand}, zona=${normalizedZone}`);
 
-      const leads = await this.db
+      // NUEVA LÓGICA: Buscar desde op_leads_rep para obtener leads únicos con duplicate_ids
+      const uniqueLeads = await this.db
         .select()
-        .from(opLead)
+        .from(opLeadsRep)
         .where(
           and(
-            ilike(opLead.marca, `%${normalizedBrand}%`),
-            ilike(opLead.cliente, `%${normalizedClient}%`),
-            ilike(opLead.localizacion, `%${normalizedZone}%`),
-            isNull(opLead.campaignId) // Solo leads NO asignados
+            ilike(opLeadsRep.marca, `%${normalizedBrand}%`),
+            ilike(opLeadsRep.cliente, `%${normalizedClient}%`),
+            ilike(opLeadsRep.localizacion, `%${normalizedZone}%`)
           )
         )
-        .orderBy(asc(opLead.fechaCreacion));
+        .orderBy(asc(opLeadsRep.fechaCreacion));
 
-      console.log(`📊 Leads disponibles (no asignados): ${leads.length}`);
+      console.log(`📊 Leads únicos encontrados: ${uniqueLeads.length}`);
+      
+      // Filtrar solo los que no tienen ninguno de sus duplicados asignados
+      const availableUniqueLeads: any[] = [];
+      
+      for (const uniqueLead of uniqueLeads) {
+        // Verificar si alguno de los duplicados ya está asignado
+        const duplicateIds = uniqueLead.duplicateIds || [uniqueLead.id];
+        
+        const assignedCount = await this.db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(opLead)
+          .where(
+            and(
+              inArray(opLead.id, duplicateIds),
+              sql`${opLead.campaignId} IS NOT NULL`
+            )
+          );
 
-      return leads.map(this.mapOpLeadToAvailableLead);
+        const alreadyAssigned = assignedCount[0]?.count || 0;
+        
+        if (alreadyAssigned === 0) {
+          // Ningún duplicado está asignado, incluir este lead único
+          availableUniqueLeads.push({
+            ...this.mapOpLeadRepToAvailableLead(uniqueLead),
+            duplicateIds: duplicateIds
+          });
+        }
+      }
+
+      console.log(`📊 Leads únicos disponibles (sin duplicados asignados): ${availableUniqueLeads.length}`);
+
+      return availableUniqueLeads;
     } catch (error: any) {
-      console.error(`Error getting available leads for ${clientName}:`, error);
-      throw new Error(`Failed to get available leads: ${error.message}`);
+      console.error(`Error getting available unique leads for ${clientName}:`, error);
+      throw new Error(`Failed to get available unique leads: ${error.message}`);
     }
   }
 
@@ -104,35 +133,41 @@ export class PostgresLeadRepository implements ILeadRepository {
   }
 
   /**
-   * Asigna leads a una campaña específica (actualizar campaign_id en op_lead)
+   * Asigna leads únicos a una campaña usando duplicate_ids para consistencia total
+   * Nuevo parámetro: uniqueLeadsWithDuplicates[] contiene {id, duplicateIds}
    */
-  async assignLeadsToCampaign(leadIds: number[], campaignId: number): Promise<number> {
+  async assignLeadsToCampaign(uniqueLeadsWithDuplicates: any[], campaignId: number): Promise<number> {
     await this.ensureDbInitialized();
     
     try {
-
-      
-      if (leadIds.length === 0) {
+      if (uniqueLeadsWithDuplicates.length === 0) {
         return 0;
       }
 
-      console.log(`🎯 Asignando ${leadIds.length} leads a campaña ${campaignId}`);
+      // Extraer todos los duplicate_ids de los leads únicos seleccionados
+      const allDuplicateIds: number[] = [];
+      for (const uniqueLead of uniqueLeadsWithDuplicates) {
+        const duplicateIds = uniqueLead.duplicateIds || [uniqueLead.id];
+        allDuplicateIds.push(...duplicateIds);
+      }
 
-      // Actualizar campaign_id para los leads especificados
+      console.log(`🎯 Asignando ${uniqueLeadsWithDuplicates.length} leads únicos (${allDuplicateIds.length} duplicados totales) a campaña ${campaignId}`);
+
+      // Actualizar campaign_id para TODOS los duplicados
       const result = await this.db
         .update(opLead)
         .set({ 
           campaignId: campaignId,
           updatedAt: new Date()
         })
-        .where(inArray(opLead.id, leadIds));
+        .where(inArray(opLead.id, allDuplicateIds));
 
-      console.log(`✅ Leads asignados exitosamente a campaña ${campaignId}`);
+      console.log(`✅ Leads asignados exitosamente: ${uniqueLeadsWithDuplicates.length} únicos → ${allDuplicateIds.length} duplicados a campaña ${campaignId}`);
       
-      return leadIds.length;
+      return allDuplicateIds.length; // Retornar el total de duplicados asignados
     } catch (error: any) {
-      console.error(`Error assigning leads to campaign ${campaignId}:`, error);
-      throw new Error(`Failed to assign leads: ${error.message}`);
+      console.error(`Error assigning unique leads to campaign ${campaignId}:`, error);
+      throw new Error(`Failed to assign unique leads: ${error.message}`);
     }
   }
 

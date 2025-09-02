@@ -14,8 +14,8 @@ export interface ILeadRepository {
   // Contar leads ya asignados a una campaña específica
   countAssignedLeadsForCampaign(campaignId: number): Promise<number>;
   
-  // Asignar leads a una campaña específica (actualizar campaign_id en op_leads)
-  assignLeadsToCampaign(leadIds: number[], campaignId: number): Promise<number>;
+  // Asignar leads únicos a una campaña usando duplicate_ids para consistencia total
+  assignLeadsToCampaign(uniqueLeadsWithDuplicates: any[], campaignId: number): Promise<number>;
   
   // Obtener leads asignados a una campaña
   getLeadsAssignedToCampaign(campaignId: number): Promise<AvailableLead[]>;
