@@ -111,6 +111,7 @@ export const opLeadsRep = pgTable("op_leads_rep", {
   cliente: text("cliente"),
   marca: text("marca").notNull(),
   campaign: text("campaign").notNull(),
+  campaignId: integer("campaign_id"),  // ✅ NUEVO CAMPO AGREGADO
   googleSheetsRowNumber: integer("google_sheets_row_number"),
   source: text("source").notNull().default("google_sheets"),
   fechaCreacion: timestamp("fecha_creacion").notNull(),
