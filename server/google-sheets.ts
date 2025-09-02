@@ -438,6 +438,8 @@ class GoogleSheetsService {
           }
           
           // Aplicar valores específicos por nombre de campaña - CORRECCIÓN FINAL
+          // COMENTADO TEMPORALMENTE: Corrección manual para Javier Cagiao
+          /*
           if (clienteLower.includes('renault') && clienteLower.includes('javier') && clienteLower.includes('cagiao')) {
             enviados = 45; // FORZAR 45 datos para RENAULT - Javier Cagiao
             console.log(`🚨 CORRECCIÓN FORZADA: RENAULT - Javier Cagiao ahora muestra ${enviados} datos enviados`);
@@ -445,6 +447,7 @@ class GoogleSheetsService {
             enviados = 45; // FORZAR 45 para cualquier RENAULT
             console.log(`🚨 CORRECCIÓN FORZADA: RENAULT respaldo ${enviados} datos enviados`);
           }
+          */
           const pedidosPorDia = row[35] && !isNaN(Number(row[35])) ? Number(row[35]) : 0;
           
           // Calcular entregados por día de forma realista
