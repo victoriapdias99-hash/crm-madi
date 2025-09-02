@@ -1,6 +1,7 @@
-import { sql, eq, and, ilike, isNull, desc, asc } from 'drizzle-orm';
+import { sql, eq, and, ilike, isNull, desc, asc, inArray } from 'drizzle-orm';
 import { AvailableLead } from '../../domain/entities/CampaignClosure';
 import { ILeadRepository } from '../../domain/interfaces/ILeadRepository';
+import { opLeadsRep, opLead } from '@shared/schema';
 
 /**
  * Implementación PostgreSQL del repositorio de leads
@@ -36,7 +37,7 @@ export class PostgresLeadRepository implements ILeadRepository {
     await this.ensureDbInitialized();
     
     try {
-      const { opLeadsRep } = await import('../../../shared/schema');
+
       
       // Normalizar nombres para matching
       const normalizedClient = this.normalizeClientName(clientName);
@@ -73,7 +74,7 @@ export class PostgresLeadRepository implements ILeadRepository {
     await this.ensureDbInitialized();
     
     try {
-      const { opLeadsRep } = await import('../../../shared/schema');
+
       
       const normalizedClient = this.normalizeClientName(clientName);
       const normalizedBrand = brandName.toLowerCase();
@@ -107,7 +108,7 @@ export class PostgresLeadRepository implements ILeadRepository {
     await this.ensureDbInitialized();
     
     try {
-      const { opLead } = await import('../../../shared/schema');
+
       
       if (leadIds.length === 0) {
         return 0;
@@ -122,7 +123,7 @@ export class PostgresLeadRepository implements ILeadRepository {
           campaignId: campaignId,
           updatedAt: new Date()
         })
-        .where(sql`${opLead.id} = ANY(${leadIds})`);
+        .where(inArray(opLead.id, leadIds));
 
       console.log(`✅ Leads asignados exitosamente a campaña ${campaignId}`);
       
@@ -140,7 +141,7 @@ export class PostgresLeadRepository implements ILeadRepository {
     await this.ensureDbInitialized();
     
     try {
-      const { opLead } = await import('../../../shared/schema');
+
       
       const leads = await this.db
         .select()
@@ -164,7 +165,7 @@ export class PostgresLeadRepository implements ILeadRepository {
     await this.ensureDbInitialized();
     
     try {
-      const { opLead } = await import('../../../shared/schema');
+
       
       const result = await this.db
         .select({ campaignId: opLead.campaignId })
@@ -190,7 +191,7 @@ export class PostgresLeadRepository implements ILeadRepository {
     await this.ensureDbInitialized();
     
     try {
-      const { opLead } = await import('../../../shared/schema');
+
       
       const result = await this.db
         .select({ fechaCreacion: opLead.fechaCreacion })
