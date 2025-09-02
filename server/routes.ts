@@ -627,7 +627,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let datosAcumulados = 0;
         let entregadosPorDiaTotal = 0;
         let diasConDatos = 0;
-        let fechaFinReal = null;
+        // Si la campaña ya tiene fecha_fin en la BD, usarla directamente
+        let fechaFinReal = campana.fechaFin || null;
         
         // LÓGICA LINEAL Y CONTINUA: Cada campaña continúa donde terminó la anterior
         
@@ -688,17 +689,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // La campaña está completa Y hay campañas posteriores: limitar al pedido
           datosAcumulados = campana.cantidadDatosSolicitados;
           diasConDatos = 1; // Marcar como con datos
-          fechaFinReal = new Date().toISOString().split('T')[0];
+          // Solo asignar fechaFinReal si no existe en la BD
+          if (!fechaFinReal) {
+            fechaFinReal = new Date().toISOString().split('T')[0];
+          }
         } else if (datosRealesTotal >= rangoFin && campanasPosteriores.length === 0) {
           // La campaña superó el pedido PERO es la última: usar TODOS los datos reales
           datosAcumulados = datosRealesTotal - datosAcumuladosAnteriores;
           diasConDatos = 1; // Marcar como con datos
-          fechaFinReal = new Date().toISOString().split('T')[0];
+          // Solo asignar fechaFinReal si no existe en la BD
+          if (!fechaFinReal) {
+            fechaFinReal = new Date().toISOString().split('T')[0];
+          }
         } else {
           // La campaña está en progreso
           datosAcumulados = datosRealesTotal - datosAcumuladosAnteriores;
           diasConDatos = datosAcumulados > 0 ? 1 : 0;
-          fechaFinReal = diasConDatos > 0 ? new Date().toISOString().split('T')[0] : null;
+          // Solo asignar fechaFinReal si no existe en la BD y hay datos
+          if (!fechaFinReal && diasConDatos > 0) {
+            fechaFinReal = new Date().toISOString().split('T')[0];
+          }
         }
         
         // Cálculo de asignación de datos completado

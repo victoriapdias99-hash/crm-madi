@@ -329,19 +329,21 @@ export default function DatosDiariosDashboard() {
       }
     };
     
-    // Todas las campañas se consideran "en proceso" - sin finalización automática
-    const enProceso = filteredData
-      .sort((a, b) => {
-        // Ordenar por fecha de campaña según el estado sortByDate
-        const dateA = parseDate(a.fechaCampana);
-        const dateB = parseDate(b.fechaCampana);
-        return sortByDate === 'desc' 
-          ? dateB.getTime() - dateA.getTime() // Descendente (más reciente primero)
-          : dateA.getTime() - dateB.getTime(); // Ascendente (más antigua primero)
-      });
+    // Separar campañas según tengan fecha_fin o no
+    const sortedData = filteredData.sort((a, b) => {
+      // Ordenar por fecha de campaña según el estado sortByDate
+      const dateA = parseDate(a.fechaCampana);
+      const dateB = parseDate(b.fechaCampana);
+      return sortByDate === 'desc' 
+        ? dateB.getTime() - dateA.getTime() // Descendente (más reciente primero)
+        : dateA.getTime() - dateB.getTime(); // Ascendente (más antigua primero)
+    });
+
+    // Campañas en proceso: sin fechaFinReal
+    const enProceso = sortedData.filter(data => !data.fechaFinReal);
     
-    // Campañas finalizadas vacías - la finalización ya no es automática
-    const finalizadas: DatosDiariosData[] = [];
+    // Campañas finalizadas: con fechaFinReal
+    const finalizadas = sortedData.filter(data => data.fechaFinReal);
     
     console.log(`📊 Datos ordenados: ${enProceso.length} en proceso, ${finalizadas.length} finalizadas`);
     
