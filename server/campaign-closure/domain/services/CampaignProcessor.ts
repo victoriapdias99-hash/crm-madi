@@ -26,7 +26,11 @@ export class CampaignProcessor {
     // Ordenar por fecha de inicio (más antigua primero)
     const sortedCampaigns = campaigns
       .filter(c => c.status === 'En proceso')
-      .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+      .sort((a, b) => {
+        const dateA = typeof a.startDate === 'string' ? new Date(a.startDate) : a.startDate;
+        const dateB = typeof b.startDate === 'string' ? new Date(b.startDate) : b.startDate;
+        return dateA.getTime() - dateB.getTime();
+      });
 
     if (sortedCampaigns.length === 0) {
       console.log(`ℹ️ No hay campañas pendientes para ${clientName}`);
