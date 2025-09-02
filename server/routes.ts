@@ -322,12 +322,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return [{ totalDuplicados: 0 }];
         }
         
-        // 3. Buscar duplicados en op_leads_rep para estos leads específicos
+        // 3. Buscar duplicados directamente usando una subconsulta más eficiente
         const duplicadosResult = await db.select({ 
-          totalDuplicados: sql<number>`SUM(${opLeadsRepTable.cantidadDuplicados})` 
-        })
-        .from(opLeadsRepTable)
-        .where(inArray(opLeadsRepTable.metaLeadId, metaLeadIds));
+          totalDuplicados: sql<number>`
+            SELECT COALESCE(SUM(olr.cantidad_duplicados), 0)
+            FROM op_leads_rep olr
+            WHERE olr.meta_lead_id IN (
+              SELECT ol.meta_lead_id 
+              FROM op_lead ol 
+              WHERE ol.campaign_id = ${campana.id}
+              AND ol.meta_lead_id IS NOT NULL
+            )
+          `
+        });
         
         const totalDuplicados = duplicadosResult[0]?.totalDuplicados || 0;
         console.log(`✅ FINALIZADA ${campana.marca} ${campana.numeroCampana}: ${totalDuplicados} duplicados (de ${leadsAsignados.length} leads asignados)`);
