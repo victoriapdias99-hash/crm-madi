@@ -451,16 +451,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log(`🚨 CORRECCIÓN DB: RENAULT ajustado a 45 datos`);
           } else 
           */
-          if (clienteNombreReal.toLowerCase().includes('novo group')) {
-            enviadosFinales = 106;
-            console.log(`🚨 CORRECCIÓN DB: NOVO GROUP ajustado a 106 datos`);
-          } else if (clienteNombreReal.toLowerCase().includes('grupo quijada') && clienteIdentificador.includes('peugeot')) {
-            enviadosFinales = 8;
-            console.log(`🚨 CORRECCIÓN DB: GRUPO QUIJADA PEUGEOT ajustado a 8 datos`);
-          } else if (clienteNombreReal.toLowerCase().includes('grupo quijada') && clienteIdentificador.includes('citroen')) {
-            enviadosFinales = 10;
-            console.log(`🚨 CORRECCIÓN DB: GRUPO QUIJADA CITROEN ajustado a 10 datos`);
-          }
 
           // Calcular métricas como el sistema actual
           const cantidadSolicitados = campana.cantidadDatosSolicitados;
@@ -744,11 +734,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // **CORRECCIONES ESPECÍFICAS POR CLIENTE (APLICAR PRIMERO)**
         
-        // Corrección específica para NOVO GROUP: usar 106 datos reales medidos (exacto de Google Sheets "pamela 8 de 106")
-        if (cliente.nombreCliente.toLowerCase().includes('novo')) {
-          datosFinales = 106; // Usuario confirma 106 datos exactos en Google Sheets búsqueda "pamela"
-          console.log(`🚨 CORRECCIÓN NOVO GROUP: Datos finales ajustados a ${datosFinales} (conteo exacto Google Sheets "pamela 8 de 106")`);
-        }
         
         // Debug específico para TOYOTA para diagnosticar problema de limitación
         if (cliente.nombreCliente.toLowerCase().includes('toyota')) {
@@ -769,13 +754,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         */
         
-        // Corrección específica para AVEC Peugeot Córdoba: usar 8 datos reales medidos
-        if (cliente.nombreCliente.toLowerCase().includes('grupo quijada') && 
-            campana.marca.toLowerCase() === 'peugeot' && 
-            campana.zona.toLowerCase() === 'córdoba') {
-          datosFinales = 8; // Usuario confirma 8 datos reales medidos (corregido desde 47)
-          console.log(`🚨 CORRECCIÓN AVEC PEUGEOT CÓRDOBA: Datos finales ajustados a ${datosFinales} (medición manual confirmada por usuario)`);
-        }
         
         // NUEVO PROCESO CORRECTO: Contabilización por hoja de marca primero
         if (cliente.nombreCliente.toLowerCase().includes('grupo quijada') && 
@@ -798,18 +776,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const datosRealesPorHojaMarca = leadsEspecificos.length;
             console.log(`📊 RESULTADO AUTOMÁTICO: ${datosRealesPorHojaMarca} datos encontrados en hoja ${campana.marca} para ${cliente.nombreCliente} desde ${campana.fechaCampana}`);
             
-            // 🚨 APLICAR MEDICIÓN MANUAL DEL USUARIO (Prioridad absoluta)
-            console.log(`🚨 CORRECCIÓN CITROËN AMBA: Aplicando medición manual de 38 registros confirmados por usuario`);
-            datosRealesTotal = 38; // Medición manual confirmada por usuario
-            datosFinales = 38; // Usar directamente el valor manual (no aplicar límites de campaña)
+            // Usar los datos reales encontrados en la base de datos
+            datosFinales = datosAcumulados; // Usar cálculo automático
             
             console.log(`🎯 CONTABILIZACIÓN EXACTA: datosRealesTotal=${datosRealesTotal}, datosAcumuladosAnteriores=${datosAcumuladosAnteriores}, datosFinales=${datosFinales}`);
             
           } catch (error) {
             console.error(`❌ Error en nuevo proceso Citroën:`, error);
-            // Fallback temporal con valor conocido (actualizado según medición manual del usuario)
-            datosFinales = 38;
-            console.log(`🚨 FALLBACK CITROËN AMBA: Usando valor actualizado ${datosFinales} (medición manual 38 registros confirmada por usuario)`);
+            // Fallback: usar cálculo automático
+            datosFinales = datosAcumulados;
+            console.log(`📊 FALLBACK CITROËN AMBA: Usando cálculo automático ${datosFinales}`);
           }
         }
         

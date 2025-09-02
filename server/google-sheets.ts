@@ -396,13 +396,7 @@ class GoogleSheetsService {
           // Mapeo directo por nombre exacto de cliente (basado en evidencia del usuario)
           const clienteLower = cliente.toLowerCase();
           
-          if (clienteLower.includes('grupo quijada') && clienteLower.includes('citroen') && zona.toLowerCase().includes('amba')) {
-            conteoRealAnalista = 10; // Usuario confirma conteo manual de 10 datos exactos para CITROËN AMBA
-            console.log('🔍 GROUPE QUIJADA CITROËN AMBA: Aplicando conteo manual de 10 datos (confirmado por usuario)');
-          } else if (clienteLower.includes('grupo quijada') && clienteLower.includes('peugeot') && zona.toLowerCase().includes('cordoba')) {
-            conteoRealAnalista = 8; // Datos AVEC Córdoba para Peugeot
-            console.log('🔍 GROUPE QUIJADA PEUGEOT CÓRDOBA: Aplicando conteo real de 8 datos AVEC');
-          }
+          // Usar conteo automático de la base de datos para todos los casos
           if (conteoRealAnalista !== null) {
             enviados = conteoRealAnalista;
           } else {
@@ -416,20 +410,9 @@ class GoogleSheetsService {
                 pedidosPorDia: row[35]
               });
               
-              // Usar datos reales de la hoja de cálculo basados en imagen del usuario
-              if (cliente.toLowerCase().includes('citroen') && zona.toLowerCase().includes('amba')) {
-                // Usuario confirma conteo manual de 10 datos exactos
-                enviados = 10;
-                console.log(`AVEC CITROEN AMBA: Usando conteo manual confirmado por usuario - 10 enviados`);
-              } else if (cliente.toLowerCase().includes('peugeot') && zona.toLowerCase().includes('cordoba')) {
-                // Peugeot Córdoba: 8 datos reales AVEC
-                enviados = 8;
-                console.log(`AVEC PEUGEOT CÓRDOBA: Usando datos reales vistos en la hoja - ${enviados} enviados`);
-              } else {
-                // Para otros casos de AVEC, usar suma de días o datos como respaldo
-                enviados = sumaDias > 0 ? sumaDias : (enviadosFromColumn > 0 ? enviadosFromColumn : 0);
-                console.log(`AVEC OTROS: ${cliente} en ${zona} - ${enviados} enviados`);
-              }
+              // Para todos los casos de AVEC, usar suma de días o datos como respaldo
+              enviados = sumaDias > 0 ? sumaDias : (enviadosFromColumn > 0 ? enviadosFromColumn : 0);
+              console.log(`AVEC: ${cliente} en ${zona} - ${enviados} enviados`);
             }
           }
           

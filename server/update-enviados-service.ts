@@ -160,10 +160,6 @@ export class UpdateEnviadosService {
     console.log(`🔍 DEBUG: Aplicando correcciones para cliente: "${nombreCliente}" - Campaña: ${campana.numeroCampana}`);
     
     // Aplicar las mismas correcciones que en el endpoint principal
-    if (nombreCliente.includes('novo')) {
-      console.log(`🚨 CORRECCIÓN APLICADA: NOVO GROUP = 106`);
-      return 106; // Usuario confirma 106 datos exactos
-    }
     
     
     if (nombreCliente.includes('toyota')) {
@@ -183,14 +179,6 @@ export class UpdateEnviadosService {
       }
     }
     
-    if (nombreCliente.includes('group quijada') || nombreCliente.includes('avec')) {
-      if (campana.marca?.toLowerCase() === 'citroen') {
-        return 10; // Conteo manual confirmado
-      }
-      if (campana.marca?.toLowerCase() === 'peugeot') {
-        return 47; // Medición real
-      }
-    }
     
     return enviados;
   }

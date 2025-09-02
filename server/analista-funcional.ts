@@ -17,7 +17,7 @@ export class AnalistaFuncional {
       'CITROEN': {
         marca: 'Citroen',
         zona: 'AMBA',
-        datosEnviados: 19, // Usuario muestra 19 filas en imagen (filas 2-20)
+        datosEnviados: null, // Se calcula automáticamente
         fuente: 'Imagen Google Sheets filas 2-20'
       },
       'PEUGEOT_CORDOBA': {
@@ -49,8 +49,8 @@ export class AnalistaFuncional {
     */
     
     if (marca.toLowerCase().includes('citroen') && zona.toLowerCase().includes('amba')) {
-      console.log('🔍 CITROËN AMBA: Aplicando conteo real de 19 datos (filas 2-20 en Google Sheets)');
-      return 19;
+      console.log('🔍 CITROËN AMBA: Usando conteo automático de la base de datos');
+      return null;
     }
     
     if (marca.toLowerCase().includes('peugeot') && zona.toLowerCase().includes('cordoba')) {
@@ -70,24 +70,14 @@ export class AnalistaFuncional {
     datosCalculados.forEach(dato => {
       const cliente = dato.clienteNombre || dato.cliente;
       
-      // Verificar RENAULT
+      // Verificar RENAULT - Ahora usa conteo automático
       if (cliente.toLowerCase().includes('renault')) {
-        if (dato.enviados !== 45) {
-          console.log(`❌ DISCREPANCIA RENAULT: Dashboard muestra ${dato.enviados}, debe ser 45`);
-          discrepanciasEncontradas++;
-        } else {
-          console.log(`✅ RENAULT: Correcto (${dato.enviados})`);
-        }
+        console.log(`✅ RENAULT: ${dato.enviados} datos (conteo automático de BD)`);
       }
       
-      // Verificar CITROËN
+      // Verificar CITROËN - Ahora usa conteo automático
       if (cliente.toLowerCase().includes('citroen') || dato.cliente.toLowerCase().includes('citroen')) {
-        if (dato.enviados !== 19) {
-          console.log(`❌ DISCREPANCIA CITROËN: Dashboard muestra ${dato.enviados}, debe ser 19`);
-          discrepanciasEncontradas++;
-        } else {
-          console.log(`✅ CITROËN: Correcto (${dato.enviados})`);
-        }
+        console.log(`✅ CITROËN: ${dato.enviados} datos (conteo automático de BD)`);
       }
     });
 

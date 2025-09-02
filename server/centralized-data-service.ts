@@ -411,10 +411,7 @@ export class CentralizedDataService {
   private async getManualCorrection(clienteNombre: string, numeroCampana: string): Promise<number | null> {
     // Correcciones manuales específicas almacenadas en BD
     const corrections: Record<string, number> = {
-      'novo_group': 106,
-      'avec_peugeot_cordoba': 8,
-      'avec_citroen_amba': 38,
-      'fiat_autos_del_sol_2': 475
+      // Todas las correcciones eliminadas - usar datos reales de BD
     };
     
     const key = this.generateCorrectionKey(clienteNombre, numeroCampana);
