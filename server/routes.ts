@@ -420,6 +420,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Obtener campañas comerciales para mapeo
       const campanas = await storage.getAllCampanasComerciales();
+      const clientes = await storage.getAllClientes();
+      
+      // DEBUG: Listar todas las campañas que se van a procesar
+      console.log(`🗂️ Campañas a procesar (${campanas.length}):`);
+      campanas.forEach(c => {
+        const clienteData = clientes.find(cl => cl.id === c.clienteId);
+        console.log(`  - ${c.marca} ${c.numeroCampana} (${clienteData?.nombreComercial || 'Sin cliente'}) - fecha_fin: ${c.fechaFin || 'null'}`);
+      });
+      
       const processedData = [];
 
       for (const campana of campanas) {
@@ -705,10 +714,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // La campaña está en progreso
           datosAcumulados = datosRealesTotal - datosAcumuladosAnteriores;
           diasConDatos = datosAcumulados > 0 ? 1 : 0;
-          // Solo asignar fechaFinReal si no existe en la BD y hay datos
+          // NOVO GROUP: NO sobreescribir fechaFinReal si ya existe en BD
+          // Solo asignar fechaFinReal calculada si no existe en la BD
           if (!fechaFinReal && diasConDatos > 0) {
             fechaFinReal = new Date().toISOString().split('T')[0];
           }
+        }
+
+        // DEBUG: Log para NOVO GROUP
+        if (cliente.nombreCliente && cliente.nombreCliente.toLowerCase().includes('pamela')) {
+          console.log(`🔍 NOVO GROUP DEBUG: fechaFinReal final = ${fechaFinReal}, campana.fechaFin = ${campana.fechaFin}`);
         }
         
         // Cálculo de asignación de datos completado
