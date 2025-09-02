@@ -84,6 +84,7 @@ export const opLead = pgTable("op_lead", {
   // Metadatos de campaña
   marca: text("marca").notNull(), // Fiat, Toyota, VW, etc.
   campaign: text("campaign").notNull(), // Nombre de campaña original
+  campaignId: integer("campaign_id"), // ID de campaña asignada (para cierre de campañas)
   
   // Control de sincronización con Google Sheets
   googleSheetsRowNumber: integer("google_sheets_row_number"), // Número de fila exacto en Google Sheets

@@ -2880,6 +2880,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     console.log('✅ Rutas del sistema refactorizado registradas: /api/sync/*');
   } catch (error) {
+    console.error('❌ Error registrando rutas del sistema de sync:', error);
+  }
+
+  // Importar y registrar rutas del sistema de cierre de campañas
+  try {
+    console.log('🔄 Registrando rutas del sistema de cierre de campañas...');
+    const { createCampaignClosureRoutes, campaignClosureLoggingMiddleware } = await import('./campaign-closure/presentation/routes/campaign-closure-routes');
+    
+    // Aplicar middleware específico de campaign closure
+    app.use('/api/campaign-closure', campaignClosureLoggingMiddleware);
+    
+    // Registrar todas las rutas de campaign closure (/api/campaign-closure/*)
+    app.use('/api/campaign-closure', createCampaignClosureRoutes());
+    
+    console.log('✅ Rutas del sistema de cierre de campañas registradas: /api/campaign-closure/*');
+  } catch (error) {
     console.error('❌ Error registrando rutas del sistema refactorizado:', error);
   }
 
