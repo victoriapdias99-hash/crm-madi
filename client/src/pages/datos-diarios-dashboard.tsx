@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Save, RefreshCw, Download, Filter } from "lucide-react";
+import { Loader2, Save, RefreshCw, Download, Filter, Power } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Navigation } from "@/components/navigation";
@@ -435,6 +435,31 @@ export default function DatosDiariosDashboard() {
     },
   });
 
+  // Mutation para ejecutar cierre de campañas
+  const closeCampaignsMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('/api/campaign-closure/execute', 'POST');
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Cierre de campañas completado",
+        description: data.message || "Proceso de cierre ejecutado correctamente",
+      });
+      // Refrescar datos para mostrar campañas cerradas
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+    },
+    onError: (error: any) => {
+      console.error('Error en cierre de campañas:', error);
+      toast({
+        title: "Error en cierre de campañas",
+        description: error.message || "No se pudo ejecutar el proceso de cierre",
+        variant: "destructive",
+      });
+    }
+  });
+
   const updateCplMutation = useMutation({
     mutationFn: async ({ clienteIndex, cpl, clienteNombre, numeroCampana }: { 
       clienteIndex: number; 
@@ -750,6 +775,21 @@ export default function DatosDiariosDashboard() {
                 <RefreshCw className="h-4 w-4 mr-2" />
               )}
               Sincronizar Pestañas
+            </Button>
+
+            <Button
+              onClick={() => closeCampaignsMutation.mutate()}
+              disabled={closeCampaignsMutation.isPending}
+              className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-bold shadow-xl transform hover:scale-105 transition-all duration-300 px-4 py-3"
+              size="lg"
+              data-testid="button-close-campaigns"
+            >
+              {closeCampaignsMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Power className="h-4 w-4 mr-2" />
+              )}
+              Cerrar Campañas
             </Button>
 
             <Button
