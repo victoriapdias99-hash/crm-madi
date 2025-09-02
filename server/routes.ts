@@ -290,9 +290,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // 🎯 LÓGICA DIFERENCIADA: Campañas finalizadas vs En proceso (para duplicados)
     if (campana.fechaFin) {
-      // ✅ CAMPAÑA FINALIZADA: Para duplicados, usar 0 por ahora (op_lead no tiene campo duplicados)
-      console.log(`🎯 FINALIZADA ${campana.marca} ${campana.numeroCampana}: Duplicados = 0 (leads asignados)`);
-      return [{ totalDuplicados: 0 }];
+      // ✅ CAMPAÑA FINALIZADA: Calcular duplicados de leads asignados
+      console.log(`🎯 FINALIZADA ${campana.marca} ${campana.numeroCampana}: Calculando duplicados de leads asignados (campaign_id = ${campana.id})`);
+      
+      try {
+        const { opLead } = await import('../shared/schema');
+        const { eq, inArray } = await import('drizzle-orm');
+        
+        // 1. Obtener los IDs de leads asignados a esta campaña
+        const leadsAsignados = await db.select({ 
+          id: opLead.id,
+          metaLeadId: opLead.metaLeadId,
+          telefono: opLead.telefono,
+          email: opLead.email
+        })
+        .from(opLead)
+        .where(eq(opLead.campaignId, campana.id));
+        
+        if (leadsAsignados.length === 0) {
+          console.log(`✅ FINALIZADA ${campana.marca} ${campana.numeroCampana}: Sin leads asignados, duplicados = 0`);
+          return [{ totalDuplicados: 0 }];
+        }
+        
+        // 2. Extraer meta_lead_ids para buscar en op_leads_rep
+        const metaLeadIds = leadsAsignados
+          .map(lead => lead.metaLeadId)
+          .filter(id => id !== null);
+        
+        if (metaLeadIds.length === 0) {
+          console.log(`✅ FINALIZADA ${campana.marca} ${campana.numeroCampana}: Sin meta_lead_ids válidos, duplicados = 0`);
+          return [{ totalDuplicados: 0 }];
+        }
+        
+        // 3. Buscar duplicados en op_leads_rep para estos leads específicos
+        const duplicadosResult = await db.select({ 
+          totalDuplicados: sql<number>`SUM(${opLeadsRepTable.cantidadDuplicados})` 
+        })
+        .from(opLeadsRepTable)
+        .where(inArray(opLeadsRepTable.metaLeadId, metaLeadIds));
+        
+        const totalDuplicados = duplicadosResult[0]?.totalDuplicados || 0;
+        console.log(`✅ FINALIZADA ${campana.marca} ${campana.numeroCampana}: ${totalDuplicados} duplicados (de ${leadsAsignados.length} leads asignados)`);
+        
+        return [{ totalDuplicados }];
+        
+      } catch (error) {
+        console.error(`❌ Error calculando duplicados para campaña finalizada ${campana.id}:`, error);
+        return [{ totalDuplicados: 0 }];
+      }
     }
     
     // 📊 CAMPAÑA EN PROCESO: Usar filtros genéricos para duplicados
