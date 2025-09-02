@@ -488,6 +488,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             marca: campana.marca,
             fechaCampana: campana.fechaCampana,
             fechaFin: fechaFinExacta, // Usar fecha con timestamp exacto
+            fechaFinReal: fechaFinExacta, // Campo que usa el frontend para filtros
             facturacionBruta: campana.facturacionBruta,
             pedidosPorDia: campana.pedidosPorDia ?? 0, // Campo "Día" desde tabla campañas
             pedidosTotal: campana.cantidadDatosSolicitados, // Campo "Pedidos Total" (Datos Solicitados)
@@ -502,7 +503,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Campos calculados adicionales
             inversionRealizada: (enviadosFinales * (storedCpl || 0)),
             inversionPendiente: (faltantesAEnviar * (storedCpl || 0)),
-            estado: 'En proceso', // Estado manual - sin finalización automática
+            estado: fechaFinExacta ? 'Finalizada' : 'En proceso', // Estado basado en fecha_fin
             duplicados: totalDuplicados
           };
 
