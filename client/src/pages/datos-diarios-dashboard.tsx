@@ -339,11 +339,11 @@ export default function DatosDiariosDashboard() {
         : dateA.getTime() - dateB.getTime(); // Ascendente (más antigua primero)
     });
 
-    // Campañas en proceso: sin fechaFinReal
-    const enProceso = sortedData.filter(data => !data.fechaFinReal);
+    // Campañas en proceso: sin fechaFin
+    const enProceso = sortedData.filter(data => !data.fechaFin);
     
-    // Campañas finalizadas: con fechaFinReal
-    const finalizadas = sortedData.filter(data => data.fechaFinReal);
+    // Campañas finalizadas: con fechaFin
+    const finalizadas = sortedData.filter(data => data.fechaFin);
     
     console.log(`📊 Datos ordenados: ${enProceso.length} en proceso, ${finalizadas.length} finalizadas`);
     
