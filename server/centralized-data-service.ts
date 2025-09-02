@@ -412,7 +412,6 @@ export class CentralizedDataService {
     // Correcciones manuales específicas almacenadas en BD
     const corrections: Record<string, number> = {
       'novo_group': 106,
-      'renault_javier': 45,
       'avec_peugeot_cordoba': 8,
       'avec_citroen_amba': 38,
       'fiat_autos_del_sol_2': 475

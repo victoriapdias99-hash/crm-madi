@@ -369,11 +369,10 @@ class GoogleSheetsService {
           const enviadosFromColumn = row[33] && !isNaN(Number(row[33])) ? Number(row[33]) : 0;
           const sumaDias = diasData.reduce((sum, day) => sum + day, 0);
           
-          // Debug específico para RENAULT y AVEC
-          if (cliente.toLowerCase().includes('renault')) {
-            console.log(`RENAULT debug: columna 33 = ${enviadosFromColumn}, suma días = ${sumaDias}`);
-            console.log(`RENAULT días individuales:`, diasData.slice(0, 10));
-            console.log(`RENAULT: Usando conteo real de 45 datos (actualizado por usuario)`);
+          // Debug específico para AVEC
+          if (cliente.toLowerCase().includes('avec')) {
+            console.log(`AVEC debug: columna 33 = ${enviadosFromColumn}, suma días = ${sumaDias}`);
+            console.log(`AVEC días individuales:`, diasData.slice(0, 10));
           }
           
           // Inicializar enviados con el valor estándar
@@ -397,10 +396,7 @@ class GoogleSheetsService {
           // Mapeo directo por nombre exacto de cliente (basado en evidencia del usuario)
           const clienteLower = cliente.toLowerCase();
           
-          if (clienteLower.includes('renault') && clienteLower.includes('javier') && clienteLower.includes('cagiao')) {
-            conteoRealAnalista = 45; // Usuario reporta 45 datos medidos para esta campaña específica
-            console.log('🔍 RENAULT - Javier Cagiao: Aplicando conteo real de 45 datos (reportado por usuario)');
-          } else if (clienteLower.includes('grupo quijada') && clienteLower.includes('citroen') && zona.toLowerCase().includes('amba')) {
+          if (clienteLower.includes('grupo quijada') && clienteLower.includes('citroen') && zona.toLowerCase().includes('amba')) {
             conteoRealAnalista = 10; // Usuario confirma conteo manual de 10 datos exactos para CITROËN AMBA
             console.log('🔍 GROUPE QUIJADA CITROËN AMBA: Aplicando conteo manual de 10 datos (confirmado por usuario)');
           } else if (clienteLower.includes('grupo quijada') && clienteLower.includes('peugeot') && zona.toLowerCase().includes('cordoba')) {
@@ -437,17 +433,6 @@ class GoogleSheetsService {
             }
           }
           
-          // Aplicar valores específicos por nombre de campaña - CORRECCIÓN FINAL
-          // COMENTADO TEMPORALMENTE: Corrección manual para Javier Cagiao
-          /*
-          if (clienteLower.includes('renault') && clienteLower.includes('javier') && clienteLower.includes('cagiao')) {
-            enviados = 45; // FORZAR 45 datos para RENAULT - Javier Cagiao
-            console.log(`🚨 CORRECCIÓN FORZADA: RENAULT - Javier Cagiao ahora muestra ${enviados} datos enviados`);
-          } else if (clienteLower.includes('renault') && conteoRealAnalista === null) {
-            enviados = 45; // FORZAR 45 para cualquier RENAULT
-            console.log(`🚨 CORRECCIÓN FORZADA: RENAULT respaldo ${enviados} datos enviados`);
-          }
-          */
           const pedidosPorDia = row[35] && !isNaN(Number(row[35])) ? Number(row[35]) : 0;
           
           // Calcular entregados por día de forma realista

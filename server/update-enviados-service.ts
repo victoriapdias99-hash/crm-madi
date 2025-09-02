@@ -165,9 +165,6 @@ export class UpdateEnviadosService {
       return 106; // Usuario confirma 106 datos exactos
     }
     
-    if (nombreCliente.includes('renault')) {
-      return 45; // Medición real del usuario
-    }
     
     if (nombreCliente.includes('toyota')) {
       return Math.max(enviados, 101); // Puede superar el pedido

@@ -11,7 +11,7 @@ export class AnalistaFuncional {
       'RENAULT': {
         marca: 'Renault',
         zona: 'AMBA', 
-        datosEnviados: 45, // Usuario reporta 45 datos medidos
+        datosEnviados: null, // Se calcula automáticamente
         fuente: 'Conteo manual usuario'
       },
       'CITROEN': {
@@ -43,7 +43,7 @@ export class AnalistaFuncional {
     // RENAULT_FIX_DISABLED: Corrección de conteo deshabilitada
     /*
     if (clienteNombre.toLowerCase().includes('renault')) {
-      console.log('🔍 RENAULT: Aplicando conteo real de 45 datos (reportado por usuario)');
+      console.log('🔍 RENAULT: Usando conteo automático de la base de datos');
       return 45;
     }
     */
