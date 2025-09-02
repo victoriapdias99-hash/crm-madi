@@ -444,10 +444,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const clienteNombreReal = clienteData?.nombreCliente || `${campana.marca.toUpperCase()} ${campana.numeroCampana}`;
           
           // Aplicar mismas correcciones que el sistema actual
+          // RENAULT_FIX_DISABLED: Corrección temporal deshabilitada
+          /*
           if (clienteIdentificador.toLowerCase().includes('renault')) {
             enviadosFinales = 45;
             console.log(`🚨 CORRECCIÓN DB: RENAULT ajustado a 45 datos`);
-          } else if (clienteNombreReal.toLowerCase().includes('novo group')) {
+          } else 
+          */
+          if (clienteNombreReal.toLowerCase().includes('novo group')) {
             enviadosFinales = 106;
             console.log(`🚨 CORRECCIÓN DB: NOVO GROUP ajustado a 106 datos`);
           } else if (clienteNombreReal.toLowerCase().includes('grupo quijada') && clienteIdentificador.includes('peugeot')) {
@@ -756,11 +760,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`  cantidadSolicitados: ${campana.cantidadDatosSolicitados}`);
         }
         
+        // RENAULT_FIX_DISABLED: Corrección específica para RENAULT - Javier Cagiao deshabilitada
+        /*
         // Corrección específica para RENAULT - Javier Cagiao: usar 45 datos reales medidos
         if (cliente.nombreCliente.toLowerCase().includes('renault') && cliente.nombreCliente.toLowerCase().includes('javier')) {
           datosFinales = 45; // Usuario reporta 45 datos reales medidos
           console.log(`🚨 CORRECCIÓN RENAULT - Javier Cagiao: Datos finales ajustados a ${datosFinales} (medición real del usuario)`);
         }
+        */
         
         // Corrección específica para AVEC Peugeot Córdoba: usar 8 datos reales medidos
         if (cliente.nombreCliente.toLowerCase().includes('grupo quijada') && 

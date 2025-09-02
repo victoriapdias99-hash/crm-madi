@@ -40,10 +40,13 @@ export class AnalistaFuncional {
   async validarConteoReal(clienteNombre: string, marca: string, zona: string): Promise<number> {
     // Mapeo específico basado en evidencia visual del usuario
     
+    // RENAULT_FIX_DISABLED: Corrección de conteo deshabilitada
+    /*
     if (clienteNombre.toLowerCase().includes('renault')) {
       console.log('🔍 RENAULT: Aplicando conteo real de 45 datos (reportado por usuario)');
       return 45;
     }
+    */
     
     if (marca.toLowerCase().includes('citroen') && zona.toLowerCase().includes('amba')) {
       console.log('🔍 CITROËN AMBA: Aplicando conteo real de 19 datos (filas 2-20 en Google Sheets)');
