@@ -323,12 +323,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // 3. ✅ Consulta OPTIMIZADA: Usar campaign_id directamente desde op_leads_rep
-        const { sum, eq } = await import('drizzle-orm');
+        const { sum } = await import('drizzle-orm');
         const duplicadosResult = await db.select({ 
           totalDuplicados: sum(opLeadsRepTable.cantidadDuplicados)
         })
         .from(opLeadsRepTable)
-        .where(eq(opLeadsRepTable.campaignId, campana.id));
+        .where((table) => table.campaignId === campana.id);
         
         const totalDuplicados = duplicadosResult[0]?.totalDuplicados || 0;
         console.log(`✅ FINALIZADA ${campana.marca} ${campana.numeroCampana}: ${totalDuplicados} duplicados (de ${leadsAsignados.length} leads asignados)`);
