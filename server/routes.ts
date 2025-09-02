@@ -493,7 +493,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Campos calculados adicionales
             inversionRealizada: (enviadosFinales * (storedCpl || 0)),
             inversionPendiente: (faltantesAEnviar * (storedCpl || 0)),
-            estado: porcentajeDatosEnviados >= 100 ? 'Finalizada' : 'En proceso',
+            estado: 'En proceso', // Estado manual - sin finalización automática
             duplicados: totalDuplicados
           };
 

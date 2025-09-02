@@ -235,8 +235,8 @@ export default function ReportesDashboard() {
       roiPromedio,
       cplPromedio,
       conversionPromedio,
-      campanasActivas: datosFiltrados.filter(c => c.porcentajeDatosEnviados < 100).length,
-      campanasFinalizadas: datosFiltrados.filter(c => c.porcentajeDatosEnviados >= 100).length
+      campanasActivas: datosFiltrados.length, // Todas las campañas se consideran activas
+      campanasFinalizadas: 0 // Sin finalización automática
     };
   }, [finanzasData, datosFiltrados]);
 

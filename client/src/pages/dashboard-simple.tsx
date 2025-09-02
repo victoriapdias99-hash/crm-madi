@@ -150,8 +150,9 @@ export default function DashboardSimple() {
     );
   }
 
-  const campanasEnProceso = data.filter(item => item.porcentajeDatosEnviados < 100);
-  const campanasFinalizadas = data.filter(item => item.porcentajeDatosEnviados >= 100);
+  // Todas las campañas se consideran en proceso - sin finalización automática
+  const campanasEnProceso = data;
+  const campanasFinalizadas: any[] = [];
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">

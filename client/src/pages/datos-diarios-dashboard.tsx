@@ -329,8 +329,8 @@ export default function DatosDiariosDashboard() {
       }
     };
     
+    // Todas las campañas se consideran "en proceso" - sin finalización automática
     const enProceso = filteredData
-      .filter(data => data.porcentajeDatosEnviados < 100)
       .sort((a, b) => {
         // Ordenar por fecha de campaña según el estado sortByDate
         const dateA = parseDate(a.fechaCampana);
@@ -340,24 +340,8 @@ export default function DatosDiariosDashboard() {
           : dateA.getTime() - dateB.getTime(); // Ascendente (más antigua primero)
       });
     
-    let finalizadasData = filteredData.filter(data => data.porcentajeDatosEnviados >= 100);
-    
-    // Aplicar filtro de mes para campañas finalizadas
-    if (filtroMesFinalizadas && filtroMesFinalizadas !== 'all') {
-      finalizadasData = finalizadasData.filter((data: DatosDiariosData) => 
-        data.fechaCampana && data.fechaCampana.startsWith(filtroMesFinalizadas)
-      );
-    }
-    
-    const finalizadas = finalizadasData
-      .sort((a, b) => {
-        // Ordenar campañas finalizadas también por fecha según el estado sortByDate
-        const dateA = parseDate(a.fechaCampana);
-        const dateB = parseDate(b.fechaCampana);
-        return sortByDate === 'desc' 
-          ? dateB.getTime() - dateA.getTime() // Descendente (más reciente primero)
-          : dateA.getTime() - dateB.getTime(); // Ascendente (más antigua primero)
-      });
+    // Campañas finalizadas vacías - la finalización ya no es automática
+    const finalizadas: DatosDiariosData[] = [];
     
     console.log(`📊 Datos ordenados: ${enProceso.length} en proceso, ${finalizadas.length} finalizadas`);
     
@@ -958,7 +942,8 @@ export default function DatosDiariosDashboard() {
                               <span className="font-medium text-green-700 dark:text-green-300 block">
                                 {data.fechaCampana || 'N/A'}
                               </span>
-                              {updatedData.porcentajeDatosEnviados >= 100 && (
+                              {/* Fecha de fin se mostrará solo si existe fechaFinReal - sin lógica automática */}
+                              {data.fechaFinReal && (
                                 <div className="text-xs text-blue-600 dark:text-blue-400 font-semibold">
                                   Fin: {formatDateTimeExact(data.fechaFinReal)}
                                 </div>
@@ -1451,11 +1436,10 @@ export default function DatosDiariosDashboard() {
                   )}
                 </tbody>
               </table>
-              {datosDiarios?.filter(data => data.porcentajeDatosEnviados >= 100).length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  No hay campañas finalizadas aún
-                </div>
-              )}
+              {/* Sin campañas finalizadas automáticas */}
+              <div className="text-center py-8 text-gray-500">
+                Las campañas finalizadas se gestionan manualmente
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -1498,7 +1482,7 @@ export default function DatosDiariosDashboard() {
                         const inversions = calculateInversions(data, currentCpl);
                         const cplReal = calculateCPLReal(data);
                         const metaAdsAmount = cplReal > 0 ? Math.round(cplReal * data.enviados) : inversions.inversionPendiente;
-                        return sum + (data.porcentajeDatosEnviados >= 100 ? inversions.inversionPendiente : metaAdsAmount);
+                        return sum + metaAdsAmount; // Sin lógica automática de finalización
                       }, 0).toLocaleString('es-AR')}
                     </div>
                   </div>
@@ -1513,7 +1497,7 @@ export default function DatosDiariosDashboard() {
                         const inversions = calculateInversions(data, currentCpl);
                         const cplReal = calculateCPLReal(data);
                         const metaAdsAmount = cplReal > 0 ? Math.round(cplReal * data.enviados) : inversions.inversionPendiente;
-                        const pendiente = data.porcentajeDatosEnviados >= 100 ? inversions.inversionPendiente : metaAdsAmount;
+                        const pendiente = metaAdsAmount; // Sin lógica automática de finalización
                         return sum + inversions.inversionRealizada + pendiente;
                       }, 0).toLocaleString('es-AR')}
                     </div>
