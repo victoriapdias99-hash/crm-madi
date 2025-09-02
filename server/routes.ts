@@ -292,6 +292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (campana.fechaFin) {
       // ✅ CAMPAÑA FINALIZADA: Calcular duplicados de leads asignados
       console.log(`🎯 FINALIZADA ${campana.marca} ${campana.numeroCampana}: Calculando duplicados de leads asignados (campaign_id = ${campana.id})`);
+      console.log(`🔧 DEBUG: Iniciando cálculo de duplicados para campaña finalizada ${campana.id}`);
       
       try {
         const { opLead } = await import('../shared/schema');
@@ -307,6 +308,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(opLead)
         .where(eq(opLead.campaignId, campana.id));
         
+        console.log(`🔧 DEBUG: Encontrados ${leadsAsignados.length} leads asignados a campaña ${campana.id}`);
+        
         if (leadsAsignados.length === 0) {
           console.log(`✅ FINALIZADA ${campana.marca} ${campana.numeroCampana}: Sin leads asignados, duplicados = 0`);
           return [{ totalDuplicados: 0 }];
@@ -317,20 +320,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .map(lead => lead.metaLeadId)
           .filter(id => id !== null);
         
+        console.log(`🔧 DEBUG: Extraídos ${metaLeadIds.length} meta_lead_ids de ${leadsAsignados.length} leads`);
+        
         if (metaLeadIds.length === 0) {
           console.log(`✅ FINALIZADA ${campana.marca} ${campana.numeroCampana}: Sin meta_lead_ids válidos, duplicados = 0`);
           return [{ totalDuplicados: 0 }];
         }
         
-        // 3. ✅ Consulta OPTIMIZADA: Usar campaign_id directamente desde op_leads_rep
-        const { sum } = await import('drizzle-orm');
-        const duplicadosResult = await db.select({ 
-          totalDuplicados: sum(opLeadsRepTable.cantidadDuplicados)
+        // 3. ✅ Consulta CORREGIDA: Buscar leads únicos por meta_lead_id
+        // Buscar en op_leads_rep usando los meta_lead_ids de los leads asignados
+        const leadsUnicos = await db.select({
+          duplicateIds: opLeadsRepTable.duplicateIds
         })
         .from(opLeadsRepTable)
-        .where((table) => table.campaignId === campana.id);
+        .where(inArray(opLeadsRepTable.metaLeadId, metaLeadIds));
         
-        const totalDuplicados = duplicadosResult[0]?.totalDuplicados || 0;
+        console.log(`🔍 DEBUG DUPLICADOS: ${leadsUnicos.length} leads únicos encontrados de ${metaLeadIds.length} meta_lead_ids`);
+        
+        // Contar total de duplicados: suma de longitudes de arrays duplicate_ids
+        let totalDuplicados = 0;
+        for (const lead of leadsUnicos) {
+          const arrayLength = lead.duplicateIds ? lead.duplicateIds.length : 0;
+          totalDuplicados += arrayLength;
+          console.log(`🔍 DEBUG: Lead único con ${arrayLength} duplicados`);
+        }
+        
+        console.log(`🔍 DEBUG DUPLICADOS: Total calculado = ${totalDuplicados}`);
         console.log(`✅ FINALIZADA ${campana.marca} ${campana.numeroCampana}: ${totalDuplicados} duplicados (de ${leadsAsignados.length} leads asignados)`);
         
         return [{ totalDuplicados }];
