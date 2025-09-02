@@ -89,13 +89,13 @@ export function mapClosureResultToResponse(result: any): ClosureResponseDto {
     durationFormatted,
     details: result.details ? {
       closedCampaigns: result.details.closedCampaigns?.map((campaign: any) => ({
-        campaignId: campaign.campaignId,
-        clientName: campaign.clientName,
-        brandName: campaign.brandName,
-        leadsAssigned: campaign.leadsAssigned,
-        targetLeads: campaign.targetLeads,
-        closureDate: campaign.closureDate.toISOString(),
-        finalLeadDate: campaign.finalLeadDate.toISOString()
+        campaignId: campaign.campaignDetail?.campaignId || campaign.campaignId,
+        clientName: campaign.campaignDetail?.clientName || campaign.clientName,
+        brandName: campaign.campaignDetail?.brandName || campaign.brandName,
+        leadsAssigned: campaign.campaignDetail?.leadsAssigned || campaign.leadsAssigned,
+        targetLeads: campaign.campaignDetail?.targetLeads || campaign.targetLeads,
+        closureDate: campaign.campaignDetail?.closureDate?.toISOString() || campaign.closureDate?.toISOString() || new Date().toISOString(),
+        finalLeadDate: campaign.campaignDetail?.finalLeadDate?.toISOString() || campaign.finalLeadDate?.toISOString() || new Date().toISOString()
       })) || [],
       clientsProcessed: result.details.clientsProcessed || [],
       validationErrors: result.details.validationErrors

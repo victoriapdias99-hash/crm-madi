@@ -44,23 +44,24 @@ export class PostgresLeadRepository implements ILeadRepository {
       const normalizedBrand = brandName.toLowerCase();
       const normalizedZone = this.normalizeZoneName(zone);
 
-      console.log(`🔍 Buscando leads para: cliente=${normalizedClient}, marca=${normalizedBrand}, zona=${normalizedZone}`);
+      console.log(`🔍 Buscando leads NO asignados para: cliente=${normalizedClient}, marca=${normalizedBrand}, zona=${normalizedZone}`);
 
       const leads = await this.db
         .select()
-        .from(opLeadsRep)
+        .from(opLead)
         .where(
           and(
-            ilike(opLeadsRep.marca, `%${normalizedBrand}%`),
-            ilike(opLeadsRep.cliente, `%${normalizedClient}%`),
-            ilike(opLeadsRep.localizacion, `%${normalizedZone}%`)
+            ilike(opLead.marca, `%${normalizedBrand}%`),
+            ilike(opLead.cliente, `%${normalizedClient}%`),
+            ilike(opLead.localizacion, `%${normalizedZone}%`),
+            isNull(opLead.campaignId) // Solo leads NO asignados
           )
         )
-        .orderBy(asc(opLeadsRep.fechaCreacion));
+        .orderBy(asc(opLead.fechaCreacion));
 
-      console.log(`📊 Leads únicos encontrados: ${leads.length}`);
+      console.log(`📊 Leads disponibles (no asignados): ${leads.length}`);
 
-      return leads.map(this.mapOpLeadRepToAvailableLead);
+      return leads.map(this.mapOpLeadToAvailableLead);
     } catch (error: any) {
       console.error(`Error getting available leads for ${clientName}:`, error);
       throw new Error(`Failed to get available leads: ${error.message}`);
@@ -82,17 +83,18 @@ export class PostgresLeadRepository implements ILeadRepository {
 
       const result = await this.db
         .select({ count: sql<number>`count(*)::int` })
-        .from(opLeadsRep)
+        .from(opLead)
         .where(
           and(
-            ilike(opLeadsRep.marca, `%${normalizedBrand}%`),
-            ilike(opLeadsRep.cliente, `%${normalizedClient}%`),
-            ilike(opLeadsRep.localizacion, `%${normalizedZone}%`)
+            ilike(opLead.marca, `%${normalizedBrand}%`),
+            ilike(opLead.cliente, `%${normalizedClient}%`),
+            ilike(opLead.localizacion, `%${normalizedZone}%`),
+            isNull(opLead.campaignId) // Solo leads NO asignados
           )
         );
 
       const count = result[0]?.count || 0;
-      console.log(`📊 Count de leads únicos: ${count} para ${clientName} (${brandName}, ${zone})`);
+      console.log(`📊 Leads disponibles (no asignados): ${count} para ${clientName} (${brandName}, ${zone})`);
       
       return count;
     } catch (error: any) {
@@ -155,6 +157,28 @@ export class PostgresLeadRepository implements ILeadRepository {
     } catch (error: any) {
       console.error(`Error getting leads for campaign ${campaignId}:`, error);
       throw new Error(`Failed to get assigned leads: ${error.message}`);
+    }
+  }
+
+  /**
+   * Cuenta leads YA asignados a una campaña específica
+   */
+  async countAssignedLeadsForCampaign(campaignId: number): Promise<number> {
+    await this.ensureDbInitialized();
+    
+    try {
+      const result = await this.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(opLead)
+        .where(eq(opLead.campaignId, campaignId));
+
+      const count = result[0]?.count || 0;
+      console.log(`📊 Leads ya asignados a campaña ${campaignId}: ${count}`);
+      
+      return count;
+    } catch (error: any) {
+      console.error(`Error counting assigned leads for campaign ${campaignId}:`, error);
+      return 0;
     }
   }
 

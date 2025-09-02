@@ -11,6 +11,9 @@ export interface ILeadRepository {
   // Contar leads únicos disponibles (usando op_leads_rep)
   countUniqueLeadsForClient(clientName: string, brandName: string, zone: string): Promise<number>;
   
+  // Contar leads ya asignados a una campaña específica
+  countAssignedLeadsForCampaign(campaignId: number): Promise<number>;
+  
   // Asignar leads a una campaña específica (actualizar campaign_id en op_leads)
   assignLeadsToCampaign(leadIds: number[], campaignId: number): Promise<number>;
   

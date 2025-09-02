@@ -67,23 +67,53 @@ export class CampaignProcessor {
     error?: string;
   }> {
     try {
-      // Contar leads únicos disponibles para este cliente
+      // Contar leads YA asignados a esta campaña
+      const currentAssignedLeads = await this.leadRepository.countAssignedLeadsForCampaign(campaign.id);
+      
+      // Contar leads únicos disponibles para este cliente (no asignados)
       const availableLeadsCount = await this.leadRepository.countUniqueLeadsForClient(
         campaign.clientName,
         campaign.brandName,
         campaign.zone
       );
 
-      console.log(`📊 Leads disponibles para ${campaign.brandName} ${campaign.campaignNumber}: ${availableLeadsCount}`);
+      console.log(`📊 Leads ya asignados a campaña ${campaign.id}: ${currentAssignedLeads}`);
+      console.log(`📊 Leads disponibles (no asignados): ${availableLeadsCount}`);
       console.log(`🎯 Meta de leads: ${campaign.targetLeads}`);
+      
+      // Si ya alcanzó la meta, cerrar la campaña
+      if (currentAssignedLeads >= campaign.targetLeads) {
+        console.log(`✅ Campaña ya completó su meta (${currentAssignedLeads}/${campaign.targetLeads})`);
+        const finalLeadDate = await this.leadRepository.getLastLeadDateForCampaign(campaign.id);
+        
+        if (finalLeadDate) {
+          await this.campaignRepository.closeCampaign(campaign.id, finalLeadDate);
+          console.log(`🎯 Campaña ${campaign.id} cerrada automáticamente`);
+          
+          const campaignDetail: ClosedCampaignDetail = {
+            campaignId: campaign.id,
+            clientName: campaign.clientName,
+            brandName: campaign.brandName,
+            leadsAssigned: currentAssignedLeads,
+            targetLeads: campaign.targetLeads,
+            closureDate: new Date(),
+            finalLeadDate
+          };
+          
+          return { success: true, leadsAssigned: 0, campaignDetail };
+        }
+      }
 
       if (availableLeadsCount === 0) {
         console.log(`⚠️ No hay leads disponibles para asignar`);
         return { success: false, leadsAssigned: 0, error: 'No hay leads disponibles' };
       }
 
-      // Determinar cuántos leads asignar (mínimo entre disponibles y meta)
-      const leadsToAssign = Math.min(availableLeadsCount, campaign.targetLeads);
+      // Calcular cuántos leads necesitamos para completar la meta
+      const leadsNeeded = campaign.targetLeads - currentAssignedLeads;
+      const leadsToAssign = Math.min(availableLeadsCount, leadsNeeded);
+      
+      console.log(`🎯 Leads necesarios: ${leadsNeeded}, disponibles: ${availableLeadsCount}, asignaremos: ${leadsToAssign}`);
 
       // Obtener leads específicos para asignar
       const availableLeads = await this.leadRepository.getAvailableLeadsForClient(
@@ -104,8 +134,9 @@ export class CampaignProcessor {
       
       console.log(`✅ Asignados ${assignedCount} leads a campaña ${campaign.id}`);
 
-      // Si se alcanzó la meta, cerrar la campaña
-      if (assignedCount >= campaign.targetLeads) {
+      // Verificar si se alcanzó la meta (leads actuales + recién asignados)
+      const totalLeads = currentAssignedLeads + assignedCount;
+      if (totalLeads >= campaign.targetLeads) {
         const finalLeadDate = leadsToProcess[leadsToProcess.length - 1].fechaCreacion;
         await this.campaignRepository.closeCampaign(campaign.id, finalLeadDate);
 
@@ -115,7 +146,7 @@ export class CampaignProcessor {
           campaignId: campaign.id,
           clientName: campaign.clientName,
           brandName: campaign.brandName,
-          leadsAssigned: assignedCount,
+          leadsAssigned: totalLeads,
           targetLeads: campaign.targetLeads,
           closureDate: new Date(),
           finalLeadDate
