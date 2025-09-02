@@ -409,9 +409,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   async function contarLeadsPorCampana(campana: any, clienteData: any, db: any, opLeadsRepTable: any, sql: any, count: any, todasLasCampanas: any[]) {
     
-    // 🎯 LÓGICA UNIFICADA: Todas las campañas usan filtros genéricos con op_leads_rep
-    const estadoCampana = campana.fechaFin ? 'FINALIZADA' : 'EN PROCESO';
-    console.log(`📊 ${estadoCampana} ${campana.marca} ${campana.numeroCampana}: Usando filtros genéricos`);
+    // 🎯 LÓGICA DIFERENCIADA: Finalizadas usan campaign_id, en proceso usan filtros
+    if (campana.fechaFin) {
+      // ✅ CAMPAÑA FINALIZADA: Contar directamente por campaign_id en op_leads_rep
+      console.log(`🎯 FINALIZADA ${campana.marca} ${campana.numeroCampana}: Contando por campaign_id en op_leads_rep`);
+      
+      try {
+        const { eq } = await import('drizzle-orm');
+        
+        const result = await db.select({ count: count() })
+          .from(opLeadsRepTable)
+          .where(eq(opLeadsRepTable.campaignId, campana.id));
+        
+        const leadsAsignados = result[0]?.count || 0;
+        console.log(`✅ FINALIZADA ${campana.marca} ${campana.numeroCampana}: ${leadsAsignados} leads en op_leads_rep`);
+        
+        return [{ count: leadsAsignados }];
+        
+      } catch (error) {
+        console.error(`❌ Error contando leads en op_leads_rep para campaña ${campana.id}:`, error);
+        return [{ count: 0 }];
+      }
+    }
+    
+    // 📊 CAMPAÑA EN PROCESO: Usar filtros genéricos
+    console.log(`📊 EN PROCESO ${campana.marca} ${campana.numeroCampana}: Usando filtros genéricos`);
     // NORMALIZAR nombre comercial igual que en la sincronización (espacios → underscores)
     const nombreComercialRaw = clienteData?.nombreComercial || '';
     const nombreComercial = nombreComercialRaw
