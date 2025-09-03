@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Navigation } from '@/components/navigation';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
+import { Eye, Edit2, Power } from 'lucide-react';
+import { apiRequest } from '@/lib/queryClient';
 
 interface DashboardData {
   cliente: string;
@@ -57,6 +62,11 @@ export default function DashboardSimple() {
   const [data, setData] = useState<DashboardData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCampaign, setSelectedCampaign] = useState<DashboardData | null>(null);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [closingCampaign, setClosingCampaign] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const fetchData = async () => {
     try {
@@ -154,6 +164,51 @@ export default function DashboardSimple() {
   const campanasEnProceso = data;
   const campanasFinalizadas: any[] = [];
 
+  // Funciones para manejar las acciones
+  const handleCloseCampaign = async (campaign: DashboardData) => {
+    try {
+      setClosingCampaign(campaign.numeroCampana);
+      
+      // Buscar el cliente en el nombre de la campaña para hacer el cierre específico
+      const clienteName = campaign.clienteNombre.toUpperCase().replace(/\s+/g, '_');
+      const marca = extractMarca(campaign.cliente).toUpperCase();
+      
+      const response = await apiRequest('/api/campaign-closure/execute', 'POST', {
+        clients: [clienteName],
+        brands: [marca],
+        dryRun: false
+      });
+
+      if (response) {
+        toast({
+          title: "Campaña cerrada exitosamente",
+          description: `La campaña ${campaign.numeroCampana} ha sido cerrada correctamente.`
+        });
+        // Recargar datos después del cierre
+        await fetchData();
+      }
+    } catch (error) {
+      console.error('Error cerrando campaña:', error);
+      toast({
+        title: "Error al cerrar campaña",
+        description: "Hubo un problema al cerrar la campaña. Inténtalo de nuevo.",
+        variant: "destructive"
+      });
+    } finally {
+      setClosingCampaign(null);
+    }
+  };
+
+  const handleEditCampaign = (campaign: DashboardData) => {
+    setSelectedCampaign(campaign);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleViewDetails = (campaign: DashboardData) => {
+    setSelectedCampaign(campaign);
+    setIsDetailsDialogOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <Navigation />
@@ -221,6 +276,7 @@ export default function DashboardSimple() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Faltantes</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">CPL</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Inversión</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -263,6 +319,47 @@ export default function DashboardSimple() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         ARS ${item.inversionRealizada.toLocaleString('es-AR')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleCloseCampaign(item)}
+                            disabled={closingCampaign === item.numeroCampana}
+                            className="h-8 px-3"
+                            data-testid={`button-close-campaign-${item.numeroCampana}`}
+                          >
+                            {closingCampaign === item.numeroCampana ? (
+                              <span className="text-xs">Cerrando...</span>
+                            ) : (
+                              <>
+                                <Power className="w-3 h-3 mr-1" />
+                                <span className="text-xs">Cerrar</span>
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditCampaign(item)}
+                            className="h-8 px-3"
+                            data-testid={`button-edit-campaign-${item.numeroCampana}`}
+                          >
+                            <Edit2 className="w-3 h-3 mr-1" />
+                            <span className="text-xs">Editar</span>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleViewDetails(item)}
+                            className="h-8 px-3"
+                            data-testid={`button-details-campaign-${item.numeroCampana}`}
+                          >
+                            <Eye className="w-3 h-3 mr-1" />
+                            <span className="text-xs">Ver detalles</span>
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -341,6 +438,121 @@ export default function DashboardSimple() {
             </button>
           </div>
         )}
+
+        {/* Dialog para Ver Detalles de Campaña */}
+        <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Detalles de la Campaña</DialogTitle>
+            </DialogHeader>
+            {selectedCampaign && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h3 className="font-semibold text-gray-700">Cliente</h3>
+                    <p className="text-sm">{selectedCampaign.clienteNombre}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-700">Número de Campaña</h3>
+                    <p className="text-sm">#{selectedCampaign.numeroCampana}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-700">Marca</h3>
+                    <p className="text-sm">{extractMarca(selectedCampaign.cliente)}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-700">Zona</h3>
+                    <p className="text-sm">{selectedCampaign.zona}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-700">Fecha de Inicio</h3>
+                    <p className="text-sm">{selectedCampaign.fechaCampana || 'No especificada'}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-700">Fecha de Fin</h3>
+                    <p className="text-sm">{selectedCampaign.fechaFinReal || 'En proceso'}</p>
+                  </div>
+                </div>
+                
+                <div className="border-t pt-4">
+                  <h3 className="font-semibold text-gray-700 mb-3">Estadísticas de la Campaña</h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-blue-600">{selectedCampaign.enviados}</p>
+                      <p className="text-sm text-gray-500">Enviados</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-green-600">{selectedCampaign.pedidosTotal}</p>
+                      <p className="text-sm text-gray-500">Total Solicitado</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-orange-600">{selectedCampaign.porcentajeDatosEnviados.toFixed(1)}%</p>
+                      <p className="text-sm text-gray-500">Completado</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t pt-4">
+                  <h3 className="font-semibold text-gray-700 mb-3">Información Financiera</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="font-medium text-gray-600">CPL (Costo por Lead)</h4>
+                      <p className="text-lg font-semibold">ARS ${parseFloat(selectedCampaign.cpl).toLocaleString('es-AR')}</p>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-600">Inversión Realizada</h4>
+                      <p className="text-lg font-semibold">ARS ${selectedCampaign.inversionRealizada.toLocaleString('es-AR')}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t pt-4">
+                  <h3 className="font-semibold text-gray-700 mb-3">Progreso</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Faltantes por enviar</span>
+                      <span className="font-medium">{selectedCampaign.faltantesAEnviar}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div 
+                        className="bg-orange-500 h-3 rounded-full transition-all duration-300" 
+                        style={{width: `${Math.min(selectedCampaign.porcentajeDatosEnviados, 100)}%`}}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog para Editar Campaña */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Editar Campaña</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-gray-600">
+                Para editar esta campaña, serás redirigido al módulo de gestión de campañas donde podrás modificar todos los detalles.
+              </p>
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={() => {
+                    // Redirigir al módulo de campañas 
+                    window.location.href = '/campanas-management';
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Ir a Gestión de Campañas
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
       </div>
     </div>
