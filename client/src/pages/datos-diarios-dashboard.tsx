@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Save, RefreshCw, Download, Filter, Power } from "lucide-react";
+import { Loader2, Save, RefreshCw, Download, Filter, Power, Edit, Eye, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Navigation } from "@/components/navigation";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useLocation } from "wouter";
 import { CPLStorage } from "@/lib/cpl-storage";
 import { debounce, memoize, measurePerformance } from "@/lib/performance";
 
@@ -85,6 +87,12 @@ export default function DatosDiariosDashboard() {
   
   // Estado para filtro de Campañas Finalizadas
   const [filtroMesFinalizadas, setFiltroMesFinalizadas] = useState<string>('all');
+  
+  // Estados para modal de detalles y acciones
+  const [selectedCampaign, setSelectedCampaign] = useState<DatosDiariosData | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isClosingCampaign, setIsClosingCampaign] = useState(false);
+  const [, setLocation] = useLocation();
 
   // Función para exportar una campaña individual a CSV
   const handleExportCampanaCSV = async (campana: DatosDiariosData) => {
@@ -728,6 +736,47 @@ export default function DatosDiariosDashboard() {
     unifiedUpdateMutation.mutate();
   };
 
+  // Funciones para manejar las acciones de campañas
+  const handleCloseCampaign = async (campaign: DatosDiariosData) => {
+    setIsClosingCampaign(true);
+    try {
+      const response = await apiRequest('/api/campaign-closure/execute', 'POST', {
+        clienteId: campaign.cliente,
+        campaignNumber: campaign.numeroCampana
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Campaña cerrada",
+          description: `La campaña ${campaign.cliente} #${campaign.numeroCampana} ha sido cerrada exitosamente`,
+        });
+        // Refrescar datos
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
+      } else {
+        throw new Error('Error al cerrar la campaña');
+      }
+    } catch (error) {
+      console.error('Error closing campaign:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo cerrar la campaña. Intenta nuevamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsClosingCampaign(false);
+    }
+  };
+
+  const handleEditCampaign = (campaign: DatosDiariosData) => {
+    // Redirigir a la página de gestión de campañas con filtro específico
+    setLocation(`/campanas-management?cliente=${encodeURIComponent(campaign.cliente)}`);
+  };
+
+  const handleViewDetails = (campaign: DatosDiariosData) => {
+    setSelectedCampaign(campaign);
+    setIsDetailsModalOpen(true);
+  };
+
   if (finalIsLoading && !datosDiarios) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-blue-900/20 flex items-center justify-center">
@@ -940,6 +989,7 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Inversión Realizada</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Inversión Pendiente</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Exportar CSV</th>
+                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1127,13 +1177,46 @@ export default function DatosDiariosDashboard() {
                             )}
                           </Button>
                         </td>
+                        <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
+                          <div className="flex gap-2 justify-center">
+                            <Button
+                              onClick={() => handleCloseCampaign(data)}
+                              disabled={isClosingCampaign}
+                              size="sm"
+                              className="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-semibold shadow-lg"
+                              data-testid={`button-close-campaign-${data.cliente.replace(/\s+/g, '-')}`}
+                            >
+                              {isClosingCampaign ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <Power className="w-3 h-3" />
+                              )}
+                            </Button>
+                            <Button
+                              onClick={() => handleEditCampaign(data)}
+                              size="sm"
+                              className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold shadow-lg"
+                              data-testid={`button-edit-campaign-${data.cliente.replace(/\s+/g, '-')}`}
+                            >
+                              <Edit className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              onClick={() => handleViewDetails(data)}
+                              size="sm"
+                              className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold shadow-lg"
+                              data-testid={`button-view-details-${data.cliente.replace(/\s+/g, '-')}`}
+                            >
+                              <Eye className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </td>
                       </tr>
                     );
                   })}
                   {/* Fila de Totales - Campañas en Proceso */}
                   {campanasEnProceso.length > 0 && (
                     <tr className="bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-800/50 dark:to-orange-800/50 border-t-4 border-amber-500">
-                      <td colSpan={showDuplicatesOnly ? 13 : 12} className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100 text-lg">
+                      <td colSpan={showDuplicatesOnly ? 14 : 13} className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100 text-lg">
                         TOTAL CAMPAÑAS EN PROCESO
                       </td>
                       <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
@@ -1185,6 +1268,9 @@ export default function DatosDiariosDashboard() {
                             }, 0).toLocaleString('es-AR')}
                           </span>
                         </div>
+                      </td>
+                      <td className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100">
+                        —
                       </td>
                       <td className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100">
                         —
@@ -1550,6 +1636,144 @@ export default function DatosDiariosDashboard() {
           </Card>
         )}
       </div>
+
+      {/* Modal de detalles de campaña */}
+      <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="w-5 h-5" />
+              Detalles de Campaña: {selectedCampaign?.clienteNombre}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedCampaign && (
+            <div className="space-y-6">
+              {/* Información básica */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-4 rounded-lg">
+                  <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">Información General</h3>
+                  <div className="space-y-2 text-sm">
+                    <div><span className="font-medium">Cliente:</span> {selectedCampaign.clienteNombre}</div>
+                    <div><span className="font-medium">Marca:</span> {extractMarca(selectedCampaign.cliente)}</div>
+                    <div><span className="font-medium">Zona:</span> {selectedCampaign.zona}</div>
+                    <div><span className="font-medium">Número de Campaña:</span> #{selectedCampaign.numeroCampana || 1}</div>
+                    <div><span className="font-medium">Estado:</span> {selectedCampaign.estadoCampana || 'En proceso'}</div>
+                  </div>
+                </div>
+                
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-4 rounded-lg">
+                  <h3 className="font-semibold text-green-800 dark:text-green-200 mb-2">Fechas</h3>
+                  <div className="space-y-2 text-sm">
+                    <div><span className="font-medium">Fecha de Inicio:</span> {selectedCampaign.fechaCampana || 'N/A'}</div>
+                    <div><span className="font-medium">Fecha de Fin:</span> {selectedCampaign.fechaFinReal ? formatDateTimeExact(selectedCampaign.fechaFinReal) : 'En proceso'}</div>
+                    <div><span className="font-medium">Días Procesados:</span> {selectedCampaign.diasProcesados || 0}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Métricas de rendimiento */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-4 rounded-lg text-center">
+                  <h4 className="font-semibold text-purple-800 dark:text-purple-200 mb-2">Datos Enviados</h4>
+                  <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">{selectedCampaign.enviados}</div>
+                  <div className="text-sm text-purple-600 dark:text-purple-400">de {selectedCampaign.pedidosTotal || selectedCampaign.cantidadSolicitada || 0} solicitados</div>
+                </div>
+                
+                <div className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 p-4 rounded-lg text-center">
+                  <h4 className="font-semibold text-orange-800 dark:text-orange-200 mb-2">Duplicados</h4>
+                  <div className="text-2xl font-bold text-orange-700 dark:text-orange-300">{selectedCampaign.duplicados || 0}</div>
+                  <div className="text-sm text-orange-600 dark:text-orange-400">registros duplicados</div>
+                </div>
+                
+                <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 p-4 rounded-lg text-center">
+                  <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">% Progreso</h4>
+                  <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">{selectedCampaign.porcentajeDatosEnviados?.toFixed(1) || '0.0'}%</div>
+                  <div className="text-sm text-blue-600 dark:text-blue-400">completado</div>
+                </div>
+              </div>
+
+              {/* Información financiera */}
+              <div className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20 p-4 rounded-lg">
+                <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-4">Información Financiera</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-sm font-medium text-gray-600 dark:text-gray-400">CPL Guardado</div>
+                    <div className="text-lg font-bold text-gray-800 dark:text-gray-200">
+                      ARS ${(CPLStorage.get(selectedCampaign.cliente, selectedCampaign.numeroCampana.toString()) || selectedCampaign.cpl || 0).toLocaleString('es-AR')}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-600 dark:text-gray-400">Inversión Realizada</div>
+                    <div className="text-lg font-bold text-green-600 dark:text-green-400">
+                      ARS ${(() => {
+                        const currentCpl = CPLStorage.get(selectedCampaign.cliente, selectedCampaign.numeroCampana.toString()) || selectedCampaign.cpl || 0;
+                        const inversions = calculateInversions(selectedCampaign, currentCpl);
+                        return inversions.inversionRealizada.toLocaleString('es-AR');
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Rendimiento diario */}
+              <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 p-4 rounded-lg">
+                <h3 className="font-semibold text-amber-800 dark:text-amber-200 mb-4">Rendimiento Diario</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-sm font-medium text-amber-600 dark:text-amber-400">Entregados por Día</div>
+                    <div className="text-lg font-bold text-amber-800 dark:text-amber-200">
+                      {selectedCampaign.entregadosPorDia?.toFixed(2) || '0.00'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-amber-600 dark:text-amber-400">Pedidos por Día</div>
+                    <div className="text-lg font-bold text-amber-800 dark:text-amber-200">
+                      {selectedCampaign.pedidosPorDia?.toFixed(2) || '0.00'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botones de acción en el modal */}
+              <div className="flex gap-3 justify-end pt-4 border-t">
+                <Button
+                  onClick={() => {
+                    setIsDetailsModalOpen(false);
+                    handleEditCampaign(selectedCampaign);
+                  }}
+                  className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Editar Campaña
+                </Button>
+                <Button
+                  onClick={() => {
+                    setIsDetailsModalOpen(false);
+                    handleCloseCampaign(selectedCampaign);
+                  }}
+                  className="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white"
+                  disabled={isClosingCampaign}
+                >
+                  {isClosingCampaign ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Power className="w-4 h-4 mr-2" />
+                  )}
+                  Cerrar Campaña
+                </Button>
+                <Button
+                  onClick={() => setIsDetailsModalOpen(false)}
+                  variant="outline"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Cerrar
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
