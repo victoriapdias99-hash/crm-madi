@@ -256,7 +256,24 @@ export class GoogleSheetsGateway implements ISheetsGateway {
     }
 
     // Mapear columnas según estructura estándar de Google Sheets
-    const timestamp = row[0] ? new Date(row[0]).toISOString() : new Date().toISOString();
+    let timestamp: string;
+    try {
+      if (row[0]) {
+        // Validar que el valor se puede convertir a fecha
+        const dateValue = new Date(row[0]);
+        if (isNaN(dateValue.getTime())) {
+          // Si no es una fecha válida, usar fecha actual
+          timestamp = new Date().toISOString();
+        } else {
+          timestamp = dateValue.toISOString();
+        }
+      } else {
+        timestamp = new Date().toISOString();
+      }
+    } catch (error) {
+      // En caso de cualquier error en el parsing, usar fecha actual
+      timestamp = new Date().toISOString();
+    }
     const name = row[1] ? row[1].toString().trim() : 'S/D';
     const phone = row[2] ? row[2].toString().trim() : 'S/D';
     const email = row[3] ? row[3].toString().trim() : '';

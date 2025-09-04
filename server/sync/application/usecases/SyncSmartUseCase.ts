@@ -74,8 +74,11 @@ export class SyncSmartUseCase {
         clientsMatched: {}
       };
 
-      // 2. Procesar todas las marcas disponibles con verificación de integridad integrada
-      for (const sheetName of brandAnalysis.availableSheets) {
+      // 2. Procesar SOLO marcas que necesitan sincronización (optimización de cuota)
+      const brandsToProcess = brandAnalysis.incompleteSheets.map(s => s.name);
+      console.log(`🎯 Procesando solo marcas que necesitan sincronización: ${brandsToProcess.join(', ')}`);
+      
+      for (const sheetName of brandsToProcess) {
         console.log(`🔄 Procesando marca ${sheetName} con verificación de integridad...`);
         
         await this.syncRepository.updateSyncStatus({
@@ -134,6 +137,14 @@ export class SyncSmartUseCase {
         }
         
         details.sheetsProcessed?.push(sheetName);
+        
+        // ✅ RATE LIMITING: Pausa entre marcas para respetar límites de API
+        const isLastBrand = brandsToProcess.indexOf(sheetName) === brandsToProcess.length - 1;
+        if (!isLastBrand) {
+          const delayMs = 3000; // 3 segundos entre marcas
+          console.log(`⏳ Esperando ${delayMs/1000}s antes de procesar siguiente marca...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
       }
 
       // 3. Actualizar estado final
@@ -222,11 +233,15 @@ export class SyncSmartUseCase {
         }
       }
 
-      const totalPending = incompleteSheets.reduce((sum, sheet) => sum + (sheet.totalCount - sheet.currentCount), 0);
+      // 3. Ordenar marcas incompletas por cantidad de registros (mayor a menor) para priorizar
+      const sortedIncompleteSheets = incompleteSheets.sort((a, b) => b.currentCount - a.currentCount);
+      console.log(`📊 Ordenamiento por registros: ${sortedIncompleteSheets.map(s => `${s.name}(${s.currentCount})`).join(', ')}`);
+
+      const totalPending = sortedIncompleteSheets.reduce((sum, sheet) => sum + (sheet.totalCount - sheet.currentCount), 0);
 
       return {
         availableSheets,
-        incompleteSheets,
+        incompleteSheets: sortedIncompleteSheets,
         totalPending
       };
 
