@@ -487,6 +487,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  // Función para verificar si existe una campaña anterior abierta con mismo cliente, marca y zona
+  async function tieneCampanaAnteriorAbierta(campanaActual: any, todasLasCampanas: any[]): Promise<boolean> {
+    try {
+      // Buscar campañas anteriores del mismo cliente con la misma marca y zona
+      const campanasAnteriores = todasLasCampanas.filter(c => 
+        c.clienteId === campanaActual.clienteId && // Mismo cliente
+        c.marca === campanaActual.marca && // Misma marca
+        c.zona === campanaActual.zona && // Misma zona
+        c.id !== campanaActual.id && // No incluir la campaña actual
+        new Date(c.fechaCampana) < new Date(campanaActual.fechaCampana) && // Anterior en el tiempo
+        !c.fechaFin // Sin fecha de fin (campaña abierta)
+      );
+      
+      console.log(`📊 Verificando campaña ${campanaActual.marca} ${campanaActual.numeroCampana}: ${campanasAnteriores.length} campañas anteriores abiertas`);
+      
+      return campanasAnteriores.length > 0;
+    } catch (error) {
+      console.error('Error verificando campañas anteriores abiertas:', error);
+      return false;
+    }
+  }
+
   // Endpoint principal para datos diarios usando PostgreSQL con filtrado por nombre comercial
   app.get('/api/dashboard/datos-diarios-db', async (req, res) => {
     try {
@@ -515,7 +537,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Contar duplicados con los mismos filtros que la campaña
           const duplicadosResult = await contarDuplicadosPorCampana(campana, clienteData, db, opLeadsRep, sql, campanas);
-          const totalDuplicados = duplicadosResult?.[0]?.totalDuplicados || 0;
+          let totalDuplicados = duplicadosResult?.[0]?.totalDuplicados || 0;
+          
+          // Verificar si existe una campaña anterior abierta con mismo cliente, marca y zona
+          const tieneCampanaAnterior = await tieneCampanaAnteriorAbierta(campana, campanas);
           
           // Aplicar correcciones específicas (mantener la lógica actual)
           let enviadosFinales = enviadosDB;
@@ -540,6 +565,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Obtener CPL desde la base de datos
           const storedCpl = await storage.getCplByClienteAndCampana(clienteIdentificador, campana.numeroCampana);
+
+          // Aplicar signo negativo si hay campaña anterior abierta
+          if (tieneCampanaAnterior) {
+            enviadosFinales = -Math.abs(enviadosFinales); // Convertir a negativo
+            totalDuplicados = -Math.abs(totalDuplicados); // Convertir a negativo
+            console.log(`🔴 Aplicando valores negativos para campaña ${campana.marca} ${campana.numeroCampana} - hay campaña anterior abierta`);
+          }
 
           // Usar fecha fin de la campaña sin cálculo automático
           // Las fechas fin solo se deben calcular cuando realmente se completa la campaña
