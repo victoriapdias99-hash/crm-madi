@@ -213,7 +213,26 @@ export class SyncSmartUseCase {
         const newRowsAvailable = lastAvailableRow > lastProcessedRow;
         const newRowsCount = Math.max(0, lastAvailableRow - lastProcessedRow);
         
-        console.log(`📊 ${sheetName}: ${currentCount} en BD, última fila procesada: ${lastProcessedRow}, última fila disponible: ${lastAvailableRow}, nuevas: ${newRowsCount}`);
+        // 🚨 VALIDACIÓN DE CONSISTENCIA: Detectar pérdida de datos
+        console.log(`🔍 DEBUG ${sheetName}: lastProcessedRow=${lastProcessedRow}, lastAvailableRow=${lastAvailableRow}, condición=${lastProcessedRow > lastAvailableRow && lastProcessedRow > 1}`);
+        if (lastProcessedRow > lastAvailableRow && lastProcessedRow > 1) {
+          const lostRows = lastProcessedRow - lastAvailableRow;
+          console.log(`🚨 ALERTA ${sheetName}: Posible pérdida de datos! BD procesó hasta fila ${lastProcessedRow} pero Google Sheets solo tiene hasta ${lastAvailableRow}. Filas faltantes: ${lostRows}`);
+          console.log(`🔄 ${sheetName}: Forzando resincronización para verificar datos perdidos`);
+          
+          // Forzar inclusión en sincronización para verificar
+          const totalCount = await this.getTotalBrandCount(sheetName);
+          incompleteSheets.push({
+            name: sheetName,
+            currentCount,
+            totalCount,
+            lastRow: lastProcessedRow,
+            newRows: 1 // Forzar al menos 1 para que se procese
+          });
+          console.log(`🔄 ${sheetName} FORZADA para verificación de consistencia`);
+        } else {
+          console.log(`📊 ${sheetName}: ${currentCount} en BD, última fila procesada: ${lastProcessedRow}, última fila disponible: ${lastAvailableRow}, nuevas: ${newRowsCount}`);
+        }
         
         // Solo agregar marcas que tienen filas nuevas
         if (newRowsAvailable && newRowsCount > 0) {
