@@ -374,8 +374,50 @@ export class PostgresLeadRepository implements ILeadRepository {
       const result = await this.db.transaction(async (tx: any) => {
         console.log(`🚀 Iniciando transacción atómica para campaña ${campaignId}`);
 
-        // PASO 1: Seleccionar y BLOQUEAR leads disponibles con FOR UPDATE
-        console.log(`🔍 Buscando leads disponibles con bloqueo atómico...`);
+        // PASO 1A: Obtener TODOS los leads disponibles para análisis de debugging
+        console.log(`🔍 DEBUGGING: Obteniendo TODOS los leads disponibles para análisis...`);
+        console.log(`🔧 Filtros normalizados: cliente=${normalizedClient}, marca=${normalizedBrand}, zona=${normalizedZone}`);
+        
+        const allAvailableLeads = await tx
+          .select()
+          .from(opLead)
+          .where(
+            and(
+              ilike(opLead.marca, `%${normalizedBrand}%`),
+              ilike(opLead.cliente, `%${normalizedClient}%`),
+              ilike(opLead.localizacion, `%${normalizedZone}%`),
+              isNull(opLead.campaignId) // Solo leads NO asignados
+            )
+          )
+          .orderBy(asc(opLead.fechaCreacion)); // Sin LIMIT para ver todos
+
+        console.log(`📊 TOTAL DE LEADS DISPONIBLES: ${allAvailableLeads.length}`);
+        
+        // LOG DETALLADO: Mostrar los primeros 20 leads ordenados por fecha
+        console.log(`📋 PRIMEROS ${Math.min(20, allAvailableLeads.length)} LEADS ORDENADOS POR FECHA:`);
+        allAvailableLeads.slice(0, 20).forEach((lead, index) => {
+          console.log(`   ${index + 1}. Fila ${lead.googleSheetsRowNumber}: ${lead.nombre} - ${lead.fechaCreacion.toISOString()}`);
+        });
+
+        if (allAvailableLeads.length > 20) {
+          console.log(`   ... y ${allAvailableLeads.length - 20} más`);
+        }
+
+        // LOG ESPECÍFICO: Verificar las filas problemáticas (6, 22, 28, 32, 36)
+        const problematicRows = [6, 22, 28, 32, 36];
+        console.log(`🚨 VERIFICANDO FILAS PROBLEMÁTICAS: ${problematicRows.join(', ')}`);
+        problematicRows.forEach(rowNum => {
+          const found = allAvailableLeads.find(lead => lead.googleSheetsRowNumber === rowNum);
+          if (found) {
+            const position = allAvailableLeads.findIndex(lead => lead.googleSheetsRowNumber === rowNum) + 1;
+            console.log(`   ✅ Fila ${rowNum}: ENCONTRADA en posición ${position} - ${found.nombre} - ${found.fechaCreacion.toISOString()}`);
+          } else {
+            console.log(`   ❌ Fila ${rowNum}: NO ENCONTRADA (posiblemente filtrada)`);
+          }
+        });
+
+        // PASO 1B: Seleccionar y BLOQUEAR leads disponibles con FOR UPDATE (con LIMIT)
+        console.log(`🔒 Aplicando LIMIT ${targetCount} y FOR UPDATE para asignación atómica...`);
         
         const availableLeads = await tx
           .select()
@@ -392,7 +434,30 @@ export class PostgresLeadRepository implements ILeadRepository {
           .limit(targetCount)
           .for('update'); // BLOQUEO CRÍTICO - Previene race conditions
 
-        console.log(`📊 Leads encontrados y bloqueados: ${availableLeads.length}`);
+        console.log(`📊 Leads SELECCIONADOS para asignación: ${availableLeads.length}`);
+
+        // LOG DETALLADO: Mostrar exactamente qué leads fueron seleccionados
+        console.log(`🎯 LEADS QUE SERÁN ASIGNADOS:`);
+        availableLeads.forEach((lead, index) => {
+          console.log(`   ${index + 1}. ID ${lead.id} - Fila ${lead.googleSheetsRowNumber}: ${lead.nombre} - ${lead.fechaCreacion.toISOString()}`);
+        });
+
+        // ANÁLISIS DE SALTOS: Comparar leads seleccionados vs las filas problemáticas
+        console.log(`🔍 ANÁLISIS DE SALTOS:`);
+        const selectedRowNumbers = availableLeads.map(lead => lead.googleSheetsRowNumber);
+        problematicRows.forEach(rowNum => {
+          if (selectedRowNumbers.includes(rowNum)) {
+            console.log(`   ✅ Fila ${rowNum}: INCLUIDA en asignación`);
+          } else {
+            const foundInAll = allAvailableLeads.find(lead => lead.googleSheetsRowNumber === rowNum);
+            if (foundInAll) {
+              const positionInAll = allAvailableLeads.findIndex(lead => lead.googleSheetsRowNumber === rowNum) + 1;
+              console.log(`   ❌ Fila ${rowNum}: SALTADA - estaba en posición ${positionInAll} de ${allAvailableLeads.length} pero fuera del LIMIT ${targetCount}`);
+            } else {
+              console.log(`   ❌ Fila ${rowNum}: NO DISPONIBLE - no cumple filtros o ya asignada`);
+            }
+          }
+        });
 
         if (availableLeads.length === 0) {
           throw new Error(`No hay leads disponibles para ${clientName} (${brandName}, ${zone})`);
