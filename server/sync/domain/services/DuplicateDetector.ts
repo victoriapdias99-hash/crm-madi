@@ -55,6 +55,8 @@ export class DuplicateDetector {
     existingLeads: SyncLead[]
   ): ProcessedSyncLead[] {
     
+    console.log(`🔍 DUPLICATE DEBUG: Verificando ${newLeads.length} leads nuevos contra ${existingLeads.length} existentes`);
+    
     // Crear mapas de leads existentes para búsqueda rápida
     const existingPhones = new Set(existingLeads.map(l => this.normalizePhone(l.telefono)));
     const existingMetaIds = new Set(existingLeads.map(l => l.metaLeadId));
@@ -64,24 +66,32 @@ export class DuplicateDetector {
         .map(l => `${l.marca.toUpperCase()}_${l.googleSheetsRowNumber}`)
     );
     
-    return newLeads.map(lead => {
+    let duplicatesFound = 0;
+    let duplicatesByPhone = 0;
+    let duplicatesByMetaId = 0;
+    let duplicatesByRow = 0;
+    
+    const result = newLeads.map((lead, index) => {
       const isDuplicateByPhone = existingPhones.has(lead.normalizedPhone);
       const isDuplicateByMetaId = existingMetaIds.has(lead.metaLeadId);
       
       // Verificar duplicado por número de fila de Google Sheets
       let isDuplicateByRowNumber = false;
+      let rowKey = null;
       if (lead.googleSheetsRowNumber && lead.marca) {
-        const rowKey = `${lead.marca.toUpperCase()}_${lead.googleSheetsRowNumber}`;
+        rowKey = `${lead.marca.toUpperCase()}_${lead.googleSheetsRowNumber}`;
         isDuplicateByRowNumber = existingRowNumbers.has(rowKey);
       }
       
       const isDuplicate = isDuplicateByPhone || isDuplicateByMetaId || isDuplicateByRowNumber;
       
       if (isDuplicate) {
-        // Encontrar el lead original para referencia
-        const rowKey = lead.googleSheetsRowNumber && lead.marca ? 
-          `${lead.marca.toUpperCase()}_${lead.googleSheetsRowNumber}` : null;
+        duplicatesFound++;
+        if (isDuplicateByPhone) duplicatesByPhone++;
+        if (isDuplicateByMetaId) duplicatesByMetaId++;
+        if (isDuplicateByRowNumber) duplicatesByRow++;
         
+        // Encontrar el lead original para referencia
         const originalLead = existingLeads.find(l => 
           this.normalizePhone(l.telefono) === lead.normalizedPhone || 
           l.metaLeadId === lead.metaLeadId ||
@@ -89,11 +99,25 @@ export class DuplicateDetector {
            `${l.marca.toUpperCase()}_${l.googleSheetsRowNumber}` === rowKey)
         );
         
+        // 🚨 LOG DETALLADO DE DUPLICADOS
+        console.log(`🚨 DUPLICADO ENCONTRADO [${index + 1}/${newLeads.length}]:`);
+        console.log(`   Nuevo lead: ${lead.nombre} | Tel: ${lead.normalizedPhone} | Fila: ${lead.googleSheetsRowNumber} | MetaID: ${lead.metaLeadId}`);
+        console.log(`   Razones: Phone=${isDuplicateByPhone} | MetaId=${isDuplicateByMetaId} | Row=${isDuplicateByRowNumber}`);
+        if (originalLead) {
+          console.log(`   Lead existente: ${originalLead.nombre} | Tel: ${this.normalizePhone(originalLead.telefono)} | Fila: ${originalLead.googleSheetsRowNumber} | ID: ${originalLead.id}`);
+        }
+        console.log(`   RowKey: ${rowKey}`);
+        
         return {
           ...lead,
           isDuplicate: true,
           duplicateOf: originalLead?.metaLeadId
         };
+      } else {
+        // 📝 LOG DE LEADS NUEVOS (solo primeros 3 para no saturar)
+        if (index < 3) {
+          console.log(`✅ NUEVO LEAD [${index + 1}]: ${lead.nombre} | Tel: ${lead.normalizedPhone} | Fila: ${lead.googleSheetsRowNumber}`);
+        }
       }
       
       return {
@@ -101,6 +125,11 @@ export class DuplicateDetector {
         isDuplicate: false
       };
     });
+    
+    console.log(`📊 RESUMEN DUPLICADOS: ${duplicatesFound} total | ${duplicatesByPhone} por teléfono | ${duplicatesByMetaId} por MetaID | ${duplicatesByRow} por fila`);
+    console.log(`✅ LEADS NUEVOS: ${newLeads.length - duplicatesFound} de ${newLeads.length} se guardarán`);
+    
+    return result;
   }
 
   /**

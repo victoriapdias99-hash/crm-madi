@@ -497,6 +497,16 @@ export class SyncSmartUseCase {
       
       console.log(`📊 De ${validLeads.length} leads: ${newLeads.length} nuevos, ${duplicatesCount} duplicados detectados`);
       
+      // 🔍 Log detallado de estadísticas
+      console.log(`📈 ESTADÍSTICAS DETALLADAS ${brandName}:`);
+      console.log(`   📥 Leads obtenidos de Google Sheets: ${validLeads.length}`);
+      console.log(`   📊 Leads existentes en BD: ${existingLeads.length}`);
+      console.log(`   ✅ Leads nuevos para guardar: ${newLeads.length}`);
+      console.log(`   🚫 Leads marcados como duplicados: ${duplicatesCount}`);
+      if (duplicatesCount > 0) {
+        console.log(`   📉 Tasa de duplicados: ${((duplicatesCount / validLeads.length) * 100).toFixed(1)}%`);
+      }
+      
       // Log detallado de duplicados por tipo
       if (duplicatesCount > 0) {
         const duplicatesByPhone = leadsWithDuplicates.filter(l => 
