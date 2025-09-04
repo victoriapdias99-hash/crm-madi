@@ -46,6 +46,9 @@ export class PostgresSyncRepository implements ISyncRepository {
 
   async createLead(lead: ProcessedSyncLead): Promise<SyncLead> {
     try {
+      // 🚨 LOG 4: Antes de insertar en BD
+      console.log(`💾 BEFORE INSERT: lead.cliente="${lead.cliente}" (${typeof lead.cliente}) | lead.normalizedClient="${lead.normalizedClient}" (${typeof lead.normalizedClient})`);
+      
       // Mapear ProcessedSyncLead a InsertOpLead
       const opLeadData: InsertOpLead = {
         metaLeadId: lead.metaLeadId,

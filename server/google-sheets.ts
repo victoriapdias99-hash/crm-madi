@@ -75,6 +75,9 @@ class GoogleSheetsService {
   private parseRowToLead(row: any[], sheetName: string, rowIndex: number): SheetLead | null {
     if (!this.isValidRow(row)) return null;
 
+    // 🚨 LOG 1b: Datos crudos de Google Sheets (sistema legacy)
+    console.log(`📊 RAW GOOGLE SHEETS [Legacy-Fila ${rowIndex + 1}]: cliente="${row[8]}" (${typeof row[8]}) → parseado="${row[8] || ''}" (${typeof (row[8] || '')})`);
+
     return {
       timestamp: row[0] || new Date().toISOString(),           // Fecha
       name: row[1] || '',                                      // Nombre

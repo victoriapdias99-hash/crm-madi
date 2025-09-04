@@ -283,6 +283,9 @@ export class GoogleSheetsGateway implements ISheetsGateway {
     const origen = row[7] ? row[7].toString().trim() : '';
     const localizacion = row[8] ? row[8].toString().trim() : '';
     const cliente = row[9] ? row[9].toString().trim() : '';
+    
+    // 🚨 LOG 1: Datos crudos de Google Sheets
+    console.log(`📊 RAW GOOGLE SHEETS [Fila ${rowIndex}]: cliente="${row[9]}" (${typeof row[9]}) → parseado="${cliente}" (${typeof cliente})`);
 
     return {
       timestamp,

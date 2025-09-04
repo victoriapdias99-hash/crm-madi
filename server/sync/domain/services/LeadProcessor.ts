@@ -13,6 +13,9 @@ export class LeadProcessor {
   convertRawToSyncLead(rawLead: RawSheetLead): SyncLead {
     const metaLeadId = this.generateMetaLeadId(rawLead);
     
+    // 🚨 LOG 2: Después de convertir RAW a SyncLead
+    console.log(`🔄 CONVERT RAW: Input="${rawLead.cliente}" (${typeof rawLead.cliente}) → Output="${String(rawLead.cliente || 'S/D')}" (string)`);
+    
     return {
       metaLeadId,
       nombre: this.sanitizeName(rawLead.name),
@@ -37,6 +40,9 @@ export class LeadProcessor {
    */
   processLead(syncLead: SyncLead): ProcessedSyncLead {
     const validationErrors: string[] = [];
+    
+    // 🚨 LOG 3: Antes de normalizar en processLead
+    console.log(`⚡ BEFORE NORMALIZE: syncLead.cliente="${syncLead.cliente}" (${typeof syncLead.cliente})`);
     
     // Normalizar datos
     const normalizedPhone = this.normalizePhone(syncLead.telefono);
