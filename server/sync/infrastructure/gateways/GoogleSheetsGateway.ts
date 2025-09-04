@@ -165,6 +165,53 @@ export class GoogleSheetsGateway implements ISheetsGateway {
     }
   }
 
+  /**
+   * Obtiene leads de rangos específicos en Google Sheets
+   * Usado para verificación de integridad - obtener solo filas específicas
+   */
+  async getLeadsFromRange(sheetName: string, range: string): Promise<RawSheetLead[]> {
+    await this.ensureServiceInitialized();
+    
+    try {
+      console.log(`📋 GoogleSheetsGateway: Obteniendo datos del rango "${range}" en sheet "${sheetName}"`);
+      
+      // Usar la API de Google Sheets directamente para obtener un rango específico
+      const response = await this.googleSheetsService.sheets.spreadsheets.values.get({
+        spreadsheetId: this.googleSheetsService.spreadsheetId,
+        range: `${sheetName}!${range}`,
+        majorDimension: 'ROWS'
+      });
+      
+      const rows = response.data.values || [];
+      console.log(`📊 GoogleSheetsGateway: Obtenidas ${rows.length} filas del rango "${range}"`);
+      
+      if (rows.length === 0) {
+        return [];
+      }
+      
+      // Extraer número de fila inicial del rango (ej: "A4:ZZ7" → fila inicial = 4)
+      const startRow = parseInt(range.split(':')[0].match(/\d+/)?.[0] || '1');
+      
+      const leads: RawSheetLead[] = [];
+      
+      rows.forEach((row, index) => {
+        const actualRowNumber = startRow + index;
+        
+        // Usar el mismo parseador que el GoogleSheetsService original
+        const lead = this.parseRowToRawSheetLead(row, sheetName, actualRowNumber);
+        if (lead) {
+          leads.push(lead);
+        }
+      });
+      
+      console.log(`✅ GoogleSheetsGateway: Procesados ${leads.length} leads válidos del rango "${range}"`);
+      return leads;
+    } catch (error) {
+      console.error(`Error obteniendo rango ${range} de ${sheetName}:`, error);
+      return [];
+    }
+  }
+
   // ========== MÉTODOS PRIVADOS ==========
 
   private mapToRawSheetLeads(leads: any[]): RawSheetLead[] {
@@ -186,6 +233,58 @@ export class GoogleSheetsGateway implements ISheetsGateway {
       campaign: lead.campaign || lead.campana || 'S/D',
       cost: lead.cost || lead.costo || '0'
     }));
+  }
+
+  /**
+   * Convierte una fila de Google Sheets a formato RawSheetLead
+   * Replica el comportamiento del parseRowToLead del GoogleSheetsService
+   */
+  private parseRowToRawSheetLead(row: any[], sheetName: string, rowIndex: number): RawSheetLead | null {
+    if (!row || row.length < 2) {
+      return null;
+    }
+
+    // Validación permisiva: acepta cualquier fila con contenido
+    const hasContent = row.some(cell => {
+      if (!cell) return false;
+      const cellStr = cell.toString().trim();
+      return cellStr.length > 0 && cellStr !== '';
+    });
+
+    if (!hasContent) {
+      return null;
+    }
+
+    // Mapear columnas según estructura estándar de Google Sheets
+    const timestamp = row[0] ? new Date(row[0]).toISOString() : new Date().toISOString();
+    const name = row[1] ? row[1].toString().trim() : 'S/D';
+    const phone = row[2] ? row[2].toString().trim() : 'S/D';
+    const email = row[3] ? row[3].toString().trim() : '';
+    const city = row[4] ? row[4].toString().trim() : '';
+    const modelo = row[5] ? row[5].toString().trim() : '';
+    const comentarioHorario = row[6] ? row[6].toString().trim() : '';
+    const origen = row[7] ? row[7].toString().trim() : '';
+    const localizacion = row[8] ? row[8].toString().trim() : '';
+    const cliente = row[9] ? row[9].toString().trim() : '';
+
+    return {
+      timestamp,
+      name,
+      email,
+      phone,
+      city,
+      interest: '',
+      budget: '',
+      modelo,
+      comentarioHorario,
+      origen,
+      localizacion,
+      cliente,
+      googleSheetsRowNumber: rowIndex,
+      source: 'google_sheets',
+      campaign: sheetName,
+      cost: '0'
+    };
   }
 
   private async ensureServiceInitialized(): Promise<void> {

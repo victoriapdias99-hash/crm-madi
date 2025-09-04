@@ -361,6 +361,35 @@ export class PostgresSyncRepository implements ISyncRepository {
     }
   }
 
+  /**
+   * Obtiene solo los números de fila de Google Sheets para una marca específica
+   * Usado para verificación de integridad - detectar gaps en la secuencia
+   */
+  async getGoogleSheetsRowNumbers(marca: string): Promise<number[]> {
+    try {
+      if (!marca) {
+        return [];
+      }
+
+      const result = await db.select({ 
+        rowNumber: opLead.googleSheetsRowNumber 
+      })
+        .from(opLead)
+        .where(sql`${opLead.marca} = ${marca.toUpperCase()} AND ${opLead.googleSheetsRowNumber} IS NOT NULL`)
+        .orderBy(sql`${opLead.googleSheetsRowNumber} ASC`);
+      
+      const rowNumbers = result
+        .map(row => row.rowNumber)
+        .filter(row => row !== null && row !== undefined) as number[];
+        
+      console.log(`🔍 ${marca}: ${rowNumbers.length} filas en BD, rango: ${rowNumbers[0] || 0}-${rowNumbers[rowNumbers.length - 1] || 0}`);
+      return rowNumbers;
+    } catch (error) {
+      console.error(`Error getting Google Sheets row numbers for ${marca}:`, error);
+      return [];
+    }
+  }
+
   // ========== MÉTODOS PRIVADOS DE MAPPING ==========
 
   private mapOpLeadToSyncLead(opLeadData: any): SyncLead {

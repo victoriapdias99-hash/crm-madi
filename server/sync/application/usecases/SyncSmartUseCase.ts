@@ -74,57 +74,66 @@ export class SyncSmartUseCase {
         clientsMatched: {}
       };
 
-      // 2. Procesar solo las marcas incompletas
-      for (const incompleteSheet of brandAnalysis.incompleteSheets) {
-        console.log(`🔄 Procesando marca ${incompleteSheet.name}: ${incompleteSheet.currentCount}/${incompleteSheet.totalCount} registros`);
+      // 2. Procesar todas las marcas disponibles con verificación de integridad integrada
+      for (const sheetName of brandAnalysis.availableSheets) {
+        console.log(`🔄 Procesando marca ${sheetName} con verificación de integridad...`);
         
         await this.syncRepository.updateSyncStatus({
-          currentOperation: `Sincronizando marca ${incompleteSheet.name}`,
+          currentOperation: `Verificando integridad: ${sheetName}`,
+          progress: { current: totalProcessed, total: brandAnalysis.totalPending, stage: 'integrity_check' }
+        });
+
+        // ✅ FASE 1: VERIFICACIÓN Y CORRECCIÓN DE INTEGRIDAD
+        const integrityResult = await this.verifyAndFixIntegrity(sheetName);
+        details.newLeads += integrityResult.gapsFixed;
+        totalProcessed += integrityResult.gapsFixed;
+
+        await this.syncRepository.updateSyncStatus({
+          currentOperation: `Sincronización incremental: ${sheetName}`,
           progress: { current: totalProcessed, total: brandAnalysis.totalPending, stage: 'syncing' }
         });
 
-        // Obtener solo las filas nuevas de esta marca (incremental)
-        const rawLeads = await this.getNewRowsOnly(incompleteSheet.name);
+        // ✅ FASE 2: SINCRONIZACIÓN INCREMENTAL (solo si hay filas nuevas)
+        const incompleteSheet = brandAnalysis.incompleteSheets.find(s => s.name === sheetName);
+        if (incompleteSheet && incompleteSheet.newRows > 0) {
+          console.log(`🆕 ${sheetName}: Sincronizando ${incompleteSheet.newRows} filas nuevas (incremental)`);
+          
+          // Obtener solo las filas nuevas de esta marca (incremental)
+          const rawLeads = await this.getNewRowsOnly(sheetName);
         
-        if (rawLeads.length > 0) {
-          // Procesar y guardar leads
-          const syncLeads = rawLeads.map(raw => this.leadProcessor.convertRawToSyncLead(raw));
-          const processedLeads = this.leadProcessor.processLeadsBatch(syncLeads);
-          const validLeads = processedLeads.filter(lead => lead.isValid);
-          
-          // Filtrar duplicados que ya existen en la base de datos
-          const newLeads = await this.filterExistingLeads(validLeads, incompleteSheet.name);
-          
-          if (newLeads.length > 0) {
-            const savedCount = await this.syncRepository.createLeadsBatch(newLeads);
-            console.log(`✅ ${incompleteSheet.name}: Guardados ${savedCount} nuevos registros`);
+          if (rawLeads.length > 0) {
+            // Procesar y guardar leads
+            const syncLeads = rawLeads.map(raw => this.leadProcessor.convertRawToSyncLead(raw));
+            const processedLeads = this.leadProcessor.processLeadsBatch(syncLeads);
+            const validLeads = processedLeads.filter(lead => lead.isValid);
             
-            details.newLeads += savedCount;
-            totalProcessed += savedCount;
+            // Filtrar duplicados que ya existen en la base de datos
+            const newLeads = await this.filterExistingLeads(validLeads, sheetName);
+            
+            if (newLeads.length > 0) {
+              const savedCount = await this.syncRepository.createLeadsBatch(newLeads);
+              console.log(`✅ ${sheetName}: Guardados ${savedCount} nuevos registros incrementales`);
+              
+              details.newLeads += savedCount;
+              totalProcessed += savedCount;
+            } else {
+              console.log(`ℹ️ ${sheetName}: No hay nuevos registros para guardar (incremental)`);
+            }
           } else {
-            console.log(`ℹ️ ${incompleteSheet.name}: No hay nuevos registros para guardar`);
-          }
-          
-          details.sheetsProcessed?.push(incompleteSheet.name);
-          
-          // Limpiar duplicados automáticamente después de procesar la marca
-          console.log(`🧽 Limpiando duplicados para marca ${incompleteSheet.name}...`);
-          const duplicatesRemoved = await (this.syncRepository as any).cleanDuplicatesForBrand(incompleteSheet.name);
-          if (duplicatesRemoved > 0) {
-            console.log(`✨ ${incompleteSheet.name}: ${duplicatesRemoved} duplicados eliminados`);
+            console.log(`ℹ️ ${sheetName}: No hay nuevos registros para obtener (incremental)`);
           }
         } else {
-          console.log(`ℹ️ ${incompleteSheet.name}: No hay nuevos registros para guardar`);
-          
-          // También limpiar duplicados aunque no haya nuevos registros
-          console.log(`🧽 Limpiando duplicados para marca ${incompleteSheet.name}...`);
-          const duplicatesRemoved = await (this.syncRepository as any).cleanDuplicatesForBrand(incompleteSheet.name);
-          if (duplicatesRemoved > 0) {
-            console.log(`✨ ${incompleteSheet.name}: ${duplicatesRemoved} duplicados eliminados`);
-          }
+          console.log(`✅ ${sheetName}: No hay filas nuevas para sincronización incremental`);
         }
         
-        details.sheetsProcessed?.push(incompleteSheet.name);
+        // ✅ FASE 3: LIMPIAR DUPLICADOS SIEMPRE
+        console.log(`🧽 Limpiando duplicados para marca ${sheetName}...`);
+        const duplicatesRemoved = await (this.syncRepository as any).cleanDuplicatesForBrand(sheetName);
+        if (duplicatesRemoved > 0) {
+          console.log(`✨ ${sheetName}: ${duplicatesRemoved} duplicados eliminados`);
+        }
+        
+        details.sheetsProcessed?.push(sheetName);
       }
 
       // 3. Actualizar estado final
@@ -313,6 +322,123 @@ export class SyncSmartUseCase {
       console.error(`Error getting last available row for sheet ${sheetName}:`, error);
       return 0;
     }
+  }
+
+  /**
+   * Verifica y corrige la integridad de datos para una marca específica
+   * Detecta gaps en la secuencia de google_sheets_row_number y los sincroniza
+   */
+  private async verifyAndFixIntegrity(marca: string): Promise<{ gapsFixed: number; integrityStatus: string; missingRows?: number[] }> {
+    console.log(`🔍 Verificando integridad para ${marca}...`);
+    
+    try {
+      // 1. Obtener filas existentes en BD
+      const dbRows = await (this.syncRepository as any).getGoogleSheetsRowNumbers(marca);
+      const maxDbRow = Math.max(...dbRows, 0);
+      
+      // 2. Obtener última fila real en Google Sheets
+      const maxGoogleRow = await this.getLastAvailableRow(marca);
+      
+      if (maxGoogleRow === 0) {
+        console.log(`⚠️ ${marca}: No hay datos en Google Sheets`);
+        return { gapsFixed: 0, integrityStatus: 'no_data' };
+      }
+      
+      // 3. Generar secuencia esperada y detectar gaps
+      const expectedRows = Array.from({length: maxGoogleRow}, (_, i) => i + 1);
+      const missingRows = expectedRows.filter(row => !dbRows.includes(row));
+      
+      if (missingRows.length === 0) {
+        console.log(`✅ ${marca}: Integridad completa (${dbRows.length}/${maxGoogleRow} filas)`);
+        return { gapsFixed: 0, integrityStatus: 'complete' };
+      }
+      
+      // 4. SINCRONIZAR GAPS DETECTADOS
+      console.log(`🔧 ${marca}: Detectados ${missingRows.length} gaps - sincronizando filas: [${missingRows.slice(0, 5).join(', ')}${missingRows.length > 5 ? '...' : ''}]`);
+      const gapsSynced = await this.syncSpecificRows(marca, missingRows);
+      
+      console.log(`✅ ${marca}: ${gapsSynced.length} gaps sincronizados de ${missingRows.length} detectados`);
+      return { 
+        gapsFixed: gapsSynced.length, 
+        integrityStatus: 'fixed',
+        missingRows: missingRows 
+      };
+    } catch (error) {
+      console.error(`Error verificando integridad para ${marca}:`, error);
+      return { gapsFixed: 0, integrityStatus: 'error' };
+    }
+  }
+
+  /**
+   * Sincroniza filas específicas de Google Sheets
+   * Optimiza las llamadas API agrupando filas consecutivas
+   */
+  private async syncSpecificRows(marca: string, rowNumbers: number[]): Promise<any[]> {
+    if (rowNumbers.length === 0) return [];
+    
+    try {
+      // Optimizar: agrupar filas consecutivas para minimizar API calls
+      const ranges = this.optimizeRowRanges(rowNumbers);
+      console.log(`📋 ${marca}: Obteniendo ${rowNumbers.length} filas en ${ranges.length} rangos optimizados`);
+      
+      const allLeads: any[] = [];
+      
+      for (const range of ranges) {
+        // Obtener datos específicos de Google Sheets usando el nuevo método
+        const rangeLeads = await (this.sheetsGateway as any).getLeadsFromRange(marca, range);
+        allLeads.push(...rangeLeads);
+      }
+      
+      console.log(`📥 ${marca}: Obtenidos ${allLeads.length} leads de ${ranges.length} rangos`);
+      
+      if (allLeads.length === 0) {
+        return [];
+      }
+      
+      // Procesar con la lógica actual del sistema
+      const syncLeads = allLeads.map(raw => this.leadProcessor.convertRawToSyncLead(raw));
+      const processedLeads = this.leadProcessor.processLeadsBatch(syncLeads);
+      const validLeads = processedLeads.filter(lead => lead.isValid);
+      
+      // Filtrar duplicados que ya existen en la base de datos
+      const newLeads = await this.filterExistingLeads(validLeads, marca);
+      
+      // Guardar en BD
+      if (newLeads.length > 0) {
+        const savedCount = await this.syncRepository.createLeadsBatch(newLeads);
+        console.log(`💾 ${marca}: Guardados ${savedCount} leads de gaps sincronizados`);
+        return newLeads;
+      }
+      
+      return [];
+    } catch (error) {
+      console.error(`Error sincronizando filas específicas para ${marca}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Optimiza rangos de filas para minimizar llamadas API
+   * Convierte [4,5,6,7,10,11,15] → ["A4:ZZ7", "A10:ZZ11", "A15:ZZ15"]
+   */
+  private optimizeRowRanges(rowNumbers: number[]): string[] {
+    const sortedRows = [...rowNumbers].sort((a, b) => a - b);
+    const ranges: string[] = [];
+    
+    let start = sortedRows[0];
+    let end = sortedRows[0];
+    
+    for (let i = 1; i < sortedRows.length; i++) {
+      if (sortedRows[i] === end + 1) {
+        end = sortedRows[i]; // Extender rango consecutivo
+      } else {
+        ranges.push(end === start ? `A${start}:ZZ${start}` : `A${start}:ZZ${end}`);
+        start = end = sortedRows[i]; // Nuevo rango
+      }
+    }
+    
+    ranges.push(end === start ? `A${start}:ZZ${start}` : `A${start}:ZZ${end}`);
+    return ranges;
   }
 
   /**
