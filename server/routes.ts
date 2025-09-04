@@ -291,8 +291,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // 🎯 LÓGICA DIFERENCIADA: Campañas finalizadas vs En proceso (para duplicados)
     if (campana.fechaFin) {
       // ✅ CAMPAÑA FINALIZADA: Calcular duplicados de leads asignados
-      console.log(`🎯 FINALIZADA ${campana.marca} ${campana.numeroCampana}: Calculando duplicados de leads asignados (campaign_id = ${campana.id})`);
-      console.log(`🔧 DEBUG: Iniciando cálculo de duplicados para campaña finalizada ${campana.id}`);
       
       try {
         const { opLead } = await import('../shared/schema');
@@ -308,10 +306,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(opLead)
         .where(eq(opLead.campaignId, campana.id));
         
-        console.log(`🔧 DEBUG: Encontrados ${leadsAsignados.length} leads asignados a campaña ${campana.id}`);
         
         if (leadsAsignados.length === 0) {
-          console.log(`✅ FINALIZADA ${campana.marca} ${campana.numeroCampana}: Sin leads asignados, duplicados = 0`);
           return [{ totalDuplicados: 0 }];
         }
         
@@ -320,10 +316,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .map(lead => lead.metaLeadId)
           .filter(id => id !== null);
         
-        console.log(`🔧 DEBUG: Extraídos ${metaLeadIds.length} meta_lead_ids de ${leadsAsignados.length} leads`);
         
         if (metaLeadIds.length === 0) {
-          console.log(`✅ FINALIZADA ${campana.marca} ${campana.numeroCampana}: Sin meta_lead_ids válidos, duplicados = 0`);
           return [{ totalDuplicados: 0 }];
         }
         
@@ -335,18 +329,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(opLeadsRepTable)
         .where(inArray(opLeadsRepTable.metaLeadId, metaLeadIds));
         
-        console.log(`🔍 DEBUG DUPLICADOS: ${leadsUnicos.length} leads únicos encontrados de ${metaLeadIds.length} meta_lead_ids`);
         
         // Contar total de duplicados: suma de longitudes de arrays duplicate_ids
         let totalDuplicados = 0;
         for (const lead of leadsUnicos) {
           const arrayLength = lead.duplicateIds ? lead.duplicateIds.length : 0;
           totalDuplicados += arrayLength;
-          console.log(`🔍 DEBUG: Lead único con ${arrayLength} duplicados`);
         }
         
-        console.log(`🔍 DEBUG DUPLICADOS: Total calculado = ${totalDuplicados}`);
-        console.log(`✅ FINALIZADA ${campana.marca} ${campana.numeroCampana}: ${totalDuplicados} duplicados (de ${leadsAsignados.length} leads asignados)`);
         
         return [{ totalDuplicados }];
         
@@ -357,7 +347,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     // 📊 CAMPAÑA EN PROCESO: Usar filtros genéricos para duplicados
-    console.log(`📊 EN PROCESO ${campana.marca} ${campana.numeroCampana}: Duplicados con filtros genéricos`);
     // NORMALIZAR nombre comercial igual que en la sincronización (espacios → underscores)
     const nombreComercialRaw = clienteData?.nombreComercial || '';
     const nombreComercial = nombreComercialRaw
@@ -412,7 +401,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // 🎯 LÓGICA DIFERENCIADA: Finalizadas usan campaign_id, en proceso usan filtros
     if (campana.fechaFin) {
       // ✅ CAMPAÑA FINALIZADA: Contar directamente por campaign_id en op_leads_rep
-      console.log(`🎯 FINALIZADA ${campana.marca} ${campana.numeroCampana}: Contando por campaign_id en op_leads_rep`);
       
       try {
         const { eq } = await import('drizzle-orm');
@@ -422,7 +410,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .where(eq(opLeadsRepTable.campaignId, campana.id));
         
         const leadsAsignados = result[0]?.count || 0;
-        console.log(`✅ FINALIZADA ${campana.marca} ${campana.numeroCampana}: ${leadsAsignados} leads en op_leads_rep`);
         
         return [{ count: leadsAsignados }];
         
@@ -433,7 +420,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     // 📊 CAMPAÑA EN PROCESO: Usar filtros genéricos
-    console.log(`📊 EN PROCESO ${campana.marca} ${campana.numeroCampana}: Usando filtros genéricos`);
     // NORMALIZAR nombre comercial igual que en la sincronización (espacios → underscores)
     const nombreComercialRaw = clienteData?.nombreComercial || '';
     const nombreComercial = nombreComercialRaw
@@ -468,12 +454,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fechaSiguiente.setDate(fechaSiguiente.getDate() - 1); // Día anterior
         fechaFinCalculada = fechaSiguiente.toISOString().split('T')[0];
         
-        console.log(`🗓️ AUTO-CALCULADO: ${campana.marca} ${campana.numeroCampana} hasta ${fechaFinCalculada} (día anterior a siguiente campaña)`);
       }
     }
     
-    console.log(`🗺️ ZONA: ${localizacionFiltro} para ${campana.marca} ${campana.numeroCampana}`);
-    console.log(`🔍 FILTROS: marca='%${campana.marca.toLowerCase()}%', cliente='%${nombreComercial}%', zona='${localizacionFiltro}', fecha>='${campana.fechaCampana}'`);
     
     try {
       // Usar operadores Drizzle individuales para evitar problemas de parámetros
@@ -496,7 +479,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(opLeadsRepTable)
         .where(and(...conditions));
       
-      console.log(`✅ DRIZZLE OK: ${campana.marca} ${campana.numeroCampana} = ${result[0]?.count || 0}`);
       return result;
       
     } catch (error) {
@@ -513,18 +495,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { opLeadsRep, campanasComerciales } = await import('../shared/schema');
       const { count, sql, desc } = await import('drizzle-orm');
 
-      console.log('📊 Calculando datos diarios desde PostgreSQL...');
 
       // Obtener campañas comerciales para mapeo
       const campanas = await storage.getAllCampanasComerciales();
       const clientes = await storage.getAllClientes();
       
-      // DEBUG: Listar todas las campañas que se van a procesar
-      console.log(`🗂️ Campañas a procesar (${campanas.length}):`);
-      campanas.forEach(c => {
-        const clienteData = clientes.find(cl => cl.id === c.clienteId);
-        console.log(`  - ${c.marca} ${c.numeroCampana} (${clienteData?.nombreComercial || 'Sin cliente'}) - fecha_fin: ${c.fechaFin || 'null'}`);
-      });
       
       const processedData = [];
 
@@ -536,9 +511,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Usar función auxiliar para contar leads con filtro inteligente
           const leadsCount = await contarLeadsPorCampana(campana, clienteData, db, opLeadsRep, sql, count, campanas);
 
-          console.log(`🔍 DEBUG ${campana.marca} ${campana.numeroCampana}: leadsCount =`, JSON.stringify(leadsCount, null, 2));
           const enviadosDB = leadsCount[0]?.count || 0;
-          console.log(`🔍 DEBUG ${campana.marca} ${campana.numeroCampana}: enviadosDB = ${enviadosDB}`);
 
           // Contar duplicados con los mismos filtros que la campaña
           const duplicadosResult = await contarDuplicadosPorCampana(campana, clienteData, db, opLeadsRep, sql, campanas);
@@ -605,14 +578,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
 
           processedData.push(record);
-          console.log(`✅ DB: ${clienteIdentificador} = ${enviadosFinales} enviados`);
 
         } catch (campaignError) {
           console.error(`Error procesando campaña ${campana.numeroCampana}:`, campaignError);
         }
       }
 
-      console.log(`📊 Datos procesados desde PostgreSQL: ${processedData.length} campañas`);
       res.json(processedData);
 
     } catch (error) {
@@ -628,7 +599,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { opLeadsRep } = await import('../shared/schema');
       const { sql } = await import('drizzle-orm');
 
-      console.log('🔍 Obteniendo duplicados desde op_leads_rep...');
 
       // Agrupar por marca + cliente para mapear a las campañas del dashboard
       const duplicadosData = await db.select({
@@ -650,7 +620,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         duplicadosMap[`${clienteIdentificador}-1`] = item.totalDuplicados || 0;
       });
 
-      console.log(`✅ Duplicados procesados: ${Object.keys(duplicadosMap).length} campañas con datos`);
       res.json(duplicadosMap);
 
     } catch (error) {
