@@ -116,7 +116,6 @@ export class UpdateEnviadosService {
           fechaSiguiente.setDate(fechaSiguiente.getDate() - 1); // Día anterior
           fechaFinCalculada = fechaSiguiente.toISOString().split('T')[0];
           
-          console.log(`🗓️ UPDATE-SERVICE AUTO-CALCULADO: ${campana.marca} ${campana.numeroCampana} hasta ${fechaFinCalculada} (día anterior a siguiente campaña)`);
         }
       }
       
@@ -134,18 +133,15 @@ export class UpdateEnviadosService {
       
       const enviadosDB = leadsCount[0]?.count || 0;
       
-      console.log(`📊 UPDATE-SERVICE: ${cliente.nombreCliente} Campaña ${campana.numeroCampana} = ${enviadosDB} enviados (filtrado por fechas)`);
       
       // CRÍTICO: Aplicar correcciones DESPUÉS del cálculo filtrado
       const enviadosCorregidos = this.applyClientSpecificCorrections(cliente, campana, enviadosDB);
       
       // Si hay una corrección específica, usarla; sino usar el cálculo filtrado
       if (enviadosCorregidos !== enviadosDB && enviadosCorregidos > 0) {
-        console.log(`📊 UPDATE-SERVICE RESULTADO: ${enviadosCorregidos} enviados para ${cliente.nombreCliente} (corrección específica aplicada)`);
-        return enviadosCorregidos;
+          return enviadosCorregidos;
       }
       
-      console.log(`📊 UPDATE-SERVICE RESULTADO: ${enviadosDB} enviados para ${cliente.nombreCliente} (cálculo filtrado por fechas)`);
       return enviadosDB;
       
     } catch (error) {
