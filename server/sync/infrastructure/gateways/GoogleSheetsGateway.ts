@@ -276,16 +276,16 @@ export class GoogleSheetsGateway implements ISheetsGateway {
     }
     const name = row[1] ? row[1].toString().trim() : 'S/D';
     const phone = row[2] ? row[2].toString().trim() : 'S/D';
-    const email = row[3] ? row[3].toString().trim() : '';
-    const city = row[4] ? row[4].toString().trim() : '';
-    const modelo = row[5] ? row[5].toString().trim() : '';
-    const comentarioHorario = row[6] ? row[6].toString().trim() : '';
-    const origen = row[7] ? row[7].toString().trim() : '';
-    const localizacion = row[8] ? row[8].toString().trim() : '';
-    const cliente = row[9] ? row[9].toString().trim() : '';
+    const email = '';                                               // Email vacío (no existe en Google Sheets)
+    const city = row[3] ? row[3].toString().trim() : '';         // ✅ CIUDAD/LOCALIDAD (D) 
+    const modelo = row[4] ? row[4].toString().trim() : '';       // ✅ MODELO (E)
+    const comentarioHorario = row[5] ? row[5].toString().trim() : ''; // ✅ COMENTARIO/HORARIO (F)
+    const origen = row[6] ? row[6].toString().trim() : '';       // ✅ ORIGEN (G)
+    const localizacion = row[7] ? row[7].toString().trim() : '';  // ✅ LOCALIZACION (H)  
+    const cliente = row[8] ? row[8].toString().trim() : '';       // ✅ CLIENTE (I)
     
-    // 🚨 LOG 1: Datos crudos de Google Sheets
-    console.log(`📊 RAW GOOGLE SHEETS [Fila ${rowIndex}]: cliente="${row[9]}" (${typeof row[9]}) → parseado="${cliente}" (${typeof cliente})`);
+    // 🚨 LOG 1: Datos crudos de Google Sheets  
+    console.log(`📊 RAW GOOGLE SHEETS [Fila ${rowIndex}]: cliente="${row[8]}" (${typeof row[8]}) → parseado="${cliente}" (${typeof cliente})`);
 
     return {
       timestamp,
