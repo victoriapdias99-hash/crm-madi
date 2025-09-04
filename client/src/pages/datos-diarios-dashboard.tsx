@@ -21,8 +21,8 @@ interface DatosDiariosData {
   marca: string;
   zona: string;
   diasData: number[];
-  enviados: number;
-  entregadosPorDia: number;
+  enviados: number | string;
+  entregadosPorDia: number | string;
   pedidosPorDia: number;
   pedidosTotal: number;
   numeroCampana: number;
@@ -31,15 +31,16 @@ interface DatosDiariosData {
   faltantesAEnviar: number;
   cpl: number;
   ventaPorCampana: number;
-  inversionRealizada: number;
-  inversionPendiente: number;
+  inversionRealizada: number | string;
+  inversionPendiente: number | string;
   fechaCampana: string;
   fechaFinReal: string | null;
+  fechaFin?: string | null;
   cantidadSolicitada: number;
   diasProcesados: number;
   estadoCampana: string;
-  duplicados?: number;
-  faltantes?: number;
+  duplicados?: number | string;
+  faltantes?: number | string;
   esSuperior100?: boolean;
 }
 
@@ -534,7 +535,7 @@ export default function DatosDiariosDashboard() {
 
   // Función para calcular CPL Real basado en Meta Ads
   const calculateCPLReal = (data: DatosDiariosData) => {
-    if (!metaCampaigns || !Array.isArray(metaCampaigns) || data.enviados === 0) {
+    if (!metaCampaigns || !Array.isArray(metaCampaigns) || data.enviados === 0 || data.enviados === "-") {
       return 0;
     }
 
@@ -571,7 +572,7 @@ export default function DatosDiariosDashboard() {
 
     if (matchingCampaign && matchingCampaign.spend > 0) {
       // CPL Real = Gasto total Meta Ads / Datos enviados
-      return matchingCampaign.spend / data.enviados;
+      return matchingCampaign.spend / (typeof data.enviados === 'number' ? data.enviados : 0);
     }
 
     return 0;
@@ -603,7 +604,7 @@ export default function DatosDiariosDashboard() {
   // Memoized calculation for inversions - Performance Optimization with NaN protection
   const calculateInversions = useMemo(() => memoize((data: DatosDiariosData, cpl: number) => {
     const safeCpl = isNaN(cpl) || !cpl ? 0 : cpl;
-    const safeEnviados = isNaN(data.enviados) || !data.enviados ? 0 : data.enviados;
+    const safeEnviados = isNaN(data.enviados) || !data.enviados || data.enviados === "-" ? 0 : data.enviados;
     const safePedidosTotal = isNaN(data.pedidosTotal) || !data.pedidosTotal ? 0 : data.pedidosTotal;
     const safePorcentaje = isNaN(data.porcentajeDatosEnviados) || !data.porcentajeDatosEnviados ? 0 : data.porcentajeDatosEnviados;
     
@@ -1263,7 +1264,8 @@ export default function DatosDiariosDashboard() {
                           <div className="bg-gradient-to-r from-red-100 to-pink-100 dark:from-red-800/50 dark:to-pink-800/50 p-2 rounded-lg">
                             <span className="font-bold text-red-700 dark:text-red-300">
                               {campanasEnProceso.reduce((sum: number, data: DatosDiariosData) => {
-                                return sum + (data.duplicados || 0);
+                                const duplicados = data.duplicados === "-" ? 0 : (data.duplicados || 0);
+                                return sum + duplicados;
                               }, 0)}
                             </span>
                             <div className="text-xs text-red-500 mt-1">Total</div>
@@ -1291,7 +1293,8 @@ export default function DatosDiariosDashboard() {
                               const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0;
                               const inversions = calculateInversions(data, currentCpl);
                               const cplReal = calculateCPLReal(data);
-                              const metaAdsAmount = cplReal > 0 ? Math.round(cplReal * data.enviados) : inversions.inversionPendiente;
+                              const enviados = typeof data.enviados === 'number' ? data.enviados : 0;
+                              const metaAdsAmount = cplReal > 0 ? Math.round(cplReal * enviados) : inversions.inversionPendiente;
                               return sum + metaAdsAmount;
                             }, 0).toLocaleString('es-AR')}
                           </span>

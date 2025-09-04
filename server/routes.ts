@@ -566,11 +566,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Obtener CPL desde la base de datos
           const storedCpl = await storage.getCplByClienteAndCampana(clienteIdentificador, campana.numeroCampana);
 
-          // Aplicar signo negativo si hay campaña anterior abierta
+          // Aplicar guión si hay campaña anterior abierta
+          let enviadosDisplay: string | number = enviadosFinales;
+          let duplicadosDisplay: string | number = totalDuplicados;
+          
           if (tieneCampanaAnterior) {
-            enviadosFinales = -Math.abs(enviadosFinales); // Convertir a negativo
-            totalDuplicados = -Math.abs(totalDuplicados); // Convertir a negativo
-            console.log(`🔴 Aplicando valores negativos para campaña ${campana.marca} ${campana.numeroCampana} - hay campaña anterior abierta`);
+            enviadosDisplay = "-"; // Mostrar guión en lugar del número
+            duplicadosDisplay = "-"; // Mostrar guión en lugar del número
+            console.log(`🔴 Aplicando guión para campaña ${campana.marca} ${campana.numeroCampana} - hay campaña anterior abierta`);
           }
 
           // Usar fecha fin de la campaña sin cálculo automático
@@ -581,7 +584,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             cliente: clienteIdentificador, // Identificador técnico (JEEP 1, VW 1, etc.)
             clienteNombre: clienteNombreReal, // Nombre real del cliente desde la base de datos
             zona: campana.zona,
-            enviados: enviadosFinales,
+            enviados: enviadosDisplay,
             cantidadDatosSolicitados: cantidadSolicitados,
             porcentajeDatosEnviados,
             faltantesAEnviar,
@@ -594,19 +597,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             facturacionBruta: campana.facturacionBruta,
             pedidosPorDia: campana.pedidosPorDia ?? 0, // Campo "Día" desde tabla campañas
             pedidosTotal: campana.cantidadDatosSolicitados, // Campo "Pedidos Total" (Datos Solicitados)
-            faltantes: Math.max(0, campana.cantidadDatosSolicitados - enviadosFinales), // Faltantes = Pedidos Total - Enviados
+            faltantes: tieneCampanaAnterior ? "-" : Math.max(0, campana.cantidadDatosSolicitados - enviadosFinales), // Faltantes = Pedidos Total - Enviados
             entregadosPorDia: (() => {
               // Calcular días transcurridos desde fecha de campaña hasta hoy o fecha fin
               const fechaInicio = campana.fechaCampana ? new Date(campana.fechaCampana) : new Date();
               const fechaReferencia = fechaFinExacta && fechaFinExacta !== null ? new Date(fechaFinExacta) : new Date();
               const diasTranscurridos = Math.max(1, Math.ceil((fechaReferencia.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24)));
-              return enviadosFinales / diasTranscurridos;
+              return tieneCampanaAnterior ? "-" : enviadosFinales / diasTranscurridos;
             })(), // Entregados por día = enviados / días transcurridos
             // Campos calculados adicionales
-            inversionRealizada: (enviadosFinales * (storedCpl || 0)),
-            inversionPendiente: (faltantesAEnviar * (storedCpl || 0)),
+            inversionRealizada: tieneCampanaAnterior ? "-" : (enviadosFinales * (storedCpl || 0)),
+            inversionPendiente: tieneCampanaAnterior ? "-" : (faltantesAEnviar * (storedCpl || 0)),
             estado: fechaFinExacta ? 'Finalizada' : 'En proceso', // Estado basado en fecha_fin
-            duplicados: totalDuplicados
+            duplicados: duplicadosDisplay
           };
 
           processedData.push(record);
