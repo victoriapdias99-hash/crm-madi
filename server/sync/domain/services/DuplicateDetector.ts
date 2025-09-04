@@ -55,11 +55,10 @@ export class DuplicateDetector {
     existingLeads: SyncLead[]
   ): ProcessedSyncLead[] {
     
-    console.log(`🔍 DUPLICATE DEBUG: Verificando ${newLeads.length} leads nuevos contra ${existingLeads.length} existentes`);
+    console.log(`🔍 MIGRACIÓN COMPLETA: Verificando ${newLeads.length} leads nuevos contra ${existingLeads.length} existentes`);
+    console.log(`🎯 NUEVA LÓGICA: Solo usando googleSheetsRowNumber como criterio de duplicado`);
     
-    // Crear mapas de leads existentes para búsqueda rápida
-    const existingPhones = new Set(existingLeads.map(l => this.normalizePhone(l.telefono)));
-    const existingMetaIds = new Set(existingLeads.map(l => l.metaLeadId));
+    // Crear mapa de filas existentes para búsqueda rápida (solo necesitamos esto)
     const existingRowNumbers = new Set(
       existingLeads
         .filter(l => l.googleSheetsRowNumber && l.marca)
@@ -67,15 +66,11 @@ export class DuplicateDetector {
     );
     
     let duplicatesFound = 0;
-    let duplicatesByPhone = 0;
-    let duplicatesByMetaId = 0;
     let duplicatesByRow = 0;
     
     const result = newLeads.map((lead, index) => {
-      const isDuplicateByPhone = existingPhones.has(lead.normalizedPhone);
-      const isDuplicateByMetaId = existingMetaIds.has(lead.metaLeadId);
-      
-      // Verificar duplicado por número de fila de Google Sheets
+      // 🎯 NUEVA LÓGICA: Solo considerar duplicado por número de fila de Google Sheets
+      // Esto permite migrar TODOS los datos, incluso con teléfonos repetidos
       let isDuplicateByRowNumber = false;
       let rowKey = null;
       if (lead.googleSheetsRowNumber && lead.marca) {
@@ -83,28 +78,25 @@ export class DuplicateDetector {
         isDuplicateByRowNumber = existingRowNumbers.has(rowKey);
       }
       
-      const isDuplicate = isDuplicateByPhone || isDuplicateByMetaId || isDuplicateByRowNumber;
+      // ✅ SOLO usar fila como criterio de duplicado para migración completa
+      const isDuplicate = isDuplicateByRowNumber;
       
       if (isDuplicate) {
         duplicatesFound++;
-        if (isDuplicateByPhone) duplicatesByPhone++;
-        if (isDuplicateByMetaId) duplicatesByMetaId++;
         if (isDuplicateByRowNumber) duplicatesByRow++;
         
-        // Encontrar el lead original para referencia
+        // Encontrar el lead original para referencia (solo por fila)
         const originalLead = existingLeads.find(l => 
-          this.normalizePhone(l.telefono) === lead.normalizedPhone || 
-          l.metaLeadId === lead.metaLeadId ||
-          (rowKey && l.googleSheetsRowNumber && l.marca && 
-           `${l.marca.toUpperCase()}_${l.googleSheetsRowNumber}` === rowKey)
+          rowKey && l.googleSheetsRowNumber && l.marca && 
+          `${l.marca.toUpperCase()}_${l.googleSheetsRowNumber}` === rowKey
         );
         
         // 🚨 LOG DETALLADO DE DUPLICADOS
-        console.log(`🚨 DUPLICADO ENCONTRADO [${index + 1}/${newLeads.length}]:`);
-        console.log(`   Nuevo lead: ${lead.nombre} | Tel: ${lead.normalizedPhone} | Fila: ${lead.googleSheetsRowNumber} | MetaID: ${lead.metaLeadId}`);
-        console.log(`   Razones: Phone=${isDuplicateByPhone} | MetaId=${isDuplicateByMetaId} | Row=${isDuplicateByRowNumber}`);
+        console.log(`🚨 DUPLICADO POR FILA [${index + 1}/${newLeads.length}]:`);
+        console.log(`   Nuevo lead: ${lead.nombre} | Tel: ${lead.normalizedPhone} | Fila: ${lead.googleSheetsRowNumber}`);
+        console.log(`   Razón: Row=${isDuplicateByRowNumber} (ya existe esta fila)`);
         if (originalLead) {
-          console.log(`   Lead existente: ${originalLead.nombre} | Tel: ${this.normalizePhone(originalLead.telefono)} | Fila: ${originalLead.googleSheetsRowNumber} | ID: ${originalLead.id}`);
+          console.log(`   Lead existente: ${originalLead.nombre} | Fila: ${originalLead.googleSheetsRowNumber} | ID: ${originalLead.id}`);
         }
         console.log(`   RowKey: ${rowKey}`);
         
@@ -114,9 +106,9 @@ export class DuplicateDetector {
           duplicateOf: originalLead?.metaLeadId
         };
       } else {
-        // 📝 LOG DE LEADS NUEVOS (solo primeros 3 para no saturar)
-        if (index < 3) {
-          console.log(`✅ NUEVO LEAD [${index + 1}]: ${lead.nombre} | Tel: ${lead.normalizedPhone} | Fila: ${lead.googleSheetsRowNumber}`);
+        // 📝 LOG DE LEADS NUEVOS (solo primeros 5 para no saturar logs)
+        if (index < 5) {
+          console.log(`✅ LEAD NUEVO [${index + 1}]: ${lead.nombre} | Tel: ${lead.normalizedPhone} | Fila: ${lead.googleSheetsRowNumber}`);
         }
       }
       
@@ -126,8 +118,11 @@ export class DuplicateDetector {
       };
     });
     
-    console.log(`📊 RESUMEN DUPLICADOS: ${duplicatesFound} total | ${duplicatesByPhone} por teléfono | ${duplicatesByMetaId} por MetaID | ${duplicatesByRow} por fila`);
-    console.log(`✅ LEADS NUEVOS: ${newLeads.length - duplicatesFound} de ${newLeads.length} se guardarán`);
+    console.log(`🎯 MIGRACIÓN COMPLETA - RESUMEN:`);
+    console.log(`   📊 Total evaluados: ${newLeads.length}`);
+    console.log(`   🚫 Duplicados por fila existente: ${duplicatesByRow}`);
+    console.log(`   ✅ Leads nuevos para migrar: ${newLeads.length - duplicatesFound}`);
+    console.log(`   📈 Tasa de migración: ${((newLeads.length - duplicatesFound) / newLeads.length * 100).toFixed(1)}%`);
     
     return result;
   }

@@ -507,19 +507,8 @@ export class SyncSmartUseCase {
         console.log(`   📉 Tasa de duplicados: ${((duplicatesCount / validLeads.length) * 100).toFixed(1)}%`);
       }
       
-      // Log detallado de duplicados por tipo
+      // 🎯 Log de duplicados SOLO por fila (nueva lógica de migración completa)
       if (duplicatesCount > 0) {
-        const duplicatesByPhone = leadsWithDuplicates.filter(l => 
-          l.isDuplicate && existingLeads.some((e: any) => 
-            e.telefono && l.normalizedPhone && 
-            e.telefono.replace(/[^\d+]/g, '') === l.normalizedPhone
-          )
-        ).length;
-        
-        const duplicatesByMetaId = leadsWithDuplicates.filter(l => 
-          l.isDuplicate && existingLeads.some((e: any) => e.metaLeadId === l.metaLeadId)
-        ).length;
-        
         const duplicatesByRowNumber = leadsWithDuplicates.filter(l => {
           if (!l.isDuplicate || !l.googleSheetsRowNumber || !l.marca) return false;
           const rowKey = `${l.marca.toUpperCase()}_${l.googleSheetsRowNumber}`;
@@ -529,7 +518,8 @@ export class SyncSmartUseCase {
           );
         }).length;
         
-        console.log(`📈 Duplicados: ${duplicatesByPhone} por teléfono, ${duplicatesByMetaId} por metaLeadId, ${duplicatesByRowNumber} por número de fila`);
+        console.log(`📈 Duplicados por fila ya procesada: ${duplicatesByRowNumber}`);
+        console.log(`🎯 MIGRACIÓN COMPLETA: Permite teléfonos repetidos en filas diferentes`);
       }
 
       return newLeads;
