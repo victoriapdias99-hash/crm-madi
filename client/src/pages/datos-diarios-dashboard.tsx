@@ -967,6 +967,7 @@ export default function DatosDiariosDashboard() {
               <table className="w-full border-collapse border border-gray-300 dark:border-gray-600">
                 <thead>
                   <tr className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20">
+                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Acciones</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-left font-semibold text-amber-900 dark:text-amber-100">Cliente</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-left font-semibold text-amber-900 dark:text-amber-100">Marca</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-left font-semibold text-amber-900 dark:text-amber-100">Zona</th>
@@ -989,7 +990,6 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Inversión Realizada</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Inversión Pendiente</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Exportar CSV</th>
-                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1014,6 +1014,39 @@ export default function DatosDiariosDashboard() {
                     
                     return (
                       <tr key={uniqueKey} className="hover:bg-gradient-to-r hover:from-amber-50 hover:to-orange-50 dark:hover:from-amber-900/10 dark:hover:to-orange-900/10 transition-all duration-300">
+                        <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
+                          <div className="flex gap-2 justify-center">
+                            <Button
+                              onClick={() => handleCloseCampaign(data)}
+                              disabled={isClosingCampaign}
+                              size="sm"
+                              className="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-semibold shadow-lg"
+                              data-testid={`button-close-campaign-${data.cliente.replace(/\s+/g, '-')}`}
+                            >
+                              {isClosingCampaign ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <Power className="w-3 h-3" />
+                              )}
+                            </Button>
+                            <Button
+                              onClick={() => handleEditCampaign(data)}
+                              size="sm"
+                              className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold shadow-lg"
+                              data-testid={`button-edit-campaign-${data.cliente.replace(/\s+/g, '-')}`}
+                            >
+                              <Edit className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              onClick={() => handleViewDetails(data)}
+                              size="sm"
+                              className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold shadow-lg"
+                              data-testid={`button-view-details-${data.cliente.replace(/\s+/g, '-')}`}
+                            >
+                              <Eye className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </td>
                         <td className="border border-amber-200 dark:border-amber-600 p-3">
                           <div className="space-y-1">
                             <div className="font-bold text-slate-800 dark:text-slate-200">{data.clienteNombre}</div>
@@ -1177,46 +1210,16 @@ export default function DatosDiariosDashboard() {
                             )}
                           </Button>
                         </td>
-                        <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
-                          <div className="flex gap-2 justify-center">
-                            <Button
-                              onClick={() => handleCloseCampaign(data)}
-                              disabled={isClosingCampaign}
-                              size="sm"
-                              className="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-semibold shadow-lg"
-                              data-testid={`button-close-campaign-${data.cliente.replace(/\s+/g, '-')}`}
-                            >
-                              {isClosingCampaign ? (
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                              ) : (
-                                <Power className="w-3 h-3" />
-                              )}
-                            </Button>
-                            <Button
-                              onClick={() => handleEditCampaign(data)}
-                              size="sm"
-                              className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold shadow-lg"
-                              data-testid={`button-edit-campaign-${data.cliente.replace(/\s+/g, '-')}`}
-                            >
-                              <Edit className="w-3 h-3" />
-                            </Button>
-                            <Button
-                              onClick={() => handleViewDetails(data)}
-                              size="sm"
-                              className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold shadow-lg"
-                              data-testid={`button-view-details-${data.cliente.replace(/\s+/g, '-')}`}
-                            >
-                              <Eye className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </td>
                       </tr>
                     );
                   })}
                   {/* Fila de Totales - Campañas en Proceso */}
                   {campanasEnProceso.length > 0 && (
                     <tr className="bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-800/50 dark:to-orange-800/50 border-t-4 border-amber-500">
-                      <td colSpan={showDuplicatesOnly ? 14 : 13} className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100 text-lg">
+                      <td className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100">
+                        —
+                      </td>
+                      <td colSpan={showDuplicatesOnly ? 13 : 12} className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100 text-lg">
                         TOTAL CAMPAÑAS EN PROCESO
                       </td>
                       <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
