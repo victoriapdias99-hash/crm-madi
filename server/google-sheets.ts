@@ -116,7 +116,7 @@ class GoogleSheetsService {
         includeGridData: false,
       });
 
-      const sheet = spreadsheetResponse.data.sheets?.find(s => s.properties?.title === sheetName);
+      const sheet = spreadsheetResponse.data.sheets?.find((s: any) => s.properties?.title === sheetName);
       if (!sheet?.properties?.gridProperties?.rowCount) {
         console.log(`⚠️ No se pudo detectar tamaño de '${sheetName}', usando límite de 5000`);
         return 5000; // Límite más alto como fallback
@@ -130,7 +130,7 @@ class GoogleSheetsService {
       console.log(`📏 ${sheetName}: Usando límite seguro de ${safeLimit} filas`);
       
       return safeLimit;
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error detectando rango para ${sheetName}:`, error.message);
       console.log(`📏 ${sheetName}: Fallback a 5000 filas debido a error`);
       return 5000; // Límite más alto como fallback en caso de error
@@ -182,7 +182,7 @@ class GoogleSheetsService {
         console.log(`✅ ${sheetName}: ${validRowsCount} leads válidos, ${skippedRowsCount} filas omitidas`);
         return leads;
         
-      } catch (error) {
+      } catch (error: any) {
         retryCount++;
         console.error(`❌ Error obteniendo datos de '${sheetName}' (intento ${retryCount}):`, error.message);
         
@@ -222,8 +222,8 @@ class GoogleSheetsService {
       // Extraer nombres de pestañas y filtrar las excluidas
       const excludedSheets = ['Datos Diarios', 'Control Campañas', 'Datos diarios', 'Control campañas'];
       const availableSheets = sheets
-        .map(sheet => sheet.properties?.title)
-        .filter(sheetName => 
+        .map((sheet: any) => sheet.properties?.title)
+        .filter((sheetName: any) => 
           sheetName && 
           !excludedSheets.includes(sheetName) &&
           !sheetName.toLowerCase().includes('control') &&
@@ -267,7 +267,7 @@ class GoogleSheetsService {
           const sheetLeads = await this.getSheetData(sheetName);
           allLeads.push(...sheetLeads);
           console.log(`✅ GoogleSheetsService: ${sheetLeads.length} leads obtenidos de "${sheetName}"`);
-        } catch (error) {
+        } catch (error: any) {
           console.warn(`⚠️ GoogleSheetsService: Error obteniendo datos de "${sheetName}":`, error.message);
           // Continuar con otras pestañas aunque una falle
         }
@@ -275,7 +275,7 @@ class GoogleSheetsService {
       
       console.log(`📥 GoogleSheetsService: Total de ${allLeads.length} leads obtenidos de ${sheetNames.length} pestañas`);
       return allLeads;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error obteniendo todos los leads de Google Sheets:', error);
       return [];
     }

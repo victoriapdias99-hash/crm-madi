@@ -13,21 +13,20 @@ export class LeadProcessor {
   convertRawToSyncLead(rawLead: RawSheetLead): SyncLead {
     const metaLeadId = this.generateMetaLeadId(rawLead);
     
-    // 🚨 LOG 2: Después de convertir RAW a SyncLead
-    console.log(`🔄 CONVERT RAW: Input="${rawLead.cliente}" (${typeof rawLead.cliente}) → Output="${String(rawLead.cliente || 'S/D')}" (string)`);
+    // Conversión RAW a SyncLead completada
     
     return {
       metaLeadId,
       nombre: this.sanitizeName(rawLead.name),
-      telefono: this.sanitizePhone(rawLead.phone),
-      email: this.sanitizeEmail(rawLead.email),
-      ciudad: this.sanitizeCity(rawLead.city),
-      modelo: rawLead.modelo || 'S/D',
-      comentarioHorario: rawLead.comentarioHorario || 'S/D',
+      telefono: this.sanitizePhone(rawLead.phone || ''),
+      email: this.sanitizeEmail(rawLead.email || ''),
+      ciudad: this.sanitizeCity(rawLead.city || ''),
+      modelo: rawLead.modelo || null,
+      comentarioHorario: rawLead.comentarioHorario || null,
       marca: this.extractBrand(rawLead.campaign),
-      origen: rawLead.origen || 'S/D',
-      localizacion: rawLead.localizacion || 'S/D',
-      cliente: String(rawLead.cliente || 'S/D'), // ✅ CORRECCIÓN: Forzar conversión a string
+      origen: rawLead.origen || null,
+      localizacion: rawLead.localizacion || null,
+      cliente: rawLead.cliente || null,
       googleSheetsRowNumber: rawLead.googleSheetsRowNumber,
       fechaCreacion: this.parseTimestamp(rawLead.timestamp),
       source: 'google_sheets',
@@ -41,8 +40,7 @@ export class LeadProcessor {
   processLead(syncLead: SyncLead): ProcessedSyncLead {
     const validationErrors: string[] = [];
     
-    // 🚨 LOG 3: Antes de normalizar en processLead
-    console.log(`⚡ BEFORE NORMALIZE: syncLead.cliente="${syncLead.cliente}" (${typeof syncLead.cliente})`);
+    // Inicio del procesamiento del lead
     
     // Normalizar datos
     const normalizedPhone = this.normalizePhone(syncLead.telefono);
@@ -102,9 +100,9 @@ export class LeadProcessor {
     return cleaned || 'S/D';
   }
 
-  private sanitizeCity(city: string): string {
+  private sanitizeCity(city: string): string | null {
     const cleaned = (city || '').trim();
-    return cleaned || 'S/D';
+    return cleaned || null;
   }
 
   private sanitizeCampaignName(campaign: string): string {
@@ -156,7 +154,7 @@ export class LeadProcessor {
     // ✅ CORRECCIÓN: Convertir cualquier tipo a string para evitar números en BD
     const stringValue = String(clientName || 'S/D');
     
-    console.log(`🔧 NORMALIZE CLIENT: Input="${clientName}" (${typeof clientName}) → Output="${stringValue}"`);
+    // Cliente normalizado exitosamente
     
     return stringValue
       .toLowerCase()

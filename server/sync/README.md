@@ -1,9 +1,12 @@
 # Sistema de Sincronización Inteligente
 
 ## Estado Actual
-**✅ FUNCIONANDO AL 100% - Agosto 31, 2025**
+**✅ FUNCIONANDO AL 100% - Septiembre 4, 2025**
 
-Sistema de sincronización que conecta Google Sheets con PostgreSQL usando detección inteligente de duplicados y procesamiento incremental por marcas. **Problema crítico de lógica de filas resuelto** - ahora sincroniza el 100% de los datos disponibles.
+Sistema de sincronización que conecta Google Sheets con PostgreSQL usando detección inteligente de duplicados y procesamiento incremental por marcas. **Últimas mejoras aplicadas:**
+- ✅ **Problema crítico de lógica de filas resuelto** - ahora sincroniza el 100% de los datos disponibles
+- ✅ **Mapeo de campos optimizado con valores NULL** - mejor integridad de datos
+- ✅ **Tipos TypeScript actualizados** - soporte completo para campos opcionales
 
 ## Corrección Crítica Aplicada
 
@@ -169,20 +172,44 @@ curl http://localhost:5000/api/sync/status
 
 ## Estructura de Datos
 
-### Lead Schema
+### Lead Schema (Actualizado Sep 4, 2025)
 ```typescript
 interface Lead {
-  nombre: string;
-  telefono: string;
-  email?: string;
-  ciudad: string;
-  marca: string;
-  googleSheetsRowNumber: number;
-  origen?: string;
-  localizacion?: string;
-  cliente?: string;
+  // Campos requeridos
+  nombre: string;                    // 'S/D' si vacío
+  telefono: string;                  // 'S/D' si vacío
+  marca: string;                     // Del nombre del sheet
+  googleSheetsRowNumber: number;     // Número de fila en Google Sheets
+  source: string;                    // 'google_sheets'
+  campaign: string;                  // Del nombre del sheet
+  
+  // Campos opcionales (usan NULL si vacío)
+  email: string | null;              // NULL (no existe en Google Sheets)
+  ciudad: string | null;             // NULL si row[3] vacío
+  modelo: string | null;             // NULL si row[4] vacío  
+  comentarioHorario: string | null;  // NULL si row[5] vacío
+  origen: string | null;             // NULL si row[6] vacío
+  localizacion: string | null;       // NULL si row[7] vacío
+  cliente: string | null;            // NULL si row[8] vacío
+  interest: string | null;           // NULL (no usado)
+  budget: string | null;             // NULL (no usado)
 }
 ```
+
+### Mapeo de Columnas Google Sheets → Base de Datos
+```
+Columna A → timestamp     (fecha/hora del lead)
+Columna B → nombre        (requerido: 'S/D' si vacío)
+Columna C → telefono      (requerido: 'S/D' si vacío)
+Columna D → ciudad        (opcional: NULL si vacío)
+Columna E → modelo        (opcional: NULL si vacío)
+Columna F → comentarioHorario (opcional: NULL si vacío)
+Columna G → origen        (opcional: NULL si vacío)
+Columna H → localizacion  (opcional: NULL si vacío)
+Columna I → cliente       (opcional: NULL si vacío)
+```
+
+**Cambio Importante (Sep 4, 2025):** Campos opcionales ahora usan `null` en lugar de strings vacíos para mejor integridad de datos en PostgreSQL.
 
 ### Response Schema
 ```typescript
@@ -206,6 +233,14 @@ interface SyncResult {
 
 ---
 
+## Documentación Adicional
+
+- 📋 **[MAPPING.md](./MAPPING.md)** - Detalles completos del mapeo de campos con NULL
+- 🏗️ **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Arquitectura detallada del sistema
+
+---
+
 **Estado del Sistema: ✅ OPERATIVO AL 100%**  
 **Última corrección crítica: Agosto 31, 2025**  
-**Verifica que las filas nuevas se detectan y procesan correctamente**
+**Última optimización: Septiembre 4, 2025 - Mapeo con NULL**  
+**Verifica que las filas nuevas se detectan y procesan correctamente con integridad de datos**

@@ -26,9 +26,7 @@ export class GoogleSheetsGateway implements ISheetsGateway {
     await this.ensureServiceInitialized();
     
     try {
-      console.log('🔄 GoogleSheetsGateway: Obteniendo todos los leads de Google Sheets...');
       const leads = await this.googleSheetsService.getAllLeadsFromSheets();
-      
       console.log(`📥 GoogleSheetsGateway: Obtenidos ${leads.length} leads totales`);
       return this.mapToRawSheetLeads(leads);
     } catch (error) {
@@ -41,10 +39,7 @@ export class GoogleSheetsGateway implements ISheetsGateway {
     await this.ensureServiceInitialized();
     
     try {
-      console.log(`🔄 GoogleSheetsGateway: Obteniendo leads de sheet "${sheetName}"...`);
       const leads = await this.googleSheetsService.getSheetData(sheetName);
-      
-      console.log(`📥 GoogleSheetsGateway: Obtenidos ${leads.length} leads de "${sheetName}"`);
       return this.mapToRawSheetLeads(leads);
     } catch (error) {
       console.error(`Error getting leads from sheet ${sheetName}:`, error);
@@ -56,8 +51,6 @@ export class GoogleSheetsGateway implements ISheetsGateway {
     await this.ensureServiceInitialized();
     
     try {
-      console.log(`🔄 GoogleSheetsGateway: Obteniendo leads de múltiples sheets: ${sheetNames.join(', ')}`);
-      
       const allLeads: RawSheetLead[] = [];
       
       for (const sheetName of sheetNames) {
@@ -83,9 +76,6 @@ export class GoogleSheetsGateway implements ISheetsGateway {
     await this.ensureServiceInitialized();
     
     try {
-      console.log(`🔄 GoogleSheetsGateway: Obteniendo leads específicos de "${sheetName}"${since ? ` desde ${since.toISOString()}` : ''}`);
-      
-      // Obtener todos los leads del sheet
       const allLeads = await this.getLeadsFromSheet(sheetName);
       
       // Filtrar por fecha si se especifica
@@ -95,7 +85,6 @@ export class GoogleSheetsGateway implements ISheetsGateway {
             const leadDate = new Date(lead.timestamp);
             return leadDate >= since;
           } catch (error) {
-            // Si no se puede parsear la fecha, incluir el lead
             return true;
           }
         });
@@ -115,10 +104,9 @@ export class GoogleSheetsGateway implements ISheetsGateway {
     await this.ensureServiceInitialized();
     
     try {
-      console.log('🔍 GoogleSheetsGateway: Obteniendo nombres de sheets disponibles...');
       const sheetNames = await this.googleSheetsService.getAvailableSheetNames();
       
-      console.log(`📋 GoogleSheetsGateway: Encontrados ${sheetNames.length} sheets disponibles: ${sheetNames.join(', ')}`);
+      console.log(`📋 GoogleSheetsGateway: Encontrados ${sheetNames.length} sheets disponibles`);
       
       if (sheetNames.length === 0) {
         throw new Error('No se encontraron pestañas disponibles en Google Sheets');
@@ -135,9 +123,6 @@ export class GoogleSheetsGateway implements ISheetsGateway {
     await this.ensureServiceInitialized();
     
     try {
-      console.log('🔐 GoogleSheetsGateway: Validando acceso a Google Sheets...');
-      
-      // Intentar obtener la lista de sheets como validación
       const sheetNames = await this.getAvailableSheetNames();
       const hasAccess = sheetNames.length > 0;
       
@@ -157,7 +142,6 @@ export class GoogleSheetsGateway implements ISheetsGateway {
       // por fila, así que devolvemos null por ahora
       // En una implementación real, esto podría usar la API de Drive o timestamps internos
       
-      console.log(`ℹ️ GoogleSheetsGateway: getLastModified no implementado para ${sheetName || 'sheets'}`);
       return null;
     } catch (error) {
       console.error('Error getting last modified date:', error);
@@ -173,9 +157,6 @@ export class GoogleSheetsGateway implements ISheetsGateway {
     await this.ensureServiceInitialized();
     
     try {
-      console.log(`📋 GoogleSheetsGateway: Obteniendo datos del rango "${range}" en sheet "${sheetName}"`);
-      
-      // Usar la API de Google Sheets directamente para obtener un rango específico
       const response = await this.googleSheetsService.sheets.spreadsheets.values.get({
         spreadsheetId: this.googleSheetsService.spreadsheetId,
         range: `${sheetName}!${range}`,
@@ -183,7 +164,6 @@ export class GoogleSheetsGateway implements ISheetsGateway {
       });
       
       const rows = response.data.values || [];
-      console.log(`📊 GoogleSheetsGateway: Obtenidas ${rows.length} filas del rango "${range}"`);
       
       if (rows.length === 0) {
         return [];
@@ -204,7 +184,6 @@ export class GoogleSheetsGateway implements ISheetsGateway {
         }
       });
       
-      console.log(`✅ GoogleSheetsGateway: Procesados ${leads.length} leads válidos del rango "${range}"`);
       return leads;
     } catch (error) {
       console.error(`Error obteniendo rango ${range} de ${sheetName}:`, error);
@@ -284,8 +263,10 @@ export class GoogleSheetsGateway implements ISheetsGateway {
     const localizacion = row[7] ? row[7].toString().trim() : null;  // ✅ LOCALIZACION (H) → NULL si vacío  
     const cliente = row[8] ? row[8].toString().trim() : null;       // ✅ CLIENTE (I) → NULL si vacío
     
-    // 🚨 LOG 1: Datos crudos de Google Sheets  
-    console.log(`📊 RAW GOOGLE SHEETS [Fila ${rowIndex}]: cliente="${row[8]}" (${typeof row[8]}) → parseado="${cliente}" (${typeof cliente})`);
+    // Solo log en debug mode si es necesario
+    if (process.env.NODE_ENV === 'development' && Math.random() < 0.01) {
+      console.log(`📊 RAW SAMPLE [Fila ${rowIndex}]: cliente="${cliente}"`);
+    }
 
     return {
       timestamp,

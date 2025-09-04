@@ -10,15 +10,15 @@ export interface SyncLead {
   nombre: string;
   telefono: string;
   email: string;
-  ciudad: string;
-  modelo: string;                   // Modelo del auto
-  comentarioHorario: string;        // Horario/Comentarios
+  ciudad: string | null;            // ✅ Permite NULL
+  modelo: string | null;            // ✅ Permite NULL - Modelo del auto
+  comentarioHorario: string | null; // ✅ Permite NULL - Horario/Comentarios
   
   // Metadatos de origen
   marca: string;
-  origen: string;        // WhatsApp, Instagram, etc.
-  localizacion: string;  // Ubicación geográfica
-  cliente: string;       // Cliente específico asociado
+  origen: string | null;            // ✅ Permite NULL - WhatsApp, Instagram, etc.
+  localizacion: string | null;      // ✅ Permite NULL - Ubicación geográfica
+  cliente: string | null;           // ✅ Permite NULL - Cliente específico asociado
   
   // Control de sincronización
   googleSheetsRowNumber?: number;   // Número de fila exacto en Google Sheets
