@@ -24,7 +24,7 @@ export class LeadProcessor {
       marca: this.extractBrand(rawLead.campaign),
       origen: rawLead.origen || 'S/D',
       localizacion: rawLead.localizacion || 'S/D',
-      cliente: rawLead.cliente || 'S/D',
+      cliente: String(rawLead.cliente || 'S/D'), // ✅ CORRECCIÓN: Forzar conversión a string
       googleSheetsRowNumber: rawLead.googleSheetsRowNumber,
       fechaCreacion: this.parseTimestamp(rawLead.timestamp),
       source: 'google_sheets',
@@ -146,8 +146,13 @@ export class LeadProcessor {
     return email.trim().toLowerCase();
   }
 
-  private normalizeClientName(clientName: string): string {
-    return clientName
+  private normalizeClientName(clientName: any): string {
+    // ✅ CORRECCIÓN: Convertir cualquier tipo a string para evitar números en BD
+    const stringValue = String(clientName || 'S/D');
+    
+    console.log(`🔧 NORMALIZE CLIENT: Input="${clientName}" (${typeof clientName}) → Output="${stringValue}"`);
+    
+    return stringValue
       .toLowerCase()
       .trim()
       .replace(/[^\w\s]/g, '') // Remover caracteres especiales
