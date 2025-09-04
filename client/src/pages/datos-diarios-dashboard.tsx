@@ -82,6 +82,7 @@ export default function DatosDiariosDashboard() {
   // Estados para filtros de Campañas en Proceso
   const [filtroZona, setFiltroZona] = useState<string>('');
   const [filtroMarca, setFiltroMarca] = useState<string>('');
+  const [filtroCliente, setFiltroCliente] = useState<string>('');
   const [filtroFechaInicio, setFiltroFechaInicio] = useState<string>('');
   const [filtroFechaFin, setFiltroFechaFin] = useState<string>('');
   
@@ -279,6 +280,13 @@ export default function DatosDiariosDashboard() {
     return marcas.sort();
   }, [datosDiarios]);
 
+  const opcionesCliente = useMemo(() => {
+    if (!datosDiarios || !Array.isArray(datosDiarios)) return [];
+    const clientesSet = new Set(datosDiarios.map((data: DatosDiariosData) => data.clienteNombre).filter(Boolean));
+    const clientes = Array.from(clientesSet);
+    return clientes.sort();
+  }, [datosDiarios]);
+
   // Memoize filtered and sorted data for performance
   const campanasData = useMemo(() => {
     // Verificar que datosDiarios existe y es un array
@@ -303,6 +311,10 @@ export default function DatosDiariosDashboard() {
         const marca = data.cliente.match(/^([A-Z]+)/)?.[1] || data.cliente.split(' ')[0];
         return marca === filtroMarca;
       });
+    }
+    
+    if (filtroCliente) {
+      filteredData = filteredData.filter((data: DatosDiariosData) => data.clienteNombre === filtroCliente);
     }
     
     if (filtroFechaInicio) {
@@ -356,7 +368,7 @@ export default function DatosDiariosDashboard() {
     console.log(`📊 Datos ordenados: ${enProceso.length} en proceso, ${finalizadas.length} finalizadas`);
     
     return { campanasEnProceso: enProceso, campanasFinalizadas: finalizadas };
-  }, [datosDiarios, showDuplicatesOnly, sortByDate, filtroZona, filtroMarca, filtroFechaInicio, filtroFechaFin, filtroMesFinalizadas]);
+  }, [datosDiarios, showDuplicatesOnly, sortByDate, filtroZona, filtroMarca, filtroCliente, filtroFechaInicio, filtroFechaFin, filtroMesFinalizadas]);
 
   const { campanasEnProceso, campanasFinalizadas } = campanasData;
 
@@ -927,6 +939,18 @@ export default function DatosDiariosDashboard() {
                   </SelectContent>
                 </Select>
 
+                <Select value={filtroCliente || "all"} onValueChange={(value) => setFiltroCliente(value === "all" ? "" : value)}>
+                  <SelectTrigger className="w-48 bg-white/20 text-white border-white/30 hover:bg-white/30 text-sm" data-testid="filter-cliente">
+                    <SelectValue placeholder="Todos los clientes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los clientes</SelectItem>
+                    {opcionesCliente.map(cliente => (
+                      <SelectItem key={cliente} value={cliente}>{cliente}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
                 <Input
                   type="date"
                   value={filtroFechaInicio}
@@ -943,11 +967,12 @@ export default function DatosDiariosDashboard() {
                   data-testid="filter-fecha-fin"
                 />
 
-                {(filtroZona || filtroMarca || filtroFechaInicio || filtroFechaFin) && (
+                {(filtroZona || filtroMarca || filtroCliente || filtroFechaInicio || filtroFechaFin) && (
                   <Button
                     onClick={() => {
                       setFiltroZona('');
                       setFiltroMarca('');
+                      setFiltroCliente('');
                       setFiltroFechaInicio('');
                       setFiltroFechaFin('');
                     }}
