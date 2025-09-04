@@ -61,15 +61,25 @@ class GoogleSheetsService {
   }
 
   private isValidRow(row: any[]): boolean {
-    // Validación mejorada: acepta filas que tengan algún dato válido o útil
-    if (!row || row.length < 1) return false;
+    // ✅ VALIDACIÓN MEJORADA: Requiere campos esenciales
+    if (!row || row.length < 3) return false;
     
-    // Verificar si hay al menos una celda con contenido útil
-    return row.some(cell => {
-      if (!cell) return false;
-      const cellStr = cell.toString().trim();
-      return cellStr.length > 0 && cellStr !== '';
-    });
+    // Verificar que tenga nombre (columna B) O teléfono (columna C)
+    const name = row[1] ? row[1].toString().trim() : '';
+    const phone = row[2] ? row[2].toString().trim() : '';
+    
+    // Validar formato básico de teléfono si existe
+    const hasValidPhone = phone && /[\d\+\-\s\(\)]{7,}/.test(phone);
+    const hasValidName = name && name.length >= 2 && !name.toLowerCase().includes('nombre');
+    
+    // Requiere al menos nombre válido o teléfono válido
+    const isValid = hasValidName || hasValidPhone;
+    
+    if (!isValid) {
+      console.log(`🚫 Fila inválida: nombre='${name}', teléfono='${phone}'`);
+    }
+    
+    return isValid;
   }
 
   private parseRowToLead(row: any[], sheetName: string, rowIndex: number): SheetLead | null {
@@ -103,27 +113,92 @@ class GoogleSheetsService {
       return [];
     }
 
+    // ✅ RETRY MEJORADO: Implementar retry en caso de fallos temporales
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    while (retryCount < maxRetries) {
+      try {
+        console.log(`🔄 Intentando obtener datos de '${sheetName}' (intento ${retryCount + 1}/${maxRetries})`);
+        
+        const response = await this.sheets.spreadsheets.values.get({
+          spreadsheetId: this.spreadsheetId,
+          range: `${sheetName}!A1:ZZ1000`, // ✅ EXPANDIDO: Captura hasta 1000 filas y todas las columnas posibles
+        });
+
+        const rows = response.data.values || [];
+        const leads: SheetLead[] = [];
+        let validRowsCount = 0;
+        let skippedRowsCount = 0;
+
+        console.log(`📊 ${sheetName}: Procesando ${rows.length} filas totales`);
+        
+        // Skip header row (index 0)
+        for (let i = 1; i < rows.length; i++) {
+          const lead = this.parseRowToLead(rows[i], sheetName, i);
+          if (lead) {
+            leads.push(lead);
+            validRowsCount++;
+          } else {
+            skippedRowsCount++;
+          }
+        }
+
+        console.log(`✅ ${sheetName}: ${validRowsCount} leads válidos, ${skippedRowsCount} filas omitidas`);
+        return leads;
+        
+      } catch (error) {
+        retryCount++;
+        console.error(`❌ Error obteniendo datos de '${sheetName}' (intento ${retryCount}):`, error.message);
+        
+        if (retryCount >= maxRetries) {
+          console.error(`🚨 FALLÓ después de ${maxRetries} intentos: ${sheetName}`);
+          return [];
+        }
+        
+        // Esperar antes del retry (exponential backoff)
+        const waitTime = Math.pow(2, retryCount) * 1000;
+        console.log(`⏳ Esperando ${waitTime}ms antes del siguiente intento...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
+    
+    return [];
+  }
+
+  /**
+   * ✅ NUEVA: Obtiene el número real de la última fila con datos
+   */
+  async getActualLastRowWithData(sheetName: string): Promise<number> {
+    if (!this.sheets) {
+      console.error('Google Sheets service not initialized');
+      return 0;
+    }
+
     try {
+      // Obtener todos los datos de la columna A para detectar la última fila
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: `${sheetName}!A:L`, // Ampliando a L para capturar todas las columnas
+        range: `${sheetName}!A:A`,
+        majorDimension: 'ROWS'
       });
 
       const rows = response.data.values || [];
-      const leads: SheetLead[] = [];
-
-      // Skip header row (index 0)
-      for (let i = 1; i < rows.length; i++) {
-        const lead = this.parseRowToLead(rows[i], sheetName, i);
-        if (lead) {
-          leads.push(lead);
+      
+      // Buscar desde el final hacia atrás la primera fila no vacía
+      for (let i = rows.length - 1; i >= 0; i--) {
+        if (rows[i] && rows[i][0] && rows[i][0].toString().trim()) {
+          const actualLastRow = i + 1; // +1 porque Google Sheets es 1-indexed
+          console.log(`📊 ${sheetName}: Última fila real con datos = ${actualLastRow}`);
+          return actualLastRow;
         }
       }
-
-      return leads;
+      
+      console.log(`⚠️ ${sheetName}: No se encontraron datos, devolviendo fila 1`);
+      return 1; // Solo header, no hay datos
     } catch (error) {
-      console.error(`Error fetching data from sheet ${sheetName}:`, error);
-      return [];
+      console.error(`Error obteniendo última fila de ${sheetName}:`, error);
+      return 0;
     }
   }
 
@@ -159,8 +234,8 @@ class GoogleSheetsService {
       console.log('🚫 Pestañas excluidas:', excludedSheets);
       
       return availableSheets;
-    } catch (error) {
-      console.error('Error obteniendo lista de pestañas:', error);
+    } catch (error: any) {
+      console.error('Error obteniendo lista de pestañas:', error?.message || error);
       // Fallback a la lista fija en caso de error
       return ['Fiat', 'Peugeot', 'Citroen', 'Toyota', 'Chevrolet', 'Renault'];
     }
@@ -317,8 +392,8 @@ class GoogleSheetsService {
           title !== 'Datos Diarios' && 
           !title.toLowerCase().includes('config')
         );
-    } catch (error) {
-      console.error('Error fetching sheet names:', error);
+    } catch (error: any) {
+      console.error('Error fetching sheet names:', error?.message || error);
       return [];
     }
   }
