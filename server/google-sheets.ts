@@ -156,41 +156,6 @@ class GoogleSheetsService {
     return [];
   }
 
-  /**
-   * ✅ NUEVA: Obtiene el número real de la última fila con datos
-   */
-  async getActualLastRowWithData(sheetName: string): Promise<number> {
-    if (!this.sheets) {
-      console.error('Google Sheets service not initialized');
-      return 0;
-    }
-
-    try {
-      // Obtener todos los datos de la columna A para detectar la última fila
-      const response = await this.sheets.spreadsheets.values.get({
-        spreadsheetId: this.spreadsheetId,
-        range: `${sheetName}!A:A`,
-        majorDimension: 'ROWS'
-      });
-
-      const rows = response.data.values || [];
-      
-      // Buscar desde el final hacia atrás la primera fila no vacía
-      for (let i = rows.length - 1; i >= 0; i--) {
-        if (rows[i] && rows[i][0] && rows[i][0].toString().trim()) {
-          const actualLastRow = i + 1; // +1 porque Google Sheets es 1-indexed
-          console.log(`📊 ${sheetName}: Última fila real con datos = ${actualLastRow}`);
-          return actualLastRow;
-        }
-      }
-      
-      console.log(`⚠️ ${sheetName}: No se encontraron datos, devolviendo fila 1`);
-      return 1; // Solo header, no hay datos
-    } catch (error) {
-      console.error(`Error obteniendo última fila de ${sheetName}:`, error);
-      return 0;
-    }
-  }
 
   /**
    * Obtiene automáticamente todas las pestañas del documento (excluyendo las de control)

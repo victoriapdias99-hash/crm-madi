@@ -295,21 +295,10 @@ export class SyncSmartUseCase {
   }
 
   /**
-   * ✅ MEJORADO: Obtiene el número real de la última fila con datos en Google Sheets
+   * Obtiene el número de la última fila disponible con datos en Google Sheets
    */
   private async getLastAvailableRow(sheetName: string): Promise<number> {
     try {
-      // Usar el nuevo método optimizado del GoogleSheetsService
-      const googleSheetsService = await import('../../../google-sheets');
-      const actualLastRow = await googleSheetsService.googleSheetsService.getActualLastRowWithData(sheetName);
-      
-      if (actualLastRow > 0) {
-        console.log(`✅ ${sheetName}: última fila real detectada = ${actualLastRow}`);
-        return actualLastRow;
-      }
-      
-      // Fallback al método anterior si el nuevo falla
-      console.log(`⚠️ ${sheetName}: usando método fallback para detectar última fila`);
       const leads = await this.sheetsGateway.getLeadsFromSheets([sheetName]);
       
       if (leads.length === 0) {
@@ -318,7 +307,7 @@ export class SyncSmartUseCase {
       
       // Encontrar la fila más alta con datos
       const maxRow = Math.max(...leads.map(lead => lead.googleSheetsRowNumber || 0));
-      console.log(`📊 ${sheetName}: última fila disponible con datos (fallback) = ${maxRow}`);
+      console.log(`📊 ${sheetName}: última fila disponible con datos = ${maxRow}`);
       return maxRow;
     } catch (error) {
       console.error(`Error getting last available row for sheet ${sheetName}:`, error);
