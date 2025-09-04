@@ -61,25 +61,15 @@ class GoogleSheetsService {
   }
 
   private isValidRow(row: any[]): boolean {
-    // ✅ VALIDACIÓN MEJORADA: Requiere campos esenciales
-    if (!row || row.length < 3) return false;
+    // ✅ VALIDACIÓN PERMISIVA: Acepta cualquier fila con algún contenido
+    if (!row || row.length < 1) return false;
     
-    // Verificar que tenga nombre (columna B) O teléfono (columna C)
-    const name = row[1] ? row[1].toString().trim() : '';
-    const phone = row[2] ? row[2].toString().trim() : '';
-    
-    // Validar formato básico de teléfono si existe
-    const hasValidPhone = phone && /[\d\+\-\s\(\)]{7,}/.test(phone);
-    const hasValidName = name && name.length >= 2 && !name.toLowerCase().includes('nombre');
-    
-    // Requiere al menos nombre válido o teléfono válido
-    const isValid = hasValidName || hasValidPhone;
-    
-    if (!isValid) {
-      console.log(`🚫 Fila inválida: nombre='${name}', teléfono='${phone}'`);
-    }
-    
-    return isValid;
+    // Verificar si hay al menos una celda con contenido útil
+    return row.some(cell => {
+      if (!cell) return false;
+      const cellStr = cell.toString().trim();
+      return cellStr.length > 0 && cellStr !== '';
+    });
   }
 
   private parseRowToLead(row: any[], sheetName: string, rowIndex: number): SheetLead | null {
