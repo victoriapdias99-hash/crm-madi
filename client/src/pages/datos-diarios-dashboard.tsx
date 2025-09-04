@@ -44,6 +44,19 @@ interface DatosDiariosData {
   esSuperior100?: boolean;
 }
 
+// Función helper para manejar valores que pueden ser números o "-"
+const formatNumber = (value: number | string | undefined | null, decimals: number = 2): string => {
+  if (value === "-" || value === null || value === undefined) return "-";
+  if (typeof value === "string" && value !== "-") {
+    const numValue = parseFloat(value);
+    return isNaN(numValue) ? "-" : numValue.toFixed(decimals);
+  }
+  if (typeof value === "number") {
+    return value.toFixed(decimals);
+  }
+  return "-";
+};
+
 // Función utilitaria para formatear fechas con hora exacta
 const formatDateTimeExact = (dateStr: string | null): string => {
   if (!dateStr || dateStr === 'null') return 'Pendiente';
@@ -1121,12 +1134,12 @@ export default function DatosDiariosDashboard() {
                         </td>
                         <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
                           <span className="font-medium text-slate-700 dark:text-slate-300">
-                            {data.entregadosPorDia ? data.entregadosPorDia.toFixed(2) : '0.00'}
+                            {formatNumber(data.entregadosPorDia, 2)}
                           </span>
                         </td>
                         <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
                           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-2 rounded-lg">
-                            <span className="font-medium text-blue-600 dark:text-blue-300">{data.pedidosPorDia?.toFixed(2) || '0.00'}</span>
+                            <span className="font-medium text-blue-600 dark:text-blue-300">{formatNumber(data.pedidosPorDia, 2)}</span>
                             <div className="text-xs text-blue-500 mt-1">De campaña</div>
                           </div>
                         </td>
@@ -1138,7 +1151,7 @@ export default function DatosDiariosDashboard() {
                               : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
                             }`}
                           >
-                            {inversions.porcentajeDesvio ? inversions.porcentajeDesvio.toFixed(2) : '0.00'}%
+                            {formatNumber(inversions.porcentajeDesvio, 2)}%
                           </Badge>
                         </td>
                         <td className="border border-amber-200 dark:border-amber-600 p-3">
@@ -1158,7 +1171,7 @@ export default function DatosDiariosDashboard() {
                                 ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white' 
                                 : 'bg-gradient-to-r from-amber-500 to-orange-600 text-white'
                             }`}>
-                              {updatedData.porcentajeDatosEnviados.toFixed(1)}%
+                              {formatNumber(updatedData.porcentajeDatosEnviados, 1)}%
                               {updatedData.esSuperior100 && <span className="ml-1">✓</span>}
                             </Badge>
                           </div>
@@ -1458,11 +1471,11 @@ export default function DatosDiariosDashboard() {
                           </div>
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
-                          {data.entregadosPorDia ? data.entregadosPorDia.toFixed(2) : '0.00'}
+                          {formatNumber(data.entregadosPorDia, 2)}
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
                           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-2 rounded-lg">
-                            <span className="font-medium text-blue-600 dark:text-blue-300">{data.pedidosPorDia?.toFixed(2) || '0.00'}</span>
+                            <span className="font-medium text-blue-600 dark:text-blue-300">{formatNumber(data.pedidosPorDia, 2)}</span>
                             <div className="text-xs text-blue-500 mt-1">De campaña</div>
                           </div>
                         </td>
@@ -1474,7 +1487,7 @@ export default function DatosDiariosDashboard() {
                               : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
                             }`}
                           >
-                            {inversions.porcentajeDesvio ? inversions.porcentajeDesvio.toFixed(2) : '0.00'}%
+                            {formatNumber(inversions.porcentajeDesvio, 2)}%
                           </Badge>
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2">
@@ -1486,7 +1499,7 @@ export default function DatosDiariosDashboard() {
                               />
                             </div>
                             <span className="text-xs font-bold text-green-700">
-                              {data.porcentajeDatosEnviados ? data.porcentajeDatosEnviados.toFixed(1) : '0.0'}%
+                              {formatNumber(data.porcentajeDatosEnviados, 1)}%
                             </span>
                           </div>
                         </td>
@@ -1719,7 +1732,7 @@ export default function DatosDiariosDashboard() {
                 
                 <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 p-4 rounded-lg text-center">
                   <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">% Progreso</h4>
-                  <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">{selectedCampaign.porcentajeDatosEnviados?.toFixed(1) || '0.0'}%</div>
+                  <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">{formatNumber(selectedCampaign.porcentajeDatosEnviados, 1)}%</div>
                   <div className="text-sm text-blue-600 dark:text-blue-400">completado</div>
                 </div>
               </div>
@@ -1754,13 +1767,13 @@ export default function DatosDiariosDashboard() {
                   <div>
                     <div className="text-sm font-medium text-amber-600 dark:text-amber-400">Entregados por Día</div>
                     <div className="text-lg font-bold text-amber-800 dark:text-amber-200">
-                      {selectedCampaign.entregadosPorDia?.toFixed(2) || '0.00'}
+                      {formatNumber(selectedCampaign.entregadosPorDia, 2)}
                     </div>
                   </div>
                   <div>
                     <div className="text-sm font-medium text-amber-600 dark:text-amber-400">Pedidos por Día</div>
                     <div className="text-lg font-bold text-amber-800 dark:text-amber-200">
-                      {selectedCampaign.pedidosPorDia?.toFixed(2) || '0.00'}
+                      {formatNumber(selectedCampaign.pedidosPorDia, 2)}
                     </div>
                   </div>
                 </div>
