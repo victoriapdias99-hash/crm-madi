@@ -313,8 +313,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // 2. Extraer meta_lead_ids para buscar en op_leads_rep
         const metaLeadIds = leadsAsignados
-          .map(lead => lead.metaLeadId)
-          .filter(id => id !== null);
+          .map((lead: any) => lead.metaLeadId)
+          .filter((id: any) => id !== null);
         
         
         if (metaLeadIds.length === 0) {
@@ -565,7 +565,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             faltantes: Math.max(0, campana.cantidadDatosSolicitados - enviadosFinales), // Faltantes = Pedidos Total - Enviados
             entregadosPorDia: (() => {
               // Calcular días transcurridos desde fecha de campaña hasta hoy o fecha fin
-              const fechaInicio = new Date(campana.fechaCampana);
+              const fechaInicio = campana.fechaCampana ? new Date(campana.fechaCampana) : new Date();
               const fechaReferencia = fechaFinExacta && fechaFinExacta !== null ? new Date(fechaFinExacta) : new Date();
               const diasTranscurridos = Math.max(1, Math.ceil((fechaReferencia.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24)));
               return enviadosFinales / diasTranscurridos;
@@ -646,11 +646,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const cliente = await storage.getCliente(campana.clienteId);
         if (!cliente) continue;
         
-        const fechaInicioCampana = new Date(campana.fechaCampana);
+        const fechaInicioCampana = campana.fechaCampana ? new Date(campana.fechaCampana) : new Date();
         
         // Filtrar datos específicos para esta campaña
         // Para demo: permitir datos históricos si la fecha de campaña es futura
-        const fechaInicio = new Date(campana.fechaCampana);
+        const fechaInicio = campana.fechaCampana ? new Date(campana.fechaCampana) : new Date();
         const hoy = new Date();
         // Agregar 1 día a hoy para comparación más precisa
         const manana = new Date(hoy.getTime() + 24 * 60 * 60 * 1000);
@@ -716,7 +716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           c.marca === campana.marca &&
           c.zona === campana.zona &&
           parseInt(c.numeroCampana) < parseInt(campana.numeroCampana) &&
-          new Date(c.fechaCampana) <= new Date(campana.fechaCampana)
+          (c.fechaCampana ? new Date(c.fechaCampana) : new Date()) <= (campana.fechaCampana ? new Date(campana.fechaCampana) : new Date())
         );
         
         // 2. Calcular el punto de inicio de esta campaña (suma de todas las anteriores)
@@ -809,7 +809,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           estadoCampana = 'Completada';
         } else if (diasConDatos === 0 || datosParaCampana.length === 0) {
           // Verificar si la campaña es nueva (creada recientemente)
-          const fechaCreacion = new Date(campana.fechaCreacion || campana.createdAt);
+          const fechaCreacion = campana.fechaCreacion ? new Date(campana.fechaCreacion) : (campana.createdAt ? new Date(campana.createdAt) : new Date());
           const horasDesdeCreacion = (Date.now() - fechaCreacion.getTime()) / (1000 * 60 * 60);
           
           if (horasDesdeCreacion < 24) {
@@ -858,7 +858,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // PASO 2: Verificar nombre exacto del cliente
           // PASO 3: Contabilizar por fecha de inicio de campaña
           try {
-            const fechaInicioCampana = new Date(campana.fechaCampana);
+            const fechaInicioCampana = campana.fechaCampana ? new Date(campana.fechaCampana) : new Date();
             const leadsEspecificos = await googleSheetsService.getLeadsByBrandAndClient(
               campana.marca,
               cliente.nombreCliente,
@@ -944,7 +944,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const metaAdsService = getMetaAdsServiceInstance();
           if (metaAdsService && datosFinales > 0) {
             // Crear rango de fecha para la campaña (desde inicio hasta hoy)
-            const fechaInicio = new Date(campana.fechaCampana);
+            const fechaInicio = campana.fechaCampana ? new Date(campana.fechaCampana) : new Date();
             const fechaFin = new Date();
             
             // Formatear fechas para Meta Ads API
@@ -1061,7 +1061,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`Campaign start date: ${campana.fechaCampana}, requested data: ${campana.cantidadDatosSolicitados}`);
         
         // Filtrar datos por cliente/marca Y fecha de inicio de campaña
-        const fechaInicioCampana = new Date(campana.fechaCampana);
+        const fechaInicioCampana = campana.fechaCampana ? new Date(campana.fechaCampana) : new Date();
         
         const datosRelacionados = datosDiarios.filter(dato => {
           if (!dato.fecha) return false;
@@ -1167,7 +1167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const cliente = clientes.find(c => c.id === campana.clienteId);
           
           // Calcular datos reales obtenidos hasta ahora
-          const fechaInicioObj = new Date(campana.fechaCampana);
+          const fechaInicioObj = campana.fechaCampana ? new Date(campana.fechaCampana) : new Date();
           const hoy = new Date();
           
           // Filtrar datos desde la fecha de inicio hasta hoy
@@ -1244,7 +1244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json({ 
           success: true, 
           message: `CPL actualizado para ${clienteNombre} campaña ${numeroCampana}`,
-          cpl: parseFloat(cpl)
+          cpl: cpl
         });
       } else if (typeof clienteIndex === 'number') {
         // Fallback al método anterior
@@ -1254,7 +1254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json({ 
           success: true, 
           message: `CPL actualizado para cliente ${clienteIndex}`,
-          cpl: parseFloat(cpl)
+          cpl: cpl
         });
       } else {
         res.status(400).json({ error: 'Must provide either clienteIndex or clienteNombre+numeroCampana' });
@@ -1365,7 +1365,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         success: true, 
         message: `Pedidos por día actualizado para cliente ${clienteIndex}`,
-        pedidos: parseInt(pedidos)
+        pedidos: pedidos
       });
     } catch (error) {
       console.error('Error updating pedidos por día:', error);

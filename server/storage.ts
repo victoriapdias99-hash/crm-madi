@@ -73,6 +73,7 @@ export interface IStorage {
   getCampanaComercial(id: number): Promise<CampanaComercial | undefined>;
   getAllCampanasComerciales(): Promise<CampanaComercial[]>;
   getCampanasPorCliente(clienteId: number): Promise<CampanaComercial[]>;
+  getDashboardCampaigns(): Promise<any[]>;
   createCampanaComercial(campana: InsertCampanaComercial): Promise<CampanaComercial>;
   updateCampanaComercial(id: number, updates: Partial<CampanaComercial>): Promise<CampanaComercial | undefined>;
   deleteCampanaComercial(id: number): Promise<boolean>;
@@ -777,6 +778,11 @@ export class MemStorage implements IStorage {
   async deleteCampanaComercial(id: number): Promise<boolean> {
     return this.campanasComerciales.delete(id);
   }
+
+  async getDashboardCampaigns(): Promise<any[]> {
+    // Return all commercial campaigns for dashboard fallback
+    return this.getAllCampanasComerciales();
+  }
 }
 
 // DatabaseStorage implementation
@@ -1102,6 +1108,11 @@ export class DatabaseStorage implements IStorage {
   async deleteCampanaComercial(id: number): Promise<boolean> {
     const result = await db.delete(campanasComerciales).where(eq(campanasComerciales.id, id));
     return (result.rowCount || 0) > 0;
+  }
+
+  async getDashboardCampaigns(): Promise<any[]> {
+    // Return all commercial campaigns for dashboard fallback
+    return this.getAllCampanasComerciales();
   }
 
   // CPL operations for DatabaseStorage

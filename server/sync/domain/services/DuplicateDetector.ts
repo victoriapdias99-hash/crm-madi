@@ -96,7 +96,7 @@ export class DuplicateDetector {
         console.log(`   Nuevo lead: ${lead.nombre} | Tel: ${lead.normalizedPhone} | Fila: ${lead.googleSheetsRowNumber}`);
         console.log(`   Razón: Row=${isDuplicateByRowNumber} (ya existe esta fila)`);
         if (originalLead) {
-          console.log(`   Lead existente: ${originalLead.nombre} | Fila: ${originalLead.googleSheetsRowNumber} | ID: ${originalLead.id}`);
+          console.log(`   Lead existente: ${originalLead.nombre} | Fila: ${originalLead.googleSheetsRowNumber} | MetaID: ${originalLead.metaLeadId}`);
         }
         console.log(`   RowKey: ${rowKey}`);
         
