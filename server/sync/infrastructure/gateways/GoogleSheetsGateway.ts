@@ -218,16 +218,16 @@ export class GoogleSheetsGateway implements ISheetsGateway {
     return leads.map(lead => ({
       timestamp: lead.timestamp || new Date().toISOString(),
       name: lead.name || lead.nombre || 'S/D',
-      email: lead.email || 'S/D',
+      email: lead.email || null,
       phone: lead.phone || lead.telefono || 'S/D',
-      city: lead.city || lead.ciudad || 'S/D',
-      interest: lead.interest || lead.interes || 'S/D',
-      budget: lead.budget || lead.presupuesto || 'S/D',
-      modelo: lead.modelo || 'S/D',                    // Modelo del auto
-      comentarioHorario: lead.comentarioHorario || 'S/D', // Horario/Comentarios
-      origen: lead.origen || 'S/D',                    // ORIGEN
-      localizacion: lead.localizacion || 'S/D',        // LOCALIZACION
-      cliente: lead.cliente || 'S/D',                  // CLIENTE
+      city: lead.city || lead.ciudad || null,
+      interest: lead.interest || lead.interes || null,
+      budget: lead.budget || lead.presupuesto || null,
+      modelo: lead.modelo || null,                    // Modelo del auto
+      comentarioHorario: lead.comentarioHorario || null, // Horario/Comentarios
+      origen: lead.origen || null,                    // ORIGEN
+      localizacion: lead.localizacion || null,        // LOCALIZACION
+      cliente: lead.cliente || null,                  // CLIENTE
       googleSheetsRowNumber: lead.googleSheetsRowNumber, // Número de fila de Google Sheets
       source: lead.source || 'google_sheets',
       campaign: lead.campaign || lead.campana || 'S/D',
@@ -276,13 +276,13 @@ export class GoogleSheetsGateway implements ISheetsGateway {
     }
     const name = row[1] ? row[1].toString().trim() : 'S/D';
     const phone = row[2] ? row[2].toString().trim() : 'S/D';
-    const email = '';                                               // Email vacío (no existe en Google Sheets)
-    const city = row[3] ? row[3].toString().trim() : '';         // ✅ CIUDAD/LOCALIDAD (D) 
-    const modelo = row[4] ? row[4].toString().trim() : '';       // ✅ MODELO (E)
-    const comentarioHorario = row[5] ? row[5].toString().trim() : ''; // ✅ COMENTARIO/HORARIO (F)
-    const origen = row[6] ? row[6].toString().trim() : '';       // ✅ ORIGEN (G)
-    const localizacion = row[7] ? row[7].toString().trim() : '';  // ✅ LOCALIZACION (H)  
-    const cliente = row[8] ? row[8].toString().trim() : '';       // ✅ CLIENTE (I)
+    const email = null;                                               // Email no existe → NULL
+    const city = row[3] ? row[3].toString().trim() : null;         // ✅ CIUDAD/LOCALIDAD (D) → NULL si vacío 
+    const modelo = row[4] ? row[4].toString().trim() : null;       // ✅ MODELO (E) → NULL si vacío
+    const comentarioHorario = row[5] ? row[5].toString().trim() : null; // ✅ COMENTARIO/HORARIO (F) → NULL si vacío
+    const origen = row[6] ? row[6].toString().trim() : null;       // ✅ ORIGEN (G) → NULL si vacío
+    const localizacion = row[7] ? row[7].toString().trim() : null;  // ✅ LOCALIZACION (H) → NULL si vacío  
+    const cliente = row[8] ? row[8].toString().trim() : null;       // ✅ CLIENTE (I) → NULL si vacío
     
     // 🚨 LOG 1: Datos crudos de Google Sheets  
     console.log(`📊 RAW GOOGLE SHEETS [Fila ${rowIndex}]: cliente="${row[8]}" (${typeof row[8]}) → parseado="${cliente}" (${typeof cliente})`);
@@ -293,8 +293,8 @@ export class GoogleSheetsGateway implements ISheetsGateway {
       email,
       phone,
       city,
-      interest: '',
-      budget: '',
+      interest: null,
+      budget: null,
       modelo,
       comentarioHorario,
       origen,

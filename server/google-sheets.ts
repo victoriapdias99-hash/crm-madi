@@ -4,18 +4,18 @@ import { analistaFuncional } from './analista-funcional';
 interface SheetLead {
   timestamp: string;
   name: string;
-  email: string;
+  email: string | null;
   phone: string;
-  city: string;
-  interest: string;
-  budget: string;
+  city: string | null;
+  interest: string | null;
+  budget: string | null;
   // Nuevos campos agregados
-  modelo: string;                    // Modelo del auto
-  comentarioHorario: string;         // Horario/Comentarios
+  modelo: string | null;                    // Modelo del auto
+  comentarioHorario: string | null;         // Horario/Comentarios
   // Columnas desde Google Sheets (G, H, I)
-  origen: string;
-  localizacion: string;
-  cliente: string;
+  origen: string | null;
+  localizacion: string | null;
+  cliente: string | null;
   googleSheetsRowNumber?: number;    // Número de fila exacto en Google Sheets
   source: string;
   campaign: string;

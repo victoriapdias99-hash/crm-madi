@@ -53,16 +53,16 @@ export interface ProcessedSyncLead extends SyncLead {
 export interface RawSheetLead {
   timestamp: string;
   name: string;
-  email: string;
+  email: string | null;
   phone: string;
-  city: string;
-  interest: string;
-  budget: string;
-  modelo: string;                   // Modelo del auto
-  comentarioHorario: string;        // Horario/Comentarios
-  origen: string;      // Columna G
-  localizacion: string; // Columna H
-  cliente: string;     // Columna I
+  city: string | null;
+  interest: string | null;
+  budget: string | null;
+  modelo: string | null;                   // Modelo del auto
+  comentarioHorario: string | null;        // Horario/Comentarios
+  origen: string | null;      // Columna G
+  localizacion: string | null; // Columna H
+  cliente: string | null;     // Columna I
   googleSheetsRowNumber?: number;   // Número de fila exacto en Google Sheets
   source: string;
   campaign: string;
