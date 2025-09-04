@@ -25,4 +25,19 @@ export interface ILeadRepository {
   
   // Obtener fecha del último lead asignado a una campaña
   getLastLeadDateForCampaign(campaignId: number): Promise<Date | null>;
+  
+  // NUEVO: Asignación atómica de leads con verificación de continuidad
+  assignLeadsAtomically(
+    clientName: string, 
+    brandName: string, 
+    zone: string, 
+    campaignId: number, 
+    targetCount: number
+  ): Promise<{
+    assigned: number;
+    finalLeadDate?: Date;
+    leads: AvailableLead[];
+    continuityVerified: boolean;
+    exactCountVerified: boolean;
+  }>;
 }

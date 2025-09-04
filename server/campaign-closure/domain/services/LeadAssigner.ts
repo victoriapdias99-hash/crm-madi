@@ -9,7 +9,7 @@ export class LeadAssigner {
   constructor(private leadRepository: ILeadRepository) {}
 
   /**
-   * Asigna leads únicos a una campaña específica
+   * NUEVO: Asigna leads usando función atómica que previene race conditions
    */
   async assignLeadsToTarget(
     clientName: string,
@@ -23,63 +23,37 @@ export class LeadAssigner {
     leads: AvailableLead[];
   }> {
     try {
-      console.log(`🎯 Asignando hasta ${targetCount} leads para campaña ${campaignId}`);
+      console.log(`🎯 ASIGNACIÓN ATÓMICA INICIADA: ${targetCount} leads para campaña ${campaignId}`);
       console.log(`📋 Filtros: cliente=${clientName}, marca=${brandName}, zona=${zone}`);
 
-      // Obtener leads únicos disponibles
-      const availableLeads = await this.leadRepository.getAvailableLeadsForClient(
+      // USAR NUEVA FUNCIÓN ATÓMICA - Una sola operación, sin race conditions
+      const result = await this.leadRepository.assignLeadsAtomically(
         clientName,
         brandName,
-        zone
+        zone,
+        campaignId,
+        targetCount
       );
 
-      console.log(`📊 Leads únicos disponibles: ${availableLeads.length}`);
+      console.log(`✅ ASIGNACIÓN ATÓMICA COMPLETADA:`);
+      console.log(`   📊 Leads asignados: ${result.assigned}`);
+      console.log(`   📅 Continuidad verificada: ${result.continuityVerified ? '✅' : '⚠️'}`);
+      console.log(`   🔢 Conteo exacto verificado: ${result.exactCountVerified ? '✅' : '⚠️'}`);
+      console.log(`   📅 Fecha final: ${result.finalLeadDate?.toISOString()}`);
 
-      if (availableLeads.length === 0) {
-        return { assigned: 0, leads: [] };
+      // Verificar que la asignación fue exitosa
+      if (!result.exactCountVerified) {
+        throw new Error(`Error crítico: conteo inexacto en asignación atómica`);
       }
-
-      // Filtrar solo leads no asignados
-      const unassignedLeads = [];
-      for (const lead of availableLeads) {
-        const isAssigned = await this.leadRepository.isLeadAssigned(lead.id);
-        if (!isAssigned) {
-          unassignedLeads.push(lead);
-        }
-      }
-
-      console.log(`📋 Leads no asignados: ${unassignedLeads.length}`);
-
-      // Ordenar por fecha de creación (más antiguos primero)
-      const sortedLeads = unassignedLeads.sort((a, b) => 
-        a.fechaCreacion.getTime() - b.fechaCreacion.getTime()
-      );
-
-      // Tomar solo los leads necesarios
-      const leadsToAssign = sortedLeads.slice(0, targetCount);
-      const leadIds = leadsToAssign.map(lead => lead.id);
-
-      if (leadIds.length === 0) {
-        return { assigned: 0, leads: [] };
-      }
-
-      // Asignar leads a la campaña
-      const assignedCount = await this.leadRepository.assignLeadsToCampaign(leadsToAssign, campaignId);
-
-      const finalLeadDate = leadsToAssign.length > 0 
-        ? leadsToAssign[leadsToAssign.length - 1].fechaCreacion 
-        : undefined;
-
-      console.log(`✅ Asignados ${assignedCount} leads. Fecha final: ${finalLeadDate?.toISOString()}`);
 
       return {
-        assigned: assignedCount,
-        finalLeadDate,
-        leads: leadsToAssign
+        assigned: result.assigned,
+        finalLeadDate: result.finalLeadDate,
+        leads: result.leads
       };
     } catch (error: any) {
-      console.error(`❌ Error en asignación de leads:`, error);
-      throw new Error(`Failed to assign leads: ${error.message}`);
+      console.error(`❌ ERROR EN ASIGNACIÓN ATÓMICA:`, error);
+      throw new Error(`Atomic lead assignment failed: ${error.message}`);
     }
   }
 

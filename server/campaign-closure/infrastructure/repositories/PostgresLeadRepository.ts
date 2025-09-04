@@ -341,4 +341,145 @@ export class PostgresLeadRepository implements ILeadRepository {
       campaignId: lead.campaignId
     };
   }
+
+  /**
+   * NUEVA FUNCIÓN ATÓMICA: Asigna leads con verificación de continuidad y conteo exacto
+   * Usa transacciones para garantizar atomicidad y prevenir race conditions
+   */
+  async assignLeadsAtomically(
+    clientName: string, 
+    brandName: string, 
+    zone: string, 
+    campaignId: number, 
+    targetCount: number
+  ): Promise<{
+    assigned: number;
+    finalLeadDate?: Date;
+    leads: AvailableLead[];
+    continuityVerified: boolean;
+    exactCountVerified: boolean;
+  }> {
+    await this.ensureDbInitialized();
+    
+    try {
+      console.log(`🔒 ASIGNACIÓN ATÓMICA: ${targetCount} leads para campaña ${campaignId}`);
+      console.log(`📋 Filtros atómicos: cliente=${clientName}, marca=${brandName}, zona=${zone}`);
+
+      // Normalizar parámetros
+      const normalizedClient = this.normalizeClientName(clientName);
+      const normalizedBrand = brandName.toLowerCase();
+      const normalizedZone = this.normalizeZoneName(zone);
+
+      // TRANSACCIÓN ATÓMICA - TODO O NADA
+      const result = await this.db.transaction(async (tx: any) => {
+        console.log(`🚀 Iniciando transacción atómica para campaña ${campaignId}`);
+
+        // PASO 1: Seleccionar y BLOQUEAR leads disponibles con FOR UPDATE
+        console.log(`🔍 Buscando leads disponibles con bloqueo atómico...`);
+        
+        const availableLeads = await tx
+          .select()
+          .from(opLead)
+          .where(
+            and(
+              ilike(opLead.marca, `%${normalizedBrand}%`),
+              ilike(opLead.cliente, `%${normalizedClient}%`),
+              ilike(opLead.localizacion, `%${normalizedZone}%`),
+              isNull(opLead.campaignId) // Solo leads NO asignados
+            )
+          )
+          .orderBy(asc(opLead.fechaCreacion))
+          .limit(targetCount)
+          .for('update'); // BLOQUEO CRÍTICO - Previene race conditions
+
+        console.log(`📊 Leads encontrados y bloqueados: ${availableLeads.length}`);
+
+        if (availableLeads.length === 0) {
+          throw new Error(`No hay leads disponibles para ${clientName} (${brandName}, ${zone})`);
+        }
+
+        if (availableLeads.length < targetCount) {
+          console.log(`⚠️ Solo hay ${availableLeads.length} leads disponibles de ${targetCount} solicitados`);
+        }
+
+        // PASO 2: Verificar continuidad de fechas ANTES de asignar
+        const continuityCheck = this.verifyDateContinuity(availableLeads);
+        console.log(`📅 Verificación de continuidad: ${continuityCheck ? '✅ CONTINUO' : '⚠️ CON GAPS'}`);
+
+        // PASO 3: Asignación ATÓMICA de todos los leads seleccionados
+        const leadIds = availableLeads.map((lead: any) => lead.id);
+        console.log(`🎯 Asignando ${leadIds.length} leads atómicamente a campaña ${campaignId}`);
+
+        const updateResult = await tx
+          .update(opLead)
+          .set({ 
+            campaignId: campaignId,
+            updatedAt: new Date()
+          })
+          .where(inArray(opLead.id, leadIds));
+
+        // PASO 4: Verificar conteo exacto INMEDIATAMENTE después de asignar
+        const verificationCount = await tx
+          .select({ count: sql<number>`count(*)::int` })
+          .from(opLead)
+          .where(eq(opLead.campaignId, campaignId));
+
+        const actualAssigned = verificationCount[0]?.count || 0;
+        const exactCountOk = actualAssigned === leadIds.length;
+        
+        console.log(`✅ Verificación de conteo: esperados=${leadIds.length}, asignados=${actualAssigned}, exacto=${exactCountOk}`);
+
+        if (!exactCountOk) {
+          throw new Error(`Error de conteo: esperados ${leadIds.length}, encontrados ${actualAssigned}`);
+        }
+
+        // PASO 5: Mapear resultado y obtener fecha final
+        const mappedLeads = availableLeads.map(this.mapOpLeadToAvailableLead);
+        const finalLeadDate = mappedLeads.length > 0 
+          ? mappedLeads[mappedLeads.length - 1].fechaCreacion 
+          : undefined;
+
+        console.log(`🎉 TRANSACCIÓN EXITOSA: ${leadIds.length} leads asignados atómicamente`);
+        console.log(`📅 Fecha del último lead: ${finalLeadDate?.toISOString()}`);
+
+        return {
+          assigned: leadIds.length,
+          finalLeadDate,
+          leads: mappedLeads,
+          continuityVerified: continuityCheck,
+          exactCountVerified: exactCountOk
+        };
+      });
+
+      console.log(`✅ ASIGNACIÓN ATÓMICA COMPLETADA: ${result.assigned} leads a campaña ${campaignId}`);
+      return result;
+
+    } catch (error: any) {
+      console.error(`❌ ERROR EN ASIGNACIÓN ATÓMICA para campaña ${campaignId}:`, error);
+      throw new Error(`Atomic assignment failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Verifica que las fechas de leads sean continuas (sin gaps grandes)
+   */
+  private verifyDateContinuity(leads: any[]): boolean {
+    if (leads.length <= 1) return true;
+
+    const sortedLeads = leads.sort((a, b) => a.fechaCreacion.getTime() - b.fechaCreacion.getTime());
+    
+    for (let i = 1; i < sortedLeads.length; i++) {
+      const current = new Date(sortedLeads[i].fechaCreacion).getTime();
+      const previous = new Date(sortedLeads[i-1].fechaCreacion).getTime();
+      
+      // Gap de más de 7 días se considera discontinuo
+      const gapDays = (current - previous) / (1000 * 60 * 60 * 24);
+      if (gapDays > 7) {
+        console.log(`⚠️ Gap detectado: ${gapDays.toFixed(1)} días entre ${sortedLeads[i-1].fechaCreacion} y ${sortedLeads[i].fechaCreacion}`);
+        return false;
+      }
+    }
+    
+    return true;
+  }
 }
