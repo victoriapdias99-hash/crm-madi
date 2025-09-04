@@ -97,6 +97,43 @@ class GoogleSheetsService {
     };
   }
 
+  /**
+   * Detecta la última fila con datos en una hoja
+   */
+  private async getLastRowWithData(sheetName: string): Promise<number> {
+    try {
+      if (!this.sheets) {
+        return 1000; // Fallback al límite anterior
+      }
+
+      // Obtener metadata de la hoja para detectar dimensiones
+      const spreadsheetResponse = await this.sheets.spreadsheets.get({
+        spreadsheetId: this.spreadsheetId,
+        ranges: [`${sheetName}!A:A`],
+        includeGridData: false,
+      });
+
+      const sheet = spreadsheetResponse.data.sheets?.find(s => s.properties?.title === sheetName);
+      if (!sheet?.properties?.gridProperties?.rowCount) {
+        console.log(`⚠️ No se pudo detectar tamaño de '${sheetName}', usando límite de 5000`);
+        return 5000; // Límite más alto como fallback
+      }
+
+      const maxRows = sheet.properties.gridProperties.rowCount;
+      console.log(`📏 ${sheetName}: Detectadas ${maxRows} filas máximas en la hoja`);
+      
+      // Limitar a un máximo razonable para evitar timeouts
+      const safeLimit = Math.min(maxRows, 10000);
+      console.log(`📏 ${sheetName}: Usando límite seguro de ${safeLimit} filas`);
+      
+      return safeLimit;
+    } catch (error) {
+      console.error(`Error detectando rango para ${sheetName}:`, error.message);
+      console.log(`📏 ${sheetName}: Fallback a 5000 filas debido a error`);
+      return 5000; // Límite más alto como fallback en caso de error
+    }
+  }
+
   async getSheetData(sheetName: string): Promise<SheetLead[]> {
     if (!this.sheets) {
       console.log('Google Sheets API not configured');
@@ -111,9 +148,14 @@ class GoogleSheetsService {
       try {
         console.log(`🔄 Intentando obtener datos de '${sheetName}' (intento ${retryCount + 1}/${maxRetries})`);
         
+        // ✅ RANGO DINÁMICO: Detectar automáticamente el número real de filas
+        const maxRows = await this.getLastRowWithData(sheetName);
+        const dynamicRange = `${sheetName}!A1:ZZ${maxRows}`;
+        console.log(`📊 ${sheetName}: Usando rango dinámico: ${dynamicRange}`);
+
         const response = await this.sheets.spreadsheets.values.get({
           spreadsheetId: this.spreadsheetId,
-          range: `${sheetName}!A1:ZZ1000`, // ✅ EXPANDIDO: Captura hasta 1000 filas y todas las columnas posibles
+          range: dynamicRange,
         });
 
         const rows = response.data.values || [];
