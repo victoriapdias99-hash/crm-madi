@@ -2188,31 +2188,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Endpoint simplificado - devolver mock ID para testing del modal
+  // Endpoint para obtener ID de campaña comercial por cliente y número de campaña
   app.get('/api/campanas-comerciales/by-client-campaign', async (req, res) => {
     try {
       const { clienteNombre, numeroCampana } = req.query;
-      console.log('🔍 Buscando campaña:', { clienteNombre, numeroCampana });
+      console.log('🔍 Buscando campaña real:', { clienteNombre, numeroCampana });
       
       if (!clienteNombre || !numeroCampana) {
         return res.status(400).json({ error: 'clienteNombre and numeroCampana are required' });
       }
       
-      // Por ahora devolver datos mock para que funcione el modal
-      const mockCampana = {
-        id: 1,
-        cantidadDatosSolicitados: 100,
-        marca: 'Peugeot',
-        zona: 'AMBA',
-        localizado: '',
-        pedidosPorDia: 10,
-        facturacionBruta: '50000.00'
-      };
+      // Buscar la campaña comercial por nombre de cliente y número de campaña en la BD
+      const campanas = await storage.getAllCampanasComerciales();
+      const clientes = await storage.getAllClientes();
       
-      console.log('✅ Devolviendo datos mock para testing');
-      res.json({ id: 1, campana: mockCampana });
+      console.log(`📊 Total campañas en BD: ${campanas.length}, Total clientes: ${clientes.length}`);
+      
+      // Encontrar el cliente que coincida con el nombre (búsqueda flexible)
+      const cliente = clientes.find(c => 
+        c.nombreComercial.toLowerCase().includes((clienteNombre as string).toLowerCase()) ||
+        c.nombreCliente.toLowerCase().includes((clienteNombre as string).toLowerCase()) ||
+        (clienteNombre as string).toLowerCase().includes(c.nombreComercial.toLowerCase()) ||
+        (clienteNombre as string).toLowerCase().includes(c.nombreCliente.toLowerCase())
+      );
+      
+      console.log('👤 Cliente encontrado:', cliente ? `${cliente.nombreComercial} (ID: ${cliente.id})` : 'No encontrado');
+      
+      if (!cliente) {
+        console.log('❌ Cliente no encontrado. Clientes disponibles:', clientes.slice(0, 5).map(c => c.nombreComercial));
+        return res.status(404).json({ error: 'Cliente not found' });
+      }
+      
+      // Encontrar la campaña que coincida con el cliente y número de campaña
+      const campana = campanas.find(c => 
+        c.clienteId === cliente.id && 
+        c.numeroCampana === (numeroCampana as string)
+      );
+      
+      console.log('🎯 Campaña encontrada:', campana ? `${campana.numeroCampana} (ID: ${campana.id})` : 'No encontrada');
+      
+      if (!campana) {
+        const campanasDelCliente = campanas.filter(c => c.clienteId === cliente.id);
+        console.log('❌ Campaña no encontrada. Campañas del cliente:', campanasDelCliente.map(c => c.numeroCampana));
+        return res.status(404).json({ error: 'Campaña not found' });
+      }
+      
+      console.log('✅ Resultado exitoso con datos reales de BD:', { id: campana.id });
+      res.json({ id: campana.id, campana });
     } catch (error) {
-      console.error('❌ Error in mock endpoint:', error);
+      console.error('❌ Error finding campaña comercial en BD:', error);
       res.status(500).json({ error: 'Failed to find campaña comercial' });
     }
   });

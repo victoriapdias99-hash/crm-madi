@@ -246,13 +246,13 @@ export default function DashboardSimple() {
       const { id, campana } = await response.json();
       setEditingCampaignId(id);
       
-      // Cargar datos en el formulario
+      // Cargar datos en el formulario usando datos reales de la BD
       editForm.reset({
-        cantidadDatosSolicitados: campana.cantidadDatosSolicitados || 0,
-        marca: campana.marca || '',
-        zona: campana.zona || '',
+        cantidadDatosSolicitados: campana.cantidadDatosSolicitados || campaign.cantidadSolicitada || 0,
+        marca: campana.marca || extractMarca(campaign.cliente),
+        zona: campana.zona || campaign.zona || '',
         localizado: campana.localizado || '',
-        pedidosPorDia: campana.pedidosPorDia || 0,
+        pedidosPorDia: campana.pedidosPorDia || campaign.pedidosPorDia || 0,
         facturacionBruta: parseFloat(campana.facturacionBruta || '0'),
       });
       
@@ -273,24 +273,32 @@ export default function DashboardSimple() {
     if (!editingCampaignId) return;
     
     try {
-      const response = await apiRequest(`/api/campanas-comerciales/${editingCampaignId}`, 'PUT', data);
+      const response = await apiRequest(`/api/campanas-comerciales/${editingCampaignId}`, 'PUT', {
+        cantidadDatosSolicitados: data.cantidadDatosSolicitados,
+        marca: data.marca,
+        zona: data.zona,
+        localizado: data.localizado,
+        pedidosPorDia: data.pedidosPorDia,
+        facturacionBruta: data.facturacionBruta.toString(),
+        updatedAt: new Date()
+      });
       
       if (response) {
         toast({
           title: "Campaña actualizada",
-          description: "Los cambios se han guardado correctamente"
+          description: "Los cambios se han guardado correctamente en la base de datos"
         });
         setIsEditDialogOpen(false);
         setEditingCampaignId(null);
         editForm.reset();
-        // Recargar datos del dashboard
+        // Recargar datos del dashboard para mostrar cambios
         await fetchData();
       }
     } catch (error) {
       console.error('Error actualizando campaña:', error);
       toast({
         title: "Error",
-        description: "No se pudo actualizar la campaña",
+        description: "No se pudo actualizar la campaña en la base de datos",
         variant: "destructive"
       });
     }
