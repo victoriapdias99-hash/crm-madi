@@ -1068,14 +1068,13 @@ export default function DatosDiariosDashboard() {
                                 <Power className="w-3 h-3" />
                               )}
                             </Button>
-                            <Button
+                            <button
                               onClick={() => handleEditCampaign(data)}
-                              size="sm"
-                              className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold shadow-lg"
+                              className="inline-flex items-center justify-center bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold shadow-lg text-sm px-2 py-1 rounded"
                               data-testid={`button-edit-campaign-${data.cliente.replace(/\s+/g, '-')}`}
                             >
                               <Edit className="w-3 h-3" />
-                            </Button>
+                            </button>
                             <Button
                               onClick={() => handleViewDetails(data)}
                               size="sm"
