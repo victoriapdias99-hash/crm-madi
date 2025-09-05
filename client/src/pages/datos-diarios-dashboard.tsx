@@ -806,13 +806,31 @@ export default function DatosDiariosDashboard() {
 
   // Función para abrir el formulario de edición
   const handleOpenEditForm = (campaign: DatosDiariosData) => {
+    // Formatear fechas para inputs de tipo date (YYYY-MM-DD)
+    const formatDateForInput = (dateStr: string | null) => {
+      if (!dateStr || dateStr === 'null') return '';
+      
+      // Si ya está en formato YYYY-MM-DD, usar tal como está
+      if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        return dateStr;
+      }
+      
+      // Si está en formato DD/MM/YYYY, convertir a YYYY-MM-DD
+      if (dateStr.includes('/')) {
+        const [day, month, year] = dateStr.split('/');
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      }
+      
+      return '';
+    };
+
     setEditFormData({
       id: campaign.id,
       cantidadSolicitada: campaign.cantidadSolicitada || 0,
       zona: campaign.zona || '',
       pedidosPorDia: campaign.pedidosPorDia || 0,
-      fechaInicio: campaign.fechaInicio || '',
-      fechaFin: campaign.fechaFin || ''
+      fechaInicio: formatDateForInput(campaign.fechaCampana),
+      fechaFin: formatDateForInput(campaign.fechaFin)
     });
     setIsDetailsModalOpen(false);
     setIsEditModalOpen(true);
