@@ -346,16 +346,14 @@ export default function DashboardSimple() {
                               </>
                             )}
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
+                          <button
                             onClick={() => handleEditClick(item)}
-                            className="h-8 px-3 bg-blue-50 text-blue-600 hover:bg-blue-100"
+                            className="h-8 px-3 bg-blue-50 text-blue-600 hover:bg-blue-100 border border-gray-300 rounded text-xs flex items-center"
                             data-testid={`button-edit-campaign-${item.numeroCampana}`}
                           >
                             <Edit2 className="w-3 h-3 mr-1" />
-                            <span className="text-xs">Editar</span>
-                          </Button>
+                            <span>Editar</span>
+                          </button>
                           <Button
                             size="sm"
                             variant="outline"
