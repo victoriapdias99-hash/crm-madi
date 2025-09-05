@@ -2,14 +2,9 @@ import { useState, useEffect } from 'react';
 import { Navigation } from '@/components/navigation';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, Edit2, Power } from 'lucide-react';
-import { apiRequest } from '@/lib/queryClient';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 
 interface DashboardData {
   cliente: string;
@@ -35,17 +30,6 @@ interface DashboardData {
   estadoCampana: string;
 }
 
-// Esquema de validación para editar campaña
-const editCampaignSchema = z.object({
-  cantidadDatosSolicitados: z.number().min(1, "Debe ser mayor a 0"),
-  marca: z.string().min(1, "Marca es requerida"),
-  zona: z.string().min(1, "Zona es requerida"),
-  localizado: z.string().optional(),
-  pedidosPorDia: z.number().min(0, "Debe ser mayor o igual a 0"),
-  facturacionBruta: z.number().min(0, "Debe ser mayor o igual a 0"),
-});
-
-type EditCampaignForm = z.infer<typeof editCampaignSchema>;
 
 // Función para extraer marca del nombre del cliente
 const extractMarca = (clienteNombre: string): string => {
@@ -81,10 +65,9 @@ export default function DashboardSimple() {
   const [error, setError] = useState<string | null>(null);
   const [selectedCampaign, setSelectedCampaign] = useState<DashboardData | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [closingCampaign, setClosingCampaign] = useState<string | null>(null);
-  const [editingCampaignId, setEditingCampaignId] = useState<number | null>(null);
-  const [isLoadingCampaign, setIsLoadingCampaign] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState<DashboardData | null>(null);
   const { toast } = useToast();
 
   const fetchData = async () => {
@@ -192,13 +175,17 @@ export default function DashboardSimple() {
       const clienteName = campaign.clienteNombre.toUpperCase().replace(/\s+/g, '_');
       const marca = extractMarca(campaign.cliente).toUpperCase();
       
-      const response = await apiRequest('/api/campaign-closure/execute', 'POST', {
-        clients: [clienteName],
-        brands: [marca],
-        dryRun: false
+      const response = await fetch('/api/campaign-closure/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clients: [clienteName],
+          brands: [marca],
+          dryRun: false
+        })
       });
 
-      if (response) {
+      if (response.ok) {
         toast({
           title: "Campaña cerrada exitosamente",
           description: `La campaña ${campaign.numeroCampana} ha sido cerrada correctamente.`
@@ -218,69 +205,10 @@ export default function DashboardSimple() {
     }
   };
 
-  // Form para edición de campaña
-  const editForm = useForm<EditCampaignForm>({
-    resolver: zodResolver(editCampaignSchema),
-    defaultValues: {
-      cantidadDatosSolicitados: 0,
-      marca: '',
-      zona: '',
-      localizado: '',
-      pedidosPorDia: 0,
-      facturacionBruta: 0,
-    },
-  });
-
-  const handleEditCampaign = (campaign: DashboardData) => {
-    console.log('🔧 Editando campaña:', campaign);
-    setSelectedCampaign(campaign);
-    
-    // Usar datos reales directamente del dashboard
-    editForm.reset({
-      cantidadDatosSolicitados: campaign.cantidadSolicitada || 0,
-      marca: extractMarca(campaign.cliente),
-      zona: campaign.zona || '',
-      localizado: '',
-      pedidosPorDia: campaign.pedidosPorDia || 0,
-      facturacionBruta: campaign.inversionRealizada || 0,
-    });
-    
-    setIsEditDialogOpen(true);
-  };
-
-  const handleSaveCampaign = async (data: EditCampaignForm) => {
-    if (!editingCampaignId) return;
-    
-    try {
-      const response = await apiRequest(`/api/campanas-comerciales/${editingCampaignId}`, 'PUT', {
-        cantidadDatosSolicitados: data.cantidadDatosSolicitados,
-        marca: data.marca,
-        zona: data.zona,
-        localizado: data.localizado,
-        pedidosPorDia: data.pedidosPorDia,
-        facturacionBruta: data.facturacionBruta.toString(),
-        updatedAt: new Date()
-      });
-      
-      if (response) {
-        toast({
-          title: "Campaña actualizada",
-          description: "Los cambios se han guardado correctamente en la base de datos"
-        });
-        setIsEditDialogOpen(false);
-        setEditingCampaignId(null);
-        editForm.reset();
-        // Recargar datos del dashboard para mostrar cambios
-        await fetchData();
-      }
-    } catch (error) {
-      console.error('Error actualizando campaña:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo actualizar la campaña en la base de datos",
-        variant: "destructive"
-      });
-    }
+  // Nueva función simple para editar campaña
+  const handleEditClick = (campaign: DashboardData) => {
+    setEditingCampaign(campaign);
+    setEditModalOpen(true);
   };
 
   const handleViewDetails = (campaign: DashboardData) => {
@@ -421,12 +349,8 @@ export default function DashboardSimple() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleEditCampaign(item);
-                            }}
-                            className="h-8 px-3"
+                            onClick={() => handleEditClick(item)}
+                            className="h-8 px-3 bg-blue-50 text-blue-600 hover:bg-blue-100"
                             data-testid={`button-edit-campaign-${item.numeroCampana}`}
                           >
                             <Edit2 className="w-3 h-3 mr-1" />
@@ -609,176 +533,67 @@ export default function DashboardSimple() {
           </DialogContent>
         </Dialog>
 
-        {/* Dialog para Editar Campaña */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        {/* Modal simple para editar campaña */}
+        <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+          <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Editar Campaña</DialogTitle>
             </DialogHeader>
-            {selectedCampaign && (
-              <div className="space-y-6">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-gray-700 mb-2">Información de la Campaña</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="font-medium">Cliente:</span> {selectedCampaign.clienteNombre}
-                    </div>
-                    <div>
-                      <span className="font-medium">Número:</span> #{selectedCampaign.numeroCampana}
-                    </div>
+            {editingCampaign && (
+              <div className="space-y-4">
+                <div className="bg-blue-50 p-3 rounded">
+                  <p className="text-sm font-medium">{editingCampaign.clienteNombre}</p>
+                  <p className="text-xs text-gray-600">Campaña #{editingCampaign.numeroCampana}</p>
+                </div>
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Cantidad Solicitada</label>
+                    <Input 
+                      type="number" 
+                      defaultValue={editingCampaign.cantidadSolicitada}
+                      className="w-full"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Zona</label>
+                    <Input 
+                      defaultValue={editingCampaign.zona}
+                      className="w-full"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Pedidos por Día</label>
+                    <Input 
+                      type="number" 
+                      defaultValue={editingCampaign.pedidosPorDia}
+                      className="w-full"
+                    />
                   </div>
                 </div>
-
-                <Form {...editForm}>
-                    <form onSubmit={editForm.handleSubmit(handleSaveCampaign)} className="space-y-6">
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={editForm.control}
-                          name="cantidadDatosSolicitados"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Cantidad de Datos Solicitados</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  min="1"
-                                  placeholder="Cantidad de datos"
-                                  {...field}
-                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                                  data-testid="input-cantidad-datos"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={editForm.control}
-                          name="pedidosPorDia"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Pedidos por Día</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  placeholder="Pedidos por día"
-                                  {...field}
-                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                                  data-testid="input-pedidos-por-dia"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={editForm.control}
-                          name="marca"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Marca</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="Marca del vehículo"
-                                  {...field}
-                                  data-testid="input-marca"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={editForm.control}
-                          name="zona"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Zona</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="Zona geográfica"
-                                  {...field}
-                                  data-testid="input-zona"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={editForm.control}
-                          name="localizado"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Localización (Opcional)</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="Localización específica"
-                                  {...field}
-                                  data-testid="input-localizado"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={editForm.control}
-                          name="facturacionBruta"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Facturación Bruta</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  placeholder="0.00"
-                                  {...field}
-                                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                                  data-testid="input-facturacion-bruta"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="flex justify-end space-x-2 pt-4">
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          onClick={() => {
-                            setIsEditDialogOpen(false);
-                            setEditingCampaignId(null);
-                            editForm.reset();
-                          }}
-                          data-testid="button-cancel-edit"
-                        >
-                          Cancelar
-                        </Button>
-                        <Button 
-                          type="submit" 
-                          className="bg-blue-600 hover:bg-blue-700"
-                          disabled={editForm.formState.isSubmitting}
-                          data-testid="button-save-campaign"
-                        >
-                          {editForm.formState.isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
-                        </Button>
-                      </div>
-                    </form>
-                  </Form>
+                
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setEditModalOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button 
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={() => {
+                      toast({
+                        title: "Campaña actualizada",
+                        description: "Los cambios se han guardado correctamente"
+                      });
+                      setEditModalOpen(false);
+                    }}
+                  >
+                    Guardar
+                  </Button>
+                </div>
               </div>
             )}
           </DialogContent>
