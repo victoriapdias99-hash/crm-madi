@@ -2188,6 +2188,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint para obtener ID de campaña comercial por cliente y número de campaña
+  app.get('/api/campanas-comerciales/by-client-campaign', async (req, res) => {
+    try {
+      const { clienteNombre, numeroCampana } = req.query;
+      
+      if (!clienteNombre || !numeroCampana) {
+        return res.status(400).json({ error: 'clienteNombre and numeroCampana are required' });
+      }
+      
+      // Buscar la campaña comercial por nombre de cliente y número de campaña
+      const campanas = await storage.getAllCampanasComerciales();
+      const clientes = await storage.getAllClientes();
+      
+      // Encontrar el cliente que coincida con el nombre
+      const cliente = clientes.find(c => 
+        c.nombreComercial.toLowerCase().includes((clienteNombre as string).toLowerCase()) ||
+        c.nombreCliente.toLowerCase().includes((clienteNombre as string).toLowerCase())
+      );
+      
+      if (!cliente) {
+        return res.status(404).json({ error: 'Cliente not found' });
+      }
+      
+      // Encontrar la campaña que coincida con el cliente y número de campaña
+      const campana = campanas.find(c => 
+        c.clienteId === cliente.id && 
+        c.numeroCampana === (numeroCampana as string)
+      );
+      
+      if (!campana) {
+        return res.status(404).json({ error: 'Campaña not found' });
+      }
+      
+      res.json({ id: campana.id, campana });
+    } catch (error) {
+      console.error('Error finding campaña comercial:', error);
+      res.status(500).json({ error: 'Failed to find campaña comercial' });
+    }
+  });
+
   // Registrar rutas de Meta Ads (módulo de prueba)
   registerMetaAdsRoutes(app);
   
