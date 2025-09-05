@@ -842,7 +842,7 @@ export default function DatosDiariosDashboard() {
     
     setIsSavingEdit(true);
     try {
-      const response = await apiRequest(`/api/dashboard/campana/${editFormData.id}`, 'PATCH', editFormData);
+      const response = await apiRequest(`/api/campanas-comerciales/${editFormData.id}`, 'PUT', editFormData);
       
       if (response.ok) {
         toast({
