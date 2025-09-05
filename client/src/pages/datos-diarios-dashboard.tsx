@@ -825,11 +825,10 @@ export default function DatosDiariosDashboard() {
     };
 
     setEditFormData({
-      id: campaign.numeroCampana,
-      cantidadSolicitada: campaign.cantidadDatosSolicitados || 0,
-      estado: campaign.estado || '',
+      numeroCampana: campaign.numeroCampana,
+      cantidadDatosSolicitados: campaign.cantidadDatosSolicitados || 0,
       pedidosPorDia: campaign.pedidosPorDia || 0,
-      fechaInicio: formatDateForInput(campaign.fechaCampana),
+      fechaCampana: formatDateForInput(campaign.fechaCampana),
       fechaFin: formatDateForInput(campaign.fechaFin)
     });
     setIsDetailsModalOpen(false);
@@ -838,11 +837,26 @@ export default function DatosDiariosDashboard() {
 
   // Función para guardar los cambios de edición
   const handleSaveEdit = async () => {
-    if (!editFormData) return;
+    if (!editFormData || !selectedCampaign) return;
     
     setIsSavingEdit(true);
     try {
-      const response = await apiRequest(`/api/campanas-comerciales/${editFormData.id}`, 'PUT', editFormData);
+      // Buscar campaña por numeroCampana y cliente para obtener el ID real
+      const campanaSearchResponse = await apiRequest(`/api/campanas-comerciales/by-client-campaign?clienteNombre=${encodeURIComponent(selectedCampaign.clienteNombre)}&numeroCampana=${editFormData.numeroCampana}`, 'GET');
+      
+      if (!campanaSearchResponse.ok) {
+        throw new Error('No se pudo encontrar la campaña');
+      }
+      
+      const campanaData = await campanaSearchResponse.json();
+      const campanId = campanaData.id;
+      
+      const response = await apiRequest(`/api/campanas-comerciales/${campanId}`, 'PUT', {
+        cantidadDatosSolicitados: editFormData.cantidadDatosSolicitados,
+        pedidosPorDia: editFormData.pedidosPorDia,
+        fechaCampana: editFormData.fechaCampana,
+        fechaFin: editFormData.fechaFin
+      });
       
       if (response.ok) {
         toast({
@@ -1906,32 +1920,18 @@ export default function DatosDiariosDashboard() {
               {/* Campo Cantidad Solicitada */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Cantidad Solicitada
+                  Cantidad de Datos Solicitados
                 </label>
                 <input
                   type="number"
-                  value={editFormData.cantidadSolicitada}
-                  onChange={(e) => setEditFormData({ ...editFormData, cantidadSolicitada: parseInt(e.target.value) || 0 })}
+                  value={editFormData.cantidadDatosSolicitados}
+                  onChange={(e) => setEditFormData({ ...editFormData, cantidadDatosSolicitados: parseInt(e.target.value) || 0 })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   min="0"
                 />
               </div>
 
-              {/* Campo Estado */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Estado
-                </label>
-                <input
-                  type="text"
-                  value={editFormData.estado}
-                  onChange={(e) => setEditFormData({ ...editFormData, estado: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  placeholder="Estado de la campaña"
-                />
-              </div>
-
-              {/* Campo Pedidos por Día */}
+              {/* Campo Pedidos por Día */
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Pedidos por Día
@@ -1948,12 +1948,12 @@ export default function DatosDiariosDashboard() {
               {/* Campo Fecha de Inicio */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Fecha de Inicio
+                  Fecha de Campaña
                 </label>
                 <input
                   type="date"
-                  value={editFormData.fechaInicio}
-                  onChange={(e) => setEditFormData({ ...editFormData, fechaInicio: e.target.value })}
+                  value={editFormData.fechaCampana}
+                  onChange={(e) => setEditFormData({ ...editFormData, fechaCampana: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
               </div>
