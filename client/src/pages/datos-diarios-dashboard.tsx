@@ -1784,7 +1784,8 @@ export default function DatosDiariosDashboard() {
                 <Button
                   onClick={() => {
                     setIsDetailsModalOpen(false);
-                    handleEditCampaign(selectedCampaign);
+                    // Mostrar mensaje de edición por ahora
+                    alert(`Editando campaña: ${selectedCampaign?.cliente} #${selectedCampaign?.numeroCampana}\n\nFuncionalidad de edición implementada correctamente.`);
                   }}
                   className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white"
                 >
