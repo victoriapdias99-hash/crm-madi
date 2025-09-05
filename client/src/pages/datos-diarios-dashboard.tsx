@@ -842,17 +842,21 @@ export default function DatosDiariosDashboard() {
     
     setIsSavingEdit(true);
     try {
-      // Buscar campaña por numeroCampana y cliente para obtener el ID real
-      const campanaSearchResponse = await apiRequest(`/api/campanas-comerciales/by-client-campaign?clienteNombre=${encodeURIComponent(selectedCampaign.clienteNombre)}&numeroCampana=${editFormData.numeroCampana}`, 'GET');
+      // Obtener todas las campañas y buscar por numeroCampana
+      const campanasResponse = await apiRequest('/api/campanas-comerciales', 'GET');
       
-      if (!campanaSearchResponse.ok) {
-        throw new Error('No se pudo encontrar la campaña');
+      if (!campanasResponse.ok) {
+        throw new Error('No se pudieron cargar las campañas');
       }
       
-      const campanaData = await campanaSearchResponse.json();
-      const campanId = campanaData.id;
+      const campanas = await campanasResponse.json();
+      const campanaEncontrada = campanas.find((c: any) => c.numeroCampana === editFormData.numeroCampana.toString());
       
-      const response = await apiRequest(`/api/campanas-comerciales/${campanId}`, 'PUT', {
+      if (!campanaEncontrada) {
+        throw new Error('No se encontró la campaña');
+      }
+      
+      const response = await apiRequest(`/api/campanas-comerciales/${campanaEncontrada.id}`, 'PUT', {
         cantidadDatosSolicitados: editFormData.cantidadDatosSolicitados,
         pedidosPorDia: editFormData.pedidosPorDia,
         fechaCampana: editFormData.fechaCampana,
