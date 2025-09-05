@@ -231,42 +231,21 @@ export default function DashboardSimple() {
     },
   });
 
-  const handleEditCampaign = async (campaign: DashboardData) => {
-    try {
-      setIsLoadingCampaign(true);
-      setSelectedCampaign(campaign);
-      
-      // Obtener el ID de la campaña comercial
-      const response = await fetch(`/api/campanas-comerciales/by-client-campaign?clienteNombre=${encodeURIComponent(campaign.clienteNombre)}&numeroCampana=${encodeURIComponent(campaign.numeroCampana)}`);
-      
-      if (!response.ok) {
-        throw new Error('Campaña no encontrada');
-      }
-      
-      const { id, campana } = await response.json();
-      setEditingCampaignId(id);
-      
-      // Cargar datos en el formulario usando datos reales de la BD
-      editForm.reset({
-        cantidadDatosSolicitados: campana.cantidadDatosSolicitados || campaign.cantidadSolicitada || 0,
-        marca: campana.marca || extractMarca(campaign.cliente),
-        zona: campana.zona || campaign.zona || '',
-        localizado: campana.localizado || '',
-        pedidosPorDia: campana.pedidosPorDia || campaign.pedidosPorDia || 0,
-        facturacionBruta: parseFloat(campana.facturacionBruta || '0'),
-      });
-      
-      setIsEditDialogOpen(true);
-    } catch (error) {
-      console.error('Error cargando campaña:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo cargar la información de la campaña",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoadingCampaign(false);
-    }
+  const handleEditCampaign = (campaign: DashboardData) => {
+    console.log('🔧 Editando campaña:', campaign);
+    setSelectedCampaign(campaign);
+    
+    // Usar datos reales directamente del dashboard
+    editForm.reset({
+      cantidadDatosSolicitados: campaign.cantidadSolicitada || 0,
+      marca: extractMarca(campaign.cliente),
+      zona: campaign.zona || '',
+      localizado: '',
+      pedidosPorDia: campaign.pedidosPorDia || 0,
+      facturacionBruta: campaign.inversionRealizada || 0,
+    });
+    
+    setIsEditDialogOpen(true);
   };
 
   const handleSaveCampaign = async (data: EditCampaignForm) => {
@@ -442,7 +421,11 @@ export default function DashboardSimple() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleEditCampaign(item)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleEditCampaign(item);
+                            }}
                             className="h-8 px-3"
                             data-testid={`button-edit-campaign-${item.numeroCampana}`}
                           >
@@ -646,12 +629,7 @@ export default function DashboardSimple() {
                   </div>
                 </div>
 
-                {isLoadingCampaign ? (
-                  <div className="flex justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  </div>
-                ) : (
-                  <Form {...editForm}>
+                <Form {...editForm}>
                     <form onSubmit={editForm.handleSubmit(handleSaveCampaign)} className="space-y-6">
                       <div className="grid grid-cols-2 gap-4">
                         <FormField
@@ -801,7 +779,6 @@ export default function DashboardSimple() {
                       </div>
                     </form>
                   </Form>
-                )}
               </div>
             )}
           </DialogContent>
