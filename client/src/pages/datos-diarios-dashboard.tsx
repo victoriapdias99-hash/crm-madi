@@ -794,8 +794,9 @@ export default function DatosDiariosDashboard() {
   };
 
   const handleEditCampaign = (campaign: DatosDiariosData) => {
-    // Redirigir a la página de gestión de campañas con filtro específico
-    setLocation(`/campanas-management?cliente=${encodeURIComponent(campaign.cliente)}`);
+    // Abrir modal de edición inline en lugar de navegar
+    setSelectedCampaign(campaign);
+    setIsDetailsModalOpen(true);
   };
 
   const handleViewDetails = (campaign: DatosDiariosData) => {
