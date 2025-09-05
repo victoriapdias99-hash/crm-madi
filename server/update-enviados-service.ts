@@ -178,7 +178,8 @@ export class UpdateEnviadosService {
     
     // Aplicar las mismas correcciones que en el endpoint principal
     
-    
+    // ✅ CORRECCIONES DESHABILITADAS: Ahora usamos cálculos precisos con query corregido
+    /*
     if (nombreCliente.includes('toyota')) {
       return Math.max(enviados, 101); // Puede superar el pedido
     }
@@ -195,6 +196,7 @@ export class UpdateEnviadosService {
         return 454; // Campaña 2: leads restantes (954 - 500)
       }
     }
+    */
     
     
     return enviados;
