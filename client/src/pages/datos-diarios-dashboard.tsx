@@ -109,6 +109,11 @@ export default function DatosDiariosDashboard() {
   const [isClosingCampaign, setIsClosingCampaign] = useState(false);
   const [, setLocation] = useLocation();
 
+  // Estados para formulario de edición
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState<any>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
   // Función para exportar una campaña individual a CSV
   const handleExportCampanaCSV = async (campana: DatosDiariosData) => {
     const campaignKey = `${campana.cliente}-export`;
@@ -797,6 +802,54 @@ export default function DatosDiariosDashboard() {
     // Abrir modal de edición inline en lugar de navegar
     setSelectedCampaign(campaign);
     setIsDetailsModalOpen(true);
+  };
+
+  // Función para abrir el formulario de edición
+  const handleOpenEditForm = (campaign: DatosDiariosData) => {
+    setEditFormData({
+      id: campaign.id,
+      cantidadSolicitada: campaign.cantidadSolicitada || 0,
+      zona: campaign.zona || '',
+      pedidosPorDia: campaign.pedidosPorDia || 0,
+      fechaInicio: campaign.fechaInicio || '',
+      fechaFin: campaign.fechaFin || ''
+    });
+    setIsDetailsModalOpen(false);
+    setIsEditModalOpen(true);
+  };
+
+  // Función para guardar los cambios de edición
+  const handleSaveEdit = async () => {
+    if (!editFormData) return;
+    
+    setIsSavingEdit(true);
+    try {
+      const response = await apiRequest(`/api/dashboard/campana/${editFormData.id}`, 'PATCH', editFormData);
+      
+      if (response.ok) {
+        toast({
+          title: "✅ Campaña actualizada",
+          description: "Los cambios se guardaron correctamente.",
+        });
+        
+        // Refrescar datos del dashboard
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
+        
+        setIsEditModalOpen(false);
+        setEditFormData(null);
+      } else {
+        throw new Error('Error al guardar los cambios');
+      }
+    } catch (error) {
+      console.error('Error saving campaign:', error);
+      toast({
+        title: "❌ Error",
+        description: "No se pudieron guardar los cambios.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingEdit(false);
+    }
   };
 
   const handleViewDetails = (campaign: DatosDiariosData) => {
@@ -1783,9 +1836,9 @@ export default function DatosDiariosDashboard() {
               <div className="flex gap-3 justify-end pt-4 border-t">
                 <Button
                   onClick={() => {
-                    setIsDetailsModalOpen(false);
-                    // Mostrar mensaje de edición por ahora
-                    alert(`Editando campaña: ${selectedCampaign?.cliente} #${selectedCampaign?.numeroCampana}\n\nFuncionalidad de edición implementada correctamente.`);
+                    if (selectedCampaign) {
+                      handleOpenEditForm(selectedCampaign);
+                    }
                   }}
                   className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white"
                 >
@@ -1813,6 +1866,121 @@ export default function DatosDiariosDashboard() {
                 >
                   <X className="w-4 h-4 mr-2" />
                   Cerrar
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Edición de Campaña */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="max-w-md mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white">
+              <Edit className="w-5 h-5 inline mr-2" />
+              Editar Campaña
+            </DialogTitle>
+          </DialogHeader>
+          
+          {editFormData && (
+            <div className="space-y-4 py-4">
+              {/* Campo Cantidad Solicitada */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Cantidad Solicitada
+                </label>
+                <input
+                  type="number"
+                  value={editFormData.cantidadSolicitada}
+                  onChange={(e) => setEditFormData({ ...editFormData, cantidadSolicitada: parseInt(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  min="0"
+                />
+              </div>
+
+              {/* Campo Zona */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Zona
+                </label>
+                <select
+                  value={editFormData.zona}
+                  onChange={(e) => setEditFormData({ ...editFormData, zona: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                >
+                  <option value="">Seleccionar zona</option>
+                  <option value="NACIONAL">NACIONAL</option>
+                  <option value="AMBA">AMBA</option>
+                  <option value="Córdoba">Córdoba</option>
+                  <option value="Santa Fe">Santa Fe</option>
+                </select>
+              </div>
+
+              {/* Campo Pedidos por Día */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Pedidos por Día
+                </label>
+                <input
+                  type="number"
+                  value={editFormData.pedidosPorDia}
+                  onChange={(e) => setEditFormData({ ...editFormData, pedidosPorDia: parseInt(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  min="0"
+                />
+              </div>
+
+              {/* Campo Fecha de Inicio */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Fecha de Inicio
+                </label>
+                <input
+                  type="date"
+                  value={editFormData.fechaInicio}
+                  onChange={(e) => setEditFormData({ ...editFormData, fechaInicio: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+              </div>
+
+              {/* Campo Fecha de Fin */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Fecha de Fin
+                </label>
+                <input
+                  type="date"
+                  value={editFormData.fechaFin}
+                  onChange={(e) => setEditFormData({ ...editFormData, fechaFin: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+              </div>
+
+              {/* Botones de acción */}
+              <div className="flex gap-3 justify-end pt-4 border-t">
+                <Button
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    setEditFormData(null);
+                  }}
+                  variant="outline"
+                  disabled={isSavingEdit}
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleSaveEdit}
+                  className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
+                  disabled={isSavingEdit}
+                >
+                  {isSavingEdit ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  {isSavingEdit ? 'Guardando...' : 'Guardar Cambios'}
                 </Button>
               </div>
             </div>
