@@ -437,25 +437,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
     const localizacionFiltro = mapeoZonas[campana.zona as keyof typeof mapeoZonas] || campana.zona || 'Pais';
     
-    // NUEVA LÓGICA: Calcular fecha_fin automáticamente si no existe
-    let fechaFinCalculada = campana.fechaFin;
-    
-    if (!fechaFinCalculada) {
-      // Buscar la siguiente campaña del mismo cliente para calcular fecha límite
-      const campanasDelCliente = todasLasCampanas
-        .filter(c => c.clienteId === campana.clienteId)
-        .sort((a, b) => new Date(a.fechaCampana).getTime() - new Date(b.fechaCampana).getTime());
-      
-      const indiceCampanaActual = campanasDelCliente.findIndex(c => c.id === campana.id);
-      if (indiceCampanaActual !== -1 && indiceCampanaActual < campanasDelCliente.length - 1) {
-        // Hay una campaña siguiente, usar día anterior como límite
-        const siguienteCampana = campanasDelCliente[indiceCampanaActual + 1];
-        const fechaSiguiente = new Date(siguienteCampana.fechaCampana);
-        fechaSiguiente.setDate(fechaSiguiente.getDate() - 1); // Día anterior
-        fechaFinCalculada = fechaSiguiente.toISOString().split('T')[0];
-        
-      }
-    }
+    // ✅ USAR SOLO fecha_fin REAL de la base de datos - SIN cálculo automático
+    let fechaFinCalculada = campana.fechaFin; // Solo usar si está explícitamente definida en BD
     
     
     try {
