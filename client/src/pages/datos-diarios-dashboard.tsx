@@ -37,6 +37,7 @@ interface DatosDiariosData {
   fechaFinReal: string | null;
   fechaFin?: string | null;
   cantidadSolicitada: number;
+  cantidadDatosSolicitados?: number;
   diasProcesados: number;
   estadoCampana: string;
   duplicados?: number | string;
@@ -826,10 +827,10 @@ export default function DatosDiariosDashboard() {
 
     setEditFormData({
       numeroCampana: campaign.numeroCampana,
-      cantidadDatosSolicitados: campaign.cantidadDatosSolicitados || 0,
+      cantidadDatosSolicitados: campaign.cantidadDatosSolicitados || campaign.cantidadSolicitada || 0,
       pedidosPorDia: campaign.pedidosPorDia || 0,
       fechaCampana: formatDateForInput(campaign.fechaCampana),
-      fechaFin: formatDateForInput(campaign.fechaFin)
+      fechaFin: formatDateForInput(campaign.fechaFin || campaign.fechaFinReal)
     });
     setIsDetailsModalOpen(false);
     setIsEditModalOpen(true);
@@ -1931,7 +1932,7 @@ export default function DatosDiariosDashboard() {
                 />
               </div>
 
-              {/* Campo Pedidos por Día */
+              {/* Campo Pedidos por Día */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Pedidos por Día
@@ -1945,7 +1946,7 @@ export default function DatosDiariosDashboard() {
                 />
               </div>
 
-              {/* Campo Fecha de Inicio */}
+              {/* Campo Fecha de Campaña */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Fecha de Campaña
