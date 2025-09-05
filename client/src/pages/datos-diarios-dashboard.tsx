@@ -827,7 +827,7 @@ export default function DatosDiariosDashboard() {
     setEditFormData({
       id: campaign.numeroCampana,
       cantidadSolicitada: campaign.cantidadSolicitada || 0,
-      zona: campaign.zona || '',
+      estado: campaign.estadoCampana || '',
       pedidosPorDia: campaign.pedidosPorDia || 0,
       fechaInicio: formatDateForInput(campaign.fechaCampana),
       fechaFin: formatDateForInput(campaign.fechaFin)
@@ -1917,22 +1917,18 @@ export default function DatosDiariosDashboard() {
                 />
               </div>
 
-              {/* Campo Zona */}
+              {/* Campo Estado */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Zona
+                  Estado
                 </label>
-                <select
-                  value={editFormData.zona}
-                  onChange={(e) => setEditFormData({ ...editFormData, zona: e.target.value })}
+                <input
+                  type="text"
+                  value={editFormData.estado}
+                  onChange={(e) => setEditFormData({ ...editFormData, estado: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                >
-                  <option value="">Seleccionar zona</option>
-                  <option value="NACIONAL">NACIONAL</option>
-                  <option value="AMBA">AMBA</option>
-                  <option value="Córdoba">Córdoba</option>
-                  <option value="Santa Fe">Santa Fe</option>
-                </select>
+                  placeholder="Estado de la campaña"
+                />
               </div>
 
               {/* Campo Pedidos por Día */}
