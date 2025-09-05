@@ -343,8 +343,12 @@ export class PostgresLeadRepository implements ILeadRepository {
   }
 
   /**
-   * NUEVA FUNCIÓN ATÓMICA: Asigna leads con verificación de continuidad y conteo exacto
-   * Usa transacciones para garantizar atomicidad y prevenir race conditions
+   * FUNCIÓN ATÓMICA CORREGIDA: Asigna leads usando el procedimiento correcto
+   * 1. Busca leads únicos en op_leads_rep
+   * 2. Verifica disponibilidad de duplicados
+   * 3. Selecciona cantidad exacta necesaria
+   * 4. Extrae todos los duplicate_ids
+   * 5. Asigna todos los duplicados en op_lead
    */
   async assignLeadsAtomically(
     clientName: string, 
@@ -362,8 +366,8 @@ export class PostgresLeadRepository implements ILeadRepository {
     await this.ensureDbInitialized();
     
     try {
-      console.log(`🔒 ASIGNACIÓN ATÓMICA: ${targetCount} leads para campaña ${campaignId}`);
-      console.log(`📋 Filtros atómicos: cliente=${clientName}, marca=${brandName}, zona=${zone}`);
+      console.log(`🔒 ASIGNACIÓN ATÓMICA CORREGIDA: ${targetCount} leads únicos para campaña ${campaignId}`);
+      console.log(`📋 Filtros: cliente=${clientName}, marca=${brandName}, zona=${zone}`);
 
       // Normalizar parámetros
       const normalizedClient = this.normalizeClientName(clientName);
@@ -374,149 +378,150 @@ export class PostgresLeadRepository implements ILeadRepository {
       const result = await this.db.transaction(async (tx: any) => {
         console.log(`🚀 Iniciando transacción atómica para campaña ${campaignId}`);
 
-        // PASO 1A: Obtener TODOS los leads disponibles para análisis de debugging
-        console.log(`🔍 DEBUGGING: Obteniendo TODOS los leads disponibles para análisis...`);
+        // PASO 1: Buscar leads únicos en op_leads_rep
+        console.log(`🔍 PASO 1: Buscando leads únicos en op_leads_rep`);
         console.log(`🔧 Filtros normalizados: cliente=${normalizedClient}, marca=${normalizedBrand}, zona=${normalizedZone}`);
         
-        const allAvailableLeads = await tx
+        const uniqueLeads = await tx
           .select()
-          .from(opLead)
+          .from(opLeadsRep)
           .where(
             and(
-              ilike(opLead.marca, `%${normalizedBrand}%`),
-              ilike(opLead.cliente, `%${normalizedClient}%`),
-              ilike(opLead.localizacion, `%${normalizedZone}%`),
-              isNull(opLead.campaignId) // Solo leads NO asignados
+              ilike(opLeadsRep.marca, `%${normalizedBrand}%`),
+              ilike(opLeadsRep.cliente, `%${normalizedClient}%`),
+              ilike(opLeadsRep.localizacion, `%${normalizedZone}%`)
             )
           )
-          .orderBy(asc(opLead.fechaCreacion)); // Sin LIMIT para ver todos
+          .orderBy(asc(opLeadsRep.fechaCreacion));
 
-        console.log(`📊 TOTAL DE LEADS DISPONIBLES: ${allAvailableLeads.length}`);
+        console.log(`📊 Leads únicos encontrados en op_leads_rep: ${uniqueLeads.length}`);
+
+        // PASO 2: Verificar disponibilidad de duplicados y filtrar
+        console.log(`🔍 PASO 2: Verificando disponibilidad de duplicados`);
+        const availableUniqueLeads: any[] = [];
         
-        // LOG DETALLADO: Mostrar los primeros 20 leads ordenados por fecha
-        console.log(`📋 PRIMEROS ${Math.min(20, allAvailableLeads.length)} LEADS ORDENADOS POR FECHA:`);
-        allAvailableLeads.slice(0, 20).forEach((lead, index) => {
-          console.log(`   ${index + 1}. Fila ${lead.googleSheetsRowNumber}: ${lead.nombre} - ${lead.fechaCreacion.toISOString()}`);
-        });
+        for (const uniqueLead of uniqueLeads) {
+          const duplicateIds = uniqueLead.duplicateIds || [uniqueLead.id];
+          
+          // Verificar si alguno de los duplicados ya está asignado
+          const assignedCount = await tx
+            .select({ count: sql<number>`count(*)::int` })
+            .from(opLead)
+            .where(
+              and(
+                inArray(opLead.id, duplicateIds),
+                sql`${opLead.campaignId} IS NOT NULL`
+              )
+            );
 
-        if (allAvailableLeads.length > 20) {
-          console.log(`   ... y ${allAvailableLeads.length - 20} más`);
+          const alreadyAssigned = assignedCount[0]?.count || 0;
+          
+          if (alreadyAssigned === 0) {
+            // Ningún duplicado está asignado, incluir este lead único
+            availableUniqueLeads.push({
+              ...this.mapOpLeadRepToAvailableLead(uniqueLead),
+              duplicateIds: duplicateIds
+            });
+          }
         }
 
-        // LOG ESPECÍFICO: Verificar las filas problemáticas (6, 22, 28, 32, 36)
-        const problematicRows = [6, 22, 28, 32, 36];
-        console.log(`🚨 VERIFICANDO FILAS PROBLEMÁTICAS: ${problematicRows.join(', ')}`);
-        problematicRows.forEach(rowNum => {
-          const found = allAvailableLeads.find(lead => lead.googleSheetsRowNumber === rowNum);
-          if (found) {
-            const position = allAvailableLeads.findIndex(lead => lead.googleSheetsRowNumber === rowNum) + 1;
-            console.log(`   ✅ Fila ${rowNum}: ENCONTRADA en posición ${position} - ${found.nombre} - ${found.fechaCreacion.toISOString()}`);
-          } else {
-            console.log(`   ❌ Fila ${rowNum}: NO ENCONTRADA (posiblemente filtrada)`);
-          }
+        console.log(`📊 Leads únicos disponibles (sin duplicados asignados): ${availableUniqueLeads.length}`);
+
+        if (availableUniqueLeads.length === 0) {
+          throw new Error(`No hay leads únicos disponibles para ${clientName} (${brandName}, ${zone})`);
+        }
+
+        // PASO 3: Seleccionar exactamente la cantidad necesaria de leads únicos
+        console.log(`🎯 PASO 3: Seleccionando ${Math.min(targetCount, availableUniqueLeads.length)} leads únicos`);
+        const selectedUniqueLeads = availableUniqueLeads
+          .sort((a, b) => a.fechaCreacion.getTime() - b.fechaCreacion.getTime())
+          .slice(0, targetCount);
+
+        console.log(`📋 Leads únicos seleccionados:`);
+        selectedUniqueLeads.forEach((lead, index) => {
+          console.log(`   ${index + 1}. ID ${lead.id}: ${lead.nombre} - ${lead.fechaCreacion.toISOString()}`);
         });
 
-        // PASO 1B: Seleccionar y BLOQUEAR leads disponibles con FOR UPDATE (con LIMIT)
-        console.log(`🔒 Aplicando LIMIT ${targetCount} y FOR UPDATE para asignación atómica...`);
+        // PASO 4: Extraer todos los duplicate_ids
+        console.log(`🔗 PASO 4: Extrayendo duplicate_ids de leads únicos seleccionados`);
+        const allDuplicateIds: number[] = [];
+        for (const uniqueLead of selectedUniqueLeads) {
+          const duplicateIds = uniqueLead.duplicateIds || [uniqueLead.id];
+          allDuplicateIds.push(...duplicateIds);
+        }
+
+        console.log(`📊 Total de duplicate_ids a asignar: ${allDuplicateIds.length} (de ${selectedUniqueLeads.length} leads únicos)`);
+
+        // PASO 5: Bloquear y asignar todos los duplicate_ids atómicamente
+        console.log(`🔒 PASO 5: Bloqueando y asignando duplicate_ids en op_lead`);
         
-        const availableLeads = await tx
+        // Primero bloquear los leads que vamos a asignar
+        const leadsToAssign = await tx
           .select()
           .from(opLead)
-          .where(
-            and(
-              ilike(opLead.marca, `%${normalizedBrand}%`),
-              ilike(opLead.cliente, `%${normalizedClient}%`),
-              ilike(opLead.localizacion, `%${normalizedZone}%`),
-              isNull(opLead.campaignId) // Solo leads NO asignados
-            )
-          )
-          .orderBy(asc(opLead.fechaCreacion))
-          .limit(targetCount)
-          .for('update'); // BLOQUEO CRÍTICO - Previene race conditions
+          .where(inArray(opLead.id, allDuplicateIds))
+          .for('update'); // BLOQUEO CRÍTICO
 
-        console.log(`📊 Leads SELECCIONADOS para asignación: ${availableLeads.length}`);
+        console.log(`🔒 Leads bloqueados: ${leadsToAssign.length}`);
 
-        // LOG DETALLADO: Mostrar exactamente qué leads fueron seleccionados
-        console.log(`🎯 LEADS QUE SERÁN ASIGNADOS:`);
-        availableLeads.forEach((lead, index) => {
-          console.log(`   ${index + 1}. ID ${lead.id} - Fila ${lead.googleSheetsRowNumber}: ${lead.nombre} - ${lead.fechaCreacion.toISOString()}`);
-        });
-
-        // ANÁLISIS DE SALTOS: Comparar leads seleccionados vs las filas problemáticas
-        console.log(`🔍 ANÁLISIS DE SALTOS:`);
-        const selectedRowNumbers = availableLeads.map(lead => lead.googleSheetsRowNumber);
-        problematicRows.forEach(rowNum => {
-          if (selectedRowNumbers.includes(rowNum)) {
-            console.log(`   ✅ Fila ${rowNum}: INCLUIDA en asignación`);
-          } else {
-            const foundInAll = allAvailableLeads.find(lead => lead.googleSheetsRowNumber === rowNum);
-            if (foundInAll) {
-              const positionInAll = allAvailableLeads.findIndex(lead => lead.googleSheetsRowNumber === rowNum) + 1;
-              console.log(`   ❌ Fila ${rowNum}: SALTADA - estaba en posición ${positionInAll} de ${allAvailableLeads.length} pero fuera del LIMIT ${targetCount}`);
-            } else {
-              console.log(`   ❌ Fila ${rowNum}: NO DISPONIBLE - no cumple filtros o ya asignada`);
-            }
-          }
-        });
-
-        if (availableLeads.length === 0) {
-          throw new Error(`No hay leads disponibles para ${clientName} (${brandName}, ${zone})`);
+        // Verificar que todos estén disponibles
+        const unavailableLeads = leadsToAssign.filter((lead: any) => lead.campaignId !== null);
+        if (unavailableLeads.length > 0) {
+          throw new Error(`${unavailableLeads.length} leads ya están asignados. Race condition detectada.`);
         }
 
-        if (availableLeads.length < targetCount) {
-          console.log(`⚠️ Solo hay ${availableLeads.length} leads disponibles de ${targetCount} solicitados`);
-        }
-
-        // PASO 2: Verificar continuidad de fechas ANTES de asignar
-        const continuityCheck = this.verifyDateContinuity(availableLeads);
-        console.log(`📅 Verificación de continuidad: ${continuityCheck ? '✅ CONTINUO' : '⚠️ CON GAPS'}`);
-
-        // PASO 3: Asignación ATÓMICA de todos los leads seleccionados
-        const leadIds = availableLeads.map((lead: any) => lead.id);
-        console.log(`🎯 Asignando ${leadIds.length} leads atómicamente a campaña ${campaignId}`);
-
+        // Asignación atómica
         const updateResult = await tx
           .update(opLead)
           .set({ 
             campaignId: campaignId,
             updatedAt: new Date()
           })
-          .where(inArray(opLead.id, leadIds));
+          .where(inArray(opLead.id, allDuplicateIds));
 
-        // PASO 4: Verificar conteo exacto INMEDIATAMENTE después de asignar
+        console.log(`✅ Asignados ${allDuplicateIds.length} duplicate_ids a campaña ${campaignId}`);
+
+        // PASO 6: Verificación de conteo exacto
         const verificationCount = await tx
           .select({ count: sql<number>`count(*)::int` })
           .from(opLead)
-          .where(eq(opLead.campaignId, campaignId));
+          .where(
+            and(
+              eq(opLead.campaignId, campaignId),
+              inArray(opLead.id, allDuplicateIds)
+            )
+          );
 
         const actualAssigned = verificationCount[0]?.count || 0;
-        const exactCountOk = actualAssigned === leadIds.length;
+        const exactCountOk = actualAssigned === allDuplicateIds.length;
         
-        console.log(`✅ Verificación de conteo: esperados=${leadIds.length}, asignados=${actualAssigned}, exacto=${exactCountOk}`);
+        console.log(`✅ Verificación: esperados=${allDuplicateIds.length}, asignados=${actualAssigned}, exacto=${exactCountOk}`);
 
         if (!exactCountOk) {
-          throw new Error(`Error de conteo: esperados ${leadIds.length}, encontrados ${actualAssigned}`);
+          throw new Error(`Error de conteo: esperados ${allDuplicateIds.length}, encontrados ${actualAssigned}`);
         }
 
-        // PASO 5: Mapear resultado y obtener fecha final
-        const mappedLeads = availableLeads.map(this.mapOpLeadToAvailableLead);
-        const finalLeadDate = mappedLeads.length > 0 
-          ? mappedLeads[mappedLeads.length - 1].fechaCreacion 
+        // PASO 7: Verificar continuidad y preparar resultado
+        const continuityCheck = this.verifyDateContinuity(selectedUniqueLeads);
+        console.log(`📅 Verificación de continuidad: ${continuityCheck ? '✅ CONTINUO' : '⚠️ CON GAPS'}`);
+
+        const finalLeadDate = selectedUniqueLeads.length > 0 
+          ? selectedUniqueLeads[selectedUniqueLeads.length - 1].fechaCreacion 
           : undefined;
 
-        console.log(`🎉 TRANSACCIÓN EXITOSA: ${leadIds.length} leads asignados atómicamente`);
-        console.log(`📅 Fecha del último lead: ${finalLeadDate?.toISOString()}`);
+        console.log(`🎉 TRANSACCIÓN EXITOSA: ${selectedUniqueLeads.length} leads únicos → ${allDuplicateIds.length} duplicados asignados`);
+        console.log(`📅 Fecha del último lead único: ${finalLeadDate?.toISOString()}`);
 
         return {
-          assigned: leadIds.length,
+          assigned: allDuplicateIds.length, // Retorna el total de duplicados asignados
           finalLeadDate,
-          leads: mappedLeads,
+          leads: selectedUniqueLeads, // Retorna los leads únicos para referencia
           continuityVerified: continuityCheck,
           exactCountVerified: exactCountOk
         };
       });
 
-      console.log(`✅ ASIGNACIÓN ATÓMICA COMPLETADA: ${result.assigned} leads a campaña ${campaignId}`);
+      console.log(`✅ ASIGNACIÓN ATÓMICA COMPLETADA: ${result.assigned} duplicados asignados de ${targetCount} leads únicos solicitados`);
       return result;
 
     } catch (error: any) {
