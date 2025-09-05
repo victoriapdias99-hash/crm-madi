@@ -825,7 +825,7 @@ export default function DatosDiariosDashboard() {
     };
 
     setEditFormData({
-      id: campaign.id,
+      id: campaign.numeroCampana,
       cantidadSolicitada: campaign.cantidadSolicitada || 0,
       zona: campaign.zona || '',
       pedidosPorDia: campaign.pedidosPorDia || 0,
