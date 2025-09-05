@@ -828,9 +828,7 @@ export default function DatosDiariosDashboard() {
     setEditFormData({
       numeroCampana: campaign.numeroCampana,
       cantidadDatosSolicitados: campaign.cantidadDatosSolicitados || campaign.cantidadSolicitada || 0,
-      pedidosPorDia: campaign.pedidosPorDia || 0,
-      fechaCampana: formatDateForInput(campaign.fechaCampana),
-      fechaFin: formatDateForInput(campaign.fechaFin || campaign.fechaFinReal)
+      pedidosPorDia: campaign.pedidosPorDia || 0
     });
     setIsDetailsModalOpen(false);
     setIsEditModalOpen(true);
@@ -858,9 +856,7 @@ export default function DatosDiariosDashboard() {
       
       const response = await apiRequest(`/api/campanas-comerciales/${campanaEncontrada.id}`, 'PUT', {
         cantidadDatosSolicitados: editFormData.cantidadDatosSolicitados,
-        pedidosPorDia: editFormData.pedidosPorDia,
-        fechaCampana: editFormData.fechaCampana,
-        fechaFin: editFormData.fechaFin
+        pedidosPorDia: editFormData.pedidosPorDia
       });
       
       if (response.ok) {
@@ -1947,32 +1943,6 @@ export default function DatosDiariosDashboard() {
                   onChange={(e) => setEditFormData({ ...editFormData, pedidosPorDia: parseInt(e.target.value) || 0 })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   min="0"
-                />
-              </div>
-
-              {/* Campo Fecha de Campaña */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Fecha de Campaña
-                </label>
-                <input
-                  type="date"
-                  value={editFormData.fechaCampana}
-                  onChange={(e) => setEditFormData({ ...editFormData, fechaCampana: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                />
-              </div>
-
-              {/* Campo Fecha de Fin */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Fecha de Fin
-                </label>
-                <input
-                  type="date"
-                  value={editFormData.fechaFin}
-                  onChange={(e) => setEditFormData({ ...editFormData, fechaFin: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
               </div>
 
