@@ -806,19 +806,6 @@ export default function DatosDiariosDashboard() {
 
   // Función para abrir el formulario de edición
   const handleOpenEditForm = (campaign: DatosDiariosData) => {
-    // 🔍 DEBUG - Ver qué datos reales tiene la campaña
-    console.log('🔍 DIAGNÓSTICO - Datos de la campaña seleccionada:', {
-      numeroCampana: campaign.numeroCampana,
-      cantidadSolicitada: campaign.cantidadSolicitada,
-      estadoCampana: campaign.estadoCampana,
-      pedidosPorDia: campaign.pedidosPorDia,
-      fechaCampana: campaign.fechaCampana,
-      fechaFin: campaign.fechaFin,
-      cliente: campaign.cliente,
-      zona: campaign.zona,
-      todoElObjeto: campaign
-    });
-
     // Formatear fechas para inputs de tipo date (YYYY-MM-DD)
     const formatDateForInput = (dateStr: string | null) => {
       if (!dateStr || dateStr === 'null') return '';
@@ -837,18 +824,14 @@ export default function DatosDiariosDashboard() {
       return '';
     };
 
-    const formData = {
+    setEditFormData({
       id: campaign.numeroCampana,
-      cantidadSolicitada: campaign.cantidadSolicitada || 0,
-      estado: campaign.estadoCampana || '',
+      cantidadSolicitada: campaign.cantidadDatosSolicitados || 0,
+      estado: campaign.estado || '',
       pedidosPorDia: campaign.pedidosPorDia || 0,
       fechaInicio: formatDateForInput(campaign.fechaCampana),
       fechaFin: formatDateForInput(campaign.fechaFin)
-    };
-
-    console.log('🔍 DIAGNÓSTICO - Datos del formulario a cargar:', formData);
-
-    setEditFormData(formData);
+    });
     setIsDetailsModalOpen(false);
     setIsEditModalOpen(true);
   };
