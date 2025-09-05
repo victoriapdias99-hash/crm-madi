@@ -462,9 +462,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Usar operadores Drizzle individuales para evitar problemas de parámetros
       const { ilike, eq, gte, lte, and } = await import('drizzle-orm');
       
+      // 🔍 DEBUG: Log para verificar normalización y filtros
+      console.log(`🎯 Query Debug - Campaña: ${campana.marca} ${campana.numeroCampana}`);
+      console.log(`📊 Cliente normalizado: "${nombreComercial}"`);
+      console.log(`🌍 Zona/Localización: ${localizacionFiltro}`);
+      console.log(`📅 Fecha inicio: ${campana.fechaCampana}, Fecha fin: ${fechaFinCalculada || 'Sin límite'}`);
+      
       let conditions = [
         ilike(opLeadsRepTable.campaign, `%${campana.marca.toLowerCase()}%`),
-        ilike(opLeadsRepTable.cliente, `%${nombreComercial}%`),
+        eq(opLeadsRepTable.cliente, nombreComercial), // ✅ CORRECCIÓN: Comparación exacta en lugar de ILIKE con wildcards
         eq(opLeadsRepTable.localizacion, localizacionFiltro),
         eq(opLeadsRepTable.source, 'google_sheets'),
         gte(sql`date(${opLeadsRepTable.fechaCreacion})`, campana.fechaCampana)
@@ -478,6 +484,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .select({ count: count() })
         .from(opLeadsRepTable)
         .where(and(...conditions));
+      
+      console.log(`✅ Leads encontrados: ${result[0]?.count || 0}`);
       
       return result;
       

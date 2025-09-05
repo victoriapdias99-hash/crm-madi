@@ -91,10 +91,10 @@ export class UpdateEnviadosService {
       // Obtener todas las campañas para cálculo de fechas límite
       const todasLasCampanas = await this.storage.getAllCampanasComerciales();
       
-      // Importar dependencias de Drizzle
+      // Importar dependencias de Drizzle - USAR opLeadsRep optimizado
       const { db } = await import('./db');
-      const { leads } = await import('../shared/schema');
-      const { count, sql } = await import('drizzle-orm');
+      const { opLeadsRep } = await import('../shared/schema');
+      const { count, sql, eq, ilike, gte, lte, and } = await import('drizzle-orm');
       
       // Usar la misma función que el endpoint principal para garantizar consistencia
       const nombreComercial = cliente?.nombreComercial || '';
@@ -119,17 +119,38 @@ export class UpdateEnviadosService {
         }
       }
       
-      // Ejecutar la misma query SQL que el endpoint principal
+      // Ejecutar la MISMA query que el endpoint principal - EXACTAMENTE igual
+      console.log(`🎯 Update Service Query Debug - Campaña: ${campana.marca} ${campana.numeroCampana}`);
+      console.log(`📊 Cliente normalizado: "${nombreComercial}"`);
+      console.log(`📅 Fecha inicio: ${campana.fechaCampana}, Fecha fin: ${fechaFinCalculada || 'Sin límite'}`);
+
+      // Mapeo de zonas (igual que en routes.ts)
+      const mapeoZonas = {
+        'NACIONAL': 'Pais',
+        'AMBA': 'Amba', 
+        'Córdoba': 'Cordoba',
+        'Santa Fe': 'Santa Fe'
+      };
+      const localizacionFiltro = mapeoZonas[campana.zona as keyof typeof mapeoZonas] || campana.zona || 'Pais';
+      
+      let conditions = [
+        ilike(opLeadsRep.campaign, `%${campana.marca.toLowerCase()}%`),
+        eq(opLeadsRep.cliente, nombreComercial), // ✅ CORRECCIÓN: Comparación exacta (igual que routes.ts)
+        eq(opLeadsRep.localizacion, localizacionFiltro),
+        eq(opLeadsRep.source, 'google_sheets'),
+        gte(sql`date(${opLeadsRep.fechaCreacion})`, campana.fechaCampana)
+      ];
+      
+      if (fechaFinCalculada) {
+        conditions.push(lte(sql`date(${opLeadsRep.fechaCreacion})`, fechaFinCalculada));
+      }
+
       const leadsCount = await db
         .select({ count: count() })
-        .from(leads)
-        .where(
-          sql`lower(${leads.campaignName}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
-              AND lower(${leads.cliente}) LIKE ${`%${nombreComercial.toLowerCase()}%`}
-              AND ${leads.source} = 'google_sheets'
-              AND date(${leads.leadDate}) >= ${campana.fechaCampana}
-              ${fechaFinCalculada ? sql`AND date(${leads.leadDate}) <= ${fechaFinCalculada}` : sql``}`
-        );
+        .from(opLeadsRep)
+        .where(and(...conditions));
+      
+      console.log(`✅ Update Service - Leads encontrados: ${leadsCount[0]?.count || 0}`);
       
       const enviadosDB = leadsCount[0]?.count || 0;
       
