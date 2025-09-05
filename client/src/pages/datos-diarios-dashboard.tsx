@@ -95,13 +95,18 @@ export default function DatosDiariosDashboard() {
   const [sortByDate, setSortByDate] = useState<'desc' | 'asc'>('desc'); // Por defecto más reciente primero
   
   // Estados para filtros de Campañas en Proceso
-  const [filtroZona, setFiltroZona] = useState<string>('');
-  const [filtroMarca, setFiltroMarca] = useState<string>('');
-  const [filtroCliente, setFiltroCliente] = useState<string>('');
-  const [filtroFechaInicio, setFiltroFechaInicio] = useState<string>('');
-  const [filtroFechaFin, setFiltroFechaFin] = useState<string>('');
+  const [filtroProcesoZona, setFiltroProcesoZona] = useState<string>('');
+  const [filtroProcesoMarca, setFiltroProcesoMarca] = useState<string>('');
+  const [filtroProcesoCliente, setFiltroProcesoCliente] = useState<string>('');
+  const [filtroProcesoFechaInicio, setFiltroProcesoFechaInicio] = useState<string>('');
+  const [filtroProcesoFechaFin, setFiltroProcesoFechaFin] = useState<string>('');
   
-  // Estado para filtro de Campañas Finalizadas
+  // Estados para filtros de Campañas Finalizadas
+  const [filtroFinalizadasZona, setFiltroFinalizadasZona] = useState<string>('');
+  const [filtroFinalizadasMarca, setFiltroFinalizadasMarca] = useState<string>('');
+  const [filtroFinalizadasCliente, setFiltroFinalizadasCliente] = useState<string>('');
+  const [filtroFinalizadasFechaInicio, setFiltroFinalizadasFechaInicio] = useState<string>('');
+  const [filtroFinalizadasFechaFin, setFiltroFinalizadasFechaFin] = useState<string>('');
   const [filtroMesFinalizadas, setFiltroMesFinalizadas] = useState<string>('all');
   
   // Estados para modal de detalles y acciones
@@ -319,43 +324,6 @@ export default function DatosDiariosDashboard() {
       // Performance optimization complete
     });
     
-    let filteredData = datosDiarios;
-    
-    // Aplicar filtros de zona, marca y fecha de inicio
-    if (filtroZona) {
-      filteredData = filteredData.filter((data: DatosDiariosData) => data.zona === filtroZona);
-    }
-    
-    if (filtroMarca) {
-      filteredData = filteredData.filter((data: DatosDiariosData) => {
-        const marca = data.cliente.match(/^([A-Z]+)/)?.[1] || data.cliente.split(' ')[0];
-        return marca === filtroMarca;
-      });
-    }
-    
-    if (filtroCliente) {
-      filteredData = filteredData.filter((data: DatosDiariosData) => data.clienteNombre === filtroCliente);
-    }
-    
-    if (filtroFechaInicio) {
-      filteredData = filteredData.filter((data: DatosDiariosData) => 
-        data.fechaCampana && data.fechaCampana >= filtroFechaInicio
-      );
-    }
-    
-    if (filtroFechaFin) {
-      filteredData = filteredData.filter((data: DatosDiariosData) => 
-        data.fechaCampana && data.fechaCampana <= filtroFechaFin
-      );
-    }
-    
-    // If showing duplicates only, filter to show campaigns with duplicate data
-    if (showDuplicatesOnly) {
-      filteredData = filteredData.filter((data: DatosDiariosData) => {
-        return (data.duplicados || 0) > 0;
-      });
-    }
-    
     // Función segura para parsear fechas
     const parseDate = (dateStr: string) => {
       if (!dateStr || dateStr === 'null') return new Date(0); // Fecha por defecto muy antigua
@@ -369,8 +337,8 @@ export default function DatosDiariosDashboard() {
       }
     };
     
-    // Separar campañas según tengan fecha_fin o no
-    const sortedData = filteredData.sort((a, b) => {
+    // Separar datos iniciales por estado
+    const sortedData = datosDiarios.sort((a, b) => {
       // Ordenar por fecha de campaña según el estado sortByDate
       const dateA = parseDate(a.fechaCampana);
       const dateB = parseDate(b.fechaCampana);
@@ -379,16 +347,90 @@ export default function DatosDiariosDashboard() {
         : dateA.getTime() - dateB.getTime(); // Ascendente (más antigua primero)
     });
 
-    // Campañas en proceso: sin fechaFin
-    const enProceso = sortedData.filter(data => !data.fechaFin);
+    // Separar campañas en proceso y finalizadas SIN filtros
+    const todasEnProceso = sortedData.filter(data => !data.fechaFin);
+    const todasFinalizadas = sortedData.filter(data => data.fechaFin);
     
-    // Campañas finalizadas: con fechaFin
-    const finalizadas = sortedData.filter(data => data.fechaFin);
+    // FILTRAR CAMPAÑAS EN PROCESO INDEPENDIENTEMENTE
+    let campanasEnProcesoFiltradas = todasEnProceso;
     
-    console.log(`📊 Datos ordenados: ${enProceso.length} en proceso, ${finalizadas.length} finalizadas`);
+    if (filtroProcesoZona) {
+      campanasEnProcesoFiltradas = campanasEnProcesoFiltradas.filter((data: DatosDiariosData) => data.zona === filtroProcesoZona);
+    }
     
-    return { campanasEnProceso: enProceso, campanasFinalizadas: finalizadas };
-  }, [datosDiarios, showDuplicatesOnly, sortByDate, filtroZona, filtroMarca, filtroCliente, filtroFechaInicio, filtroFechaFin, filtroMesFinalizadas]);
+    if (filtroProcesoMarca) {
+      campanasEnProcesoFiltradas = campanasEnProcesoFiltradas.filter((data: DatosDiariosData) => {
+        const marca = data.cliente.match(/^([A-Z]+)/)?.[1] || data.cliente.split(' ')[0];
+        return marca === filtroProcesoMarca;
+      });
+    }
+    
+    if (filtroProcesoCliente) {
+      campanasEnProcesoFiltradas = campanasEnProcesoFiltradas.filter((data: DatosDiariosData) => data.clienteNombre === filtroProcesoCliente);
+    }
+    
+    if (filtroProcesoFechaInicio) {
+      campanasEnProcesoFiltradas = campanasEnProcesoFiltradas.filter((data: DatosDiariosData) => 
+        data.fechaCampana && data.fechaCampana >= filtroProcesoFechaInicio
+      );
+    }
+    
+    if (filtroProcesoFechaFin) {
+      campanasEnProcesoFiltradas = campanasEnProcesoFiltradas.filter((data: DatosDiariosData) => 
+        data.fechaCampana && data.fechaCampana <= filtroProcesoFechaFin
+      );
+    }
+    
+    // Aplicar filtro de duplicados solo a campañas en proceso
+    if (showDuplicatesOnly) {
+      campanasEnProcesoFiltradas = campanasEnProcesoFiltradas.filter((data: DatosDiariosData) => {
+        return (data.duplicados || 0) > 0;
+      });
+    }
+    
+    // FILTRAR CAMPAÑAS FINALIZADAS INDEPENDIENTEMENTE
+    let campanasFinalizadasFiltradas = todasFinalizadas;
+    
+    if (filtroFinalizadasZona) {
+      campanasFinalizadasFiltradas = campanasFinalizadasFiltradas.filter((data: DatosDiariosData) => data.zona === filtroFinalizadasZona);
+    }
+    
+    if (filtroFinalizadasMarca) {
+      campanasFinalizadasFiltradas = campanasFinalizadasFiltradas.filter((data: DatosDiariosData) => {
+        const marca = data.cliente.match(/^([A-Z]+)/)?.[1] || data.cliente.split(' ')[0];
+        return marca === filtroFinalizadasMarca;
+      });
+    }
+    
+    if (filtroFinalizadasCliente) {
+      campanasFinalizadasFiltradas = campanasFinalizadasFiltradas.filter((data: DatosDiariosData) => data.clienteNombre === filtroFinalizadasCliente);
+    }
+    
+    if (filtroFinalizadasFechaInicio) {
+      campanasFinalizadasFiltradas = campanasFinalizadasFiltradas.filter((data: DatosDiariosData) => 
+        data.fechaCampana && data.fechaCampana >= filtroFinalizadasFechaInicio
+      );
+    }
+    
+    if (filtroFinalizadasFechaFin) {
+      campanasFinalizadasFiltradas = campanasFinalizadasFiltradas.filter((data: DatosDiariosData) => 
+        data.fechaCampana && data.fechaCampana <= filtroFinalizadasFechaFin
+      );
+    }
+    
+    // Aplicar filtro de mes a finalizadas
+    if (filtroMesFinalizadas && filtroMesFinalizadas !== 'all') {
+      campanasFinalizadasFiltradas = campanasFinalizadasFiltradas.filter((data: DatosDiariosData) => {
+        if (!data.fechaCampana) return false;
+        const fechaMes = data.fechaCampana.substring(0, 7); // YYYY-MM
+        return fechaMes === filtroMesFinalizadas;
+      });
+    }
+    
+    console.log(`📊 Datos ordenados: ${campanasEnProcesoFiltradas.length} en proceso, ${campanasFinalizadasFiltradas.length} finalizadas`);
+    
+    return { campanasEnProceso: campanasEnProcesoFiltradas, campanasFinalizadas: campanasFinalizadasFiltradas };
+  }, [datosDiarios, showDuplicatesOnly, sortByDate, filtroProcesoZona, filtroProcesoMarca, filtroProcesoCliente, filtroProcesoFechaInicio, filtroProcesoFechaFin, filtroFinalizadasZona, filtroFinalizadasMarca, filtroFinalizadasCliente, filtroFinalizadasFechaInicio, filtroFinalizadasFechaFin, filtroMesFinalizadas]);
 
   const { campanasEnProceso, campanasFinalizadas } = campanasData;
 
@@ -1016,8 +1058,8 @@ export default function DatosDiariosDashboard() {
                   <span className="text-sm font-medium">Filtros:</span>
                 </div>
                 
-                <Select value={filtroZona || "all"} onValueChange={(value) => setFiltroZona(value === "all" ? "" : value)}>
-                  <SelectTrigger className="w-40 bg-white/20 text-white border-white/30 hover:bg-white/30 text-sm" data-testid="filter-zona">
+                <Select value={filtroProcesoZona || "all"} onValueChange={(value) => setFiltroProcesoZona(value === "all" ? "" : value)}>
+                  <SelectTrigger className="w-40 bg-white/20 text-white border-white/30 hover:bg-white/30 text-sm" data-testid="filter-proceso-zona">
                     <SelectValue placeholder="Todas las zonas" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1028,8 +1070,8 @@ export default function DatosDiariosDashboard() {
                   </SelectContent>
                 </Select>
 
-                <Select value={filtroMarca || "all"} onValueChange={(value) => setFiltroMarca(value === "all" ? "" : value)}>
-                  <SelectTrigger className="w-40 bg-white/20 text-white border-white/30 hover:bg-white/30 text-sm" data-testid="filter-marca">
+                <Select value={filtroProcesoMarca || "all"} onValueChange={(value) => setFiltroProcesoMarca(value === "all" ? "" : value)}>
+                  <SelectTrigger className="w-40 bg-white/20 text-white border-white/30 hover:bg-white/30 text-sm" data-testid="filter-proceso-marca">
                     <SelectValue placeholder="Todas las marcas" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1040,8 +1082,8 @@ export default function DatosDiariosDashboard() {
                   </SelectContent>
                 </Select>
 
-                <Select value={filtroCliente || "all"} onValueChange={(value) => setFiltroCliente(value === "all" ? "" : value)}>
-                  <SelectTrigger className="w-48 bg-white/20 text-white border-white/30 hover:bg-white/30 text-sm" data-testid="filter-cliente">
+                <Select value={filtroProcesoCliente || "all"} onValueChange={(value) => setFiltroProcesoCliente(value === "all" ? "" : value)}>
+                  <SelectTrigger className="w-48 bg-white/20 text-white border-white/30 hover:bg-white/30 text-sm" data-testid="filter-proceso-cliente">
                     <SelectValue placeholder="Todos los clientes" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1054,33 +1096,33 @@ export default function DatosDiariosDashboard() {
 
                 <Input
                   type="date"
-                  value={filtroFechaInicio}
-                  onChange={(e) => setFiltroFechaInicio(e.target.value)}
+                  value={filtroProcesoFechaInicio}
+                  onChange={(e) => setFiltroProcesoFechaInicio(e.target.value)}
                   className="w-44 bg-white/20 text-white border-white/30 hover:bg-white/30 placeholder:text-white/60 text-sm"
-                  data-testid="filter-fecha-inicio"
+                  data-testid="filter-proceso-fecha-inicio"
                 />
 
                 <Input
                   type="date"
-                  value={filtroFechaFin}
-                  onChange={(e) => setFiltroFechaFin(e.target.value)}
+                  value={filtroProcesoFechaFin}
+                  onChange={(e) => setFiltroProcesoFechaFin(e.target.value)}
                   className="w-44 bg-white/20 text-white border-white/30 hover:bg-white/30 placeholder:text-white/60 text-sm"
-                  data-testid="filter-fecha-fin"
+                  data-testid="filter-proceso-fecha-fin"
                 />
 
-                {(filtroZona || filtroMarca || filtroCliente || filtroFechaInicio || filtroFechaFin) && (
+                {(filtroProcesoZona || filtroProcesoMarca || filtroProcesoCliente || filtroProcesoFechaInicio || filtroProcesoFechaFin) && (
                   <Button
                     onClick={() => {
-                      setFiltroZona('');
-                      setFiltroMarca('');
-                      setFiltroCliente('');
-                      setFiltroFechaInicio('');
-                      setFiltroFechaFin('');
+                      setFiltroProcesoZona('');
+                      setFiltroProcesoMarca('');
+                      setFiltroProcesoCliente('');
+                      setFiltroProcesoFechaInicio('');
+                      setFiltroProcesoFechaFin('');
                     }}
                     variant="secondary"
                     size="sm"
                     className="bg-red-500/80 hover:bg-red-600/80 text-white border-red-300 text-sm"
-                    data-testid="button-clear-filters"
+                    data-testid="button-clear-filters-proceso"
                   >
                     ✕ Limpiar filtros
                   </Button>
@@ -1432,12 +1474,64 @@ export default function DatosDiariosDashboard() {
                 </Badge>
               </CardTitle>
               
-              {/* Control de filtro de mes */}
+              {/* Controles de filtro para finalizadas */}
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex items-center gap-2">
                   <Filter className="h-4 w-4" />
-                  <span className="text-sm font-medium">Filtro de mes:</span>
+                  <span className="text-sm font-medium">Filtros:</span>
                 </div>
+                
+                <Select value={filtroFinalizadasZona || "all"} onValueChange={(value) => setFiltroFinalizadasZona(value === "all" ? "" : value)}>
+                  <SelectTrigger className="w-40 bg-white/20 text-white border-white/30 hover:bg-white/30 text-sm" data-testid="filter-finalizadas-zona">
+                    <SelectValue placeholder="Todas las zonas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas las zonas</SelectItem>
+                    {opcionesZona.map(zona => (
+                      <SelectItem key={zona} value={zona}>{zona}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={filtroFinalizadasMarca || "all"} onValueChange={(value) => setFiltroFinalizadasMarca(value === "all" ? "" : value)}>
+                  <SelectTrigger className="w-40 bg-white/20 text-white border-white/30 hover:bg-white/30 text-sm" data-testid="filter-finalizadas-marca">
+                    <SelectValue placeholder="Todas las marcas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas las marcas</SelectItem>
+                    {opcionesMarca.map(marca => (
+                      <SelectItem key={marca} value={marca}>{marca}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={filtroFinalizadasCliente || "all"} onValueChange={(value) => setFiltroFinalizadasCliente(value === "all" ? "" : value)}>
+                  <SelectTrigger className="w-48 bg-white/20 text-white border-white/30 hover:bg-white/30 text-sm" data-testid="filter-finalizadas-cliente">
+                    <SelectValue placeholder="Todos los clientes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los clientes</SelectItem>
+                    {opcionesCliente.map(cliente => (
+                      <SelectItem key={cliente} value={cliente}>{cliente}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Input
+                  type="date"
+                  value={filtroFinalizadasFechaInicio}
+                  onChange={(e) => setFiltroFinalizadasFechaInicio(e.target.value)}
+                  className="w-44 bg-white/20 text-white border-white/30 hover:bg-white/30 placeholder:text-white/60 text-sm"
+                  data-testid="filter-finalizadas-fecha-inicio"
+                />
+
+                <Input
+                  type="date"
+                  value={filtroFinalizadasFechaFin}
+                  onChange={(e) => setFiltroFinalizadasFechaFin(e.target.value)}
+                  className="w-44 bg-white/20 text-white border-white/30 hover:bg-white/30 placeholder:text-white/60 text-sm"
+                  data-testid="filter-finalizadas-fecha-fin"
+                />
                 
                 <Select value={filtroMesFinalizadas} onValueChange={setFiltroMesFinalizadas}>
                   <SelectTrigger className="w-44 bg-white/20 text-white border-white/30 hover:bg-white/30 text-sm" data-testid="filter-mes-finalizadas">
@@ -1472,15 +1566,22 @@ export default function DatosDiariosDashboard() {
                   </SelectContent>
                 </Select>
 
-                {filtroMesFinalizadas && filtroMesFinalizadas !== 'all' && (
+                {(filtroFinalizadasZona || filtroFinalizadasMarca || filtroFinalizadasCliente || filtroFinalizadasFechaInicio || filtroFinalizadasFechaFin || (filtroMesFinalizadas && filtroMesFinalizadas !== 'all')) && (
                   <Button
-                    onClick={() => setFiltroMesFinalizadas('all')}
+                    onClick={() => {
+                      setFiltroFinalizadasZona('');
+                      setFiltroFinalizadasMarca('');
+                      setFiltroFinalizadasCliente('');
+                      setFiltroFinalizadasFechaInicio('');
+                      setFiltroFinalizadasFechaFin('');
+                      setFiltroMesFinalizadas('all');
+                    }}
                     variant="secondary"
                     size="sm"
                     className="bg-red-500/80 hover:bg-red-600/80 text-white border-red-300 text-sm"
-                    data-testid="button-clear-filter-finalizadas"
+                    data-testid="button-clear-filters-finalizadas"
                   >
-                    ✕ Limpiar filtro
+                    ✕ Limpiar filtros
                   </Button>
                 )}
               </div>
