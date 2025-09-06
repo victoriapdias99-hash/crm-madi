@@ -591,6 +591,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let fechaFinExacta = campana.fechaFin;
 
           const record = {
+            campaignId: campana.id, // ID directo de la campaña comercial para reapertura
             cliente: clienteIdentificador, // Identificador técnico (JEEP 1, VW 1, etc.)
             clienteNombre: clienteNombreReal, // Nombre real del cliente desde la base de datos
             zona: campana.zona,
