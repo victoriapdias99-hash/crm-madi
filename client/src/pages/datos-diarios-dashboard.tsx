@@ -131,6 +131,7 @@ export default function DatosDiariosDashboard() {
   // Estados para loading individual por campaña
   const [closingCampaigns, setClosingCampaigns] = useState<Set<string>>(new Set());
   const [campaignProgress, setCampaignProgress] = useState<Record<string, number>>({});
+  const [websocketConnections, setWebsocketConnections] = useState<Record<string, WebSocket>>({});
   const [showReopenConfirmModal, setShowReopenConfirmModal] = useState(false);
   const [campaignToReopen, setCampaignToReopen] = useState<DatosDiariosData | null>(null);
   const [showCloseCampaignDialog, setShowCloseCampaignDialog] = useState(false);
@@ -914,35 +915,93 @@ export default function DatosDiariosDashboard() {
     setShowCloseCampaignDialog(true);
   };
 
+  // Función para conectar WebSocket y recibir progreso real
+  const connectCampaignWebSocket = (campaignKey: string): WebSocket => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      console.log(`🔗 WebSocket conectado para campaña: ${campaignKey}`);
+      // Registrar para recibir eventos de progreso de esta campaña
+      ws.send(JSON.stringify({
+        type: 'register_campaign_progress',
+        campaignKey
+      }));
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      
+      if (data.type === 'campaign-progress' && data.campaignKey === campaignKey) {
+        console.log(`📡 Progreso recibido: ${data.progress}% - ${data.message}`);
+        
+        // Actualizar progreso real desde backend
+        setCampaignProgress(prev => ({
+          ...prev,
+          [campaignKey]: data.progress
+        }));
+        
+        // Si completó al 100%, limpiar después de mostrar
+        if (data.progress >= 100) {
+          setTimeout(() => {
+            setClosingCampaigns(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(campaignKey);
+              return newSet;
+            });
+            setCampaignProgress(prev => {
+              const newProgress = { ...prev };
+              delete newProgress[campaignKey];
+              return newProgress;
+            });
+            
+            // Cerrar WebSocket
+            ws.close();
+            setWebsocketConnections(prev => {
+              const newConnections = { ...prev };
+              delete newConnections[campaignKey];
+              return newConnections;
+            });
+          }, 2000);
+        }
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error(`❌ Error en WebSocket para ${campaignKey}:`, error);
+    };
+
+    ws.onclose = () => {
+      console.log(`🔗 WebSocket desconectado para ${campaignKey}`);
+    };
+
+    return ws;
+  };
+
   const handleCloseCampaignInline = async (campaign: DatosDiariosData) => {
     const campaignKey = `${campaign.cliente}-${campaign.numeroCampana}`;
+    
+    // Inicializar estado de cierre
     setClosingCampaigns(prev => new Set(prev).add(campaignKey));
     setCampaignProgress(prev => ({ ...prev, [campaignKey]: 0 }));
     
+    // Conectar WebSocket para progreso en tiempo real
+    const ws = connectCampaignWebSocket(campaignKey);
+    setWebsocketConnections(prev => ({
+      ...prev,
+      [campaignKey]: ws
+    }));
+    
     try {
-      // Progreso inicial - simular preparación
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setCampaignProgress(prev => ({ ...prev, [campaignKey]: 20 }));
-      
-      // Progreso validación
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setCampaignProgress(prev => ({ ...prev, [campaignKey]: 40 }));
-      
-      // Hacer la llamada API
+      // Hacer la llamada API con campaignKey para tracking
       const response = await apiRequest('/api/campaign-closure/execute', 'POST', {
         clients: campaign.cliente,
+        campaignKey: campaignKey,  // Backend usará esto para emitir progreso
         dryRun: false
       });
       
-      // Progreso procesando
-      setCampaignProgress(prev => ({ ...prev, [campaignKey]: 70 }));
-      await new Promise(resolve => setTimeout(resolve, 600));
-      
       if (response.ok) {
-        // Progreso casi completo
-        setCampaignProgress(prev => ({ ...prev, [campaignKey]: 90 }));
-        await new Promise(resolve => setTimeout(resolve, 400));
-        
         const result = await response.json();
         
         toast({
@@ -953,39 +1012,43 @@ export default function DatosDiariosDashboard() {
         // Refrescar datos
         queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
         
-        // Progreso completo
-        setCampaignProgress(prev => ({ ...prev, [campaignKey]: 100 }));
-        
-        // Delay para mostrar el 100%
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
       } else {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || 'Error al cerrar la campaña');
       }
     } catch (error) {
       console.error('Error closing campaign:', error);
+      
+      // Mostrar error y limpiar estados
+      setCampaignProgress(prev => ({ ...prev, [campaignKey]: 100 }));
+      
       toast({
         title: "Error al cerrar campaña",
         description: error.message || "No se pudo cerrar la campaña. Intenta nuevamente.",
         variant: "destructive",
       });
       
-      // En caso de error, también esperar un poco para que se vea el error
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Cerrar WebSocket en caso de error
+      ws.close();
+      setWebsocketConnections(prev => {
+        const newConnections = { ...prev };
+        delete newConnections[campaignKey];
+        return newConnections;
+      });
       
-    } finally {
-      // Limpiar estados
-      setClosingCampaigns(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(campaignKey);
-        return newSet;
-      });
-      setCampaignProgress(prev => {
-        const newProgress = { ...prev };
-        delete newProgress[campaignKey];
-        return newProgress;
-      });
+      // Limpiar estados después de mostrar error
+      setTimeout(() => {
+        setClosingCampaigns(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(campaignKey);
+          return newSet;
+        });
+        setCampaignProgress(prev => {
+          const newProgress = { ...prev };
+          delete newProgress[campaignKey];
+          return newProgress;
+        });
+      }, 2000);
     }
   };
 

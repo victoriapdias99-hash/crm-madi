@@ -1,6 +1,7 @@
 import { ICampaignRepository } from '../../domain/interfaces/ICampaignRepository';
 import { ILeadRepository } from '../../domain/interfaces/ILeadRepository';
 import { CampaignClosureUseCase } from '../../application/usecases/CampaignClosureUseCase';
+import { CampaignProcessor } from '../../domain/services/CampaignProcessor';
 import { PostgresCampaignRepository } from '../repositories/PostgresCampaignRepository';
 import { PostgresLeadRepository } from '../repositories/PostgresLeadRepository';
 
@@ -13,6 +14,7 @@ export class ClosureFactory {
   private campaignRepository?: ICampaignRepository;
   private leadRepository?: ILeadRepository;
   private campaignClosureUseCase?: CampaignClosureUseCase;
+  private campaignProcessor?: CampaignProcessor;
 
   private constructor() {}
 
@@ -46,6 +48,20 @@ export class ClosureFactory {
       console.log('🏭 Lead Repository initialized');
     }
     return this.leadRepository;
+  }
+
+  /**
+   * Obtiene el procesador de campañas
+   */
+  public getCampaignProcessor(): CampaignProcessor {
+    if (!this.campaignProcessor) {
+      const campaignRepo = this.getCampaignRepository();
+      const leadRepo = this.getLeadRepository();
+      
+      this.campaignProcessor = new CampaignProcessor(campaignRepo, leadRepo);
+      console.log('🏭 Campaign Processor initialized');
+    }
+    return this.campaignProcessor;
   }
 
   /**

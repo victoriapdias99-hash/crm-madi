@@ -42,6 +42,7 @@ function getClientMatcher() {
 interface WebSocketWithData extends WebSocket {
   userId?: number;
   dashboardId?: string;
+  campaignKey?: string;
 }
 
 // Función para obtener instancia de Meta Ads Service
@@ -103,6 +104,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
               type: 'dashboard_update',
               data: stats
             }));
+            break;
+          
+          case 'register_campaign_progress':
+            // Registrar conexión para progreso de campaña
+            const { campaignKey } = message;
+            if (campaignKey) {
+              ws.campaignKey = campaignKey;
+              console.log(`🔗 WebSocket registrado para progreso de campaña: ${campaignKey}`);
+              
+              // Obtener CampaignProcessor y registrar esta conexión
+              try {
+                const { ClosureFactory } = require('./campaign-closure/infrastructure/factories/ClosureFactory');
+                const factory = ClosureFactory.getInstance();
+                const processor = factory.getCampaignProcessor();
+                processor.registerWebSocketConnection(campaignKey, ws);
+                
+                ws.send(JSON.stringify({
+                  type: 'campaign-progress-registered',
+                  campaignKey
+                }));
+              } catch (error) {
+                console.error('Error registering campaign progress:', error);
+                ws.send(JSON.stringify({
+                  type: 'campaign-progress-error',
+                  error: 'Failed to register progress connection'
+                }));
+              }
+            }
             break;
         }
       } catch (error) {
