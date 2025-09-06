@@ -1014,9 +1014,13 @@ export default function DatosDiariosDashboard() {
         }
       });
       
+      // Usar el nombre técnico del cliente (clienteNombre en minúsculas)
+      const technicalClientName = campaign.clienteNombre.toLowerCase();
+      console.log('🔧 DEBUG: Usando nombre técnico:', technicalClientName);
+      
       // Hacer la llamada API con campaignKey para tracking
       const response = await apiRequest('/api/campaign-closure/execute', 'POST', {
-        clients: campaign.cliente,
+        clients: technicalClientName,  // Nombre técnico en minúsculas
         campaignKey: campaignKey,  // Backend usará esto para emitir progreso
         dryRun: false
       });
