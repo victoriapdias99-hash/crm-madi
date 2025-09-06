@@ -426,7 +426,7 @@ export default function DatosDiariosDashboard() {
     // Separar campañas en proceso y finalizadas SIN filtros
     // Aplicar actualización optimista para campañas reabertas
     const dataWithOptimisticUpdates = sortedData.map(data => {
-      const campaignKey = `${data.cliente}-${data.numeroCampana}`;
+      const campaignKey = `${data.cliente}-${data.numeroCampana}-${data.marca}-${data.zona}`;
       if (reopenedCampaignIds.has(campaignKey)) {
         return { ...data, fechaFin: null };
       }
@@ -942,7 +942,11 @@ export default function DatosDiariosDashboard() {
       }
       
       const campanas = await campanasResponse.json();
-      const campanaEncontrada = campanas.find((c: any) => c.numeroCampana === campaign.numeroCampana.toString());
+      const campanaEncontrada = campanas.find((c: any) => 
+        c.numeroCampana === campaign.numeroCampana.toString() && 
+        c.marca === campaign.marca &&
+        c.clienteId === campaign.clienteId
+      );
       
       if (!campanaEncontrada) {
         throw new Error('No se encontró la campaña en campanas-comerciales');
@@ -956,7 +960,7 @@ export default function DatosDiariosDashboard() {
       
       if (response.ok) {
         // Actualización optimista: mover la campaña inmediatamente
-        const campaignKey = `${campaign.cliente}-${campaign.numeroCampana}`;
+        const campaignKey = `${campaign.cliente}-${campaign.numeroCampana}-${campaign.marca}-${campaign.zona}`;
         setReopenedCampaignIds(prev => new Set([...prev, campaignKey]));
         
         toast({
@@ -990,7 +994,11 @@ export default function DatosDiariosDashboard() {
       }
       
       const campanas = await campanasResponse.json();
-      const campanaEncontrada = campanas.find((c: any) => c.numeroCampana === campaign.numeroCampana.toString());
+      const campanaEncontrada = campanas.find((c: any) => 
+        c.numeroCampana === campaign.numeroCampana.toString() && 
+        c.marca === campaign.marca &&
+        c.clienteId === campaign.clienteId
+      );
       
       if (!campanaEncontrada) {
         throw new Error('No se encontró la campaña en campanas-comerciales');
