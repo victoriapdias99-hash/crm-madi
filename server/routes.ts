@@ -2111,7 +2111,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/campanas-comerciales/:id', async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const campana = await storage.updateCampanaComercial(id, req.body);
+      
+      // Validar los datos de actualización con schema parcial
+      const updateSchema = insertCampanaComercialSchema.partial();
+      const validatedData = updateSchema.parse(req.body);
+      
+      const campana = await storage.updateCampanaComercial(id, validatedData);
       
       if (!campana) {
         return res.status(404).json({ error: 'Campaña comercial not found' });
@@ -2124,8 +2129,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('🔄 Broadcasting campaign update to frontend clients');
       
       res.json(campana);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to update campaña comercial' });
+    } catch (error: any) {
+      console.error('Error updating campaña comercial:', error);
+      if (error.name === 'ZodError') {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Failed to update campaña comercial' });
+      }
     }
   });
 
