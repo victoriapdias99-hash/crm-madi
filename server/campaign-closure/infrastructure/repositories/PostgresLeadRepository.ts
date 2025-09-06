@@ -288,6 +288,124 @@ export class PostgresLeadRepository implements ILeadRepository {
   }
 
   /**
+   * OPTIMIZACIÓN 1: Obtener solo los leads necesarios con límite
+   * Evita traer miles de registros cuando solo necesitamos unos pocos
+   */
+  async getLeadsForAssignment(
+    clientName: string,
+    brandName: string,
+    zone: string,
+    limit: number
+  ): Promise<AvailableLead[]> {
+    await this.ensureDbInitialized();
+    
+    try {
+      const normalizedClient = this.normalizeClientName(clientName);
+      const normalizedBrand = brandName.toLowerCase();
+      const normalizedZone = this.normalizeZoneName(zone);
+
+      console.log(`🚀 [OPTIMIZADO] Obteniendo máximo ${limit} leads para asignación`);
+      const startTime = Date.now();
+
+      // Query optimizada: solo traer los leads necesarios
+      const availableLeads = await this.db
+        .select()
+        .from(opLead)
+        .where(
+          and(
+            ilike(opLead.marca, `%${normalizedBrand}%`),
+            ilike(opLead.cliente, `%${normalizedClient}%`),
+            ilike(opLead.localizacion, `%${normalizedZone}%`),
+            isNull(opLead.campaignId) // Solo leads NO asignados
+          )
+        )
+        .orderBy(asc(opLead.fechaCreacion))
+        .limit(limit); // LÍMITE aplicado en la query
+
+      const queryTime = Date.now() - startTime;
+      console.log(`✅ [OPTIMIZADO] ${availableLeads.length} leads obtenidos en ${queryTime}ms`);
+
+      return availableLeads.map(this.mapOpLeadToAvailableLead);
+    } catch (error: any) {
+      console.error(`Error getting leads for assignment:`, error);
+      throw new Error(`Failed to get leads for assignment: ${error.message}`);
+    }
+  }
+
+  /**
+   * OPTIMIZACIÓN 2: Asignar leads en lotes con callback de progreso
+   * Procesa grandes volúmenes sin bloquear y con feedback
+   */
+  async assignLeadsInBatches(
+    leads: AvailableLead[],
+    campaignId: number,
+    batchSize: number = 100,
+    onProgress?: (processed: number, total: number) => void
+  ): Promise<number> {
+    await this.ensureDbInitialized();
+    
+    try {
+      if (leads.length === 0) {
+        return 0;
+      }
+
+      console.log(`📦 [BATCH] Iniciando asignación de ${leads.length} leads en lotes de ${batchSize}`);
+      const startTime = Date.now();
+      
+      let totalAssigned = 0;
+      const leadIds = leads.map(lead => lead.id);
+
+      // Procesar en lotes
+      for (let i = 0; i < leadIds.length; i += batchSize) {
+        const batch = leadIds.slice(i, i + batchSize);
+        const batchNum = Math.floor(i / batchSize) + 1;
+        const totalBatches = Math.ceil(leadIds.length / batchSize);
+        
+        console.log(`⚙️ [BATCH ${batchNum}/${totalBatches}] Procesando ${batch.length} leads...`);
+        
+        // Actualizar campaign_id para este lote
+        const result = await this.db
+          .update(opLead)
+          .set({ 
+            campaignId: campaignId,
+            updatedAt: new Date()
+          })
+          .where(
+            and(
+              inArray(opLead.id, batch),
+              isNull(opLead.campaignId) // Doble verificación: solo actualizar si no está asignado
+            )
+          )
+          .returning({ id: opLead.id });
+        
+        const batchAssigned = result.length;
+        totalAssigned += batchAssigned;
+        
+        console.log(`✅ [BATCH ${batchNum}] ${batchAssigned} leads asignados (total: ${totalAssigned}/${leads.length})`);
+        
+        // Reportar progreso si hay callback
+        if (onProgress) {
+          onProgress(totalAssigned, leads.length);
+        }
+        
+        // Pequeña pausa entre lotes para no saturar la BD
+        if (i + batchSize < leadIds.length) {
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+      }
+
+      const totalTime = Date.now() - startTime;
+      const leadsPerSecond = (totalAssigned / (totalTime / 1000)).toFixed(0);
+      console.log(`🎯 [BATCH] Asignación completada: ${totalAssigned} leads en ${totalTime}ms (${leadsPerSecond} leads/seg)`);
+      
+      return totalAssigned;
+    } catch (error: any) {
+      console.error(`Error in batch assignment for campaign ${campaignId}:`, error);
+      throw new Error(`Batch assignment failed: ${error.message}`);
+    }
+  }
+
+  /**
    * Normaliza nombres de clientes para matching consistente
    */
   private normalizeClientName(clientName: string): string {

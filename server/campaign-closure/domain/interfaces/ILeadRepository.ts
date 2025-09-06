@@ -26,6 +26,22 @@ export interface ILeadRepository {
   // Obtener fecha del último lead asignado a una campaña
   getLastLeadDateForCampaign(campaignId: number): Promise<Date | null>;
   
+  // NUEVO: Obtener leads optimizado con límite
+  getLeadsForAssignment(
+    clientName: string,
+    brandName: string,
+    zone: string,
+    limit: number
+  ): Promise<AvailableLead[]>;
+  
+  // NUEVO: Asignar leads en lotes con progreso
+  assignLeadsInBatches(
+    leads: AvailableLead[],
+    campaignId: number,
+    batchSize?: number,
+    onProgress?: (processed: number, total: number) => void
+  ): Promise<number>;
+  
   // NUEVO: Asignación atómica de leads con verificación de continuidad
   assignLeadsAtomically(
     clientName: string, 
