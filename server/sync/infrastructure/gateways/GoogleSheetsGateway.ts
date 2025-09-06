@@ -17,7 +17,6 @@ export class GoogleSheetsGateway implements ISheetsGateway {
       const { googleSheetsService } = await import('../../../google-sheets');
       this.googleSheetsService = googleSheetsService;
     } catch (error) {
-      console.error('Error initializing Google Sheets service for gateway:', error);
       throw new Error('Failed to initialize Google Sheets gateway');
     }
   }
@@ -27,10 +26,8 @@ export class GoogleSheetsGateway implements ISheetsGateway {
     
     try {
       const leads = await this.googleSheetsService.getAllLeadsFromSheets();
-      console.log(`📥 GoogleSheetsGateway: Obtenidos ${leads.length} leads totales`);
       return this.mapToRawSheetLeads(leads);
     } catch (error) {
-      console.error('Error getting all leads from Google Sheets gateway:', error);
       throw new Error(`Failed to get leads from Google Sheets: ${error.message}`);
     }
   }
@@ -42,7 +39,6 @@ export class GoogleSheetsGateway implements ISheetsGateway {
       const leads = await this.googleSheetsService.getSheetData(sheetName);
       return this.mapToRawSheetLeads(leads);
     } catch (error) {
-      console.error(`Error getting leads from sheet ${sheetName}:`, error);
       throw new Error(`Failed to get leads from sheet ${sheetName}: ${error.message}`);
     }
   }
@@ -57,17 +53,13 @@ export class GoogleSheetsGateway implements ISheetsGateway {
         try {
           const sheetLeads = await this.getLeadsFromSheet(sheetName);
           allLeads.push(...sheetLeads);
-          console.log(`✅ ${sheetName}: ${sheetLeads.length} leads`);
         } catch (error) {
-          console.warn(`⚠️ Error obteniendo leads de sheet "${sheetName}":`, error.message);
           // Continuar con otros sheets aunque uno falle
         }
       }
       
-      console.log(`📥 GoogleSheetsGateway: Total obtenido ${allLeads.length} leads de ${sheetNames.length} sheets`);
       return allLeads;
     } catch (error) {
-      console.error('Error getting leads from multiple sheets:', error);
       throw new Error(`Failed to get leads from sheets: ${error.message}`);
     }
   }
@@ -89,13 +81,11 @@ export class GoogleSheetsGateway implements ISheetsGateway {
           }
         });
         
-        console.log(`🔍 GoogleSheetsGateway: Filtrados ${filteredLeads.length}/${allLeads.length} leads desde ${since.toISOString()}`);
         return filteredLeads;
       }
       
       return allLeads;
     } catch (error) {
-      console.error(`Error getting specific leads from sheet ${sheetName}:`, error);
       throw new Error(`Failed to get specific leads from sheet ${sheetName}: ${error.message}`);
     }
   }
@@ -106,7 +96,6 @@ export class GoogleSheetsGateway implements ISheetsGateway {
     try {
       const sheetNames = await this.googleSheetsService.getAvailableSheetNames();
       
-      console.log(`📋 GoogleSheetsGateway: Encontrados ${sheetNames.length} sheets disponibles`);
       
       if (sheetNames.length === 0) {
         throw new Error('No se encontraron pestañas disponibles en Google Sheets');
@@ -114,7 +103,6 @@ export class GoogleSheetsGateway implements ISheetsGateway {
       
       return sheetNames;
     } catch (error) {
-      console.error('❌ Error crítico obteniendo nombres de sheets:', error);
       throw new Error(`Falló la detección automática de pestañas: ${error.message}`);
     }
   }
@@ -126,10 +114,8 @@ export class GoogleSheetsGateway implements ISheetsGateway {
       const sheetNames = await this.getAvailableSheetNames();
       const hasAccess = sheetNames.length > 0;
       
-      console.log(`${hasAccess ? '✅' : '❌'} GoogleSheetsGateway: Acceso ${hasAccess ? 'válido' : 'inválido'} a Google Sheets`);
       return hasAccess;
     } catch (error) {
-      console.error('Error validating sheet access:', error);
       return false;
     }
   }
@@ -144,7 +130,6 @@ export class GoogleSheetsGateway implements ISheetsGateway {
       
       return null;
     } catch (error) {
-      console.error('Error getting last modified date:', error);
       return null;
     }
   }
@@ -186,7 +171,6 @@ export class GoogleSheetsGateway implements ISheetsGateway {
       
       return leads;
     } catch (error) {
-      console.error(`Error obteniendo rango ${range} de ${sheetName}:`, error);
       return [];
     }
   }
@@ -264,9 +248,6 @@ export class GoogleSheetsGateway implements ISheetsGateway {
     const cliente = row[8] ? row[8].toString().trim() : null;       // ✅ CLIENTE (I) → NULL si vacío
     
     // Solo log en debug mode si es necesario
-    if (process.env.NODE_ENV === 'development' && Math.random() < 0.01) {
-      console.log(`📊 RAW SAMPLE [Fila ${rowIndex}]: cliente="${cliente}"`);
-    }
 
     return {
       timestamp,
