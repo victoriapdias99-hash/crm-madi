@@ -232,6 +232,25 @@ export class CampaignClosureUseCase {
   }
 
   /**
+   * Extrae el nombre comercial del input del usuario removiendo marcas conocidas
+   */
+  private extractCommercialName(userInput: string): string {
+    const knownBrands = ['toyota', 'fiat', 'peugeot', 'chevrolet', 'ford', 'renault', 'citroen', 'jeep', 'vw'];
+    
+    let commercialName = userInput.toLowerCase().trim();
+    
+    // Remover marcas conocidas del inicio
+    for (const brand of knownBrands) {
+      if (commercialName.startsWith(brand + ' ')) {
+        commercialName = commercialName.substring(brand.length + 1).trim();
+        break;
+      }
+    }
+    
+    return commercialName;
+  }
+
+  /**
    * Obtiene la lista de clientes a procesar según las opciones
    */
   private async getClientsToProcess(options: ClosureOptions): Promise<string[]> {
@@ -241,16 +260,17 @@ export class CampaignClosureUseCase {
     if (options.specificClients && options.specificClients.length > 0) {
       clients = clients.filter(client => 
         options.specificClients!.some(specified => {
-          // CORREGIDO: Usar la misma normalización que todo el sistema
+          // CORREGIDO: Extraer solo el nombre comercial del input del usuario
+          const commercialNameFromUser = this.extractCommercialName(specified);
           const clientNormalized = this.normalizeClientName(client);
-          const specifiedNormalized = this.normalizeClientName(specified);
+          const commercialNormalized = this.normalizeClientName(commercialNameFromUser);
           
-          // Verificar matching usando nombres normalizados
-          const result = clientNormalized.includes(specifiedNormalized) || 
-                        specifiedNormalized.includes(clientNormalized);
+          // Verificar matching usando solo nombres comerciales normalizados
+          const result = clientNormalized.includes(commercialNormalized) || 
+                        commercialNormalized.includes(clientNormalized);
           
           if (result) {
-            console.log(`✅ Match encontrado: "${client}" (${clientNormalized}) ↔ "${specified}" (${specifiedNormalized})`);
+            console.log(`✅ Match encontrado: "${client}" (${clientNormalized}) ↔ "${specified}" → comercial: "${commercialNameFromUser}" (${commercialNormalized})`);
           }
           
           return result;
