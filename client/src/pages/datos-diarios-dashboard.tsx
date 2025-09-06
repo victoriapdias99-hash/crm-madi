@@ -510,6 +510,54 @@ export default function DatosDiariosDashboard() {
 
   const { campanasEnProceso, campanasFinalizadas } = campanasData;
 
+  // Lógica para identificar qué campañas finalizadas deben mostrar el botón de reabrir
+  // Solo la última campaña cerrada por cada combinación cliente-marca-zona
+  const campaignsWithReopenButton = useMemo(() => {
+    const campaignGroups = new Map<string, DatosDiariosData[]>();
+    
+    // Agrupar campañas finalizadas por cliente-marca-zona
+    campanasFinalizadas.forEach(campaign => {
+      const marca = campaign.cliente.match(/^([A-Z]+)/)?.[1] || campaign.cliente.split(' ')[0];
+      const groupKey = `${campaign.clienteNombre}-${marca}-${campaign.zona}`;
+      
+      if (!campaignGroups.has(groupKey)) {
+        campaignGroups.set(groupKey, []);
+      }
+      campaignGroups.get(groupKey)!.push(campaign);
+    });
+    
+    // Para cada grupo, encontrar la campaña más reciente (última cerrada)
+    const latestCampaignIds = new Set<string>();
+    
+    campaignGroups.forEach((campaigns, groupKey) => {
+      if (campaigns.length === 0) return;
+      
+      // Ordenar por fecha de fin (fechaFin o fechaFinReal) - más reciente primero
+      const sortedCampaigns = campaigns.sort((a, b) => {
+        const fechaA = a.fechaFin || a.fechaFinReal || '1970-01-01';
+        const fechaB = b.fechaFin || b.fechaFinReal || '1970-01-01';
+        
+        // Si tienen fecha y hora completa, comparar directamente
+        if (fechaA.includes(' ') && fechaB.includes(' ')) {
+          return new Date(fechaB).getTime() - new Date(fechaA).getTime();
+        }
+        
+        // Si solo tienen fecha (YYYY-MM-DD), añadir hora para comparar
+        const dateA = fechaA.includes(' ') ? new Date(fechaA) : new Date(fechaA + ' 23:59:59');
+        const dateB = fechaB.includes(' ') ? new Date(fechaB) : new Date(fechaB + ' 23:59:59');
+        
+        return dateB.getTime() - dateA.getTime();
+      });
+      
+      // La primera campaña en el array ordenado es la más reciente
+      const latestCampaign = sortedCampaigns[0];
+      const campaignId = `${latestCampaign.cliente}-${latestCampaign.numeroCampana}-${latestCampaign.zona}`;
+      latestCampaignIds.add(campaignId);
+    });
+    
+    return latestCampaignIds;
+  }, [campanasFinalizadas]);
+
   const finalData: DatosDiariosData[] = Array.isArray(datosDiarios) ? datosDiarios : [];
   const finalIsLoading = isLoading;
 
