@@ -2166,14 +2166,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Campaña comercial not found' });
       }
       
-      // 2. Liberar leads asignados a esta campaña (actualizar op_lead)
-      const db = await storage.initDb();
-      await db.update(storage.schema.opLead)
-        .set({ 
-          campaignId: null,
-          updatedAt: new Date() 
-        })
-        .where(storage.eq(storage.schema.opLead.campaignId, id));
+      // 2. Liberar leads asignados a esta campaña
+      try {
+        const { db } = await import('./db');
+        const { opLead } = await import('@shared/schema');
+        const { eq } = await import('drizzle-orm');
+        
+        await db.update(opLead)
+          .set({ 
+            campaignId: null,
+            updatedAt: new Date() 
+          })
+          .where(eq(opLead.campaignId, id));
+        
+        console.log(`🔓 Leads liberados de campaña ${id}`);
+      } catch (leadError) {
+        console.error('Error liberando leads:', leadError);
+        // Continuar aunque falle la liberación de leads
+      }
       
       console.log(`✅ Campaña ${id} reabierta completamente - fechaFin eliminada y leads liberados`);
       

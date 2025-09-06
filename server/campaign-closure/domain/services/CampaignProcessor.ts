@@ -212,7 +212,7 @@ export class CampaignProcessor {
     error?: string;
   }> {
     const startTime = Date.now();
-    console.log(`⏱️ [TIMING] Iniciando procesamiento de campaña ${campaign.id}`);
+    console.log(`⏱️ [TIMING] Iniciando procesamiento de campaña ${campaign.id} - forceClose: ${forceClose}`);
     
     try {
       if (campaignKey) {
@@ -271,6 +271,7 @@ export class CampaignProcessor {
       }
 
       if (availableLeadsCount === 0) {
+        console.log(`🔍 Debug cierre forzado: forceClose=${forceClose}, currentAssignedLeads=${currentAssignedLeads}`);
         // Si es un cierre forzado (manual/individual) y ya hay leads asignados, cerrar la campaña
         if (forceClose && currentAssignedLeads > 0) {
           console.log(`🔧 Cierre manual: Cerrando campaña con ${currentAssignedLeads}/${campaign.targetLeads} leads`);
