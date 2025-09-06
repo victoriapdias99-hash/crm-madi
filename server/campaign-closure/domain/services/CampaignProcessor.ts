@@ -108,8 +108,8 @@ export class CampaignProcessor {
     // Si se especificó un número de campaña, filtrar solo esa
     if (specificCampaignNumber) {
       pendingCampaigns = pendingCampaigns.filter(c => 
-        c.campaignNumber === specificCampaignNumber || 
-        c.campaignNumber === parseInt(specificCampaignNumber)
+        c.campaignNumber === parseInt(specificCampaignNumber) || 
+        c.campaignNumber.toString() === specificCampaignNumber
       );
       
       if (pendingCampaigns.length === 0) {
