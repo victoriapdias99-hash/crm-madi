@@ -994,6 +994,7 @@ export default function DatosDiariosDashboard() {
     }));
     
     try {
+      console.log('🚀 DEBUG: Datos completos de campaign:', campaign);
       console.log('🚀 DEBUG: Iniciando llamada API con datos:', {
         url: '/api/campaign-closure/execute',
         method: 'POST',
@@ -1012,6 +1013,9 @@ export default function DatosDiariosDashboard() {
       });
       
       console.log('🚀 DEBUG: Response recibida:', response);
+      console.log('🚀 DEBUG: Response status:', response.status);
+      console.log('🚀 DEBUG: Response ok:', response.ok);
+      console.log('🚀 DEBUG: Response headers:', Object.fromEntries(response.headers.entries()));
       
       if (response.ok) {
         const result = await response.json();
