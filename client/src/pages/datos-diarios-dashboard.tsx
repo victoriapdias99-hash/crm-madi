@@ -994,12 +994,24 @@ export default function DatosDiariosDashboard() {
     }));
     
     try {
+      console.log('🚀 DEBUG: Iniciando llamada API con datos:', {
+        url: '/api/campaign-closure/execute',
+        method: 'POST',
+        body: {
+          clients: campaign.cliente,
+          campaignKey: campaignKey,
+          dryRun: false
+        }
+      });
+      
       // Hacer la llamada API con campaignKey para tracking
       const response = await apiRequest('/api/campaign-closure/execute', 'POST', {
         clients: campaign.cliente,
         campaignKey: campaignKey,  // Backend usará esto para emitir progreso
         dryRun: false
       });
+      
+      console.log('🚀 DEBUG: Response recibida:', response);
       
       if (response.ok) {
         const result = await response.json();
