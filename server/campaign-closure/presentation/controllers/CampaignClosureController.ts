@@ -26,9 +26,6 @@ export class CampaignClosureController {
     const startTime = Date.now();
     
     try {
-      console.log('🚀 === INICIANDO CIERRE MANUAL DE CAMPAÑAS ===');
-      console.log('📋 Request params:', req.query);
-      console.log('📋 Request body:', req.body);
 
       // Convertir query params y body a DTO
       const requestDto: ClosureRequestDto = {
@@ -36,23 +33,14 @@ export class CampaignClosureController {
         ...req.body
       };
 
-      console.log('📋 Closure request DTO:', requestDto);
 
       // Mapear a opciones del dominio
       const options = mapClosureRequestToOptions(requestDto);
-      console.log('⚙️ Closure options:', options);
 
       // Obtener el use case y ejecutar
       const useCase = this.closureFactory.getCampaignClosureUseCase();
       const result = await useCase.execute(options);
 
-      console.log('📊 Resultado del cierre:', {
-        success: result.success,
-        campaignsProcessed: result.campaignsProcessed,
-        campaignsClosed: result.campaignsClosed,
-        leadsAssigned: result.leadsAssigned,
-        duration: `${Math.round(result.duration / 1000)}s`
-      });
 
       // Mapear resultado a response DTO
       const response: ClosureResponseDto = mapClosureResultToResponse(result);
@@ -61,7 +49,6 @@ export class CampaignClosureController {
 
     } catch (error: any) {
       const duration = Date.now() - startTime;
-      console.error('❌ Error en cierre de campañas:', error);
 
       const errorResponse: ClosureResponseDto = {
         success: false,
@@ -97,7 +84,6 @@ export class CampaignClosureController {
       res.status(200).json(status);
 
     } catch (error: any) {
-      console.error('❌ Error getting closure status:', error);
       res.status(500).json({
         systemStatus: 'error',
         error: error.message,
@@ -125,7 +111,6 @@ export class CampaignClosureController {
       res.status(200).json(response);
 
     } catch (error: any) {
-      console.error('❌ Error getting pending campaigns:', error);
       res.status(500).json({
         success: false,
         error: error.message,
@@ -153,7 +138,6 @@ export class CampaignClosureController {
       res.status(200).json(response);
 
     } catch (error: any) {
-      console.error('❌ Error getting clients with pending campaigns:', error);
       res.status(500).json({
         success: false,
         error: error.message,
@@ -168,7 +152,6 @@ export class CampaignClosureController {
    */
   public async validateClosure(req: Request, res: Response): Promise<void> {
     try {
-      console.log('🔍 === VALIDANDO CIERRE DE CAMPAÑAS ===');
 
       const requestDto: ClosureRequestDto = {
         ...req.query as any,
@@ -186,7 +169,6 @@ export class CampaignClosureController {
       res.status(200).json(response);
 
     } catch (error: any) {
-      console.error('❌ Error en validación:', error);
       res.status(500).json({
         success: false,
         message: `Error en la validación: ${error.message}`,
