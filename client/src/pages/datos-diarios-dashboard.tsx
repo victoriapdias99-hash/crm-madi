@@ -14,6 +14,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useLocation } from "wouter";
 import { CPLStorage } from "@/lib/cpl-storage";
 import { debounce, memoize, measurePerformance } from "@/lib/performance";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { 
+  insertCampanaComercialSchema, 
+  type CampanaComercial, 
+  type InsertCampanaComercial,
+  type Cliente,
+  MARCAS_DISPONIBLES,
+  ZONAS_DISPONIBLES
+} from "@shared/schema";
 
 interface DatosDiariosData {
   cliente: string;
@@ -117,8 +128,62 @@ export default function DatosDiariosDashboard() {
 
   // Estados para formulario de edición
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editFormData, setEditFormData] = useState<any>(null);
-  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editingCampana, setEditingCampana] = useState<CampanaComercial | null>(null);
+
+  // Configurar useForm igual que campanas-management
+  const form = useForm<Omit<InsertCampanaComercial, 'fechaFin' | 'numeroCampana'>>({
+    resolver: zodResolver(insertCampanaComercialSchema.omit({ fechaFin: true, numeroCampana: true })),
+    defaultValues: {
+      clienteId: 0,
+      cantidadDatosSolicitados: 0,
+      marca: "",
+      zona: "",
+      fechaCampana: "",
+      pedidosPorDia: 0,
+      facturacionBruta: 0,
+    },
+  });
+
+  // Fetch clientes para el dropdown - igual que campanas-management
+  const { data: clientes = [] } = useQuery<Cliente[]>({
+    queryKey: ['/api/clientes'],
+  });
+
+  // updateMutation exactamente igual que campanas-management
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<CampanaComercial> }) => {
+      await apiRequest(`/api/campanas-comerciales/${id}`, 'PUT', data);
+    },
+    onSuccess: () => {
+      // Invalidar múltiples queries para actualización inmediata en todos los dashboards
+      queryClient.invalidateQueries({ queryKey: ['/api/campanas-comerciales'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/finanzas'] });
+      setIsEditModalOpen(false);
+      setEditingCampana(null);
+      toast({ 
+        title: "Campaña actualizada exitosamente", 
+        description: "Los cambios se reflejarán inmediatamente en Datos Diarios" 
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error updating campaña:', error);
+      const errorMessage = error?.message || "Error desconocido al actualizar campaña";
+      toast({ 
+        title: "Error al actualizar campaña", 
+        description: errorMessage,
+        variant: "destructive" 
+      });
+    }
+  });
+
+  // Función onSubmit igual que campanas-management
+  const onSubmit = (data: Omit<InsertCampanaComercial, 'fechaFin' | 'numeroCampana'>) => {
+    if (editingCampana) {
+      updateMutation.mutate({ id: editingCampana.id, data });
+    }
+  };
 
   // Función para exportar una campaña individual a CSV
   const handleExportCampanaCSV = async (campana: DatosDiariosData) => {
@@ -847,85 +912,49 @@ export default function DatosDiariosDashboard() {
     setIsDetailsModalOpen(true);
   };
 
-  // Función para abrir el formulario de edición
-  const handleOpenEditForm = (campaign: DatosDiariosData) => {
-    // Formatear fechas para inputs de tipo date (YYYY-MM-DD)
-    const formatDateForInput = (dateStr: string | null) => {
-      if (!dateStr || dateStr === 'null') return '';
-      
-      // Si ya está en formato YYYY-MM-DD, usar tal como está
-      if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        return dateStr;
-      }
-      
-      // Si está en formato DD/MM/YYYY, convertir a YYYY-MM-DD
-      if (dateStr.includes('/')) {
-        const [day, month, year] = dateStr.split('/');
-        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-      }
-      
-      return '';
-    };
-
-    setEditFormData({
-      numeroCampana: campaign.numeroCampana,
-      cantidadDatosSolicitados: campaign.cantidadDatosSolicitados || campaign.cantidadSolicitada || 0,
-      pedidosPorDia: campaign.pedidosPorDia || 0
-    });
-    setIsDetailsModalOpen(false);
-    setIsEditModalOpen(true);
-  };
-
-  // Función para guardar los cambios de edición
-  const handleSaveEdit = async () => {
-    if (!editFormData || !selectedCampaign) return;
-    
-    setIsSavingEdit(true);
+  // Función para abrir el formulario de edición - igual que campanas-management
+  const handleOpenEditForm = async (campaign: DatosDiariosData) => {
     try {
-      // Obtener todas las campañas y buscar por numeroCampana
+      // Buscar la campaña por numeroCampana en campanas-comerciales
       const campanasResponse = await apiRequest('/api/campanas-comerciales', 'GET');
-      
       if (!campanasResponse.ok) {
         throw new Error('No se pudieron cargar las campañas');
       }
       
       const campanas = await campanasResponse.json();
-      const campanaEncontrada = campanas.find((c: any) => c.numeroCampana === editFormData.numeroCampana.toString());
+      const campanaEncontrada = campanas.find((c: any) => c.numeroCampana === campaign.numeroCampana.toString());
       
       if (!campanaEncontrada) {
-        throw new Error('No se encontró la campaña');
+        throw new Error('No se encontró la campaña en campanas-comerciales');
       }
       
-      const response = await apiRequest(`/api/campanas-comerciales/${campanaEncontrada.id}`, 'PUT', {
-        cantidadDatosSolicitados: editFormData.cantidadDatosSolicitados,
-        pedidosPorDia: editFormData.pedidosPorDia
+      // Configurar campaña para edición
+      setEditingCampana(campanaEncontrada);
+      
+      // Resetear el formulario con los datos de la campaña encontrada
+      form.reset({
+        clienteId: campanaEncontrada.clienteId,
+        cantidadDatosSolicitados: campanaEncontrada.cantidadDatosSolicitados,
+        marca: campanaEncontrada.marca,
+        zona: campanaEncontrada.zona,
+        fechaCampana: campanaEncontrada.fechaCampana || "",
+        pedidosPorDia: campanaEncontrada.pedidosPorDia || 0,
+        facturacionBruta: campanaEncontrada.facturacionBruta || 0,
+        localizacion: campanaEncontrada.localizacion || "",
       });
       
-      if (response.ok) {
-        toast({
-          title: "✅ Campaña actualizada",
-          description: "Los cambios se guardaron correctamente.",
-        });
-        
-        // Refrescar datos del dashboard
-        queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
-        
-        setIsEditModalOpen(false);
-        setEditFormData(null);
-      } else {
-        throw new Error('Error al guardar los cambios');
-      }
+      setIsDetailsModalOpen(false);
+      setIsEditModalOpen(true);
     } catch (error) {
-      console.error('Error saving campaign:', error);
+      console.error('Error loading campaña for edit:', error);
       toast({
-        title: "❌ Error",
-        description: "No se pudieron guardar los cambios.",
+        title: "Error",
+        description: "No se pudo cargar la campaña para editar",
         variant: "destructive",
       });
-    } finally {
-      setIsSavingEdit(false);
     }
   };
+
 
   const handleViewDetails = (campaign: DatosDiariosData) => {
     setSelectedCampaign(campaign);
@@ -2007,74 +2036,237 @@ export default function DatosDiariosDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de Edición de Campaña */}
+      {/* Modal de Edición de Campaña - Formulario completo igual que campanas-management */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-md mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white">
-              <Edit className="w-5 h-5 inline mr-2" />
+            <DialogTitle>
               Editar Campaña
             </DialogTitle>
           </DialogHeader>
-          
-          {editFormData && (
-            <div className="space-y-4 py-4">
-              {/* Campo Cantidad Solicitada */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Cantidad de Datos Solicitados
-                </label>
-                <input
-                  type="number"
-                  value={editFormData.cantidadDatosSolicitados}
-                  onChange={(e) => setEditFormData({ ...editFormData, cantidadDatosSolicitados: parseInt(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  min="0"
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 form-modern">
+              {/* Cliente */}
+              <FormField
+                control={form.control}
+                name="clienteId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cliente *</FormLabel>
+                    <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar cliente" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {clientes.map((cliente) => (
+                          <SelectItem key={cliente.id} value={cliente.id.toString()}>
+                            {cliente.nombreCliente}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Cantidad de Datos */}
+              <FormField
+                control={form.control}
+                name="cantidadDatosSolicitados"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cantidad de Datos Solicitados *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min="1"
+                        placeholder="Ej: 500" 
+                        {...field} 
+                        onChange={(e) => field.onChange(parseInt(e.target.value))}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Fecha de Inicio */}
+              <FormField
+                control={form.control}
+                name="fechaCampana"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fecha de Inicio *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="date"
+                        value={field.value}
+                        onChange={(e) => {
+                          // Asegurar que la fecha se mantenga exacta
+                          const dateValue = e.target.value;
+                          console.log('Date input value:', dateValue);
+                          field.onChange(dateValue);
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                    <p className="text-sm text-muted-foreground">
+                      La fecha de fin se calculará automáticamente según la cantidad de datos solicitados
+                    </p>
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Marca */}
+                <FormField
+                  control={form.control}
+                  name="marca"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Marca *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar marca" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {MARCAS_DISPONIBLES.map((marca) => (
+                            <SelectItem key={marca} value={marca}>
+                              {marca}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Zona */}
+                <FormField
+                  control={form.control}
+                  name="zona"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Provincia/Zona *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar provincia" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-60">
+                          {ZONAS_DISPONIBLES.map((zona) => (
+                            <SelectItem key={zona} value={zona}>
+                              {zona}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                      <p className="text-xs text-muted-foreground">
+                        Selecciona la provincia de Argentina o AMBA/NACIONAL
+                      </p>
+                    </FormItem>
+                  )}
                 />
               </div>
 
-              {/* Campo Pedidos por Día */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Pedidos por Día
-                </label>
-                <input
-                  type="number"
-                  value={editFormData.pedidosPorDia}
-                  onChange={(e) => setEditFormData({ ...editFormData, pedidosPorDia: parseInt(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  min="0"
+              {/* Campo Localizado */}
+              <FormField
+                control={form.control}
+                name="localizacion"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Localización Específica</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Ej: Ciudades específicas, zonas, radios de targeting..."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                    <p className="text-sm text-muted-foreground">
+                      Opcional: Especifica targeting geográfico adicional o localización específica
+                    </p>
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Pedidos por Día */}
+                <FormField
+                  control={form.control}
+                  name="pedidosPorDia"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pedidos por Día</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min="0"
+                          placeholder="Ej: 20" 
+                          {...field} 
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                      <p className="text-sm text-muted-foreground">
+                        Cantidad de datos que se entregan por día
+                      </p>
+                    </FormItem>
+                  )}
+                />
+
+                {/* Facturación Bruta */}
+                <FormField
+                  control={form.control}
+                  name="facturacionBruta"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Facturación Bruta</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min="0"
+                          step="0.01"
+                          placeholder="Ej: 600000" 
+                          {...field} 
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                      <p className="text-sm text-muted-foreground">
+                        Monto total de facturación bruta por campaña
+                      </p>
+                    </FormItem>
+                  )}
                 />
               </div>
 
-              {/* Botones de acción */}
-              <div className="flex gap-3 justify-end pt-4 border-t">
-                <Button
-                  onClick={() => {
-                    setIsEditModalOpen(false);
-                    setEditFormData(null);
-                  }}
-                  variant="outline"
-                  disabled={isSavingEdit}
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsEditModalOpen(false)}
                 >
-                  <X className="w-4 h-4 mr-2" />
                   Cancelar
                 </Button>
-                <Button
-                  onClick={handleSaveEdit}
-                  className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
-                  disabled={isSavingEdit}
+                <Button 
+                  type="submit" 
+                  className="btn-gradient"
+                  disabled={updateMutation.isPending}
                 >
-                  {isSavingEdit ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Save className="w-4 h-4 mr-2" />
-                  )}
-                  {isSavingEdit ? 'Guardando...' : 'Guardar Cambios'}
+                  Actualizar Campaña
                 </Button>
               </div>
-            </div>
-          )}
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </div>
