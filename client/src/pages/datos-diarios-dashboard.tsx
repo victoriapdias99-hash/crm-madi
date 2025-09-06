@@ -934,6 +934,7 @@ export default function DatosDiariosDashboard() {
 
   const handleReopenCampaign = async (campaign: DatosDiariosData) => {
     setIsReopeningCampaign(true);
+    console.log('🚀 Iniciando reapertura de campaña:', campaign);
     try {
       // Buscar la campaña por numeroCampana en campanas-comerciales
       const campanasResponse = await apiRequest('/api/campanas-comerciales', 'GET');
