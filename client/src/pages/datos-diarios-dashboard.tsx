@@ -944,8 +944,8 @@ export default function DatosDiariosDashboard() {
       const campanas = await campanasResponse.json();
       const campanaEncontrada = campanas.find((c: any) => 
         c.numeroCampana === campaign.numeroCampana.toString() && 
-        c.marca === campaign.marca &&
-        c.clienteId === campaign.clienteId
+        c.marca.toLowerCase() === campaign.marca.toLowerCase() &&
+        c.zona === campaign.zona
       );
       
       if (!campanaEncontrada) {
@@ -996,8 +996,8 @@ export default function DatosDiariosDashboard() {
       const campanas = await campanasResponse.json();
       const campanaEncontrada = campanas.find((c: any) => 
         c.numeroCampana === campaign.numeroCampana.toString() && 
-        c.marca === campaign.marca &&
-        c.clienteId === campaign.clienteId
+        c.marca.toLowerCase() === campaign.marca.toLowerCase() &&
+        c.zona === campaign.zona
       );
       
       if (!campanaEncontrada) {
