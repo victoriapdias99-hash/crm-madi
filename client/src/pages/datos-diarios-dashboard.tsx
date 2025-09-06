@@ -727,6 +727,74 @@ export default function DatosDiariosDashboard() {
 
   // Loading state and performance data tracking
   
+  // Configurar listeners de WebSocket para refrescar dashboard automáticamente
+  useEffect(() => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const ws = new WebSocket(wsUrl);
+    
+    ws.onopen = () => {
+      console.log('🔗 WebSocket conectado para escuchar eventos del dashboard');
+      ws.send(JSON.stringify({
+        type: 'register_dashboard_listener'
+      }));
+    };
+    
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        // Escuchar eventos de actualización del dashboard
+        if (data.type === 'dashboard_refresh' || data.type === 'campaign_update') {
+          console.log('🔄 Evento de actualización recibido:', data.type);
+          
+          // Invalidar y refrescar todas las queries del dashboard
+          queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/campanas-comerciales'] });
+          queryClient.refetchQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
+          
+          // Actualizar timestamp de última actualización
+          const now = new Date();
+          console.log(`✅ Dashboard refrescado automáticamente a las ${now.toLocaleTimeString()}`);
+        }
+        
+        // Escuchar evento específico de campaña completada
+        if (data.type === 'campaign-completed') {
+          console.log('🎯 Campaña completada:', data);
+          
+          // Refrescar inmediatamente
+          queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
+          refetch();
+          
+          // Mostrar notificación si fue exitoso
+          if (data.success) {
+            toast({
+              title: "✅ Campaña procesada",
+              description: `${data.leadsAssigned || 0} leads asignados. Dashboard actualizado.`,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error procesando mensaje WebSocket:', error);
+      }
+    };
+    
+    ws.onerror = (error) => {
+      console.error('❌ Error en WebSocket del dashboard:', error);
+    };
+    
+    ws.onclose = () => {
+      console.log('🔗 WebSocket del dashboard desconectado');
+    };
+    
+    // Cleanup al desmontar el componente
+    return () => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    };
+  }, [queryClient, refetch, toast]);
+  
   // Component state tracking
   useEffect(() => {
     // State updates handled internally
@@ -1142,8 +1210,24 @@ export default function DatosDiariosDashboard() {
         
         // NUEVO: Refrescado principal de datos inmediatamente tras API success
         console.log('🔄 Refrescando datos inmediatamente tras API success');
-        queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+        
+        // Invalidar cache para forzar recarga completa
+        await queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
+        await queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+        await queryClient.invalidateQueries({ queryKey: ['/api/campanas-comerciales'] });
+        
+        // Refetch inmediato
+        await queryClient.refetchQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
+        refetch();
+        
+        // Emitir evento de actualización a través del WebSocket
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'notify_dashboard_refresh',
+            campaignKey,
+            leadsAssigned: result.leadsAssigned
+          }));
+        }
         
         // Refrescar datos con delay para asegurar que la DB esté actualizada
         setTimeout(async () => {
@@ -1151,12 +1235,6 @@ export default function DatosDiariosDashboard() {
           await queryClient.refetchQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
           refetch();
         }, 2000);
-        
-        // Refrescado adicional tras 5 segundos para casos edge
-        setTimeout(async () => {
-          console.log('🔄 Refrescado final de seguridad tras 5 segundos');
-          await queryClient.refetchQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
-        }, 5000);
         
       } else {
         const errorData = await response.json().catch(() => ({}));

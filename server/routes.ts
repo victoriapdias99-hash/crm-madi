@@ -89,6 +89,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   wss.on('connection', (ws: WebSocketWithData) => {
     dashboardConnections.add(ws);
+    console.log('🔗 Nueva conexión WebSocket. Total conectados:', dashboardConnections.size);
 
     ws.on('message', async (data) => {
       try {
@@ -104,6 +105,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ws.send(JSON.stringify({
               type: 'dashboard_update',
               data: stats
+            }));
+            break;
+            
+          case 'register_dashboard_listener':
+            // Registrar cliente para recibir actualizaciones del dashboard
+            console.log('🔔 Cliente registrado para actualizaciones del dashboard');
+            ws.send(JSON.stringify({
+              type: 'registration_confirmed',
+              message: 'Registrado para recibir actualizaciones del dashboard'
             }));
             break;
           
@@ -140,6 +150,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     ws.on('close', () => {
       dashboardConnections.delete(ws);
+      console.log('🔗 Conexión WebSocket cerrada. Total conectados:', dashboardConnections.size);
     });
   });
 
@@ -161,16 +172,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   function broadcastDashboardUpdate(data: any) {
-    const message = JSON.stringify({
+    const message = JSON.stringify(data.type ? data : {
       type: 'dashboard_update',
       data
     });
     
+    let sent = 0;
     dashboardConnections.forEach(ws => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(message);
+        sent++;
       }
     });
+    console.log(`📡 Broadcast enviado a ${sent} clientes:`, data.type || 'dashboard_update');
   }
 
   // Function to convert Google Sheets lead to database lead format

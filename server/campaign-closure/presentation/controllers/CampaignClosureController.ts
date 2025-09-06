@@ -6,6 +6,7 @@ import {
   mapClosureRequestToOptions, 
   mapClosureResultToResponse 
 } from '../../application/dto/ClosureOptions';
+import { realtimeSync } from '../../../realtime-sync';
 
 /**
  * Controlador para el cierre manual de campañas
@@ -44,6 +45,21 @@ export class CampaignClosureController {
 
       // Mapear resultado a response DTO
       const response: ClosureResponseDto = mapClosureResultToResponse(result);
+
+      // Si el cierre fue exitoso, emitir evento de actualización del dashboard
+      if (result.success && result.campaignsClosed > 0) {
+        console.log('🔄 Emitiendo evento de actualización del dashboard tras cierre exitoso');
+        
+        // Emitir evento de refresco del dashboard a todos los clientes conectados
+        realtimeSync.broadcastDashboardRefresh();
+        
+        // Emitir eventos específicos por cada campaña cerrada
+        if (result.closedCampaigns) {
+          result.closedCampaigns.forEach(campaign => {
+            realtimeSync.broadcastCampaignUpdate('updated', campaign.campaignId);
+          });
+        }
+      }
 
       res.status(200).json(response);
 
