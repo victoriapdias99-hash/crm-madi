@@ -87,7 +87,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const dashboardConnections = new Set<WebSocketWithData>();
 
   wss.on('connection', (ws: WebSocketWithData) => {
-    console.log('Dashboard client connected');
     dashboardConnections.add(ws);
 
     ws.on('message', async (data) => {
@@ -112,7 +111,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const { campaignKey } = message;
             if (campaignKey) {
               ws.campaignKey = campaignKey;
-              console.log(`🔗 WebSocket registrado para progreso de campaña: ${campaignKey}`);
               
               // Obtener CampaignProcessor y registrar esta conexión
               try {
@@ -514,7 +512,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         !c.fechaFin // Sin fecha de fin (campaña abierta)
       );
       
-      console.log(`📊 Verificando campaña ${campanaActual.marca} ${campanaActual.numeroCampana}: ${campanasAnteriores.length} campañas anteriores abiertas`);
       
       return campanasAnteriores.length > 0;
     } catch (error) {
@@ -566,7 +563,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           /*
           if (clienteIdentificador.toLowerCase().includes('renault')) {
             enviadosFinales = 45;
-            console.log(`🚨 CORRECCIÓN DB: RENAULT ajustado a 45 datos`);
           } else 
           */
 
@@ -587,7 +583,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (tieneCampanaAnterior) {
             enviadosDisplay = "-"; // Mostrar guión en lugar del número
             duplicadosDisplay = "-"; // Mostrar guión en lugar del número
-            console.log(`🔴 Aplicando guión para campaña ${campana.marca} ${campana.numeroCampana} - hay campaña anterior abierta`);
           }
 
           // Usar fecha fin de la campaña sin cálculo automático
@@ -681,8 +676,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Obtener datos reales desde la hoja "Datos Diarios"
       const datosDiarios = await googleSheetsService.getDatosDiariosData();
-      console.log(`Fetched ${datosDiarios.length} records from Datos Diarios`);
-      console.log('Available client names in data:', datosDiarios.map(d => d.cliente || d.clienteNombre).slice(0, 5));
       
       // Obtener todas las campañas comerciales para mapeo
       const campanasComerciales = await storage.getAllCampanasComerciales();
@@ -891,7 +884,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Corrección específica para RENAULT - Javier Cagiao: usar 45 datos reales medidos
         if (cliente.nombreCliente.toLowerCase().includes('renault') && cliente.nombreCliente.toLowerCase().includes('javier')) {
           datosFinales = 45; // Usuario reporta 45 datos reales medidos
-          console.log(`🚨 CORRECCIÓN RENAULT - Javier Cagiao: Datos finales ajustados a ${datosFinales} (medición real del usuario)`);
         }
         */
         
@@ -934,7 +926,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (cliente.nombreCliente.toLowerCase().includes('toyota') && 
             cliente.nombreCliente.toLowerCase().includes('mariano pichetti')) {
           datosFinales = 101; // Usuario reporta 101 datos reales (superó el pedido de 100)
-          console.log(`🚨 CORRECCIÓN TOYOTA MARIANO PICHETTI: Datos finales ajustados a ${datosFinales} (datos reales que superan el pedido)`);
         }
         
 
@@ -956,7 +947,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           else if (campana.numeroCampana === '2') {
             datosFinales = 475; // 975 - 500 = 475 leads restantes (corrección de 21 leads)
           }
-          console.log(`🚨 CORRECCIÓN FIAT AUTOS DEL SOL: Campaña ${campana.numeroCampana} ajustada a ${datosFinales} leads (de ${autosDelSolLeadsTotal} total medidos)`);
         }
         
         // Para el porcentaje de datos enviados, usar SIEMPRE la cantidad original solicitada
