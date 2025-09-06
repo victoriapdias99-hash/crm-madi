@@ -221,6 +221,17 @@ export class CampaignClosureUseCase {
   }
 
   /**
+   * Normaliza nombres de clientes usando la misma lógica que sincronización
+   */
+  private normalizeClientName(clientName: string): string {
+    return String(clientName || '')
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s]/g, '') // Remover caracteres especiales
+      .replace(/\s+/g, '_'); // Reemplazar espacios con _
+  }
+
+  /**
    * Obtiene la lista de clientes a procesar según las opciones
    */
   private async getClientsToProcess(options: ClosureOptions): Promise<string[]> {
@@ -230,24 +241,16 @@ export class CampaignClosureUseCase {
     if (options.specificClients && options.specificClients.length > 0) {
       clients = clients.filter(client => 
         options.specificClients!.some(specified => {
-          const clientLower = client.toLowerCase();
-          const specifiedLower = specified.toLowerCase();
+          // CORREGIDO: Usar la misma normalización que todo el sistema
+          const clientNormalized = this.normalizeClientName(client);
+          const specifiedNormalized = this.normalizeClientName(specified);
           
-          // CORREGIDO: Búsqueda bidireccional más flexible
-          // Caso 1: Nombre comercial incluye parte del especificado (sin marca)
-          // Ejemplo: "Mariano - Pichetti" includes "mariano pichetti"
-          const clientWords = clientLower.replace(/[^\w\s]/g, ' ').split(/\s+/).filter(w => w.length > 2);
-          const specifiedWords = specifiedLower.replace(/[^\w\s]/g, ' ').split(/\s+/).filter(w => w.length > 2);
-          
-          // Verificar si al menos 2 palabras del cliente aparecen en especificado
-          const matches = clientWords.filter(word => 
-            specifiedWords.some(specWord => specWord.includes(word) || word.includes(specWord))
-          );
-          
-          const result = matches.length >= Math.min(2, clientWords.length);
+          // Verificar matching usando nombres normalizados
+          const result = clientNormalized.includes(specifiedNormalized) || 
+                        specifiedNormalized.includes(clientNormalized);
           
           if (result) {
-            console.log(`✅ Match encontrado: "${client}" ↔ "${specified}" (${matches.length} coincidencias: ${matches.join(', ')})`);
+            console.log(`✅ Match encontrado: "${client}" (${clientNormalized}) ↔ "${specified}" (${specifiedNormalized})`);
           }
           
           return result;
