@@ -1,12 +1,62 @@
 import { CampaignClosure, ClientProcessingResult, ClosedCampaignDetail } from '../entities/CampaignClosure';
 import { ICampaignRepository } from '../interfaces/ICampaignRepository';
 import { ILeadRepository } from '../interfaces/ILeadRepository';
+import { WebSocket } from 'ws';
+
+// Interfaz para eventos de progreso
+export interface ProgressEvent {
+  type: 'campaign-progress';
+  campaignKey: string;
+  progress: number;
+  message: string;
+  timestamp: Date;
+}
+
+// Manager de WebSocket para eventos de progreso
+class ProgressEventManager {
+  private static instance: ProgressEventManager;
+  private connections: Map<string, WebSocket> = new Map();
+
+  static getInstance(): ProgressEventManager {
+    if (!ProgressEventManager.instance) {
+      ProgressEventManager.instance = new ProgressEventManager();
+    }
+    return ProgressEventManager.instance;
+  }
+
+  addConnection(campaignKey: string, ws: WebSocket) {
+    this.connections.set(campaignKey, ws);
+    console.log(`📡 Conexión WebSocket agregada para campaña: ${campaignKey}`);
+  }
+
+  removeConnection(campaignKey: string) {
+    this.connections.delete(campaignKey);
+    console.log(`📡 Conexión WebSocket removida para campaña: ${campaignKey}`);
+  }
+
+  emitProgress(campaignKey: string, progress: number, message: string) {
+    const connection = this.connections.get(campaignKey);
+    if (connection && connection.readyState === WebSocket.OPEN) {
+      const event: ProgressEvent = {
+        type: 'campaign-progress',
+        campaignKey,
+        progress,
+        message,
+        timestamp: new Date()
+      };
+      connection.send(JSON.stringify(event));
+      console.log(`📡 Progreso emitido para ${campaignKey}: ${progress}% - ${message}`);
+    }
+  }
+}
 
 /**
  * Servicio de procesamiento de campañas
  * Maneja la lógica de negocio para el cierre de campañas
  */
 export class CampaignProcessor {
+  private progressManager = ProgressEventManager.getInstance();
+  
   constructor(
     private campaignRepository: ICampaignRepository,
     private leadRepository: ILeadRepository
