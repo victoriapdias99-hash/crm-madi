@@ -1004,19 +1004,20 @@ export default function DatosDiariosDashboard() {
     
     try {
       console.log('🚀 DEBUG: Datos completos de campaign:', campaign);
-      console.log('🚀 DEBUG: Iniciando llamada API con datos:', {
-        url: '/api/campaign-closure/execute',
-        method: 'POST',
-        body: {
-          clients: campaign.cliente,
-          campaignKey: campaignKey,
-          dryRun: false
-        }
-      });
       
       // Usar el nombre técnico del cliente (clienteNombre en minúsculas)
       const technicalClientName = campaign.clienteNombre.toLowerCase();
       console.log('🔧 DEBUG: Usando nombre técnico:', technicalClientName);
+      
+      console.log('🚀 DEBUG: Iniciando llamada API con datos:', {
+        url: '/api/campaign-closure/execute',
+        method: 'POST',
+        body: {
+          clients: technicalClientName,
+          campaignKey: campaignKey,
+          dryRun: false
+        }
+      });
       
       // Hacer la llamada API con campaignKey para tracking
       const response = await apiRequest('/api/campaign-closure/execute', 'POST', {
