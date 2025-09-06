@@ -63,15 +63,40 @@ export class CampaignProcessor {
   ) {}
 
   /**
+   * Registra una conexión WebSocket para recibir eventos de progreso
+   */
+  registerWebSocketConnection(campaignKey: string, ws: WebSocket) {
+    this.progressManager.addConnection(campaignKey, ws);
+    
+    // Limpiar conexión al cerrar
+    ws.on('close', () => {
+      this.progressManager.removeConnection(campaignKey);
+    });
+    
+    ws.on('error', () => {
+      this.progressManager.removeConnection(campaignKey);
+    });
+  }
+
+  /**
    * Procesa campañas por cliente, respetando el orden cronológico
    */
-  async processClientCampaigns(clientName: string): Promise<ClientProcessingResult> {
+  async processClientCampaigns(clientName: string, campaignKey?: string): Promise<ClientProcessingResult> {
+    // Emitir progreso inicial
+    if (campaignKey) {
+      this.progressManager.emitProgress(campaignKey, 10, 'Iniciando proceso...');
+    }
+
     const campaigns = await this.campaignRepository.getCampaignsByClient(clientName);
     const campaignsClosed: ClosedCampaignDetail[] = [];
     let totalLeadsAssigned = 0;
 
     console.log(`🏢 Procesando campañas para cliente: ${clientName}`);
     console.log(`📋 Campañas encontradas: ${campaigns.length}`);
+
+    if (campaignKey) {
+      this.progressManager.emitProgress(campaignKey, 20, 'Campañas cargadas, procesando...');
+    }
 
     // Ordenar por fecha de inicio (más antigua primero)
     const sortedCampaigns = campaigns
@@ -84,6 +109,9 @@ export class CampaignProcessor {
 
     if (sortedCampaigns.length === 0) {
       console.log(`ℹ️ No hay campañas pendientes para ${clientName}`);
+      if (campaignKey) {
+        this.progressManager.emitProgress(campaignKey, 100, 'No hay campañas pendientes');
+      }
       return {
         clientName,
         campaignsProcessed: 0,
@@ -96,7 +124,7 @@ export class CampaignProcessor {
     const firstCampaign = sortedCampaigns[0];
     console.log(`🎯 Procesando primera campaña: ${firstCampaign.brandName} ${firstCampaign.campaignNumber}`);
 
-    const result = await this.processSingleCampaign(firstCampaign);
+    const result = await this.processSingleCampaign(firstCampaign, campaignKey);
     
     if (result.success) {
       campaignsClosed.push(result.campaignDetail!);
@@ -114,13 +142,17 @@ export class CampaignProcessor {
   /**
    * Procesa una campaña individual
    */
-  async processSingleCampaign(campaign: CampaignClosure): Promise<{
+  async processSingleCampaign(campaign: CampaignClosure, campaignKey?: string): Promise<{
     success: boolean;
     leadsAssigned: number;
     campaignDetail?: ClosedCampaignDetail;
     error?: string;
   }> {
     try {
+      if (campaignKey) {
+        this.progressManager.emitProgress(campaignKey, 40, 'Analizando leads actuales...');
+      }
+
       // Contar leads YA asignados a esta campaña
       const currentAssignedLeads = await this.leadRepository.countAssignedLeadsForCampaign(campaign.id);
       
@@ -138,11 +170,19 @@ export class CampaignProcessor {
       // Si ya alcanzó la meta, cerrar la campaña
       if (currentAssignedLeads >= campaign.targetLeads) {
         console.log(`✅ Campaña ya completó su meta (${currentAssignedLeads}/${campaign.targetLeads})`);
+        if (campaignKey) {
+          this.progressManager.emitProgress(campaignKey, 90, 'Cerrando campaña completada...');
+        }
+
         const finalLeadDate = await this.leadRepository.getLastLeadDateForCampaign(campaign.id);
         
         if (finalLeadDate) {
           await this.campaignRepository.closeCampaign(campaign.id, finalLeadDate);
           console.log(`🎯 Campaña ${campaign.id} cerrada automáticamente`);
+          
+          if (campaignKey) {
+            this.progressManager.emitProgress(campaignKey, 100, 'Campaña cerrada exitosamente');
+          }
           
           const campaignDetail: ClosedCampaignDetail = {
             campaignId: campaign.id,
@@ -160,7 +200,14 @@ export class CampaignProcessor {
 
       if (availableLeadsCount === 0) {
         console.log(`⚠️ No hay leads disponibles para asignar`);
+        if (campaignKey) {
+          this.progressManager.emitProgress(campaignKey, 100, 'Error: No hay leads disponibles');
+        }
         return { success: false, leadsAssigned: 0, error: 'No hay leads disponibles' };
+      }
+
+      if (campaignKey) {
+        this.progressManager.emitProgress(campaignKey, 60, 'Preparando asignación de leads...');
       }
 
       // Calcular cuántos leads necesitamos para completar la meta
@@ -181,6 +228,10 @@ export class CampaignProcessor {
         .sort((a, b) => a.fechaCreacion.getTime() - b.fechaCreacion.getTime())
         .slice(0, leadsToAssign);
       
+      if (campaignKey) {
+        this.progressManager.emitProgress(campaignKey, 70, `Asignando ${leadsToAssign} leads...`);
+      }
+
       // Asignar leads únicos (con sus duplicados) a la campaña
       const assignedCount = await this.leadRepository.assignLeadsToCampaign(uniqueLeadsToProcess, campaign.id);
       
@@ -189,10 +240,18 @@ export class CampaignProcessor {
       // Verificar si se alcanzó la meta (leads actuales + recién asignados)
       const totalLeads = currentAssignedLeads + assignedCount;
       if (totalLeads >= campaign.targetLeads) {
+        if (campaignKey) {
+          this.progressManager.emitProgress(campaignKey, 90, 'Meta alcanzada, cerrando campaña...');
+        }
+
         const finalLeadDate = uniqueLeadsToProcess[uniqueLeadsToProcess.length - 1].fechaCreacion;
         await this.campaignRepository.closeCampaign(campaign.id, finalLeadDate);
 
         console.log(`🎯 Campaña ${campaign.id} cerrada. Fecha final: ${finalLeadDate.toISOString()}`);
+
+        if (campaignKey) {
+          this.progressManager.emitProgress(campaignKey, 100, `Campaña cerrada: ${assignedCount} leads asignados`);
+        }
 
         const campaignDetail: ClosedCampaignDetail = {
           campaignId: campaign.id,
@@ -207,9 +266,16 @@ export class CampaignProcessor {
         return { success: true, leadsAssigned: assignedCount, campaignDetail };
       }
 
+      if (campaignKey) {
+        this.progressManager.emitProgress(campaignKey, 100, `${assignedCount} leads asignados`);
+      }
+
       return { success: true, leadsAssigned: assignedCount };
     } catch (error: any) {
       console.error(`❌ Error procesando campaña ${campaign.id}:`, error);
+      if (campaignKey) {
+        this.progressManager.emitProgress(campaignKey, 100, `Error: ${error.message}`);
+      }
       return { success: false, leadsAssigned: 0, error: error.message };
     }
   }
