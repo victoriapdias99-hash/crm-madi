@@ -980,16 +980,7 @@ export default function DatosDiariosDashboard() {
   };
 
   const handleCloseCampaignInline = async (campaign: DatosDiariosData) => {
-    console.log('🎯 CLICK EN BOTÓN CERRAR CAMPAÑA:', {
-      cliente: campaign.cliente,
-      clienteNombre: campaign.clienteNombre,
-      numeroCampana: campaign.numeroCampana,
-      marca: campaign.marca,
-      zona: campaign.zona
-    });
-    
     const campaignKey = `${campaign.cliente}-${campaign.numeroCampana}`;
-    console.log('🔑 Campaign Key generado:', campaignKey);
     
     // Inicializar estado de cierre
     setClosingCampaigns(prev => new Set(prev).add(campaignKey));
@@ -1003,21 +994,8 @@ export default function DatosDiariosDashboard() {
     }));
     
     try {
-      console.log('🚀 DEBUG: Datos completos de campaign:', campaign);
-      
       // Usar el nombre técnico del cliente (clienteNombre en minúsculas)
       const technicalClientName = campaign.clienteNombre.toLowerCase();
-      console.log('🔧 DEBUG: Usando nombre técnico:', technicalClientName);
-      
-      console.log('🚀 DEBUG: Iniciando llamada API con datos:', {
-        url: '/api/campaign-closure/execute',
-        method: 'POST',
-        body: {
-          clients: technicalClientName,
-          campaignKey: campaignKey,
-          dryRun: false
-        }
-      });
       
       // Hacer la llamada API con campaignKey para tracking
       const response = await apiRequest('/api/campaign-closure/execute', 'POST', {
@@ -1026,10 +1004,6 @@ export default function DatosDiariosDashboard() {
         dryRun: false
       });
       
-      console.log('🚀 DEBUG: Response recibida:', response);
-      console.log('🚀 DEBUG: Response status:', response.status);
-      console.log('🚀 DEBUG: Response ok:', response.ok);
-      console.log('🚀 DEBUG: Response headers:', Object.fromEntries(response.headers.entries()));
       
       if (response.ok) {
         const result = await response.json();
