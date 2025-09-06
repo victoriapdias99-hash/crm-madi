@@ -181,7 +181,6 @@ export default function DatosDiariosDashboard() {
       });
     },
     onError: (error: any) => {
-      console.error('Error updating campaña:', error);
       const errorMessage = error?.message || "Error desconocido al actualizar campaña";
       toast({ 
         title: "Error al actualizar campaña", 
@@ -204,25 +203,14 @@ export default function DatosDiariosDashboard() {
     setExportingCSV(true);
     
     try {
-      console.log(`🔽 Exportando CSV para campaña: ${campana.cliente}`);
-      console.log(`🔍 DEBUG: URL del endpoint:`, `/api/export/campana-leads/${encodeURIComponent(campana.cliente)}`);
-      
       const response = await apiRequest(`/api/export/campana-leads/${encodeURIComponent(campana.cliente)}`, 'GET');
-      console.log(`📡 DEBUG: Response status:`, response.status);
-      console.log(`📡 DEBUG: Response ok:`, response.ok);
       
       const data = await response.json();
-      console.log(`📦 DEBUG: Data recibida completa:`, data);
-      console.log(`📦 DEBUG: totalLeads en respuesta:`, data.totalLeads);
       
       const leads = data.leads || [];
-      console.log(`📊 DEBUG: Recibidos ${leads.length} leads del endpoint`);
-      console.log(`📋 DEBUG: Primeros 3 leads:`, leads.slice(0, 3));
       
       // Generar CSV para esta campaña específica
       const csvContent = generateCSVFromSingleCampana(campana, leads);
-      console.log(`📄 DEBUG: CSV generado tiene ${csvContent.split('\n').length} líneas`);
-      console.log(`📄 DEBUG: Primeras 5 líneas del CSV:`, csvContent.split('\n').slice(0, 5));
       
       // Crear blob y descargar archivo
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -247,7 +235,6 @@ export default function DatosDiariosDashboard() {
       });
 
     } catch (error) {
-      console.error('Error exportando CSV:', error);
       toast({
         title: "Error en exportación",
         description: `No se pudo exportar CSV para ${campana.cliente}`,
@@ -358,7 +345,6 @@ export default function DatosDiariosDashboard() {
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
     },
     onError: (error: any) => {
-      console.error('Error en sincronización smart:', error);
       toast({
         title: "Error en sincronización inteligente",
         description: error.message || "No se pudo ejecutar la sincronización smart",
@@ -401,7 +387,6 @@ export default function DatosDiariosDashboard() {
   const campanasData = useMemo(() => {
     // Verificar que datosDiarios existe y es un array
     if (!datosDiarios || !Array.isArray(datosDiarios)) {
-      console.warn('⚠️ datosDiarios is not an array:', datosDiarios);
       return { campanasEnProceso: [], campanasFinalizadas: [] };
     }
     
@@ -417,7 +402,6 @@ export default function DatosDiariosDashboard() {
         const date = new Date(dateStr);
         return isNaN(date.getTime()) ? new Date(0) : date;
       } catch (error) {
-        console.warn('⚠️ Error parsing date:', dateStr);
         return new Date(0);
       }
     };
@@ -521,8 +505,6 @@ export default function DatosDiariosDashboard() {
       });
     }
     
-    console.log(`📊 Datos ordenados: ${campanasEnProcesoFiltradas.length} en proceso, ${campanasFinalizadasFiltradas.length} finalizadas`);
-    
     return { campanasEnProceso: campanasEnProcesoFiltradas, campanasFinalizadas: campanasFinalizadasFiltradas };
   }, [datosDiarios, showDuplicatesOnly, sortByDate, filtroProcesoZona, filtroProcesoMarca, filtroProcesoCliente, filtroProcesoFechaInicio, filtroProcesoFechaFin, filtroFinalizadasZona, filtroFinalizadasMarca, filtroFinalizadasCliente, filtroFinalizadasFechaInicio, filtroFinalizadasFechaFin, filtroMesFinalizadas]);
 
@@ -531,17 +513,11 @@ export default function DatosDiariosDashboard() {
   const finalData: DatosDiariosData[] = Array.isArray(datosDiarios) ? datosDiarios : [];
   const finalIsLoading = isLoading;
 
-  console.log('Dashboard loading state:', { isLoading, error, dataLength: finalData.length });
-  console.log('Performance data:', { campanasEnProceso: campanasEnProceso?.length || 0, campanasFinalizadas: campanasFinalizadas?.length || 0 });
+  // Loading state and performance data tracking
   
-  // Debug para verificar estado del query
+  // Component state tracking
   useEffect(() => {
-    console.log('Component state update:', { 
-      isLoading, 
-      hasData: !!datosDiarios, 
-      dataLength: Array.isArray(datosDiarios) ? datosDiarios.length : 0,
-      errorMessage: error?.message 
-    });
+    // State updates handled internally
   }, [isLoading, datosDiarios, error]);
 
   // Cargar duplicados automáticamente cuando se cargan los datos
