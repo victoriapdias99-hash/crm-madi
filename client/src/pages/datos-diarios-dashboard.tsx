@@ -2471,31 +2471,33 @@ export default function DatosDiariosDashboard() {
 
       {/* AlertDialog de confirmación para cerrar campaña */}
       <AlertDialog open={showCloseCampaignDialog} onOpenChange={setShowCloseCampaignDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-2xl max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
+            <AlertDialogTitle className="flex items-center gap-2 text-lg font-bold text-gray-900 dark:text-white">
               <Power className="w-5 h-5 text-red-500" />
               Confirmar Cierre de Campaña
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              ¿Estás seguro que deseas cerrar la campaña "<strong>{campaignToClose?.clienteNombre} #{campaignToClose?.numeroCampana}</strong>"?
+            <AlertDialogDescription className="text-gray-700 dark:text-gray-300 leading-relaxed">
+              ¿Estás seguro que deseas cerrar la campaña <strong className="text-blue-600 dark:text-blue-400">"{campaignToClose?.clienteNombre} #{campaignToClose?.numeroCampana}"</strong>?
               <br />
               <br />
-              Esta acción procesará automáticamente la asignación de leads pendientes y finalizará la campaña. Una vez cerrada, la campaña se moverá a la sección "Finalizadas".
+              <span className="text-amber-600 dark:text-amber-400 font-medium">Esta acción procesará automáticamente la asignación de leads pendientes y finalizará la campaña.</span> Una vez cerrada, la campaña se moverá a la sección "Finalizadas".
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="gap-3">
             <AlertDialogCancel 
               onClick={() => {
                 setShowCloseCampaignDialog(false);
                 setCampaignToClose(null);
               }}
+              className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600"
             >
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmCloseCampaign}
-              className="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white"
+              className="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white shadow-lg border-0"
+              disabled={isClosingCampaign}
             >
               {isClosingCampaign ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
