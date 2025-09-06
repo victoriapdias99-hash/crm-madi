@@ -410,7 +410,20 @@ export default function DatosDiariosDashboard() {
             // Refrescar datos automáticamente al completar el proceso
             console.log('🔄 Refrescando datos automáticamente tras completar cierre de campaña');
             queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
-            refetch();
+            queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+            
+            // Refrescar múltiples veces para asegurar actualización
+            setTimeout(async () => {
+              console.log('🔄 Segundo refrescado - invalidando queries');
+              await queryClient.refetchQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
+              refetch();
+            }, 1000);
+            
+            setTimeout(async () => {
+              console.log('🔄 Tercer refrescado - forzado');
+              await queryClient.refetchQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
+              refetch();
+            }, 3000);
           }, 2000);
         }
       }
@@ -1252,10 +1265,9 @@ export default function DatosDiariosDashboard() {
         throw new Error('No se encontró la campaña en campanas-comerciales');
       }
       
-      // Reabrir la campaña (eliminar fecha_fin)
-      const response = await apiRequest(`/api/campanas-comerciales/${campanaEncontrada.id}`, 'PUT', {
-        ...campanaEncontrada,
-        fechaFin: null
+      // Reabrir la campaña (eliminar fecha_fin) y liberar leads
+      const response = await apiRequest(`/api/campanas-comerciales/${campanaEncontrada.id}/reopen`, 'PUT', {
+        campaignId: campanaEncontrada.id
       });
       
       if (response.ok) {
@@ -1265,10 +1277,12 @@ export default function DatosDiariosDashboard() {
         
         toast({
           title: "Campaña reabierta exitosamente",
-          description: `La campaña ${campaign.cliente} #${campaign.numeroCampana} ha sido reabierta y se movió a "En Proceso"`,
+          description: `La campaña ${campaign.cliente} #${campaign.numeroCampana} ha sido reabierta y liberada completamente`,
         });
-        // Refrescar datos del dashboard en segundo plano
-        queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
+        
+        // Refrescar datos del dashboard inmediatamente para mostrar cambios
+        await queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
+        await queryClient.refetchQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
       } else {
         throw new Error('Error al reabrir la campaña');
       }
@@ -2481,7 +2495,7 @@ export default function DatosDiariosDashboard() {
 
       {/* Modal de Edición de Campaña - Formulario completo igual que campanas-management */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white border-2 border-gray-300 !bg-white">
           <DialogHeader>
             <DialogTitle>
               Editar Campaña
@@ -2715,7 +2729,7 @@ export default function DatosDiariosDashboard() {
 
       {/* Modal de confirmación para reabrir campaña */}
       <Dialog open={showReopenConfirmModal} onOpenChange={setShowReopenConfirmModal}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md bg-white border-2 border-gray-300 !bg-white">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <RotateCcw className="w-5 h-5 text-amber-500" />

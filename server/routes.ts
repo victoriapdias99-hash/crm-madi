@@ -2152,6 +2152,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint específico para reabrir campaña (elimina fechaFin y libera leads)
+  app.put('/api/campanas-comerciales/:id/reopen', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      console.log(`🔄 Iniciando reapertura de campaña ${id}`);
+      
+      // 1. Reabrir campaña (eliminar fechaFin)
+      const campana = await storage.updateCampanaComercial(id, { fechaFin: null });
+      
+      if (!campana) {
+        return res.status(404).json({ error: 'Campaña comercial not found' });
+      }
+      
+      // 2. Liberar leads asignados a esta campaña (actualizar op_lead)
+      const db = await storage.initDb();
+      await db.update(storage.schema.opLead)
+        .set({ 
+          campaignId: null,
+          updatedAt: new Date() 
+        })
+        .where(storage.eq(storage.schema.opLead.campaignId, id));
+      
+      console.log(`✅ Campaña ${id} reabierta completamente - fechaFin eliminada y leads liberados`);
+      
+      res.json({ 
+        success: true, 
+        message: 'Campaña reabierta exitosamente y leads liberados',
+        campana 
+      });
+    } catch (error) {
+      console.error('Error reopening campaign:', error);
+      res.status(500).json({ error: 'Failed to reopen campaign' });
+    }
+  });
+
   // Endpoint específico para actualizar pedidos por día
   app.put('/api/campanas-comerciales/:id/pedidos-por-dia', async (req, res) => {
     try {

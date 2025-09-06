@@ -186,7 +186,7 @@ export class CampaignProcessor {
     
     console.log(`📡 Usando campaignKey: ${actualCampaignKey}`);
 
-    const result = await this.processSingleCampaign(campaignToProcess, actualCampaignKey);
+    const result = await this.processSingleCampaign(campaignToProcess, actualCampaignKey, !!specificCampaignNumber);
     
     if (result.success) {
       campaignsClosed.push(result.campaignDetail!);
@@ -203,8 +203,9 @@ export class CampaignProcessor {
 
   /**
    * Procesa una campaña individual
+   * @param forceClose - Si es true, permite cerrar aunque no llegue a la meta (cierre manual)
    */
-  async processSingleCampaign(campaign: CampaignClosure, campaignKey?: string): Promise<{
+  async processSingleCampaign(campaign: CampaignClosure, campaignKey?: string, forceClose: boolean = false): Promise<{
     success: boolean;
     leadsAssigned: number;
     campaignDetail?: ClosedCampaignDetail;
@@ -270,9 +271,41 @@ export class CampaignProcessor {
       }
 
       if (availableLeadsCount === 0) {
+        // Si es un cierre forzado (manual/individual) y ya hay leads asignados, cerrar la campaña
+        if (forceClose && currentAssignedLeads > 0) {
+          console.log(`🔧 Cierre manual: Cerrando campaña con ${currentAssignedLeads}/${campaign.targetLeads} leads`);
+          if (campaignKey) {
+            this.progressManager.emitProgress(campaignKey, 90, `Cerrando campaña manualmente (${currentAssignedLeads}/${campaign.targetLeads} leads)...`);
+          }
+
+          const finalLeadDate = await this.leadRepository.getLastLeadDateForCampaign(campaign.id);
+          
+          if (finalLeadDate) {
+            await this.campaignRepository.closeCampaign(campaign.id, finalLeadDate);
+            console.log(`🎯 Campaña ${campaign.id} cerrada manualmente con ${currentAssignedLeads} leads`);
+            
+            if (campaignKey) {
+              this.progressManager.emitProgress(campaignKey, 100, `Campaña cerrada manualmente: ${currentAssignedLeads}/${campaign.targetLeads} leads`);
+            }
+            
+            const campaignDetail: ClosedCampaignDetail = {
+              campaignId: campaign.id,
+              clientName: campaign.clientName,
+              brandName: campaign.brandName,
+              leadsAssigned: currentAssignedLeads,
+              targetLeads: campaign.targetLeads,
+              closureDate: new Date(),
+              finalLeadDate
+            };
+            
+            return { success: true, leadsAssigned: 0, campaignDetail };
+          }
+        }
+
         console.log(`⚠️ No hay leads disponibles para asignar`);
         if (campaignKey) {
-          this.progressManager.emitProgress(campaignKey, 100, 'Error: No hay leads disponibles');
+          const message = forceClose ? 'No se puede cerrar: campaña sin leads asignados' : 'Error: No hay leads disponibles';
+          this.progressManager.emitProgress(campaignKey, 100, message);
         }
         return { success: false, leadsAssigned: 0, error: 'No hay leads disponibles' };
       }
