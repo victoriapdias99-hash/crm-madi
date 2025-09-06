@@ -1398,20 +1398,6 @@ export default function DatosDiariosDashboard() {
               Sincronizar Pestañas
             </Button>
 
-            <Button
-              onClick={() => closeCampaignsMutation.mutate()}
-              disabled={closeCampaignsMutation.isPending}
-              className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-bold shadow-xl transform hover:scale-105 transition-all duration-300 px-4 py-3"
-              size="lg"
-              data-testid="button-close-campaigns"
-            >
-              {closeCampaignsMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Power className="h-4 w-4 mr-2" />
-              )}
-              Cerrar Campañas
-            </Button>
 
             <Button
               onClick={handleUnifiedUpdate}
