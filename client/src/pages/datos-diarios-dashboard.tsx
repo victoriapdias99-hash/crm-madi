@@ -127,6 +127,10 @@ export default function DatosDiariosDashboard() {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isClosingCampaign, setIsClosingCampaign] = useState(false);
   const [isReopeningCampaign, setIsReopeningCampaign] = useState(false);
+  
+  // Estados para loading individual por campaña
+  const [closingCampaigns, setClosingCampaigns] = useState<Set<string>>(new Set());
+  const [campaignProgress, setCampaignProgress] = useState<Record<string, number>>({});
   const [showReopenConfirmModal, setShowReopenConfirmModal] = useState(false);
   const [campaignToReopen, setCampaignToReopen] = useState<DatosDiariosData | null>(null);
   const [showCloseCampaignDialog, setShowCloseCampaignDialog] = useState(false);
@@ -900,9 +904,76 @@ export default function DatosDiariosDashboard() {
   };
 
   // Funciones para manejar las acciones de campañas
+  const handleViewDetails = (campaign: DatosDiariosData) => {
+    setSelectedCampaign(campaign);
+    setIsDetailsModalOpen(true);
+  };
+
   const handleCloseCampaign = (campaign: DatosDiariosData) => {
     setCampaignToClose(campaign);
     setShowCloseCampaignDialog(true);
+  };
+
+  const handleCloseCampaignInline = async (campaign: DatosDiariosData) => {
+    const campaignKey = `${campaign.cliente}-${campaign.numeroCampana}`;
+    setClosingCampaigns(prev => new Set(prev).add(campaignKey));
+    setCampaignProgress(prev => ({ ...prev, [campaignKey]: 0 }));
+    
+    try {
+      // Simular progreso inicial
+      setCampaignProgress(prev => ({ ...prev, [campaignKey]: 20 }));
+      
+      const response = await apiRequest('/api/campaign-closure/execute', 'POST', {
+        clients: campaign.cliente,
+        dryRun: false
+      });
+      
+      // Progreso medio
+      setCampaignProgress(prev => ({ ...prev, [campaignKey]: 60 }));
+      
+      if (response.ok) {
+        // Progreso casi completo
+        setCampaignProgress(prev => ({ ...prev, [campaignKey]: 90 }));
+        
+        const result = await response.json();
+        
+        toast({
+          title: "Campaña cerrada",
+          description: `${result.campaignsClosed || 0} campañas cerradas, ${result.leadsAssigned || 0} leads asignados`,
+        });
+        
+        // Refrescar datos
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
+        
+        // Progreso completo
+        setCampaignProgress(prev => ({ ...prev, [campaignKey]: 100 }));
+        
+        // Pequeño delay para mostrar el 100%
+        setTimeout(() => {
+          setCampaignProgress(prev => {
+            const newProgress = { ...prev };
+            delete newProgress[campaignKey];
+            return newProgress;
+          });
+        }, 1000);
+        
+      } else {
+        throw new Error('Error al cerrar la campaña');
+      }
+    } catch (error) {
+      console.error('Error closing campaign:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo cerrar la campaña. Intenta nuevamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setClosingCampaigns(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(campaignKey);
+        return newSet;
+      });
+    }
   };
 
   const confirmCloseCampaign = async () => {
@@ -1080,12 +1151,6 @@ export default function DatosDiariosDashboard() {
         variant: "destructive",
       });
     }
-  };
-
-
-  const handleViewDetails = (campaign: DatosDiariosData) => {
-    setSelectedCampaign(campaign);
-    setIsDetailsModalOpen(true);
   };
 
   if (finalIsLoading && !datosDiarios) {
@@ -1340,41 +1405,80 @@ export default function DatosDiariosDashboard() {
                       <tr key={uniqueKey} className="hover:bg-gradient-to-r hover:from-amber-50 hover:to-orange-50 dark:hover:from-amber-900/10 dark:hover:to-orange-900/10 transition-all duration-300">
                         <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
                           <div className="flex justify-center">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-8 w-8 p-0"
-                                  data-testid={`dropdown-actions-${data.cliente.replace(/\s+/g, '-')}`}
-                                >
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => handleViewDetails(data)}
-                                  className="cursor-pointer"
-                                  data-testid={`menu-view-details-${data.cliente.replace(/\s+/g, '-')}`}
-                                >
-                                  <Eye className="mr-2 h-4 w-4" />
-                                  Visualizar Campaña
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleCloseCampaign(data)}
-                                  disabled={isClosingCampaign}
-                                  className="cursor-pointer text-red-600 focus:text-red-600"
-                                  data-testid={`menu-close-campaign-${data.cliente.replace(/\s+/g, '-')}`}
-                                >
-                                  {isClosingCampaign ? (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Power className="mr-2 h-4 w-4" />
-                                  )}
-                                  Cerrar Campaña
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            {(() => {
+                              const campaignKey = `${data.cliente}-${data.numeroCampana}`;
+                              const isProcessing = closingCampaigns.has(campaignKey);
+                              const progress = campaignProgress[campaignKey] || 0;
+                              
+                              if (isProcessing) {
+                                return (
+                                  <div className="flex flex-col items-center gap-2 w-20">
+                                    <Progress 
+                                      value={progress} 
+                                      className="w-16 h-2" 
+                                      data-testid={`progress-${data.cliente.replace(/\s+/g, '-')}`}
+                                    />
+                                    <div className="text-xs text-center">
+                                      <span className="text-blue-600 dark:text-blue-400 font-semibold">
+                                        {progress < 30 ? 'Iniciando...' : progress < 70 ? 'Procesando...' : progress < 95 ? 'Cerrando...' : 'Completado!'}
+                                      </span>
+                                      <div className="text-gray-500 text-xs">
+                                        {Math.round(progress)}%
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              
+                              return (
+                                <div className="flex gap-1">
+                                  <Button
+                                    onClick={() => handleCloseCampaignInline(data)}
+                                    size="sm"
+                                    className="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white h-8 px-3"
+                                    data-testid={`button-close-campaign-${data.cliente.replace(/\s+/g, '-')}`}
+                                  >
+                                    <Power className="w-3 h-3 mr-1" />
+                                    <span className="text-xs">Cerrar</span>
+                                  </Button>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 w-8 p-0"
+                                        data-testid={`dropdown-actions-${data.cliente.replace(/\s+/g, '-')}`}
+                                      >
+                                        <MoreVertical className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem
+                                        onClick={() => handleViewDetails(data)}
+                                        className="cursor-pointer"
+                                        data-testid={`menu-view-details-${data.cliente.replace(/\s+/g, '-')}`}
+                                      >
+                                        <Eye className="mr-2 h-4 w-4" />
+                                        Visualizar Campaña
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => handleCloseCampaign(data)}
+                                        disabled={isClosingCampaign}
+                                        className="cursor-pointer text-red-600 focus:text-red-600"
+                                        data-testid={`menu-close-campaign-${data.cliente.replace(/\s+/g, '-')}`}
+                                      >
+                                        {isClosingCampaign ? (
+                                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        ) : (
+                                          <Power className="mr-2 h-4 w-4" />
+                                        )}
+                                        Cerrar Campaña (Modal)
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              );
+                            })()}
                           </div>
                         </td>
                         <td className="border border-amber-200 dark:border-amber-600 p-3">
