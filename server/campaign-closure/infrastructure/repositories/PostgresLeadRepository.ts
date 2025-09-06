@@ -46,11 +46,13 @@ export class PostgresLeadRepository implements ILeadRepository {
       console.log(`🔍 ⏱️ [TIMING] Iniciando búsqueda de leads desde op_leads_rep: cliente=${normalizedClient}, marca=${normalizedBrand}, zona=${normalizedZone}`);
 
       // NUEVA LÓGICA: Buscar desde op_leads_rep para obtener leads únicos con duplicate_ids
+      // CORREGIDO: Solo buscar leads que NO estén asignados (campaignId IS NULL)
       const uniqueLeads = await this.db
         .select()
         .from(opLeadsRep)
         .where(
           and(
+            isNull(opLeadsRep.campaignId), // CRÍTICO: Solo leads no asignados
             ilike(opLeadsRep.marca, `%${normalizedBrand}%`),
             ilike(opLeadsRep.cliente, `%${normalizedClient}%`),
             ilike(opLeadsRep.localizacion, `%${normalizedZone}%`)
@@ -308,11 +310,13 @@ export class PostgresLeadRepository implements ILeadRepository {
       const startTime = Date.now();
 
       // IMPORTANTE: Usar opLeadsRep para obtener leads únicos con duplicateIds
+      // CORREGIDO: Solo buscar leads que NO estén asignados (campaignId IS NULL)
       const uniqueLeads = await this.db
         .select()
         .from(opLeadsRep)
         .where(
           and(
+            isNull(opLeadsRep.campaignId), // CRÍTICO: Solo leads no asignados
             ilike(opLeadsRep.marca, `%${normalizedBrand}%`),
             ilike(opLeadsRep.cliente, `%${normalizedClient}%`),
             ilike(opLeadsRep.localizacion, `%${normalizedZone}%`)
@@ -582,6 +586,7 @@ export class PostgresLeadRepository implements ILeadRepository {
           .from(opLeadsRep)
           .where(
             and(
+              isNull(opLeadsRep.campaignId), // CRÍTICO: Solo leads no asignados
               ilike(opLeadsRep.marca, `%${normalizedBrand}%`),
               ilike(opLeadsRep.cliente, `%${normalizedClient}%`),
               ilike(opLeadsRep.localizacion, `%${normalizedZone}%`)
