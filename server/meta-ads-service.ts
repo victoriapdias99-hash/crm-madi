@@ -87,8 +87,6 @@ class MetaAdsService {
           until: timeRange.until || new Date().toISOString().split('T')[0]
         };
       }
-      
-      console.log('📅 FILTROS DE FECHA META ADS:', effectiveTimeRange);
 
       // Primero obtener estado actual de todas las campañas
       const campaignStatusData = await this.getCampaignStatuses();
@@ -117,8 +115,6 @@ class MetaAdsService {
         time_range: JSON.stringify(effectiveTimeRange),
         limit: 100
       };
-      
-      console.log('📊 PARÁMETROS ENVIADOS A META ADS:', params);
 
       const response = await axios.get(`${this.baseUrl}/${this.config.accountId}/insights`, { params });
       
@@ -152,8 +148,6 @@ class MetaAdsService {
           }
           // Si no, intentar obtener de cost_per_action_type (conversaciones, leads, etc.)
           else if (campaign.cost_per_action_type && Array.isArray(campaign.cost_per_action_type)) {
-            console.log(`🔍 DEBUG: Buscando cost_per_action_type para campaña ${campaign.campaign_name}`);
-            console.log('Available action types:', campaign.cost_per_action_type.map((a: any) => a.action_type));
             
             // Buscar cost_per_lead, cost_per_conversion, cost_per_messaging_conversation, etc.
             const leadCost = campaign.cost_per_action_type.find((action: any) => 
@@ -166,9 +160,7 @@ class MetaAdsService {
             );
             if (leadCost && leadCost.value) {
               costPerResult = parseFloat(leadCost.value);
-              console.log(`✅ Found cost per result: ${costPerResult} (type: ${leadCost.action_type})`);
             } else {
-              console.log('⚠️ No matching cost_per_action_type found');
             }
           }
           
@@ -222,7 +214,6 @@ class MetaAdsService {
 
       return [];
     } catch (error) {
-      console.error('Error fetching Meta Ads campaign data:', error);
       throw new Error(`Meta Ads API Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -251,7 +242,6 @@ class MetaAdsService {
 
       return [];
     } catch (error) {
-      console.error('Error fetching campaign statuses:', error);
       return [];
     }
   }
@@ -285,7 +275,6 @@ class MetaAdsService {
 
       return [];
     } catch (error) {
-      console.error('Error fetching adset statuses:', error);
       return [];
     }
   }
@@ -311,8 +300,6 @@ class MetaAdsService {
           until: filters.dateRange.until || new Date().toISOString().split('T')[0]
         };
       }
-      
-      console.log('📅 FILTROS DE FECHA ADSETS:', effectiveTimeRange, 'CAMPAÑA:', filters.campaignName);
 
       const fields = [
         'adset_id',
@@ -345,8 +332,6 @@ class MetaAdsService {
         time_range: JSON.stringify(effectiveTimeRange),
         limit: 100
       };
-      
-      console.log('📊 PARÁMETROS ADSETS ENVIADOS A META ADS:', params);
 
       // Si se especifica campaña, filtrar por nombre de campaña
       if (filters.campaignName) {
@@ -446,7 +431,6 @@ class MetaAdsService {
 
       return [];
     } catch (error) {
-      console.error('Error fetching Meta Ads adset data:', error);
       throw new Error(`Meta Ads Adset API Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -467,11 +451,9 @@ class MetaAdsService {
       // Calcular CPA: Gasto total / Cantidad de leads
       const cpa = leadCount > 0 ? totalSpend / leadCount : 0;
 
-      console.log(`🔍 CPA CALCULADO: ${campaignName} | Gasto: $${totalSpend} | Leads: ${leadCount} | CPA: $${cpa.toFixed(2)}`);
 
       return cpa;
     } catch (error) {
-      console.error(`Error calculating CPA for ${campaignName}:`, error);
       return 0;
     }
   }
@@ -537,7 +519,6 @@ class MetaAdsService {
 
       return budgetData;
     } catch (error) {
-      console.error('Error fetching campaign budgets:', error);
       throw new Error(`Budget API Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -568,7 +549,6 @@ class MetaAdsService {
       const response = await axios.get(`${this.baseUrl}/${this.config.accountId}`, { params });
       return !!response.data?.id;
     } catch (error) {
-      console.error('Token validation failed:', error);
       return false;
     }
   }
@@ -603,15 +583,12 @@ class MetaAdsService {
 
     return setInterval(async () => {
       try {
-        console.log('Syncing Meta Ads data...');
         const data = await this.getRealTimeMetrics();
-        console.log(`Synced ${data.length} campaigns from Meta Ads`);
         
         if (callback) {
           callback(data);
         }
       } catch (error) {
-        console.error('Auto sync failed:', error);
       }
     }, syncInterval);
   }
