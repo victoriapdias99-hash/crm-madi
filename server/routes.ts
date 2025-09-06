@@ -20,6 +20,7 @@ import {
   createCampanaComercialSchema
 } from "@shared/schema";
 import { ClosureFactory } from './campaign-closure/infrastructure/factories/ClosureFactory';
+import { realtimeSync } from './realtime-sync';
 
 // LEGACY CODE REMOVED: ClientMatchingSystem migrado al nuevo sistema refactorizado
 // Ver: server/sync/domain/services/ClientMatcher.ts
@@ -2186,6 +2187,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       console.log(`✅ Campaña ${id} reabierta completamente - fechaFin eliminada y leads liberados`);
+      
+      // CRÍTICO: Notificar al frontend para actualización inmediata
+      console.log('⚡ Campaña reabierta - invalidando cache del dashboard datos-diarios');
+      
+      // Notificar actualización específica de campaña
+      realtimeSync.broadcastCampaignUpdate('updated', id);
+      
+      // Forzar actualización completa del dashboard
+      realtimeSync.broadcastDashboardRefresh();
       
       res.json({ 
         success: true, 
