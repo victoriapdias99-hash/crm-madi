@@ -943,10 +943,28 @@ export default function DatosDiariosDashboard() {
       }
       
       const campanas = await campanasResponse.json();
+      // Función para normalizar zonas (eliminar acentos, convertir a minúsculas, etc.)
+      const normalizarZona = (zona: string) => {
+        return zona
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos
+          .replace(/\s+/g, '') // Eliminar espacios
+          .trim();
+      };
+
+      // Mapeo específico para casos conocidos
+      const normalizarZonaEspecial = (zona: string) => {
+        const zonaLower = zona.toLowerCase();
+        if (zonaLower === 'nacional' || zonaLower === 'pais') return 'nacional';
+        if (zonaLower === 'amba') return 'amba';
+        return normalizarZona(zona);
+      };
+
       const campanaEncontrada = campanas.find((c: any) => 
         c.numeroCampana === campaign.numeroCampana.toString() && 
         c.marca.toLowerCase() === campaign.marca.toLowerCase() &&
-        c.zona === campaign.zona
+        normalizarZonaEspecial(c.zona) === normalizarZonaEspecial(campaign.zona)
       );
       
       if (!campanaEncontrada) {
@@ -995,10 +1013,28 @@ export default function DatosDiariosDashboard() {
       }
       
       const campanas = await campanasResponse.json();
+      // Función para normalizar zonas (eliminar acentos, convertir a minúsculas, etc.)
+      const normalizarZona = (zona: string) => {
+        return zona
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos
+          .replace(/\s+/g, '') // Eliminar espacios
+          .trim();
+      };
+
+      // Mapeo específico para casos conocidos
+      const normalizarZonaEspecial = (zona: string) => {
+        const zonaLower = zona.toLowerCase();
+        if (zonaLower === 'nacional' || zonaLower === 'pais') return 'nacional';
+        if (zonaLower === 'amba') return 'amba';
+        return normalizarZona(zona);
+      };
+
       const campanaEncontrada = campanas.find((c: any) => 
         c.numeroCampana === campaign.numeroCampana.toString() && 
         c.marca.toLowerCase() === campaign.marca.toLowerCase() &&
-        c.zona === campaign.zona
+        normalizarZonaEspecial(c.zona) === normalizarZonaEspecial(campaign.zona)
       );
       
       if (!campanaEncontrada) {
