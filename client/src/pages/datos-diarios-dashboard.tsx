@@ -1995,25 +1995,35 @@ export default function DatosDiariosDashboard() {
                     
                     const inversions = calculateInversions(updatedData, currentCpl);
                     
+                    // Verificar si esta campaña debe mostrar el botón de reabrir
+                    const campaignId = `${data.cliente}-${data.numeroCampana}-${data.zona}`;
+                    const shouldShowReopenButton = campaignsWithReopenButton.has(campaignId);
+                    
                     return (
                       <tr key={`completed-${index}`} className="hover:bg-green-50 dark:hover:bg-green-900/10">
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
-                          <Button
-                            onClick={() => {
-                              setCampaignToReopen(data);
-                              setShowReopenConfirmModal(true);
-                            }}
-                            disabled={isReopeningCampaign}
-                            size="sm"
-                            className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white font-semibold shadow-lg"
-                            data-testid={`button-reopen-campaign-${data.cliente.replace(/\s+/g, '-')}`}
-                          >
-                            {isReopeningCampaign ? (
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                            ) : (
-                              <RotateCcw className="w-3 h-3" />
-                            )}
-                          </Button>
+                          {shouldShowReopenButton ? (
+                            <Button
+                              onClick={() => {
+                                setCampaignToReopen(data);
+                                setShowReopenConfirmModal(true);
+                              }}
+                              disabled={isReopeningCampaign}
+                              size="sm"
+                              className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white font-semibold shadow-lg"
+                              data-testid={`button-reopen-campaign-${data.cliente.replace(/\s+/g, '-')}`}
+                            >
+                              {isReopeningCampaign ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <RotateCcw className="w-3 h-3" />
+                              )}
+                            </Button>
+                          ) : (
+                            <div className="flex items-center justify-center text-gray-400 text-xs">
+                              —
+                            </div>
+                          )}
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2">
                           <div>
