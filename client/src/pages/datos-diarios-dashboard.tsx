@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Navigation } from "@/components/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useLocation } from "wouter";
 import { CPLStorage } from "@/lib/cpl-storage";
 import { debounce, memoize, measurePerformance } from "@/lib/performance";
@@ -127,6 +128,8 @@ export default function DatosDiariosDashboard() {
   const [isReopeningCampaign, setIsReopeningCampaign] = useState(false);
   const [showReopenConfirmModal, setShowReopenConfirmModal] = useState(false);
   const [campaignToReopen, setCampaignToReopen] = useState<DatosDiariosData | null>(null);
+  const [showCloseCampaignDialog, setShowCloseCampaignDialog] = useState(false);
+  const [campaignToClose, setCampaignToClose] = useState<DatosDiariosData | null>(null);
   const [reopenedCampaignIds, setReopenedCampaignIds] = useState<Set<string>>(new Set());
   const [, setLocation] = useLocation();
 
@@ -896,18 +899,27 @@ export default function DatosDiariosDashboard() {
   };
 
   // Funciones para manejar las acciones de campañas
-  const handleCloseCampaign = async (campaign: DatosDiariosData) => {
+  const handleCloseCampaign = (campaign: DatosDiariosData) => {
+    setCampaignToClose(campaign);
+    setShowCloseCampaignDialog(true);
+  };
+
+  const confirmCloseCampaign = async () => {
+    if (!campaignToClose) return;
+    
     setIsClosingCampaign(true);
+    setShowCloseCampaignDialog(false);
+    
     try {
       const response = await apiRequest('/api/campaign-closure/execute', 'POST', {
-        clienteId: campaign.cliente,
-        campaignNumber: campaign.numeroCampana
+        clienteId: campaignToClose.cliente,
+        campaignNumber: campaignToClose.numeroCampana
       });
       
       if (response.ok) {
         toast({
           title: "Campaña cerrada",
-          description: `La campaña ${campaign.cliente} #${campaign.numeroCampana} ha sido cerrada exitosamente`,
+          description: `La campaña ${campaignToClose.cliente} #${campaignToClose.numeroCampana} ha sido cerrada exitosamente`,
         });
         // Refrescar datos
         queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
@@ -923,6 +935,7 @@ export default function DatosDiariosDashboard() {
       });
     } finally {
       setIsClosingCampaign(false);
+      setCampaignToClose(null);
     }
   };
 
@@ -2455,6 +2468,45 @@ export default function DatosDiariosDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* AlertDialog de confirmación para cerrar campaña */}
+      <AlertDialog open={showCloseCampaignDialog} onOpenChange={setShowCloseCampaignDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Power className="w-5 h-5 text-red-500" />
+              Confirmar Cierre de Campaña
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro que deseas cerrar la campaña "<strong>{campaignToClose?.clienteNombre} #{campaignToClose?.numeroCampana}</strong>"?
+              <br />
+              <br />
+              Esta acción procesará automáticamente la asignación de leads pendientes y finalizará la campaña. Una vez cerrada, la campaña se moverá a la sección "Finalizadas".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              onClick={() => {
+                setShowCloseCampaignDialog(false);
+                setCampaignToClose(null);
+              }}
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmCloseCampaign}
+              className="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white"
+            >
+              {isClosingCampaign ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Power className="w-4 h-4 mr-2" />
+              )}
+              Cerrar Campaña
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
