@@ -127,6 +127,7 @@ export default function DatosDiariosDashboard() {
   const [isReopeningCampaign, setIsReopeningCampaign] = useState(false);
   const [showReopenConfirmModal, setShowReopenConfirmModal] = useState(false);
   const [campaignToReopen, setCampaignToReopen] = useState<DatosDiariosData | null>(null);
+  const [reopenedCampaignIds, setReopenedCampaignIds] = useState<Set<string>>(new Set());
   const [, setLocation] = useLocation();
 
   // Estados para formulario de edición
@@ -325,6 +326,13 @@ export default function DatosDiariosDashboard() {
     refetchOnReconnect: true,
   });
 
+  // Limpiar actualizaciones optimistas cuando lleguen los datos reales
+  useEffect(() => {
+    if (datosDiarios && !isLoading) {
+      setReopenedCampaignIds(new Set());
+    }
+  }, [datosDiarios, isLoading]);
+
   // Mutation para sincronizar todas las pestañas con Smart Sync
   const syncAllSheetsMutation = useMutation({
     mutationFn: async () => {
@@ -416,8 +424,17 @@ export default function DatosDiariosDashboard() {
     });
 
     // Separar campañas en proceso y finalizadas SIN filtros
-    const todasEnProceso = sortedData.filter(data => !data.fechaFin);
-    const todasFinalizadas = sortedData.filter(data => data.fechaFin);
+    // Aplicar actualización optimista para campañas reabertas
+    const dataWithOptimisticUpdates = sortedData.map(data => {
+      const campaignKey = `${data.cliente}-${data.numeroCampana}`;
+      if (reopenedCampaignIds.has(campaignKey)) {
+        return { ...data, fechaFin: null };
+      }
+      return data;
+    });
+
+    const todasEnProceso = dataWithOptimisticUpdates.filter(data => !data.fechaFin);
+    const todasFinalizadas = dataWithOptimisticUpdates.filter(data => data.fechaFin);
     
     // FILTRAR CAMPAÑAS EN PROCESO INDEPENDIENTEMENTE
     let campanasEnProcesoFiltradas = todasEnProceso;
@@ -938,11 +955,15 @@ export default function DatosDiariosDashboard() {
       });
       
       if (response.ok) {
+        // Actualización optimista: mover la campaña inmediatamente
+        const campaignKey = `${campaign.cliente}-${campaign.numeroCampana}`;
+        setReopenedCampaignIds(prev => new Set([...prev, campaignKey]));
+        
         toast({
           title: "Campaña reabierta exitosamente",
           description: `La campaña ${campaign.cliente} #${campaign.numeroCampana} ha sido reabierta y se movió a "En Proceso"`,
         });
-        // Refrescar datos del dashboard
+        // Refrescar datos del dashboard en segundo plano
         queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
       } else {
         throw new Error('Error al reabrir la campaña');
