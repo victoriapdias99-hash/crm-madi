@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Save, RefreshCw, Download, Filter, Power, Edit, Eye, X } from "lucide-react";
+import { Loader2, Save, RefreshCw, Download, Filter, Power, Edit, Eye, X, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Navigation } from "@/components/navigation";
@@ -124,6 +124,7 @@ export default function DatosDiariosDashboard() {
   const [selectedCampaign, setSelectedCampaign] = useState<DatosDiariosData | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isClosingCampaign, setIsClosingCampaign] = useState(false);
+  const [isReopeningCampaign, setIsReopeningCampaign] = useState(false);
   const [, setLocation] = useLocation();
 
   // Estados para formulario de edición
@@ -912,6 +913,50 @@ export default function DatosDiariosDashboard() {
     setIsDetailsModalOpen(true);
   };
 
+  const handleReopenCampaign = async (campaign: DatosDiariosData) => {
+    setIsReopeningCampaign(true);
+    try {
+      // Buscar la campaña por numeroCampana en campanas-comerciales
+      const campanasResponse = await apiRequest('/api/campanas-comerciales', 'GET');
+      if (!campanasResponse.ok) {
+        throw new Error('No se pudieron cargar las campañas');
+      }
+      
+      const campanas = await campanasResponse.json();
+      const campanaEncontrada = campanas.find((c: any) => c.numeroCampana === campaign.numeroCampana.toString());
+      
+      if (!campanaEncontrada) {
+        throw new Error('No se encontró la campaña en campanas-comerciales');
+      }
+      
+      // Reabrir la campaña (eliminar fecha_fin)
+      const response = await apiRequest(`/api/campanas-comerciales/${campanaEncontrada.id}`, 'PUT', {
+        ...campanaEncontrada,
+        fechaFin: null
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Campaña reabierta exitosamente",
+          description: `La campaña ${campaign.cliente} #${campaign.numeroCampana} ha sido reabierta y se movió a "En Proceso"`,
+        });
+        // Refrescar datos del dashboard
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
+      } else {
+        throw new Error('Error al reabrir la campaña');
+      }
+    } catch (error) {
+      console.error('Error reopening campaign:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo reabrir la campaña. Intenta nuevamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsReopeningCampaign(false);
+    }
+  };
+
   // Función para abrir el formulario de edición - igual que campanas-management
   const handleOpenEditForm = async (campaign: DatosDiariosData) => {
     try {
@@ -1621,6 +1666,7 @@ export default function DatosDiariosDashboard() {
               <table className="w-full border-collapse border border-gray-300 dark:border-gray-600">
                 <thead>
                   <tr className="bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20">
+                    <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Acciones</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-left font-semibold text-emerald-900 dark:text-emerald-100">Cliente</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-left font-semibold text-emerald-900 dark:text-emerald-100">Marca</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-left font-semibold text-emerald-900 dark:text-emerald-100">Zona</th>
@@ -1654,6 +1700,21 @@ export default function DatosDiariosDashboard() {
                     
                     return (
                       <tr key={`completed-${index}`} className="hover:bg-green-50 dark:hover:bg-green-900/10">
+                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                          <Button
+                            onClick={() => handleReopenCampaign(data)}
+                            disabled={isReopeningCampaign}
+                            size="sm"
+                            className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white font-semibold shadow-lg"
+                            data-testid={`button-reopen-campaign-${data.cliente.replace(/\s+/g, '-')}`}
+                          >
+                            {isReopeningCampaign ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <RotateCcw className="w-3 h-3" />
+                            )}
+                          </Button>
+                        </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2">
                           <div>
                             <div className="font-medium">{data.clienteNombre}</div>
@@ -1781,6 +1842,9 @@ export default function DatosDiariosDashboard() {
                   {/* Fila de Totales - Campañas Finalizadas */}
                   {campanasFinalizadas.length > 0 && (
                     <tr className="bg-gradient-to-r from-emerald-100 to-green-100 dark:from-emerald-800/50 dark:to-green-800/50 border-t-4 border-emerald-500">
+                      <td className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-bold text-emerald-900 dark:text-emerald-100">
+                        —
+                      </td>
                       <td colSpan={12} className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-bold text-emerald-900 dark:text-emerald-100 text-lg">
                         TOTAL CAMPAÑAS FINALIZADAS
                       </td>
