@@ -153,18 +153,35 @@ export class PostgresLeadRepository implements ILeadRepository {
 
       console.log(`🎯 Asignando ${uniqueLeadsWithDuplicates.length} leads únicos (${allDuplicateIds.length} duplicados totales) a campaña ${campaignId}`);
 
-      // Actualizar campaign_id para TODOS los duplicados
-      const result = await this.db
-        .update(opLead)
-        .set({ 
-          campaignId: campaignId,
-          updatedAt: new Date()
-        })
-        .where(inArray(opLead.id, allDuplicateIds));
-
-      console.log(`✅ Leads asignados exitosamente: ${uniqueLeadsWithDuplicates.length} únicos → ${allDuplicateIds.length} duplicados a campaña ${campaignId}`);
+      // Si hay demasiados IDs, procesar en lotes para evitar queries muy grandes
+      const batchSize = 1000;
+      let totalUpdated = 0;
       
-      return allDuplicateIds.length; // Retornar el total de duplicados asignados
+      for (let i = 0; i < allDuplicateIds.length; i += batchSize) {
+        const batch = allDuplicateIds.slice(i, i + batchSize);
+        console.log(`⚙️ Procesando lote ${Math.floor(i/batchSize) + 1}: ${batch.length} leads...`);
+        
+        try {
+          // Actualizar campaign_id para este lote de duplicados
+          await this.db
+            .update(opLead)
+            .set({ 
+              campaignId: campaignId,
+              updatedAt: new Date()
+            })
+            .where(inArray(opLead.id, batch));
+            
+          totalUpdated += batch.length;
+          console.log(`✅ Lote procesado: ${batch.length} leads asignados (total: ${totalUpdated}/${allDuplicateIds.length})`);
+        } catch (batchError: any) {
+          console.error(`❌ Error en lote ${Math.floor(i/batchSize) + 1}:`, batchError);
+          throw batchError;
+        }
+      }
+
+      console.log(`✅ Leads asignados exitosamente: ${uniqueLeadsWithDuplicates.length} únicos → ${totalUpdated} duplicados a campaña ${campaignId}`);
+      
+      return totalUpdated;
     } catch (error: any) {
       console.error(`Error assigning unique leads to campaign ${campaignId}:`, error);
       throw new Error(`Failed to assign unique leads: ${error.message}`);

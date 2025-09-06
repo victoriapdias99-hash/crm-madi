@@ -972,6 +972,14 @@ export default function DatosDiariosDashboard() {
     const wsUrl = `${protocol}//${window.location.host}/ws`;
     const ws = new WebSocket(wsUrl);
 
+    // Timeout para cerrar la conexión si no hay respuesta en 2 minutos
+    const timeoutId = setTimeout(() => {
+      console.warn(`⚠️ WebSocket timeout para ${campaignKey} - cerrando conexión`);
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    }, 120000); // 2 minutos
+
     ws.onopen = () => {
       console.log(`🔗 WebSocket conectado para campaña: ${campaignKey}`);
       // Registrar para recibir eventos de progreso de esta campaña
@@ -995,6 +1003,7 @@ export default function DatosDiariosDashboard() {
         
         // Si completó al 100%, limpiar después de mostrar
         if (data.progress >= 100) {
+          clearTimeout(timeoutId); // Limpiar timeout ya que completó
           setTimeout(() => {
             setClosingCampaigns(prev => {
               const newSet = new Set(prev);
@@ -1024,6 +1033,7 @@ export default function DatosDiariosDashboard() {
     };
 
     ws.onclose = () => {
+      clearTimeout(timeoutId); // Limpiar timeout al cerrar
       console.log(`🔗 WebSocket desconectado para ${campaignKey}`);
     };
 
@@ -1111,36 +1121,15 @@ export default function DatosDiariosDashboard() {
   const confirmCloseCampaign = async () => {
     if (!campaignToClose) return;
     
-    setIsClosingCampaign(true);
+    // Cerrar el dialog inmediatamente
     setShowCloseCampaignDialog(false);
     
-    try {
-      const response = await apiRequest('/api/campaign-closure/execute', 'POST', {
-        clienteId: campaignToClose.cliente,
-        campaignNumber: campaignToClose.numeroCampana
-      });
-      
-      if (response.ok) {
-        toast({
-          title: "Campaña cerrada",
-          description: `La campaña ${campaignToClose.cliente} #${campaignToClose.numeroCampana} ha sido cerrada exitosamente`,
-        });
-        // Refrescar datos
-        queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
-      } else {
-        throw new Error('Error al cerrar la campaña');
-      }
-    } catch (error) {
-      console.error('Error closing campaign:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo cerrar la campaña. Intenta nuevamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsClosingCampaign(false);
-      setCampaignToClose(null);
-    }
+    // Usar la función handleCloseCampaignInline que ya tiene toda la lógica del WebSocket y progress
+    await handleCloseCampaignInline(campaignToClose);
+    
+    // Limpiar estados
+    setCampaignToClose(null);
+    setIsClosingCampaign(false);
   };
 
   const handleEditCampaign = (campaign: DatosDiariosData) => {
@@ -1543,21 +1532,17 @@ export default function DatosDiariosDashboard() {
                               const progress = campaignProgress[campaignKey] || 0;
                               
                               if (isProcessing) {
+                                // Mostrar progress bar compacto con porcentaje al lado
                                 return (
-                                  <div className="flex flex-col items-center gap-2 w-20">
+                                  <div className="flex items-center justify-center gap-2 px-2">
                                     <Progress 
                                       value={progress} 
-                                      className="w-16 h-2" 
+                                      className="w-20 h-2" 
                                       data-testid={`progress-${data.cliente.replace(/\s+/g, '-')}`}
                                     />
-                                    <div className="text-xs text-center">
-                                      <span className="text-blue-600 dark:text-blue-400 font-semibold">
-                                        {progress < 30 ? 'Iniciando...' : progress < 70 ? 'Procesando...' : progress < 95 ? 'Cerrando...' : 'Completado!'}
-                                      </span>
-                                      <div className="text-gray-500 text-xs">
-                                        {Math.round(progress)}%
-                                      </div>
-                                    </div>
+                                    <span className="text-sm font-semibold text-blue-600 dark:text-blue-400 min-w-[40px] text-right">
+                                      {Math.round(progress)}%
+                                    </span>
                                   </div>
                                 );
                               }

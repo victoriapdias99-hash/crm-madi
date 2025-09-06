@@ -266,7 +266,12 @@ export class CampaignProcessor {
       }
 
       // Asignar leads únicos (con sus duplicados) a la campaña
-      const assignedCount = await this.leadRepository.assignLeadsToCampaign(uniqueLeadsToProcess, campaign.id);
+      const assignedCount = await Promise.race([
+        this.leadRepository.assignLeadsToCampaign(uniqueLeadsToProcess, campaign.id),
+        new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Timeout: Asignación de leads tardó más de 60 segundos')), 60000);
+        })
+      ]);
       
       console.log(`✅ Asignados ${assignedCount} leads a campaña ${campaign.id}`);
 
