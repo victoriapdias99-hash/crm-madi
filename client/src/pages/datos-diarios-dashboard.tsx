@@ -125,6 +125,8 @@ export default function DatosDiariosDashboard() {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isClosingCampaign, setIsClosingCampaign] = useState(false);
   const [isReopeningCampaign, setIsReopeningCampaign] = useState(false);
+  const [showReopenConfirmModal, setShowReopenConfirmModal] = useState(false);
+  const [campaignToReopen, setCampaignToReopen] = useState<DatosDiariosData | null>(null);
   const [, setLocation] = useLocation();
 
   // Estados para formulario de edición
@@ -1702,7 +1704,10 @@ export default function DatosDiariosDashboard() {
                       <tr key={`completed-${index}`} className="hover:bg-green-50 dark:hover:bg-green-900/10">
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
                           <Button
-                            onClick={() => handleReopenCampaign(data)}
+                            onClick={() => {
+                              setCampaignToReopen(data);
+                              setShowReopenConfirmModal(true);
+                            }}
                             disabled={isReopeningCampaign}
                             size="sm"
                             className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white font-semibold shadow-lg"
@@ -2331,6 +2336,57 @@ export default function DatosDiariosDashboard() {
               </div>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de confirmación para reabrir campaña */}
+      <Dialog open={showReopenConfirmModal} onOpenChange={setShowReopenConfirmModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RotateCcw className="w-5 h-5 text-amber-500" />
+              Confirmar Reapertura
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              ¿Estás seguro que quieres reabrir la campaña "{campaignToReopen?.clienteNombre} #{campaignToReopen?.numeroCampana}"?
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              La campaña se moverá de "Finalizadas" a "En Proceso" y podrá continuar recibiendo datos.
+            </p>
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => {
+                setShowReopenConfirmModal(false);
+                setCampaignToReopen(null);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              type="button"
+              className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white"
+              disabled={isReopeningCampaign}
+              onClick={() => {
+                if (campaignToReopen) {
+                  handleReopenCampaign(campaignToReopen);
+                  setShowReopenConfirmModal(false);
+                  setCampaignToReopen(null);
+                }
+              }}
+            >
+              {isReopeningCampaign ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <RotateCcw className="w-4 h-4 mr-2" />
+              )}
+              Reabrir Campaña
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
