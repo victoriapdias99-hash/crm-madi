@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Save, RefreshCw, Download, Filter, Power, Edit, Eye, X, RotateCcw } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Loader2, Save, RefreshCw, Download, Filter, Power, Edit, Eye, X, RotateCcw, MoreVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Navigation } from "@/components/navigation";
@@ -1338,28 +1339,42 @@ export default function DatosDiariosDashboard() {
                     return (
                       <tr key={uniqueKey} className="hover:bg-gradient-to-r hover:from-amber-50 hover:to-orange-50 dark:hover:from-amber-900/10 dark:hover:to-orange-900/10 transition-all duration-300">
                         <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
-                          <div className="flex gap-2 justify-center">
-                            <Button
-                              onClick={() => handleCloseCampaign(data)}
-                              disabled={isClosingCampaign}
-                              size="sm"
-                              className="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-semibold shadow-lg"
-                              data-testid={`button-close-campaign-${data.cliente.replace(/\s+/g, '-')}`}
-                            >
-                              {isClosingCampaign ? (
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                              ) : (
-                                <Power className="w-3 h-3" />
-                              )}
-                            </Button>
-                            <Button
-                              onClick={() => handleViewDetails(data)}
-                              size="sm"
-                              className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold shadow-lg"
-                              data-testid={`button-view-details-${data.cliente.replace(/\s+/g, '-')}`}
-                            >
-                              <Eye className="w-3 h-3" />
-                            </Button>
+                          <div className="flex justify-center">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  data-testid={`dropdown-actions-${data.cliente.replace(/\s+/g, '-')}`}
+                                >
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => handleViewDetails(data)}
+                                  className="cursor-pointer"
+                                  data-testid={`menu-view-details-${data.cliente.replace(/\s+/g, '-')}`}
+                                >
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  Visualizar Campaña
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleCloseCampaign(data)}
+                                  disabled={isClosingCampaign}
+                                  className="cursor-pointer text-red-600 focus:text-red-600"
+                                  data-testid={`menu-close-campaign-${data.cliente.replace(/\s+/g, '-')}`}
+                                >
+                                  {isClosingCampaign ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Power className="mr-2 h-4 w-4" />
+                                  )}
+                                  Cerrar Campaña
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </td>
                         <td className="border border-amber-200 dark:border-amber-600 p-3">
