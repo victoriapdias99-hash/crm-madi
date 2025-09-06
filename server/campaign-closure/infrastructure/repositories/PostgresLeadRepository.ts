@@ -288,8 +288,8 @@ export class PostgresLeadRepository implements ILeadRepository {
   }
 
   /**
-   * OPTIMIZACIÓN 1: Obtener solo los leads necesarios con límite
-   * Evita traer miles de registros cuando solo necesitamos unos pocos
+   * OPTIMIZACIÓN 1: Obtener solo los leads ÚNICOS necesarios con sus duplicados
+   * Respeta la estructura de leads únicos y duplicados de opLeadsRep
    */
   async getLeadsForAssignment(
     clientName: string,
@@ -304,28 +304,62 @@ export class PostgresLeadRepository implements ILeadRepository {
       const normalizedBrand = brandName.toLowerCase();
       const normalizedZone = this.normalizeZoneName(zone);
 
-      console.log(`🚀 [OPTIMIZADO] Obteniendo máximo ${limit} leads para asignación`);
+      console.log(`🚀 [OPTIMIZADO] Obteniendo máximo ${limit} leads ÚNICOS para asignación`);
       const startTime = Date.now();
 
-      // Query optimizada: solo traer los leads necesarios
-      const availableLeads = await this.db
+      // IMPORTANTE: Usar opLeadsRep para obtener leads únicos con duplicateIds
+      const uniqueLeads = await this.db
         .select()
-        .from(opLead)
+        .from(opLeadsRep)
         .where(
           and(
-            ilike(opLead.marca, `%${normalizedBrand}%`),
-            ilike(opLead.cliente, `%${normalizedClient}%`),
-            ilike(opLead.localizacion, `%${normalizedZone}%`),
-            isNull(opLead.campaignId) // Solo leads NO asignados
+            ilike(opLeadsRep.marca, `%${normalizedBrand}%`),
+            ilike(opLeadsRep.cliente, `%${normalizedClient}%`),
+            ilike(opLeadsRep.localizacion, `%${normalizedZone}%`)
           )
         )
-        .orderBy(asc(opLead.fechaCreacion))
-        .limit(limit); // LÍMITE aplicado en la query
+        .orderBy(asc(opLeadsRep.fechaCreacion))
+        .limit(limit * 2); // Traer más para compensar por leads ya asignados
+
+      console.log(`📊 Query completada: ${uniqueLeads.length} leads únicos obtenidos`);
+      
+      // Filtrar solo los que no tienen ninguno de sus duplicados asignados
+      const availableUniqueLeads: AvailableLead[] = [];
+      let checkedCount = 0;
+      
+      for (const uniqueLead of uniqueLeads) {
+        if (availableUniqueLeads.length >= limit) break; // Ya tenemos suficientes
+        
+        checkedCount++;
+        const duplicateIds = uniqueLead.duplicateIds || [uniqueLead.id];
+        
+        // Verificar si alguno de los duplicados ya está asignado
+        const assignedCheck = await this.db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(opLead)
+          .where(
+            and(
+              inArray(opLead.id, duplicateIds),
+              sql`${opLead.campaignId} IS NOT NULL`
+            )
+          );
+
+        const alreadyAssigned = assignedCheck[0]?.count || 0;
+        
+        if (alreadyAssigned === 0) {
+          // Ningún duplicado está asignado, incluir este lead único con sus duplicateIds
+          availableUniqueLeads.push({
+            ...this.mapOpLeadRepToAvailableLead(uniqueLead),
+            duplicateIds: duplicateIds // IMPORTANTE: Incluir los duplicateIds
+          });
+        }
+      }
 
       const queryTime = Date.now() - startTime;
-      console.log(`✅ [OPTIMIZADO] ${availableLeads.length} leads obtenidos en ${queryTime}ms`);
+      console.log(`✅ [OPTIMIZADO] ${availableUniqueLeads.length} leads únicos disponibles de ${checkedCount} verificados en ${queryTime}ms`);
+      console.log(`📦 Total de duplicados a asignar: ${availableUniqueLeads.reduce((sum, lead) => sum + (lead.duplicateIds?.length || 1), 0)}`);
 
-      return availableLeads.map(this.mapOpLeadToAvailableLead);
+      return availableUniqueLeads;
     } catch (error: any) {
       console.error(`Error getting leads for assignment:`, error);
       throw new Error(`Failed to get leads for assignment: ${error.message}`);
@@ -333,8 +367,8 @@ export class PostgresLeadRepository implements ILeadRepository {
   }
 
   /**
-   * OPTIMIZACIÓN 2: Asignar leads en lotes con callback de progreso
-   * Procesa grandes volúmenes sin bloquear y con feedback
+   * OPTIMIZACIÓN 2: Asignar leads ÚNICOS con sus DUPLICADOS en lotes
+   * Procesa correctamente los duplicateIds para asignación exacta
    */
   async assignLeadsInBatches(
     leads: AvailableLead[],
@@ -349,21 +383,27 @@ export class PostgresLeadRepository implements ILeadRepository {
         return 0;
       }
 
-      console.log(`📦 [BATCH] Iniciando asignación de ${leads.length} leads en lotes de ${batchSize}`);
+      // IMPORTANTE: Extraer TODOS los duplicate IDs de los leads únicos
+      const allDuplicateIds: number[] = [];
+      for (const lead of leads) {
+        const duplicateIds = lead.duplicateIds || [lead.id];
+        allDuplicateIds.push(...duplicateIds);
+      }
+
+      console.log(`📦 [BATCH] Asignando ${leads.length} leads ÚNICOS (${allDuplicateIds.length} duplicados totales) en lotes de ${batchSize}`);
       const startTime = Date.now();
       
       let totalAssigned = 0;
-      const leadIds = leads.map(lead => lead.id);
 
-      // Procesar en lotes
-      for (let i = 0; i < leadIds.length; i += batchSize) {
-        const batch = leadIds.slice(i, i + batchSize);
+      // Procesar los duplicate IDs en lotes
+      for (let i = 0; i < allDuplicateIds.length; i += batchSize) {
+        const batch = allDuplicateIds.slice(i, i + batchSize);
         const batchNum = Math.floor(i / batchSize) + 1;
-        const totalBatches = Math.ceil(leadIds.length / batchSize);
+        const totalBatches = Math.ceil(allDuplicateIds.length / batchSize);
         
-        console.log(`⚙️ [BATCH ${batchNum}/${totalBatches}] Procesando ${batch.length} leads...`);
+        console.log(`⚙️ [BATCH ${batchNum}/${totalBatches}] Procesando ${batch.length} duplicados...`);
         
-        // Actualizar campaign_id para este lote
+        // Actualizar campaign_id para este lote de duplicados
         const result = await this.db
           .update(opLead)
           .set({ 
@@ -381,24 +421,44 @@ export class PostgresLeadRepository implements ILeadRepository {
         const batchAssigned = result.length;
         totalAssigned += batchAssigned;
         
-        console.log(`✅ [BATCH ${batchNum}] ${batchAssigned} leads asignados (total: ${totalAssigned}/${leads.length})`);
+        console.log(`✅ [BATCH ${batchNum}] ${batchAssigned} duplicados asignados (total: ${totalAssigned}/${allDuplicateIds.length})`);
         
-        // Reportar progreso si hay callback
+        // Reportar progreso basado en duplicados totales
         if (onProgress) {
-          onProgress(totalAssigned, leads.length);
+          onProgress(totalAssigned, allDuplicateIds.length);
         }
         
         // Pequeña pausa entre lotes para no saturar la BD
-        if (i + batchSize < leadIds.length) {
+        if (i + batchSize < allDuplicateIds.length) {
           await new Promise(resolve => setTimeout(resolve, 50));
+        }
+      }
+
+      // Verificación de asignación exacta
+      if (totalAssigned !== allDuplicateIds.length) {
+        console.warn(`⚠️ ADVERTENCIA: Asignación no exacta. Esperados: ${allDuplicateIds.length}, Asignados: ${totalAssigned}`);
+        console.log(`🔍 Verificando discrepancia...`);
+        
+        // Verificar cuáles no se asignaron
+        const verifyResult = await this.db
+          .select({ 
+            id: opLead.id,
+            campaignId: opLead.campaignId 
+          })
+          .from(opLead)
+          .where(inArray(opLead.id, allDuplicateIds));
+        
+        const notAssigned = verifyResult.filter(r => r.campaignId !== campaignId);
+        if (notAssigned.length > 0) {
+          console.error(`❌ ${notAssigned.length} leads no se asignaron correctamente:`, notAssigned.slice(0, 5));
         }
       }
 
       const totalTime = Date.now() - startTime;
       const leadsPerSecond = (totalAssigned / (totalTime / 1000)).toFixed(0);
-      console.log(`🎯 [BATCH] Asignación completada: ${totalAssigned} leads en ${totalTime}ms (${leadsPerSecond} leads/seg)`);
+      console.log(`🎯 [BATCH] Asignación completada: ${leads.length} únicos → ${totalAssigned} duplicados en ${totalTime}ms (${leadsPerSecond} leads/seg)`);
       
-      return totalAssigned;
+      return totalAssigned; // Retornar el total de duplicados asignados
     } catch (error: any) {
       console.error(`Error in batch assignment for campaign ${campaignId}:`, error);
       throw new Error(`Batch assignment failed: ${error.message}`);

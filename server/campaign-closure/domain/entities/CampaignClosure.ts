@@ -28,6 +28,7 @@ export interface AvailableLead {
   localizacion: string;
   fechaCreacion: Date;
   campaignId?: number; // null si no está asignado
+  duplicateIds?: number[]; // IDs de todos los duplicados de este lead único
 }
 
 /**

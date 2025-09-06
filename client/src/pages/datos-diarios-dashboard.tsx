@@ -379,10 +379,11 @@ export default function DatosDiariosDashboard() {
           [campaignKey]: data.message
         }));
         
-        // Si completó al 100%, limpiar después de mostrar
+        // Si completó al 100%, limpiar estados UI (refrescado ya manejado por API success)
         if (data.progress >= 100) {
           clearTimeout(timeoutId); // Limpiar timeout ya que completó
           setTimeout(() => {
+            console.log('🔄 WebSocket: Limpiando estados UI tras completar');
             setClosingCampaigns(prev => {
               const newSet = new Set(prev);
               newSet.delete(campaignKey);
@@ -407,23 +408,8 @@ export default function DatosDiariosDashboard() {
               return newConnections;
             });
             
-            // Refrescar datos automáticamente al completar el proceso
-            console.log('🔄 Refrescando datos automáticamente tras completar cierre de campaña');
-            queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
-            queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
-            
-            // Refrescar múltiples veces para asegurar actualización
-            setTimeout(async () => {
-              console.log('🔄 Segundo refrescado - invalidando queries');
-              await queryClient.refetchQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
-              refetch();
-            }, 1000);
-            
-            setTimeout(async () => {
-              console.log('🔄 Tercer refrescado - forzado');
-              await queryClient.refetchQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
-              refetch();
-            }, 3000);
+            // NOTA: Refrescado de datos ya es manejado por API success handler
+            console.log('✅ WebSocket: Estados limpiados, refrescado manejado por API handler');
           }, 2000);
         }
       }
@@ -431,6 +417,8 @@ export default function DatosDiariosDashboard() {
 
     ws.onerror = (error) => {
       console.error(`❌ Error en WebSocket para ${campaignKey}:`, error);
+      // Limpiar timeout en caso de error
+      clearTimeout(timeoutId);
     };
 
     ws.onclose = () => {
@@ -1152,8 +1140,23 @@ export default function DatosDiariosDashboard() {
           description: `${result.campaignsClosed || 0} campañas cerradas, ${result.leadsAssigned || 0} leads asignados`,
         });
         
-        // Refrescar datos
+        // NUEVO: Refrescado principal de datos inmediatamente tras API success
+        console.log('🔄 Refrescando datos inmediatamente tras API success');
         queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+        
+        // Refrescar datos con delay para asegurar que la DB esté actualizada
+        setTimeout(async () => {
+          console.log('🔄 Refrescado de respaldo tras 2 segundos');
+          await queryClient.refetchQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
+          refetch();
+        }, 2000);
+        
+        // Refrescado adicional tras 5 segundos para casos edge
+        setTimeout(async () => {
+          console.log('🔄 Refrescado final de seguridad tras 5 segundos');
+          await queryClient.refetchQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
+        }, 5000);
         
       } else {
         const errorData = await response.json().catch(() => ({}));
