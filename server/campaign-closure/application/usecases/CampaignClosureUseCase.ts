@@ -115,7 +115,7 @@ export class CampaignClosureUseCase {
         return await this.simulateClientProcessing(clientName);
       }
 
-      return await this.campaignProcessor.processClientCampaigns(clientName);
+      return await this.campaignProcessor.processClientCampaigns(clientName, options.campaignKey);
     } catch (error: any) {
       console.error(`❌ Error procesando cliente ${clientName}:`, error);
       return {

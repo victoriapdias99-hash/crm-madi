@@ -10,6 +10,9 @@ export interface ClosureOptions {
   dryRun?: boolean; // Solo simular, no ejecutar
   validateOnly?: boolean; // Solo validar, no procesar
   
+  // Tracking de progreso
+  campaignKey?: string; // Clave única para WebSocket tracking
+  
   // Configuración avanzada
   batchSize?: number;
   timeout?: number; // timeout en segundos
@@ -23,6 +26,7 @@ export interface ClosureRequestDto {
   brands?: string; // 'Fiat,Peugeot,Toyota'
   dryRun?: string; // 'true' | 'false'
   validateOnly?: string; // 'true' | 'false'
+  campaignKey?: string; // Clave única para tracking de progreso
 }
 
 /**
@@ -62,6 +66,7 @@ export function mapClosureRequestToOptions(request: ClosureRequestDto): ClosureO
     specificBrands: request.brands ? request.brands.split(',').map(b => b.trim()) : undefined,
     dryRun: request.dryRun === 'true',
     validateOnly: request.validateOnly === 'true',
+    campaignKey: request.campaignKey,
     batchSize: 50,
     timeout: 300 // 5 minutos por defecto
   };

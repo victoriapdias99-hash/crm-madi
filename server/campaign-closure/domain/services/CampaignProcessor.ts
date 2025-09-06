@@ -59,7 +59,8 @@ export class CampaignProcessor {
   
   constructor(
     private campaignRepository: ICampaignRepository,
-    private leadRepository: ILeadRepository
+    private leadRepository: ILeadRepository,
+    private campaignKey?: string
   ) {}
 
   /**
