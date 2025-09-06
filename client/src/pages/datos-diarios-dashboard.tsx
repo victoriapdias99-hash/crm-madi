@@ -97,6 +97,33 @@ const formatDateTimeExact = (dateStr: string | null): string => {
   }
 };
 
+// Función para determinar si una campaña tiene conteo activo (números reales vs "-")
+const hasActiveCounting = (campaign: DatosDiariosData): boolean => {
+  // Una campaña tiene conteo activo si tiene datos numéricos reales
+  const enviados = campaign.enviados;
+  const entregados = campaign.entregadosPorDia;
+  
+  // Verificar que enviados sea un número real mayor que 0
+  const enviadosActive = (
+    enviados !== "-" && 
+    enviados !== null && 
+    enviados !== undefined && 
+    typeof enviados === "number" && 
+    enviados > 0
+  );
+  
+  // Verificar que entregados por día sea un número real
+  const entregadosActive = (
+    entregados !== "-" && 
+    entregados !== null && 
+    entregados !== undefined && 
+    (typeof entregados === "number" || (typeof entregados === "string" && !isNaN(parseFloat(entregados))))
+  );
+  
+  // La campaña tiene conteo activo si al menos uno de estos campos tiene datos reales
+  return enviadosActive || entregadosActive;
+};
+
 export default function DatosDiariosDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -1021,10 +1048,11 @@ export default function DatosDiariosDashboard() {
       // Usar el nombre técnico del cliente (clienteNombre en minúsculas)
       const technicalClientName = campaign.clienteNombre.toLowerCase();
       
-      // Hacer la llamada API con campaignKey para tracking
+      // Hacer la llamada API con campaignKey para tracking y número de campaña específico
       const response = await apiRequest('/api/campaign-closure/execute', 'POST', {
         clients: technicalClientName,  // Nombre técnico en minúsculas
         campaignKey: campaignKey,  // Backend usará esto para emitir progreso
+        campaignNumber: campaign.numeroCampana.toString(), // Número específico de campaña
         dryRun: false
       });
       
@@ -1535,16 +1563,7 @@ export default function DatosDiariosDashboard() {
                               }
                               
                               return (
-                                <div className="flex gap-1">
-                                  <Button
-                                    onClick={() => handleCloseCampaignInline(data)}
-                                    size="sm"
-                                    className="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white h-8 px-3"
-                                    data-testid={`button-close-campaign-${data.cliente.replace(/\s+/g, '-')}`}
-                                  >
-                                    <Power className="w-3 h-3 mr-1" />
-                                    <span className="text-xs">Cerrar</span>
-                                  </Button>
+                                <div className="flex justify-center">
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                       <Button
@@ -1565,19 +1584,22 @@ export default function DatosDiariosDashboard() {
                                         <Eye className="mr-2 h-4 w-4" />
                                         Visualizar Campaña
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={() => handleCloseCampaign(data)}
-                                        disabled={isClosingCampaign}
-                                        className="cursor-pointer text-red-600 focus:text-red-600"
-                                        data-testid={`menu-close-campaign-${data.cliente.replace(/\s+/g, '-')}`}
-                                      >
-                                        {isClosingCampaign ? (
-                                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        ) : (
-                                          <Power className="mr-2 h-4 w-4" />
-                                        )}
-                                        Cerrar Campaña (Modal)
-                                      </DropdownMenuItem>
+                                      {/* Solo mostrar opción de cerrar si la campaña tiene conteo activo */}
+                                      {hasActiveCounting(data) && (
+                                        <DropdownMenuItem
+                                          onClick={() => handleCloseCampaign(data)}
+                                          disabled={isClosingCampaign}
+                                          className="cursor-pointer text-red-600 focus:text-red-600"
+                                          data-testid={`menu-close-campaign-${data.cliente.replace(/\s+/g, '-')}`}
+                                        >
+                                          {isClosingCampaign ? (
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                          ) : (
+                                            <Power className="mr-2 h-4 w-4" />
+                                          )}
+                                          Cerrar Campaña
+                                        </DropdownMenuItem>
+                                      )}
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 </div>

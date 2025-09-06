@@ -12,6 +12,7 @@ export interface ClosureOptions {
   
   // Tracking de progreso
   campaignKey?: string; // Clave única para WebSocket tracking
+  specificCampaignNumber?: string; // Número específico de campaña a cerrar
   
   // Configuración avanzada
   batchSize?: number;
@@ -27,6 +28,7 @@ export interface ClosureRequestDto {
   dryRun?: string; // 'true' | 'false'
   validateOnly?: string; // 'true' | 'false'
   campaignKey?: string; // Clave única para tracking de progreso
+  campaignNumber?: string; // Número específico de campaña
 }
 
 /**
@@ -67,6 +69,7 @@ export function mapClosureRequestToOptions(request: ClosureRequestDto): ClosureO
     dryRun: request.dryRun === 'true',
     validateOnly: request.validateOnly === 'true',
     campaignKey: request.campaignKey,
+    specificCampaignNumber: request.campaignNumber,
     batchSize: 50,
     timeout: 300 // 5 minutos por defecto
   };

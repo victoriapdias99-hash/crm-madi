@@ -82,7 +82,7 @@ export class CampaignProcessor {
   /**
    * Procesa campañas por cliente, respetando el orden cronológico
    */
-  async processClientCampaigns(clientName: string, campaignKey?: string): Promise<ClientProcessingResult> {
+  async processClientCampaigns(clientName: string, campaignKey?: string, specificCampaignNumber?: string): Promise<ClientProcessingResult> {
     // Emitir progreso inicial
     if (campaignKey) {
       this.progressManager.emitProgress(campaignKey, 10, 'Iniciando proceso...');
@@ -94,19 +94,44 @@ export class CampaignProcessor {
 
     console.log(`🏢 Procesando campañas para cliente: ${clientName}`);
     console.log(`📋 Campañas encontradas: ${campaigns.length}`);
+    if (specificCampaignNumber) {
+      console.log(`🎯 Buscando campaña específica: ${specificCampaignNumber}`);
+    }
 
     if (campaignKey) {
       this.progressManager.emitProgress(campaignKey, 20, 'Campañas cargadas, procesando...');
     }
 
+    // Filtrar campañas en proceso
+    let pendingCampaigns = campaigns.filter(c => c.status === 'En proceso');
+    
+    // Si se especificó un número de campaña, filtrar solo esa
+    if (specificCampaignNumber) {
+      pendingCampaigns = pendingCampaigns.filter(c => 
+        c.campaignNumber === specificCampaignNumber || 
+        c.campaignNumber === parseInt(specificCampaignNumber)
+      );
+      
+      if (pendingCampaigns.length === 0) {
+        console.log(`⚠️ No se encontró la campaña ${specificCampaignNumber} para ${clientName}`);
+        if (campaignKey) {
+          this.progressManager.emitProgress(campaignKey, 100, `Campaña ${specificCampaignNumber} no encontrada o ya cerrada`);
+        }
+        return {
+          clientName,
+          campaignsProcessed: 0,
+          leadsAssigned: 0,
+          campaignsClosed: []
+        };
+      }
+    }
+    
     // Ordenar por fecha de inicio (más antigua primero)
-    const sortedCampaigns = campaigns
-      .filter(c => c.status === 'En proceso')
-      .sort((a, b) => {
-        const dateA = typeof a.startDate === 'string' ? new Date(a.startDate) : a.startDate;
-        const dateB = typeof b.startDate === 'string' ? new Date(b.startDate) : b.startDate;
-        return dateA.getTime() - dateB.getTime();
-      });
+    const sortedCampaigns = pendingCampaigns.sort((a, b) => {
+      const dateA = typeof a.startDate === 'string' ? new Date(a.startDate) : a.startDate;
+      const dateB = typeof b.startDate === 'string' ? new Date(b.startDate) : b.startDate;
+      return dateA.getTime() - dateB.getTime();
+    });
 
     if (sortedCampaigns.length === 0) {
       console.log(`ℹ️ No hay campañas pendientes para ${clientName}`);
@@ -121,11 +146,18 @@ export class CampaignProcessor {
       };
     }
 
-    // Procesar la primera campaña cronológicamente
-    const firstCampaign = sortedCampaigns[0];
-    console.log(`🎯 Procesando primera campaña: ${firstCampaign.brandName} ${firstCampaign.campaignNumber}`);
+    // Procesar la primera campaña (o la específica si se indicó)
+    const campaignToProcess = sortedCampaigns[0];
+    console.log(`🎯 Procesando campaña: ${campaignToProcess.brandName} ${campaignToProcess.campaignNumber}`);
+    
+    // Generar un campaignKey específico para esta campaña si no coincide
+    const actualCampaignKey = campaignKey && campaignKey.includes(`-${campaignToProcess.campaignNumber}`) 
+      ? campaignKey 
+      : `${clientName}-${campaignToProcess.campaignNumber}`;
+    
+    console.log(`📡 Usando campaignKey: ${actualCampaignKey}`);
 
-    const result = await this.processSingleCampaign(firstCampaign, campaignKey);
+    const result = await this.processSingleCampaign(campaignToProcess, actualCampaignKey);
     
     if (result.success) {
       campaignsClosed.push(result.campaignDetail!);
