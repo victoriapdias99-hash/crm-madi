@@ -229,9 +229,29 @@ export class CampaignClosureUseCase {
     // Filtrar por clientes específicos si se especificaron
     if (options.specificClients && options.specificClients.length > 0) {
       clients = clients.filter(client => 
-        options.specificClients!.some(specified => 
-          client.toLowerCase().includes(specified.toLowerCase())
-        )
+        options.specificClients!.some(specified => {
+          const clientLower = client.toLowerCase();
+          const specifiedLower = specified.toLowerCase();
+          
+          // CORREGIDO: Búsqueda bidireccional más flexible
+          // Caso 1: Nombre comercial incluye parte del especificado (sin marca)
+          // Ejemplo: "Mariano - Pichetti" includes "mariano pichetti"
+          const clientWords = clientLower.replace(/[^\w\s]/g, ' ').split(/\s+/).filter(w => w.length > 2);
+          const specifiedWords = specifiedLower.replace(/[^\w\s]/g, ' ').split(/\s+/).filter(w => w.length > 2);
+          
+          // Verificar si al menos 2 palabras del cliente aparecen en especificado
+          const matches = clientWords.filter(word => 
+            specifiedWords.some(specWord => specWord.includes(word) || word.includes(specWord))
+          );
+          
+          const result = matches.length >= Math.min(2, clientWords.length);
+          
+          if (result) {
+            console.log(`✅ Match encontrado: "${client}" ↔ "${specified}" (${matches.length} coincidencias: ${matches.join(', ')})`);
+          }
+          
+          return result;
+        })
       );
     }
 
