@@ -920,25 +920,33 @@ export default function DatosDiariosDashboard() {
     setCampaignProgress(prev => ({ ...prev, [campaignKey]: 0 }));
     
     try {
-      // Simular progreso inicial
+      // Progreso inicial - simular preparación
+      await new Promise(resolve => setTimeout(resolve, 500));
       setCampaignProgress(prev => ({ ...prev, [campaignKey]: 20 }));
       
+      // Progreso validación
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setCampaignProgress(prev => ({ ...prev, [campaignKey]: 40 }));
+      
+      // Hacer la llamada API
       const response = await apiRequest('/api/campaign-closure/execute', 'POST', {
         clients: campaign.cliente,
         dryRun: false
       });
       
-      // Progreso medio
-      setCampaignProgress(prev => ({ ...prev, [campaignKey]: 60 }));
+      // Progreso procesando
+      setCampaignProgress(prev => ({ ...prev, [campaignKey]: 70 }));
+      await new Promise(resolve => setTimeout(resolve, 600));
       
       if (response.ok) {
         // Progreso casi completo
         setCampaignProgress(prev => ({ ...prev, [campaignKey]: 90 }));
+        await new Promise(resolve => setTimeout(resolve, 400));
         
         const result = await response.json();
         
         toast({
-          title: "Campaña cerrada",
+          title: "Campaña cerrada exitosamente",
           description: `${result.campaignsClosed || 0} campañas cerradas, ${result.leadsAssigned || 0} leads asignados`,
         });
         
@@ -948,30 +956,35 @@ export default function DatosDiariosDashboard() {
         // Progreso completo
         setCampaignProgress(prev => ({ ...prev, [campaignKey]: 100 }));
         
-        // Pequeño delay para mostrar el 100%
-        setTimeout(() => {
-          setCampaignProgress(prev => {
-            const newProgress = { ...prev };
-            delete newProgress[campaignKey];
-            return newProgress;
-          });
-        }, 1000);
+        // Delay para mostrar el 100%
+        await new Promise(resolve => setTimeout(resolve, 800));
         
       } else {
-        throw new Error('Error al cerrar la campaña');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al cerrar la campaña');
       }
     } catch (error) {
       console.error('Error closing campaign:', error);
       toast({
-        title: "Error",
-        description: "No se pudo cerrar la campaña. Intenta nuevamente.",
+        title: "Error al cerrar campaña",
+        description: error.message || "No se pudo cerrar la campaña. Intenta nuevamente.",
         variant: "destructive",
       });
+      
+      // En caso de error, también esperar un poco para que se vea el error
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
     } finally {
+      // Limpiar estados
       setClosingCampaigns(prev => {
         const newSet = new Set(prev);
         newSet.delete(campaignKey);
         return newSet;
+      });
+      setCampaignProgress(prev => {
+        const newProgress = { ...prev };
+        delete newProgress[campaignKey];
+        return newProgress;
       });
     }
   };
