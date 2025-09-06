@@ -1229,45 +1229,37 @@ export default function DatosDiariosDashboard() {
   const handleReopenCampaign = async (campaign: DatosDiariosData) => {
     setIsReopeningCampaign(true);
     console.log('🚀 Iniciando reapertura de campaña:', campaign);
+    console.log('📋 Usando campaignId directo:', campaign.campaignId);
+    
     try {
-      // Buscar la campaña por numeroCampana en campanas-comerciales
-      const campanasResponse = await apiRequest('/api/campanas-comerciales', 'GET');
-      if (!campanasResponse.ok) {
-        throw new Error('No se pudieron cargar las campañas');
+      // SOLUCIÓN MEJORADA: Usar el campaignId directo desde los datos del dashboard
+      if (!campaign.campaignId) {
+        throw new Error('Campaign ID no disponible. Actualiza la página e intenta nuevamente.');
       }
       
-      const campanas = await campanasResponse.json();
-      // Función para normalizar zonas (eliminar acentos, convertir a minúsculas, etc.)
-      const normalizarZona = (zona: string) => {
-        return zona
-          .toLowerCase()
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos
-          .replace(/\s+/g, '') // Eliminar espacios
-          .trim();
-      };
-
-      // Mapeo específico para casos conocidos
-      const normalizarZonaEspecial = (zona: string) => {
-        const zonaLower = zona.toLowerCase();
-        if (zonaLower === 'nacional' || zonaLower === 'pais') return 'nacional';
-        if (zonaLower === 'amba') return 'amba';
-        return normalizarZona(zona);
-      };
-
-      const campanaEncontrada = campanas.find((c: any) => 
-        c.numeroCampana === campaign.numeroCampana.toString() && 
-        c.marca.toLowerCase() === campaign.marca.toLowerCase() &&
-        normalizarZonaEspecial(c.zona) === normalizarZonaEspecial(campaign.zona)
-      );
-      
-      if (!campanaEncontrada) {
-        throw new Error('No se encontró la campaña en campanas-comerciales');
+      // Validación adicional: Verificar que la campaña existe y está cerrada
+      const validationResponse = await apiRequest(`/api/campanas-comerciales/${campaign.campaignId}`, 'GET');
+      if (!validationResponse.ok) {
+        throw new Error('No se pudo verificar la campaña. Puede que no exista.');
       }
       
-      // Reabrir la campaña (eliminar fecha_fin) y liberar leads
-      const response = await apiRequest(`/api/campanas-comerciales/${campanaEncontrada.id}/reopen`, 'PUT', {
-        campaignId: campanaEncontrada.id
+      const campanaDatos = await validationResponse.json();
+      console.log('✅ Campaña validada:', {
+        id: campanaDatos.id,
+        numeroCampana: campanaDatos.numeroCampana,
+        marca: campanaDatos.marca,
+        zona: campanaDatos.zona,
+        fechaFin: campanaDatos.fechaFin
+      });
+      
+      // Verificar que la campaña esté cerrada (tenga fechaFin)
+      if (!campanaDatos.fechaFin) {
+        throw new Error('Esta campaña ya está abierta (no tiene fecha de fin)');
+      }
+      
+      // Reabrir la campaña usando el ID directo
+      const response = await apiRequest(`/api/campanas-comerciales/${campaign.campaignId}/reopen`, 'PUT', {
+        campaignId: campaign.campaignId
       });
       
       if (response.ok) {
@@ -1286,15 +1278,20 @@ export default function DatosDiariosDashboard() {
       } else {
         throw new Error('Error al reabrir la campaña');
       }
-    } catch (error) {
-      console.error('Error reopening campaign:', error);
+    } catch (error: any) {
+      console.error('❌ Error reopening campaign:', error);
+      console.error('📋 Campaign data:', campaign);
+      console.error('🆔 Campaign ID used:', campaign.campaignId);
+      
       toast({
-        title: "Error",
-        description: "No se pudo reabrir la campaña. Intenta nuevamente.",
+        title: "Error al reabrir campaña",
+        description: error.message || "No se pudo reabrir la campaña. Intenta nuevamente.",
         variant: "destructive",
       });
     } finally {
       setIsReopeningCampaign(false);
+      setShowReopenConfirmModal(false);
+      setCampaignToReopen(null);
     }
   };
 
