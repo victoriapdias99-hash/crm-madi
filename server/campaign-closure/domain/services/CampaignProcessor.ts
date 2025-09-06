@@ -16,6 +16,7 @@ export interface ProgressEvent {
 class ProgressEventManager {
   private static instance: ProgressEventManager;
   private connections: Map<string, WebSocket> = new Map();
+  private processingCampaigns: Map<string, { progress: number; message: string; startTime: Date }> = new Map();
 
   static getInstance(): ProgressEventManager {
     if (!ProgressEventManager.instance) {
@@ -33,8 +34,34 @@ class ProgressEventManager {
     this.connections.delete(campaignKey);
     console.log(`📡 Conexión WebSocket removida para campaña: ${campaignKey}`);
   }
+  
+  getProcessingCampaigns(): Record<string, { progress: number; message: string; startTime: string }> {
+    const result: Record<string, { progress: number; message: string; startTime: string }> = {};
+    this.processingCampaigns.forEach((value, key) => {
+      result[key] = {
+        progress: value.progress,
+        message: value.message,
+        startTime: value.startTime.toISOString()
+      };
+    });
+    return result;
+  }
 
   emitProgress(campaignKey: string, progress: number, message: string) {
+    // Actualizar estado interno
+    this.processingCampaigns.set(campaignKey, {
+      progress,
+      message,
+      startTime: this.processingCampaigns.get(campaignKey)?.startTime || new Date()
+    });
+    
+    // Si llegó al 100%, remover después de un tiempo
+    if (progress >= 100) {
+      setTimeout(() => {
+        this.processingCampaigns.delete(campaignKey);
+      }, 5000); // 5 segundos después de completar
+    }
+    
     const connection = this.connections.get(campaignKey);
     if (connection && connection.readyState === WebSocket.OPEN) {
       const event: ProgressEvent = {
@@ -46,6 +73,8 @@ class ProgressEventManager {
       };
       connection.send(JSON.stringify(event));
       console.log(`📡 Progreso emitido para ${campaignKey}: ${progress}% - ${message}`);
+    } else {
+      console.log(`📡 Progreso almacenado para ${campaignKey}: ${progress}% - ${message} (sin conexión WebSocket)`);
     }
   }
 }
@@ -181,20 +210,29 @@ export class CampaignProcessor {
     campaignDetail?: ClosedCampaignDetail;
     error?: string;
   }> {
+    const startTime = Date.now();
+    console.log(`⏱️ [TIMING] Iniciando procesamiento de campaña ${campaign.id}`);
+    
     try {
       if (campaignKey) {
         this.progressManager.emitProgress(campaignKey, 40, 'Analizando leads actuales...');
       }
 
       // Contar leads YA asignados a esta campaña
+      const step1Start = Date.now();
+      console.log(`⏱️ [TIMING] Contando leads asignados...`);
       const currentAssignedLeads = await this.leadRepository.countAssignedLeadsForCampaign(campaign.id);
+      console.log(`⏱️ [TIMING] Leads asignados contados en ${Date.now() - step1Start}ms`);
       
       // Contar leads únicos disponibles para este cliente (no asignados)
+      const step2Start = Date.now();
+      console.log(`⏱️ [TIMING] Contando leads disponibles...`);
       const availableLeadsCount = await this.leadRepository.countUniqueLeadsForClient(
         campaign.clientName,
         campaign.brandName,
         campaign.zone
       );
+      console.log(`⏱️ [TIMING] Leads disponibles contados en ${Date.now() - step2Start}ms`);
 
       console.log(`📊 Leads ya asignados a campaña ${campaign.id}: ${currentAssignedLeads}`);
       console.log(`📊 Leads disponibles (no asignados): ${availableLeadsCount}`);
@@ -250,28 +288,37 @@ export class CampaignProcessor {
       console.log(`🎯 Leads necesarios: ${leadsNeeded}, disponibles: ${availableLeadsCount}, asignaremos: ${leadsToAssign}`);
 
       // Obtener leads específicos para asignar
+      const step3Start = Date.now();
+      console.log(`⏱️ [TIMING] Obteniendo lista de leads disponibles...`);
       const availableLeads = await this.leadRepository.getAvailableLeadsForClient(
         campaign.clientName,
         campaign.brandName,
         campaign.zone
       );
+      console.log(`⏱️ [TIMING] Lista de leads obtenida en ${Date.now() - step3Start}ms - ${availableLeads.length} leads encontrados`);
 
       // Tomar solo los leads únicos necesarios, ordenados por fecha (más antiguos primero)
+      const step4Start = Date.now();
+      console.log(`⏱️ [TIMING] Ordenando y filtrando ${availableLeads.length} leads...`);
       const uniqueLeadsToProcess = availableLeads
         .sort((a, b) => a.fechaCreacion.getTime() - b.fechaCreacion.getTime())
         .slice(0, leadsToAssign);
+      console.log(`⏱️ [TIMING] Leads ordenados y filtrados en ${Date.now() - step4Start}ms - ${uniqueLeadsToProcess.length} leads seleccionados`);
       
       if (campaignKey) {
         this.progressManager.emitProgress(campaignKey, 70, `Asignando ${leadsToAssign} leads...`);
       }
 
       // Asignar leads únicos (con sus duplicados) a la campaña
+      const step5Start = Date.now();
+      console.log(`⏱️ [TIMING] Iniciando asignación de ${uniqueLeadsToProcess.length} leads...`);
       const assignedCount = await Promise.race([
         this.leadRepository.assignLeadsToCampaign(uniqueLeadsToProcess, campaign.id),
         new Promise<never>((_, reject) => {
           setTimeout(() => reject(new Error('Timeout: Asignación de leads tardó más de 60 segundos')), 60000);
         })
       ]);
+      console.log(`⏱️ [TIMING] Asignación completada en ${Date.now() - step5Start}ms - ${assignedCount} leads asignados`);
       
       console.log(`✅ Asignados ${assignedCount} leads a campaña ${campaign.id}`);
 
@@ -282,8 +329,11 @@ export class CampaignProcessor {
           this.progressManager.emitProgress(campaignKey, 90, 'Meta alcanzada, cerrando campaña...');
         }
 
+        const step6Start = Date.now();
+        console.log(`⏱️ [TIMING] Cerrando campaña en base de datos...`);
         const finalLeadDate = uniqueLeadsToProcess[uniqueLeadsToProcess.length - 1].fechaCreacion;
         await this.campaignRepository.closeCampaign(campaign.id, finalLeadDate);
+        console.log(`⏱️ [TIMING] Campaña cerrada en ${Date.now() - step6Start}ms`);
 
         console.log(`🎯 Campaña ${campaign.id} cerrada. Fecha final: ${finalLeadDate.toISOString()}`);
 
@@ -308,9 +358,11 @@ export class CampaignProcessor {
         this.progressManager.emitProgress(campaignKey, 100, `${assignedCount} leads asignados`);
       }
 
+      console.log(`⏱️ [TIMING] Procesamiento completo de campaña ${campaign.id} en ${Date.now() - startTime}ms`);
       return { success: true, leadsAssigned: assignedCount };
     } catch (error: any) {
       console.error(`❌ Error procesando campaña ${campaign.id}:`, error);
+      console.log(`⏱️ [TIMING] Error después de ${Date.now() - startTime}ms`);
       if (campaignKey) {
         this.progressManager.emitProgress(campaignKey, 100, `Error: ${error.message}`);
       }
@@ -323,5 +375,12 @@ export class CampaignProcessor {
    */
   async getClientsToProcess(): Promise<string[]> {
     return await this.campaignRepository.getClientsWithPendingCampaigns();
+  }
+  
+  /**
+   * Obtiene las campañas que están siendo procesadas actualmente
+   */
+  getProcessingCampaigns(): Record<string, { progress: number; message: string; startTime: string }> {
+    return this.progressManager.getProcessingCampaigns();
   }
 }

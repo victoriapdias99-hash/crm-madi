@@ -158,7 +158,12 @@ export default function DatosDiariosDashboard() {
   // Estados para loading individual por campaña
   const [closingCampaigns, setClosingCampaigns] = useState<Set<string>>(new Set());
   const [campaignProgress, setCampaignProgress] = useState<Record<string, number>>({});
+  const [campaignMessages, setCampaignMessages] = useState<Record<string, string>>({});
   const [websocketConnections, setWebsocketConnections] = useState<Record<string, WebSocket>>({});
+  const [isRestoringProgress, setIsRestoringProgress] = useState(false);
+  
+  // Estado global para controlar si hay alguna campaña procesándose
+  const isAnyProcessing = closingCampaigns.size > 0;
   const [showReopenConfirmModal, setShowReopenConfirmModal] = useState(false);
   const [campaignToReopen, setCampaignToReopen] = useState<DatosDiariosData | null>(null);
   const [showCloseCampaignDialog, setShowCloseCampaignDialog] = useState(false);
@@ -335,6 +340,137 @@ export default function DatosDiariosDashboard() {
   };
 
   
+  // Función para conectar WebSocket y recibir progreso real
+  const connectCampaignWebSocket = useCallback((campaignKey: string): WebSocket => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const ws = new WebSocket(wsUrl);
+
+    // Timeout para cerrar la conexión si no hay respuesta en 2 minutos
+    const timeoutId = setTimeout(() => {
+      console.warn(`⚠️ WebSocket timeout para ${campaignKey} - cerrando conexión`);
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    }, 120000); // 2 minutos
+
+    ws.onopen = () => {
+      console.log(`🔗 WebSocket conectado para campaña: ${campaignKey}`);
+      // Registrar para recibir eventos de progreso de esta campaña
+      ws.send(JSON.stringify({
+        type: 'register_campaign_progress',
+        campaignKey
+      }));
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      
+      if (data.type === 'campaign-progress' && data.campaignKey === campaignKey) {
+        console.log(`📡 Progreso recibido: ${data.progress}% - ${data.message}`);
+        
+        // Actualizar progreso y mensaje desde backend
+        setCampaignProgress(prev => ({
+          ...prev,
+          [campaignKey]: data.progress
+        }));
+        setCampaignMessages(prev => ({
+          ...prev,
+          [campaignKey]: data.message
+        }));
+        
+        // Si completó al 100%, limpiar después de mostrar
+        if (data.progress >= 100) {
+          clearTimeout(timeoutId); // Limpiar timeout ya que completó
+          setTimeout(() => {
+            setClosingCampaigns(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(campaignKey);
+              return newSet;
+            });
+            setCampaignProgress(prev => {
+              const newProgress = { ...prev };
+              delete newProgress[campaignKey];
+              return newProgress;
+            });
+            setCampaignMessages(prev => {
+              const newMessages = { ...prev };
+              delete newMessages[campaignKey];
+              return newMessages;
+            });
+            
+            // Cerrar WebSocket
+            ws.close();
+            setWebsocketConnections(prev => {
+              const newConnections = { ...prev };
+              delete newConnections[campaignKey];
+              return newConnections;
+            });
+            
+            // Refrescar datos automáticamente al completar el proceso
+            console.log('🔄 Refrescando datos automáticamente tras completar cierre de campaña');
+            queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
+            refetch();
+          }, 2000);
+        }
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error(`❌ Error en WebSocket para ${campaignKey}:`, error);
+    };
+
+    ws.onclose = () => {
+      clearTimeout(timeoutId); // Limpiar timeout al cerrar
+      console.log(`🔗 WebSocket desconectado para ${campaignKey}`);
+    };
+
+    return ws;
+  }, []);
+
+  // Función para recuperar el progreso de campañas al cargar la página
+  const restoreProcessingCampaigns = useCallback(async () => {
+    try {
+      setIsRestoringProgress(true);
+      const response = await apiRequest('/api/campaign-closure/processing-status');
+      const result = await response.json();
+      
+      if (result.success && Object.keys(result.processingCampaigns).length > 0) {
+        console.log('🔄 Restaurando progreso de campañas:', result.processingCampaigns);
+        
+        // Restaurar estados de progreso
+        const newClosingCampaigns = new Set<string>();
+        const newCampaignProgress: Record<string, number> = {};
+        const newCampaignMessages: Record<string, string> = {};
+        const newConnections: Record<string, WebSocket> = {};
+        
+        Object.entries(result.processingCampaigns).forEach(([campaignKey, status]: [string, any]) => {
+          newClosingCampaigns.add(campaignKey);
+          newCampaignProgress[campaignKey] = status.progress;
+          newCampaignMessages[campaignKey] = status.message || 'Procesando...';
+          
+          // Reconectar WebSocket para esta campaña
+          const ws = connectCampaignWebSocket(campaignKey);
+          newConnections[campaignKey] = ws;
+        });
+        
+        setClosingCampaigns(newClosingCampaigns);
+        setCampaignProgress(newCampaignProgress);
+        setCampaignMessages(newCampaignMessages);
+        setWebsocketConnections(prev => ({ ...prev, ...newConnections }));
+      }
+    } catch (error) {
+      console.error('Error restaurando progreso:', error);
+    } finally {
+      setIsRestoringProgress(false);
+    }
+  }, [connectCampaignWebSocket]);
+
+  // Ejecutar al cargar la página
+  useEffect(() => {
+    restoreProcessingCampaigns();
+  }, [restoreProcessingCampaigns]);
+
   // PostgreSQL optimized query for fast data updates (3s vs 15s)
   const { data: datosDiarios, isLoading, error, refetch } = useQuery<DatosDiariosData[]>({
     queryKey: ['/api/dashboard/datos-diarios-db'],
@@ -966,79 +1102,6 @@ export default function DatosDiariosDashboard() {
     setShowCloseCampaignDialog(true);
   };
 
-  // Función para conectar WebSocket y recibir progreso real
-  const connectCampaignWebSocket = (campaignKey: string): WebSocket => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-    const ws = new WebSocket(wsUrl);
-
-    // Timeout para cerrar la conexión si no hay respuesta en 2 minutos
-    const timeoutId = setTimeout(() => {
-      console.warn(`⚠️ WebSocket timeout para ${campaignKey} - cerrando conexión`);
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.close();
-      }
-    }, 120000); // 2 minutos
-
-    ws.onopen = () => {
-      console.log(`🔗 WebSocket conectado para campaña: ${campaignKey}`);
-      // Registrar para recibir eventos de progreso de esta campaña
-      ws.send(JSON.stringify({
-        type: 'register_campaign_progress',
-        campaignKey
-      }));
-    };
-
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      
-      if (data.type === 'campaign-progress' && data.campaignKey === campaignKey) {
-        console.log(`📡 Progreso recibido: ${data.progress}% - ${data.message}`);
-        
-        // Actualizar progreso real desde backend
-        setCampaignProgress(prev => ({
-          ...prev,
-          [campaignKey]: data.progress
-        }));
-        
-        // Si completó al 100%, limpiar después de mostrar
-        if (data.progress >= 100) {
-          clearTimeout(timeoutId); // Limpiar timeout ya que completó
-          setTimeout(() => {
-            setClosingCampaigns(prev => {
-              const newSet = new Set(prev);
-              newSet.delete(campaignKey);
-              return newSet;
-            });
-            setCampaignProgress(prev => {
-              const newProgress = { ...prev };
-              delete newProgress[campaignKey];
-              return newProgress;
-            });
-            
-            // Cerrar WebSocket
-            ws.close();
-            setWebsocketConnections(prev => {
-              const newConnections = { ...prev };
-              delete newConnections[campaignKey];
-              return newConnections;
-            });
-          }, 2000);
-        }
-      }
-    };
-
-    ws.onerror = (error) => {
-      console.error(`❌ Error en WebSocket para ${campaignKey}:`, error);
-    };
-
-    ws.onclose = () => {
-      clearTimeout(timeoutId); // Limpiar timeout al cerrar
-      console.log(`🔗 WebSocket desconectado para ${campaignKey}`);
-    };
-
-    return ws;
-  };
 
   const handleCloseCampaignInline = async (campaign: DatosDiariosData) => {
     const campaignKey = `${campaign.cliente}-${campaign.numeroCampana}`;
@@ -1046,6 +1109,7 @@ export default function DatosDiariosDashboard() {
     // Inicializar estado de cierre
     setClosingCampaigns(prev => new Set(prev).add(campaignKey));
     setCampaignProgress(prev => ({ ...prev, [campaignKey]: 0 }));
+    setCampaignMessages(prev => ({ ...prev, [campaignKey]: 'Iniciando...' }));
     
     // Conectar WebSocket para progreso en tiempo real
     const ws = connectCampaignWebSocket(campaignKey);
@@ -1087,6 +1151,7 @@ export default function DatosDiariosDashboard() {
       
       // Mostrar error y limpiar estados
       setCampaignProgress(prev => ({ ...prev, [campaignKey]: 100 }));
+      setCampaignMessages(prev => ({ ...prev, [campaignKey]: 'Error al procesar' }));
       
       toast({
         title: "Error al cerrar campaña",
@@ -1114,6 +1179,16 @@ export default function DatosDiariosDashboard() {
           delete newProgress[campaignKey];
           return newProgress;
         });
+        setCampaignMessages(prev => {
+          const newMessages = { ...prev };
+          delete newMessages[campaignKey];
+          return newMessages;
+        });
+        
+        // Refrescar datos automáticamente al completar el proceso con error
+        console.log('🔄 Refrescando datos tras error en cierre de campaña');
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
+        refetch();
       }, 2000);
     }
   };
@@ -1530,19 +1605,25 @@ export default function DatosDiariosDashboard() {
                               const campaignKey = `${data.cliente}-${data.numeroCampana}`;
                               const isProcessing = closingCampaigns.has(campaignKey);
                               const progress = campaignProgress[campaignKey] || 0;
+                              const message = campaignMessages[campaignKey] || 'Procesando...';
                               
                               if (isProcessing) {
-                                // Mostrar progress bar compacto con porcentaje al lado
+                                // Mostrar progress bar compacto con mensaje y porcentaje
                                 return (
-                                  <div className="flex items-center justify-center gap-2 px-2">
+                                  <div className="flex flex-col items-center gap-1 px-2 w-28">
                                     <Progress 
                                       value={progress} 
-                                      className="w-20 h-2" 
+                                      className="w-24 h-2" 
                                       data-testid={`progress-${data.cliente.replace(/\s+/g, '-')}`}
                                     />
-                                    <span className="text-sm font-semibold text-blue-600 dark:text-blue-400 min-w-[40px] text-right">
-                                      {Math.round(progress)}%
-                                    </span>
+                                    <div className="text-xs text-center w-full">
+                                      <div className="text-blue-600 dark:text-blue-400 font-medium truncate">
+                                        {message}
+                                      </div>
+                                      <div className="text-gray-500 dark:text-gray-400 font-semibold">
+                                        {Math.round(progress)}%
+                                      </div>
+                                    </div>
                                   </div>
                                 );
                               }
@@ -1569,21 +1650,31 @@ export default function DatosDiariosDashboard() {
                                         <Eye className="mr-2 h-4 w-4" />
                                         Visualizar Campaña
                                       </DropdownMenuItem>
-                                      {/* Solo mostrar opción de cerrar si la campaña tiene conteo activo */}
+                                      {/* Mostrar opción de cerrar o mensaje de espera */}
                                       {hasActiveCounting(data) && (
-                                        <DropdownMenuItem
-                                          onClick={() => handleCloseCampaign(data)}
-                                          disabled={isClosingCampaign}
-                                          className="cursor-pointer text-red-600 focus:text-red-600"
-                                          data-testid={`menu-close-campaign-${data.cliente.replace(/\s+/g, '-')}`}
-                                        >
-                                          {isClosingCampaign ? (
+                                        isAnyProcessing ? (
+                                          <DropdownMenuItem
+                                            disabled={true}
+                                            className="cursor-not-allowed text-orange-500 focus:text-orange-500"
+                                          >
                                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                          ) : (
-                                            <Power className="mr-2 h-4 w-4" />
-                                          )}
-                                          Cerrar Campaña
-                                        </DropdownMenuItem>
+                                            Cerrando campaña. Espere
+                                          </DropdownMenuItem>
+                                        ) : (
+                                          <DropdownMenuItem
+                                            onClick={() => handleCloseCampaign(data)}
+                                            disabled={isClosingCampaign}
+                                            className="cursor-pointer text-red-600 focus:text-red-600"
+                                            data-testid={`menu-close-campaign-${data.cliente.replace(/\s+/g, '-')}`}
+                                          >
+                                            {isClosingCampaign ? (
+                                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            ) : (
+                                              <Power className="mr-2 h-4 w-4" />
+                                            )}
+                                            Cerrar Campaña
+                                          </DropdownMenuItem>
+                                        )
                                       )}
                                     </DropdownMenuContent>
                                   </DropdownMenu>
@@ -2388,21 +2479,6 @@ export default function DatosDiariosDashboard() {
                 >
                   <Edit className="w-4 h-4 mr-2" />
                   Editar Campaña
-                </Button>
-                <Button
-                  onClick={() => {
-                    setIsDetailsModalOpen(false);
-                    handleCloseCampaign(selectedCampaign);
-                  }}
-                  className="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white"
-                  disabled={isClosingCampaign}
-                >
-                  {isClosingCampaign ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Power className="w-4 h-4 mr-2" />
-                  )}
-                  Cerrar Campaña
                 </Button>
                 <Button
                   onClick={() => setIsDetailsModalOpen(false)}

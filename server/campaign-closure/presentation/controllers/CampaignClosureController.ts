@@ -93,6 +93,31 @@ export class CampaignClosureController {
   }
 
   /**
+   * GET /api/campaign-closure/processing-status
+   * Obtiene campañas que están siendo procesadas actualmente
+   */
+  public async getProcessingStatus(req: Request, res: Response): Promise<void> {
+    try {
+      // Obtener las campañas que están siendo procesadas desde el ProgressManager
+      const processor = this.closureFactory.getCampaignProcessor();
+      const processingCampaigns = processor.getProcessingCampaigns();
+      
+      res.status(200).json({
+        success: true,
+        processingCampaigns,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  /**
    * GET /api/campaign-closure/pending-campaigns
    * Obtiene las campañas pendientes de cierre
    */

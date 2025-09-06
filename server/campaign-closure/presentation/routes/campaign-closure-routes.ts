@@ -67,12 +67,23 @@ export function createCampaignClosureRoutes(): Router {
     await controller.getClientsWithPendingCampaigns(req, res);
   });
 
+  /**
+   * GET /api/campaign-closure/processing-status
+   * Obtiene las campañas que están siendo procesadas actualmente
+   * 
+   * Response: { success: boolean, processingCampaigns: Record<string, {...}> }
+   */
+  router.get('/processing-status', async (req, res) => {
+    await controller.getProcessingStatus(req, res);
+  });
+
   console.log('✅ Rutas de cierre de campañas configuradas:');
   console.log('   POST /api/campaign-closure/execute');
   console.log('   POST /api/campaign-closure/validate');
   console.log('   GET  /api/campaign-closure/status');
   console.log('   GET  /api/campaign-closure/pending-campaigns');
   console.log('   GET  /api/campaign-closure/clients');
+  console.log('   GET  /api/campaign-closure/processing-status');
 
   return router;
 }

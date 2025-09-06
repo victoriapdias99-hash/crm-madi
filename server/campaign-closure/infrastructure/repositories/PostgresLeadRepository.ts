@@ -43,7 +43,7 @@ export class PostgresLeadRepository implements ILeadRepository {
       const normalizedBrand = brandName.toLowerCase();
       const normalizedZone = this.normalizeZoneName(zone);
 
-      console.log(`🔍 Buscando leads únicos NO asignados desde op_leads_rep: cliente=${normalizedClient}, marca=${normalizedBrand}, zona=${normalizedZone}`);
+      console.log(`🔍 ⏱️ [TIMING] Iniciando búsqueda de leads desde op_leads_rep: cliente=${normalizedClient}, marca=${normalizedBrand}, zona=${normalizedZone}`);
 
       // NUEVA LÓGICA: Buscar desde op_leads_rep para obtener leads únicos con duplicate_ids
       const uniqueLeads = await this.db
@@ -58,7 +58,7 @@ export class PostgresLeadRepository implements ILeadRepository {
         )
         .orderBy(asc(opLeadsRep.fechaCreacion));
 
-      console.log(`📊 Leads únicos encontrados: ${uniqueLeads.length}`);
+      console.log(`📊 ⏱️ [TIMING] Query completado - ${uniqueLeads.length} leads encontrados`);
       
       // Filtrar solo los que no tienen ninguno de sus duplicados asignados
       const availableUniqueLeads: any[] = [];
