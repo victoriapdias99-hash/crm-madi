@@ -109,7 +109,9 @@ export class PostgresCampaignRepository implements ICampaignRepository {
     await this.ensureDbInitialized();
     
     try {
-      await this.db
+      console.log(`🔧 [DB] Intentando cerrar campaña ${campaignId} con fecha: ${finalLeadDate.toISOString()}`);
+      
+      const result = await this.db
         .update(campanasComerciales)
         .set({
           fechaFin: finalLeadDate,
@@ -117,10 +119,30 @@ export class PostgresCampaignRepository implements ICampaignRepository {
         })
         .where(eq(campanasComerciales.id, campaignId));
 
-      console.log(`✅ Campaña ${campaignId} cerrada con fecha: ${finalLeadDate.toISOString()}`);
+      console.log(`✅ [DB] Campaña ${campaignId} cerrada exitosamente con fecha: ${finalLeadDate.toISOString()}`);
     } catch (error: any) {
-      console.error(`Error closing campaign ${campaignId}:`, error);
-      throw new Error(`Failed to close campaign: ${error.message}`);
+      console.error(`❌ [DB] Error específico closing campaign ${campaignId}:`, {
+        message: error.message || 'Sin mensaje',
+        code: error.code || 'Sin código',
+        detail: error.detail || 'Sin detalle',
+        hint: error.hint || 'Sin hint',
+        constraint: error.constraint || 'Sin constraint',
+        table: error.table || 'Sin tabla',
+        column: error.column || 'Sin columna',
+        dataType: error.dataType || 'Sin dataType',
+        severity: error.severity || 'Sin severity',
+        position: error.position || 'Sin position',
+        where: error.where || 'Sin where',
+        schema: error.schema || 'Sin schema',
+        routine: error.routine || 'Sin routine',
+        campaignId: campaignId,
+        finalLeadDate: finalLeadDate.toISOString(),
+        errorType: typeof error,
+        errorConstructor: error.constructor?.name || 'Sin constructor',
+        stack: error.stack?.substring(0, 200) || 'Sin stack',
+        fullError: JSON.stringify(error, null, 2)
+      });
+      throw new Error(`Failed to close campaign ${campaignId}: ${error.message || 'Unknown database error'}`);
     }
   }
 
