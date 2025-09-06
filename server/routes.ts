@@ -19,6 +19,7 @@ import {
   insertCampanaComercialSchema,
   createCampanaComercialSchema
 } from "@shared/schema";
+import { ClosureFactory } from './campaign-closure/infrastructure/factories/ClosureFactory';
 
 // LEGACY CODE REMOVED: ClientMatchingSystem migrado al nuevo sistema refactorizado
 // Ver: server/sync/domain/services/ClientMatcher.ts
@@ -115,7 +116,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               // Obtener CampaignProcessor y registrar esta conexión
               try {
-                const { ClosureFactory } = require('./campaign-closure/infrastructure/factories/ClosureFactory');
                 const factory = ClosureFactory.getInstance();
                 const processor = factory.getCampaignProcessor();
                 processor.registerWebSocketConnection(campaignKey, ws);
