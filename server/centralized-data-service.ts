@@ -27,7 +27,6 @@ export class CentralizedDataService {
           appSecret
         });
       } catch (error) {
-        console.error('Error initializing Meta Ads service:', error);
       }
     }
   }
@@ -41,7 +40,6 @@ export class CentralizedDataService {
     campaignsProcessed: number;
     metricsUpdated: number;
   }> {
-    console.log('🔄 Iniciando sincronización completa de datos...');
     
     try {
       // 1. Sincronizar datos de Google Sheets a la base de datos
@@ -56,7 +54,6 @@ export class CentralizedDataService {
       // 4. Recalcular todas las finanzas basadas en datos de BD
       await this.recalculateFinancialMetrics();
       
-      console.log('✅ Sincronización completa exitosa');
       
       return {
         googleSheetsRecords: googleSheetsData,
@@ -65,7 +62,6 @@ export class CentralizedDataService {
       };
       
     } catch (error) {
-      console.error('❌ Error en sincronización completa:', error);
       throw error;
     }
   }
@@ -75,7 +71,6 @@ export class CentralizedDataService {
    */
   private async syncGoogleSheetsData(): Promise<number> {
     try {
-      console.log('🔄 Iniciando sincronización usando sistema refactorizado...');
       
       // Usar el nuevo sistema de sincronización refactorizado
       const { SyncFactory } = await import('./sync/infrastructure/config/SyncFactory');
@@ -92,15 +87,12 @@ export class CentralizedDataService {
       });
       
       if (result.success) {
-        console.log(`✅ Sistema refactorizado procesó ${result.leadsProcessed} leads`);
         return result.leadsProcessed;
       } else {
-        console.error('❌ Error en sincronización refactorizada:', result.error);
         return 0;
       }
       
     } catch (error) {
-      console.error('Error usando sistema refactorizado:', error);
       
       // Fallback: usar solo datos diarios si el sistema refactorizado falla
       try {
@@ -124,11 +116,9 @@ export class CentralizedDataService {
           recordsInserted++;
         }
         
-        console.log(`📊 Fallback: Almacenados ${recordsInserted} registros de datos diarios`);
         return recordsInserted;
         
       } catch (fallbackError) {
-        console.error('Error en fallback de datos diarios:', fallbackError);
         return 0;
       }
     }
@@ -172,11 +162,9 @@ export class CentralizedDataService {
         processed++;
       }
       
-      console.log(`📋 Procesadas ${processed} campañas con métricas actualizadas`);
       return processed;
       
     } catch (error) {
-      console.error('Error actualizando métricas de campañas:', error);
       return 0;
     }
   }
@@ -211,7 +199,6 @@ export class CentralizedDataService {
       return enviados;
       
     } catch (error) {
-      console.error('Error calculando enviados desde BD:', error);
       return 0;
     }
   }
@@ -242,7 +229,6 @@ export class CentralizedDataService {
       return inversion;
       
     } catch (error) {
-      console.error('Error calculando inversión desde BD:', error);
       return 0;
     }
   }
@@ -276,14 +262,12 @@ export class CentralizedDataService {
             }
           }
         } catch (error) {
-          console.error(`Error actualizando Meta Ads para ${campana.numeroCampana}:`, error);
         }
       }
       
       return updated;
       
     } catch (error) {
-      console.error('Error sincronizando Meta Ads:', error);
       return 0;
     }
   }
@@ -326,10 +310,8 @@ export class CentralizedDataService {
         });
       }
       
-      console.log('💰 Métricas financieras recalculadas desde BD');
       
     } catch (error) {
-      console.error('Error recalculando métricas financieras:', error);
     }
   }
 
@@ -383,7 +365,6 @@ export class CentralizedDataService {
       return result;
       
     } catch (error) {
-      console.error('Error obteniendo datos completos desde BD:', error);
       return [];
     }
   }
