@@ -267,6 +267,12 @@ export class CampaignProcessor {
           };
           
           return { success: true, leadsAssigned: 0, campaignDetail };
+        } else {
+          console.error(`❌ [CIERRE AUTO] No se puede obtener fecha del último lead para campaña ${campaign.id} con ${currentAssignedLeads} leads asignados`);
+          if (campaignKey) {
+            this.progressManager.emitProgress(campaignKey, 100, 'Error: No se pudo obtener fecha del último lead');
+          }
+          return { success: false, leadsAssigned: 0, error: 'No se pudo obtener fecha del último lead para cierre automático' };
         }
       }
 
@@ -300,6 +306,12 @@ export class CampaignProcessor {
             };
             
             return { success: true, leadsAssigned: 0, campaignDetail };
+          } else {
+            console.error(`❌ [CIERRE MANUAL] No se puede obtener fecha del último lead para campaña ${campaign.id} con ${currentAssignedLeads} leads asignados`);
+            if (campaignKey) {
+              this.progressManager.emitProgress(campaignKey, 100, 'Error: No se pudo obtener fecha del último lead para cierre manual');
+            }
+            return { success: false, leadsAssigned: 0, error: 'No se pudo obtener fecha del último lead para cierre manual' };
           }
         }
 
