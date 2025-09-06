@@ -39,7 +39,7 @@ export class PostgresLeadRepository implements ILeadRepository {
     
     try {
       // Normalizar nombres para matching
-      const normalizedClient = this.normalizeClientName(clientName);
+      const normalizedClient = await this.getNormalizedCommercialName(clientName);
       const normalizedBrand = brandName.toLowerCase();
       const normalizedZone = this.normalizeZoneName(zone);
 
@@ -108,7 +108,7 @@ export class PostgresLeadRepository implements ILeadRepository {
     try {
 
       
-      const normalizedClient = this.normalizeClientName(clientName);
+      const normalizedClient = await this.getNormalizedCommercialName(clientName);
       const normalizedBrand = brandName.toLowerCase();
       const normalizedZone = this.normalizeZoneName(zone);
 
@@ -302,7 +302,7 @@ export class PostgresLeadRepository implements ILeadRepository {
     await this.ensureDbInitialized();
     
     try {
-      const normalizedClient = this.normalizeClientName(clientName);
+      const normalizedClient = await this.getNormalizedCommercialName(clientName);
       const normalizedBrand = brandName.toLowerCase();
       const normalizedZone = this.normalizeZoneName(zone);
 
@@ -569,7 +569,7 @@ export class PostgresLeadRepository implements ILeadRepository {
       console.log(`📋 Filtros: cliente=${clientName}, marca=${brandName}, zona=${zone}`);
 
       // Normalizar parámetros
-      const normalizedClient = this.normalizeClientName(clientName);
+      const normalizedClient = await this.getNormalizedCommercialName(clientName);
       const normalizedBrand = brandName.toLowerCase();
       const normalizedZone = this.normalizeZoneName(zone);
 
@@ -751,5 +751,35 @@ export class PostgresLeadRepository implements ILeadRepository {
     }
     
     return true;
+  }
+
+  /**
+   * Obtiene el nombreComercial normalizado basándose en el nombre completo del cliente
+   * Soluciona el problema de TOYOTA MARIANO PICHETTI usando la misma normalización que sincronización
+   */
+  private async getNormalizedCommercialName(clientName: string): Promise<string> {
+    try {
+      const { clientes } = await import('@shared/schema');
+      
+      const client = await this.db
+        .select({ nombreComercial: clientes.nombreComercial })
+        .from(clientes)
+        .where(ilike(clientes.nombreCliente, `%${clientName}%`))
+        .limit(1);
+      
+      if (client.length > 0 && client[0].nombreComercial) {
+        // Usar la misma normalización que en sincronización
+        const comercialName = this.normalizeClientName(client[0].nombreComercial);
+        console.log(`🔧 Normalización comercial: "${clientName}" → "${client[0].nombreComercial}" → "${comercialName}"`);
+        return comercialName;
+      }
+      
+      // Fallback: usar normalización original si no encuentra el cliente
+      console.log(`⚠️ Cliente "${clientName}" no encontrado en BD, usando normalización directa`);
+      return this.normalizeClientName(clientName);
+    } catch (error) {
+      console.warn(`Error obteniendo nombre comercial para ${clientName}:`, error);
+      return this.normalizeClientName(clientName);
+    }
   }
 }
