@@ -980,7 +980,16 @@ export default function DatosDiariosDashboard() {
   };
 
   const handleCloseCampaignInline = async (campaign: DatosDiariosData) => {
+    console.log('🎯 CLICK EN BOTÓN CERRAR CAMPAÑA:', {
+      cliente: campaign.cliente,
+      clienteNombre: campaign.clienteNombre,
+      numeroCampana: campaign.numeroCampana,
+      marca: campaign.marca,
+      zona: campaign.zona
+    });
+    
     const campaignKey = `${campaign.cliente}-${campaign.numeroCampana}`;
+    console.log('🔑 Campaign Key generado:', campaignKey);
     
     // Inicializar estado de cierre
     setClosingCampaigns(prev => new Set(prev).add(campaignKey));
