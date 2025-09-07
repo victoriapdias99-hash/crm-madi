@@ -104,9 +104,12 @@ class GoogleSheetsService {
       const slashDateMatch = cleanTimestamp.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
       if (slashDateMatch) {
         const [, day, month, year] = slashDateMatch;
+        console.log(`🕒 FECHA SLASH DETECTADA: "${cleanTimestamp}" → día:${day}, mes:${month}, año:${year}`);
         const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        const result = date.toISOString();
+        console.log(`🕒 FECHA TRANSFORMADA: ${cleanTimestamp} → ${result}`);
         if (!isNaN(date.getTime())) {
-          return date.toISOString();
+          return result;
         }
       }
 
