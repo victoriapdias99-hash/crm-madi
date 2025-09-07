@@ -96,6 +96,7 @@ class GoogleSheetsService {
         const fullYear = parseInt(year) < 50 ? 2000 + parseInt(year) : 1900 + parseInt(year);
         const date = new Date(fullYear, parseInt(month) - 1, parseInt(day), parseInt(hour), parseInt(minute));
         if (!isNaN(date.getTime())) {
+          console.log(`✅ FECHA PARSEADA: "${cleanTimestamp}" → ${date.toISOString()} (día=${day}, mes=${month}, año=${fullYear})`);
           return date.toISOString();
         }
       }
