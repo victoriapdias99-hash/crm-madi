@@ -184,7 +184,15 @@ export class LeadProcessor {
     if (!normalized.startsWith('+')) {
       // Asumir Argentina si no hay código de país
       if (normalized.length === 10) {
+        // Números de 10 dígitos: agregar +54
         normalized = '+54' + normalized;
+      } else if (normalized.length === 13 && normalized.startsWith('549')) {
+        // Números de 13 dígitos que empiecen con 549: ya incluyen código de Argentina
+        // Solo agregar el + al inicio (ej: 5491171423148 → +5491171423148)
+        normalized = '+' + normalized;
+      } else if (normalized.length === 11 && normalized.startsWith('549')) {
+        // Números de 11 dígitos que empiecen con 549: agregar + al inicio
+        normalized = '+' + normalized;
       }
     }
     
