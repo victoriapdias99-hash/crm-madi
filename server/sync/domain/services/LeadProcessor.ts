@@ -123,10 +123,55 @@ export class LeadProcessor {
   }
 
   private parseTimestamp(timestamp: string): string {
+    if (!timestamp || timestamp.trim() === '') {
+      return new Date().toISOString();
+    }
+
+    const cleanTimestamp = timestamp.trim();
+    
     try {
-      const date = new Date(timestamp);
-      return date.toISOString();
+      // 1. Formato ISO con timezone: 2025-08-27T14:47:25-03:00
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/.test(cleanTimestamp)) {
+        const date = new Date(cleanTimestamp);
+        if (!isNaN(date.getTime())) {
+          return date.toISOString();
+        }
+      }
+
+      // 2. Formato dd-mm-yy hh:mm: 06-09-25 18:24
+      const shortDateMatch = cleanTimestamp.match(/^(\d{2})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2})$/);
+      if (shortDateMatch) {
+        const [, day, month, year, hour, minute] = shortDateMatch;
+        // Asumir año 20XX si es menor que 50, sino 19XX
+        const fullYear = parseInt(year) < 50 ? 2000 + parseInt(year) : 1900 + parseInt(year);
+        const date = new Date(fullYear, parseInt(month) - 1, parseInt(day), parseInt(hour), parseInt(minute));
+        if (!isNaN(date.getTime())) {
+          return date.toISOString();
+        }
+      }
+
+      // 3. Formato mm/dd/yyyy: 4/9/2025
+      const slashDateMatch = cleanTimestamp.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (slashDateMatch) {
+        const [, month, day, year] = slashDateMatch;
+        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        if (!isNaN(date.getTime())) {
+          return date.toISOString();
+        }
+      }
+
+      // 4. Formato ISO estándar o cualquier otro formato que Date() pueda parsear
+      const date = new Date(cleanTimestamp);
+      if (!isNaN(date.getTime())) {
+        return date.toISOString();
+      }
+
+      // 5. Si todo falla, usar fecha actual
+      console.warn(`No se pudo parsear timestamp: "${cleanTimestamp}", usando fecha actual`);
+      return new Date().toISOString();
+      
     } catch (error) {
+      console.warn(`Error parseando timestamp: "${cleanTimestamp}":`, error);
       return new Date().toISOString();
     }
   }
