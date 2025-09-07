@@ -150,10 +150,10 @@ export class LeadProcessor {
         }
       }
 
-      // 3. Formato mm/dd/yyyy: 4/9/2025
+      // 3. Formato dd/mm/yyyy: 4/9/2025 (día/mes/año)
       const slashDateMatch = cleanTimestamp.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
       if (slashDateMatch) {
-        const [, month, day, year] = slashDateMatch;
+        const [, day, month, year] = slashDateMatch;
         const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
         if (!isNaN(date.getTime())) {
           return date.toISOString();
