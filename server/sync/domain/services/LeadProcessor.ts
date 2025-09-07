@@ -123,7 +123,10 @@ export class LeadProcessor {
   }
 
   private parseTimestamp(timestamp: string): string {
+    console.log(`🔍 LeadProcessor.parseTimestamp - Input: "${timestamp}" (tipo: ${typeof timestamp}, vacío: ${!timestamp})`);
+    
     if (!timestamp || timestamp.trim() === '') {
+      console.warn(`❌ LeadProcessor: Timestamp vacío/nulo, usando fecha actual`);
       return new Date().toISOString();
     }
 
@@ -167,7 +170,7 @@ export class LeadProcessor {
       }
 
       // 5. Si todo falla, usar fecha actual
-      console.warn(`No se pudo parsear timestamp: "${cleanTimestamp}", usando fecha actual`);
+      console.warn(`❌ LeadProcessor: No se pudo parsear timestamp: "${cleanTimestamp}", usando fecha actual`);
       return new Date().toISOString();
       
     } catch (error) {
