@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Loader2, Save, RefreshCw, Download, Filter, Power, Edit, Eye, X, RotateCcw, MoreVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useDashboardWebSocket } from "@/hooks/use-dashboard-websocket";
 import { Navigation } from "@/components/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -128,6 +129,9 @@ export default function DatosDiariosDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [cplValues, setCplValues] = useState<Record<number, number>>({});
+  
+  // WebSocket para refresh automático inmediato tras cierre de campañas
+  const { isConnected: wsConnected, connectionError, reconnectCount } = useDashboardWebSocket();
 
   const [forceShowContent, setForceShowContent] = useState(false);
   const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
@@ -472,6 +476,8 @@ export default function DatosDiariosDashboard() {
     restoreProcessingCampaigns();
   }, [restoreProcessingCampaigns]);
 
+
+
   // PostgreSQL optimized query for fast data updates (3s vs 15s)
   const { data: datosDiarios, isLoading, error, refetch } = useQuery<DatosDiariosData[]>({
     queryKey: ['/api/dashboard/datos-diarios-db'],
@@ -485,6 +491,51 @@ export default function DatosDiariosDashboard() {
     enabled: true,
     refetchOnReconnect: true,
   });
+
+  // Refresh manual completo al refrescar el navegador
+  const handleManualRefresh = useCallback(async () => {
+    console.log('🔄 Refresh manual iniciado');
+    
+    try {
+      // Invalidar todas las queries del dashboard
+      await queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/campanas-comerciales'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/clientes'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/meta-ads/campaigns'] });
+      
+      // Refetch inmediato de la query principal
+      await refetch();
+      
+      toast({
+        title: "Datos actualizados",
+        description: "Todos los datos del dashboard han sido refrescados",
+      });
+      
+      console.log('✅ Refresh manual completado');
+    } catch (error) {
+      console.error('❌ Error en refresh manual:', error);
+      toast({
+        title: "Error al actualizar",
+        description: "No se pudieron refrescar algunos datos",
+        variant: "destructive",
+      });
+    }
+  }, [queryClient, refetch, toast]);
+
+  // Auto-refresh al cambiar el foco de la ventana
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && !isLoading) {
+        console.log('🔄 Pestaña activa - refrescando datos del dashboard');
+        handleManualRefresh();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [handleManualRefresh, isLoading]);
 
   // Limpiar actualizaciones optimistas cuando lleguen los datos reales
   useEffect(() => {
@@ -1468,13 +1519,51 @@ export default function DatosDiariosDashboard() {
             <p className="text-slate-600 dark:text-slate-400 mt-2 text-lg font-medium">
               🚀 Gestión de campañas Meta Ads con datos reales de Google Sheets
             </p>
-            <div className="mt-2 flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-sm text-green-600 font-medium">Datos actualizándose cada 30 segundos</span>
+            <div className="mt-2 flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-sm text-green-600 font-medium">Datos actualizándose cada 30 segundos</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${wsConnected 
+                  ? 'bg-green-500 animate-pulse' 
+                  : connectionError 
+                    ? 'bg-red-500 animate-pulse' 
+                    : 'bg-yellow-500 animate-pulse'
+                }`}></div>
+                <span className={`text-xs font-medium ${wsConnected 
+                  ? 'text-green-600' 
+                  : connectionError 
+                    ? 'text-red-600' 
+                    : 'text-yellow-600'
+                }`}>
+                  {wsConnected 
+                    ? 'WebSocket conectado • Refresh automático activo' 
+                    : connectionError 
+                      ? 'WebSocket desconectado' 
+                      : `Reconectando... (${reconnectCount > 0 ? `intento ${reconnectCount}` : 'conectando'})`
+                  }
+                </span>
+              </div>
             </div>
             <div className="absolute -top-2 -left-2 w-24 h-24 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full opacity-10 animate-pulse"></div>
           </div>
           <div className="flex gap-3">
+            <Button
+              onClick={handleManualRefresh}
+              disabled={isLoading}
+              className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold shadow-xl transform hover:scale-105 transition-all duration-300 px-4 py-3"
+              size="lg"
+              data-testid="button-manual-refresh"
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              Refresh Manual
+            </Button>
+
             <Button
               onClick={() => syncAllSheetsMutation.mutate()}
               disabled={syncAllSheetsMutation.isPending}
@@ -1489,7 +1578,6 @@ export default function DatosDiariosDashboard() {
               )}
               Sincronizar Pestañas
             </Button>
-
 
             <Button
               onClick={handleUnifiedUpdate}
