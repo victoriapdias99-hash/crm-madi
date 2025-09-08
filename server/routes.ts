@@ -493,12 +493,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         eq(opLeadsRepTable.cliente, nombreComercial), // ✅ CORRECCIÓN: Comparación exacta en lugar de ILIKE con wildcards
         eq(opLeadsRepTable.localizacion, localizacionFiltro),
         eq(opLeadsRepTable.source, 'google_sheets'),
-        gte(sql`date(${opLeadsRepTable.fechaCreacion})`, campana.fechaCampana)
+        // 🚫 FILTRO_FECHA_DESHABILITADO: Comentado temporalmente para incluir todos los leads sin restricción de fecha
+        // gte(sql`date(${opLeadsRepTable.fechaCreacion})`, campana.fechaCampana)
       ];
       
-      if (fechaFinCalculada) {
-        conditions.push(lte(sql`date(${opLeadsRepTable.fechaCreacion})`, fechaFinCalculada));
-      }
+      // 🚫 FILTRO_FECHA_DESHABILITADO: Comentado temporalmente para incluir todos los leads sin restricción de fecha
+      // if (fechaFinCalculada) {
+      //   conditions.push(lte(sql`date(${opLeadsRepTable.fechaCreacion})`, fechaFinCalculada));
+      // }
       
       const result = await db
         .select({ count: count() })
