@@ -493,7 +493,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         eq(opLeadsRepTable.cliente, nombreComercial), // ✅ CORRECCIÓN: Comparación exacta en lugar de ILIKE con wildcards
         eq(opLeadsRepTable.localizacion, localizacionFiltro),
         eq(opLeadsRepTable.source, 'google_sheets'),
-        sql`${opLeadsRepTable.campaignId} IS NOT NULL`, // Solo contar leads ya asignados a alguna campaña
+        sql`${opLeadsRepTable.campaignId} IS NULL`, // Solo contar leads disponibles (no asignados)
         // 🚫 FILTRO_FECHA_DESHABILITADO: Comentado temporalmente para incluir todos los leads sin restricción de fecha
         // gte(sql`date(${opLeadsRepTable.fechaCreacion})`, campana.fechaCampana)
       ];
