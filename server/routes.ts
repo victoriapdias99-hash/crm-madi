@@ -433,8 +433,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             AND lower(${opLeadsRepTable.cliente}) LIKE ${`%${nombreComercial.toLowerCase()}%`}
             AND ${opLeadsRepTable.localizacion} = ${localizacionFiltro}
             AND ${opLeadsRepTable.source} = 'google_sheets'
+            AND ${opLeadsRepTable.campaignId} IS NULL
+            ${/* 🚫 FILTRO_FECHA_DESHABILITADO: Comentado temporalmente para incluir todos los leads sin restricción de fecha
             AND date(${opLeadsRepTable.fechaCreacion}) >= ${campana.fechaCampana}
-            ${fechaFinCalculada ? sql`AND date(${opLeadsRepTable.fechaCreacion}) <= ${fechaFinCalculada}` : sql``}`
+            ${fechaFinCalculada ? sql`AND date(${opLeadsRepTable.fechaCreacion}) <= ${fechaFinCalculada}` : sql``} */ sql``}`
       );
   }
 
