@@ -49,6 +49,14 @@ function CplAnalysis() {
   // Query para obtener datos de análisis CPL
   const { data, isLoading, error, refetch } = useQuery<CplAnalysisResponse>({
     queryKey: ['/api/cpl-analysis', dateFrom, dateTo],
+    queryFn: () => 
+      fetch(`/api/cpl-analysis?dateFrom=${dateFrom}&dateTo=${dateTo}`)
+        .then(res => {
+          if (!res.ok) {
+            throw new Error(`Error ${res.status}: ${res.statusText}`);
+          }
+          return res.json();
+        }),
     enabled: isManualQuery, // Solo ejecutar cuando el usuario haga clic
     retry: 2,
     staleTime: 5 * 60 * 1000, // 5 minutos
