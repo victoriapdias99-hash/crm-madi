@@ -3135,6 +3135,141 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== MÓDULO DE ANÁLISIS CPL COMPARATIVO ==========
+  
+  // Endpoint para análisis CPL Meta Ads vs CPL Real por marca
+  app.get('/api/cpl-analysis', async (req, res) => {
+    try {
+      const { dateFrom, dateTo } = req.query;
+      
+      // Validar fechas requeridas
+      if (!dateFrom || !dateTo) {
+        return res.status(400).json({ 
+          error: 'Parámetros dateFrom y dateTo son requeridos (formato YYYY-MM-DD)' 
+        });
+      }
+
+      console.log(`🔍 Análisis CPL iniciado para rango: ${dateFrom} - ${dateTo}`);
+      
+      // 1. Obtener datos de Meta Ads con filtro de fechas
+      const { metaAdsService } = await import('./meta-ads-service');
+      const metaAdsData = await metaAdsService.getCampaignSpendData({
+        since: dateFrom as string,
+        until: dateTo as string
+      });
+      
+      console.log(`📊 Meta Ads: ${metaAdsData.length} campañas obtenidas`);
+      
+      // 2. Agrupar campañas Meta Ads por marca
+      const marcasMetaAds: Record<string, {
+        importeGastado: number;
+        cplMetaAds: number;
+        leadsMetaAds: number;
+        campanas: string[];
+      }> = {};
+      
+      const marcas = ['PEUGEOT', 'FIAT', 'TOYOTA', 'CHEVROLET', 'RENAULT', 'CITROEN', 'VW', 'JEEP', 'FORD'];
+      
+      metaAdsData.forEach(campaign => {
+        const nombreCampana = campaign.campaignName.toUpperCase();
+        
+        // Encontrar marca que coincida con el nombre de campaña
+        const marcaEncontrada = marcas.find(marca => 
+          nombreCampana.includes(marca) || nombreCampana.includes(marca.toLowerCase())
+        );
+        
+        if (marcaEncontrada) {
+          if (!marcasMetaAds[marcaEncontrada]) {
+            marcasMetaAds[marcaEncontrada] = {
+              importeGastado: 0,
+              cplMetaAds: 0,
+              leadsMetaAds: 0,
+              campanas: []
+            };
+          }
+          
+          marcasMetaAds[marcaEncontrada].importeGastado += campaign.spend;
+          marcasMetaAds[marcaEncontrada].leadsMetaAds += campaign.results;
+          marcasMetaAds[marcaEncontrada].campanas.push(campaign.campaignName);
+        }
+      });
+      
+      // Calcular CPL Meta Ads promedio por marca
+      Object.keys(marcasMetaAds).forEach(marca => {
+        const data = marcasMetaAds[marca];
+        data.cplMetaAds = data.leadsMetaAds > 0 ? data.importeGastado / data.leadsMetaAds : 0;
+      });
+      
+      console.log(`🎯 Marcas procesadas de Meta Ads: ${Object.keys(marcasMetaAds).join(', ')}`);
+      
+      // 3. Obtener leads reales de la BD por fecha y marca
+      const { db } = await import('./db');
+      const { opLead } = await import('../shared/schema');
+      const { and, gte, lte, sql, count } = await import('drizzle-orm');
+      
+      const resultadoFinal = [];
+      
+      for (const marca of Object.keys(marcasMetaAds)) {
+        const metaData = marcasMetaAds[marca];
+        
+        // Query para contar leads reales de la BD
+        const leadsRealesResult = await db
+          .select({ count: count() })
+          .from(opLead)
+          .where(
+            and(
+              sql`lower(${opLead.marca}) LIKE ${`%${marca.toLowerCase()}%`}`,
+              gte(sql`date(${opLead.fechaCreacion})`, dateFrom),
+              lte(sql`date(${opLead.fechaCreacion})`, dateTo)
+            )
+          );
+        
+        const leadsReales = leadsRealesResult[0]?.count || 0;
+        
+        // Calcular CPL Real
+        const cplReal = leadsReales > 0 ? metaData.importeGastado / leadsReales : 0;
+        
+        resultadoFinal.push({
+          marca,
+          importeGastado: Math.round(metaData.importeGastado * 100) / 100,
+          cplMetaAds: Math.round(metaData.cplMetaAds * 100) / 100,
+          leadsMetaAds: metaData.leadsMetaAds,
+          cplReal: Math.round(cplReal * 100) / 100,
+          leadsReales: leadsReales,
+          diferenciaCPL: Math.round((metaData.cplMetaAds - cplReal) * 100) / 100,
+          diferenciaPorcentaje: metaData.cplMetaAds > 0 ? 
+            Math.round(((metaData.cplMetaAds - cplReal) / metaData.cplMetaAds) * 100 * 100) / 100 : 0,
+          campanasMetaAds: metaData.campanas
+        });
+        
+        console.log(`✅ ${marca}: Meta=${metaData.leadsMetaAds} leads, Real=${leadsReales} leads, CPL Meta=${metaData.cplMetaAds.toFixed(2)}, CPL Real=${cplReal.toFixed(2)}`);
+      }
+      
+      // Ordenar por importe gastado descendente
+      resultadoFinal.sort((a, b) => b.importeGastado - a.importeGastado);
+      
+      res.json({
+        success: true,
+        dateRange: { from: dateFrom, to: dateTo },
+        data: resultadoFinal,
+        summary: {
+          totalMarcas: resultadoFinal.length,
+          totalImporteGastado: Math.round(resultadoFinal.reduce((sum, item) => sum + item.importeGastado, 0) * 100) / 100,
+          totalLeadsMetaAds: resultadoFinal.reduce((sum, item) => sum + item.leadsMetaAds, 0),
+          totalLeadsReales: resultadoFinal.reduce((sum, item) => sum + item.leadsReales, 0)
+        },
+        timestamp: new Date()
+      });
+      
+    } catch (error) {
+      console.error('❌ Error en análisis CPL:', error);
+      res.status(500).json({ 
+        error: 'Error obteniendo análisis CPL',
+        details: error instanceof Error ? error.message : 'Error desconocido'
+      });
+    }
+  });
+
   // ========== REGISTRO DE RUTAS DEL SISTEMA REFACTORIZADO ==========
   
   // Importar y registrar rutas del sync refactorizado
