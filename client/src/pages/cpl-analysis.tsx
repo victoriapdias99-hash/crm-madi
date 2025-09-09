@@ -33,7 +33,7 @@ interface CplAnalysisResponse {
   timestamp: string;
 }
 
-export function CplAnalysis() {
+function CplAnalysis() {
   const [dateFrom, setDateFrom] = useState(() => {
     const date = new Date();
     date.setDate(date.getDate() - 7); // 7 días atrás por defecto
@@ -335,3 +335,5 @@ export function CplAnalysis() {
     </div>
   );
 }
+
+export default CplAnalysis;
