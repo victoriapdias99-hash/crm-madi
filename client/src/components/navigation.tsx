@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { BarChart3, Building2, Calendar, Settings, TrendingUp, Calculator, Target, Home, ArrowLeft, Link2, PieChart, Zap } from "lucide-react";
+import { BarChart3, Building2, Calendar, Settings, TrendingUp, Calculator, Target, Home, ArrowLeft, Link2, PieChart, Zap, BarChart } from "lucide-react";
 
 export function Navigation() {
   const [location] = useLocation();
@@ -54,6 +54,12 @@ export function Navigation() {
       label: "CPL Directo",
       icon: Calculator,
       active: location === "/cpl-directo"
+    },
+    {
+      href: "/cpl-analysis",
+      label: "CPL Analysis",
+      icon: BarChart,
+      active: location === "/cpl-analysis"
     },
     {
       href: "/integracion-manychat",
