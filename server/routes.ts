@@ -3151,8 +3151,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`🔍 Análisis CPL iniciado para rango: ${dateFrom} - ${dateTo}`);
       
-      // 1. Obtener datos de Meta Ads con filtro de fechas
-      const { metaAdsService } = await import('./meta-ads-service');
+      // 1. Obtener instancia del servicio Meta Ads
+      const { getMetaAdsService } = await import('./meta-ads-routes');
+      const metaAdsService = getMetaAdsService();
+      
+      if (!metaAdsService) {
+        return res.status(400).json({ 
+          error: 'Meta Ads service not configured. Please configure Meta Ads first.' 
+        });
+      }
+      
+      // 2. Obtener datos de Meta Ads con filtro de fechas
       const metaAdsData = await metaAdsService.getCampaignSpendData({
         since: dateFrom as string,
         until: dateTo as string

@@ -4,7 +4,7 @@ import { MetaAdsService, type CampaignSpendData } from "./meta-ads-service";
 let metaAdsService: MetaAdsService | null = null;
 
 // Función para obtener la instancia configurada globalmente o crear una nueva
-function getMetaAdsService(): MetaAdsService | null {
+export function getMetaAdsService(): MetaAdsService | null {
   // Si hay una instancia global configurada, usarla
   if (global.metaAdsService) {
     return global.metaAdsService;
