@@ -1,0 +1,364 @@
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { TrendingUp, TrendingDown, Calculator, DollarSign, Target, BarChart3, Percent } from 'lucide-react';
+import { Navigation } from '@/components/navigation';
+
+interface FinanzasMetaAdsData {
+  marca: string;
+  leadsMetaAds: number;
+  cplMetaAds: number;
+  inversionMetaAds: number;
+  inversionReal: number;
+  facturacionBruta: number;
+  gananciaBruta: number;
+  impuestos: number;
+  gananciaNeta: number;
+  roi: number;
+  ventaPromedio: number;
+  campanasMetaAds: string[];
+}
+
+interface FinanzasMetaAdsResponse {
+  success: boolean;
+  dateRange: { from: string; to: string };
+  data: FinanzasMetaAdsData[];
+  summary: {
+    totalMarcas: number;
+    totalInversionMetaAds: number;
+    totalInversionReal: number;
+    totalFacturacion: number;
+    totalGananciaNeta: number;
+    roiPromedio: number;
+  };
+  timestamp: string;
+}
+
+export default function FinanzasDashboardMetaAds() {
+  const [dateFrom, setDateFrom] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 30); // 30 días atrás por defecto
+    return date.toISOString().split('T')[0];
+  });
+  
+  const [dateTo, setDateTo] = useState(() => {
+    return new Date().toISOString().split('T')[0];
+  });
+
+  const [isManualQuery, setIsManualQuery] = useState(false);
+
+  // Query para obtener datos financieros de Meta Ads
+  const { data, isLoading, error, refetch } = useQuery<FinanzasMetaAdsResponse>({
+    queryKey: ['/api/finanzas-meta-ads', dateFrom, dateTo],
+    queryFn: () => 
+      fetch(`/api/finanzas-meta-ads?dateFrom=${dateFrom}&dateTo=${dateTo}`)
+        .then(res => {
+          if (!res.ok) {
+            throw new Error(`Error ${res.status}: ${res.statusText}`);
+          }
+          return res.json();
+        }),
+    enabled: isManualQuery,
+    retry: 2,
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    refetchOnWindowFocus: false
+  });
+
+  const handleAnalyze = () => {
+    setIsManualQuery(true);
+    refetch();
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 2
+    }).format(amount);
+  };
+
+  const getBadgeVariant = (roi: number) => {
+    if (roi > 50) return 'default';
+    if (roi > 0) return 'secondary';
+    return 'destructive';
+  };
+
+  const getTrendIcon = (roi: number) => {
+    return roi > 0 ? 
+      <TrendingUp className="h-4 w-4 text-green-500" /> : 
+      <TrendingDown className="h-4 w-4 text-red-500" />;
+  };
+
+  return (
+    <div className="container mx-auto py-6 space-y-6" data-testid="page-finanzas-meta-ads">
+      <Navigation />
+      
+      {/* Header */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <Calculator className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-bold" data-testid="title-main">
+            Dashboard Financiero con Meta Ads
+          </h1>
+        </div>
+        <p className="text-muted-foreground" data-testid="text-description">
+          Análisis financiero por marca basado en inversión real de Meta Ads y leads obtenidos
+        </p>
+      </div>
+
+      {/* Filtros de fecha */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            Filtros de Análisis
+          </CardTitle>
+          <CardDescription>
+            Selecciona el rango de fechas para el análisis financiero con datos de Meta Ads
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div className="space-y-2">
+              <Label htmlFor="date-from">Fecha Desde</Label>
+              <Input
+                id="date-from"
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                data-testid="input-date-from"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="date-to">Fecha Hasta</Label>
+              <Input
+                id="date-to"
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                data-testid="input-date-to"
+              />
+            </div>
+            <Button 
+              onClick={handleAnalyze} 
+              disabled={isLoading}
+              className="w-full md:w-auto"
+              data-testid="button-analyze"
+            >
+              {isLoading ? 'Analizando...' : 'Ejecutar Análisis'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Resumen financiero */}
+      {data?.summary && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Inversión Meta Ads</p>
+                  <p className="text-2xl font-bold" data-testid="text-inversion-meta">
+                    {formatCurrency(data.summary.totalInversionMetaAds)}
+                  </p>
+                </div>
+                <DollarSign className="h-8 w-8 text-red-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Inversión Real (+2%)</p>
+                  <p className="text-2xl font-bold" data-testid="text-inversion-real">
+                    {formatCurrency(data.summary.totalInversionReal)}
+                  </p>
+                </div>
+                <Calculator className="h-8 w-8 text-orange-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Facturación Total</p>
+                  <p className="text-2xl font-bold" data-testid="text-facturacion">
+                    {formatCurrency(data.summary.totalFacturacion)}
+                  </p>
+                </div>
+                <BarChart3 className="h-8 w-8 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Ganancia Neta</p>
+                  <p className="text-2xl font-bold" data-testid="text-ganancia">
+                    {formatCurrency(data.summary.totalGananciaNeta)}
+                  </p>
+                </div>
+                <TrendingUp className="h-8 w-8 text-green-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">ROI Promedio</p>
+                  <p className="text-2xl font-bold" data-testid="text-roi">
+                    {data.summary.roiPromedio.toFixed(1)}%
+                  </p>
+                </div>
+                <Percent className="h-8 w-8 text-purple-500" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Tabla de resultados por marca */}
+      {data?.data && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Análisis Financiero por Marca</CardTitle>
+            <CardDescription>
+              Rango: {data.dateRange.from} → {data.dateRange.to} | Datos de inversión real de Meta Ads
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse" data-testid="table-results">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-3 font-medium">MARCA</th>
+                    <th className="text-right p-3 font-medium">LEADS</th>
+                    <th className="text-right p-3 font-medium">CPL META ADS</th>
+                    <th className="text-right p-3 font-medium">INVERSIÓN REAL</th>
+                    <th className="text-right p-3 font-medium">FACTURACIÓN</th>
+                    <th className="text-right p-3 font-medium">GANANCIA NETA</th>
+                    <th className="text-center p-3 font-medium">ROI</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.data.map((item, index) => (
+                    <tr 
+                      key={item.marca} 
+                      className="border-b hover:bg-muted/50 transition-colors"
+                      data-testid={`row-brand-${index}`}
+                    >
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{item.marca}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {item.campanasMetaAds.length} campañas
+                          </Badge>
+                        </div>
+                      </td>
+                      <td className="p-3 text-right" data-testid={`text-leads-${index}`}>
+                        {item.leadsMetaAds.toLocaleString()}
+                      </td>
+                      <td className="p-3 text-right font-mono" data-testid={`text-cpl-${index}`}>
+                        {formatCurrency(item.cplMetaAds)}
+                      </td>
+                      <td className="p-3 text-right font-mono" data-testid={`text-inversion-${index}`}>
+                        {formatCurrency(item.inversionReal)}
+                      </td>
+                      <td className="p-3 text-right font-mono" data-testid={`text-facturacion-${index}`}>
+                        {formatCurrency(item.facturacionBruta)}
+                      </td>
+                      <td className="p-3 text-right font-mono" data-testid={`text-ganancia-${index}`}>
+                        {formatCurrency(item.gananciaNeta)}
+                      </td>
+                      <td className="p-3 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          {getTrendIcon(item.roi)}
+                          <Badge variant={getBadgeVariant(item.roi)}>
+                            {item.roi.toFixed(1)}%
+                          </Badge>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {data.data.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                No se encontraron datos para el rango de fechas seleccionado
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Estado de carga */}
+      {isLoading && (
+        <Card>
+          <CardContent className="p-8">
+            <div className="flex items-center justify-center space-x-2">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              <p>Obteniendo datos de Meta Ads y calculando finanzas...</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Estado de error */}
+      {error && (
+        <Card className="border-destructive">
+          <CardContent className="p-6">
+            <div className="text-center space-y-2">
+              <p className="text-destructive font-medium">Error al obtener análisis financiero</p>
+              <p className="text-sm text-muted-foreground">
+                {error instanceof Error ? error.message : 'Error desconocido'}
+              </p>
+              <Button onClick={handleAnalyze} variant="outline" size="sm">
+                Reintentar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Información adicional */}
+      <Card className="bg-muted/30">
+        <CardContent className="p-4">
+          <div className="space-y-2">
+            <h4 className="font-medium flex items-center gap-2">
+              <Calculator className="h-4 w-4" />
+              Explicación del Análisis Financiero
+            </h4>
+            <div className="text-sm text-muted-foreground space-y-1">
+              <p><strong>Inversión Meta Ads:</strong> Gasto real reportado por Meta Ads</p>
+              <p><strong>Inversión Real:</strong> Gasto Meta Ads + 2% de margen operativo</p>
+              <p><strong>Facturación:</strong> Leads × CPL × Tasa de conversión por marca</p>
+              <p><strong>Ganancia Neta:</strong> Facturación - Inversión Real - Impuestos (6.5%)</p>
+              <p><strong>ROI:</strong> (Ganancia Neta / Inversión Real) × 100</p>
+              <Separator className="my-2" />
+              <p className="text-xs">
+                Los datos de inversión provienen directamente de Meta Ads API. 
+                Las tasas de conversión son configurables por marca.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

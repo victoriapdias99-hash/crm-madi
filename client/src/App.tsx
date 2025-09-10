@@ -16,7 +16,7 @@ import ClientesOpLeads from "@/pages/clientes-op-leads";
 import CampanasManagement from "@/pages/campanas-management";
 import MetaAdsDashboard from "@/pages/meta-ads-dashboard";
 import MetaAdsConfig from "@/pages/meta-ads-config";
-import FinanzasDashboard from "@/pages/finanzas-dashboard-simple";
+import FinanzasDashboard from "@/pages/finanzas-dashboard-meta-ads";
 import ReportesDashboard from "@/pages/reportes-dashboard-simple";
 import ReportesGraficos from "@/pages/reportes-graficos";
 import CPLSimple from "@/pages/cpl-simple";

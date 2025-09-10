@@ -1,52 +1,90 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, DollarSign, TrendingUp, Calculator, Target, Filter, RefreshCw } from "lucide-react";
+import { Loader2, DollarSign, TrendingUp, Calculator, Target, Filter, RefreshCw, BarChart3, Percent } from "lucide-react";
 import { Navigation } from "@/components/navigation";
 import { useToast } from "@/hooks/use-toast";
 
-interface FinanzasData {
-  cliente: string;
-  clienteNombre: string;
-  campana: string;
-  numeroCampana: number;
+interface FinanzasMetaAdsData {
   marca: string;
-  zona: string;
-  totalLeads: number;
-  cpl: number;
-  cpa: number;
-  ventaPorCampana: number;
-  inversionTotal: number;
-  inversionRealizada: number;
-  inversionPendiente: number;
-  ganancia: number;
+  leadsMetaAds: number;
+  cplMetaAds: number;
+  inversionMetaAds: number;
+  inversionReal: number;
+  facturacionBruta: number;
+  gananciaBruta: number;
+  impuestos: number;
+  gananciaNeta: number;
   roi: number;
-  impuestosIIBB: number;
-  totalFacturado: number;
-  fechaCampana?: string;
+  ventaPromedio: number;
+  campanasMetaAds: string[];
+}
+
+interface FinanzasMetaAdsResponse {
+  success: boolean;
+  dateRange: { from: string; to: string };
+  data: FinanzasMetaAdsData[];
+  summary: {
+    totalMarcas: number;
+    totalInversionMetaAds: number;
+    totalInversionReal: number;
+    totalFacturacion: number;
+    totalGananciaNeta: number;
+    roiPromedio: number;
+  };
+  timestamp: string;
 }
 
 export default function FinanzasDashboard() {
-  const [mesSeleccionado, setMesSeleccionado] = useState<string>("todos");
+  const [dateFrom, setDateFrom] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 30); // 30 días atrás por defecto
+    return date.toISOString().split('T')[0];
+  });
+  
+  const [dateTo, setDateTo] = useState(() => {
+    return new Date().toISOString().split('T')[0];
+  });
+
+  const [isManualQuery, setIsManualQuery] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
-  const { data: finanzasData, isLoading } = useQuery({
-    queryKey: ['/api/dashboard/finanzas'],
-    refetchInterval: 300000,
+  // Query para obtener datos financieros de Meta Ads
+  const { data: finanzasData, isLoading, error, refetch } = useQuery<FinanzasMetaAdsResponse>({
+    queryKey: ['/api/finanzas-meta-ads', dateFrom, dateTo],
+    queryFn: () => 
+      fetch(`/api/finanzas-meta-ads?dateFrom=${dateFrom}&dateTo=${dateTo}`)
+        .then(res => {
+          if (!res.ok) {
+            throw new Error(`Error ${res.status}: ${res.statusText}`);
+          }
+          return res.json();
+        }),
+    enabled: isManualQuery,
+    retry: 2,
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    refetchOnWindowFocus: false
   });
+
+  const handleAnalyze = () => {
+    setIsManualQuery(true);
+    refetch();
+  };
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await queryClient.refetchQueries({ queryKey: ['/api/dashboard/finanzas'] });
+      await refetch();
       toast({
         title: "Datos actualizados",
-        description: "Los datos de finanzas se han actualizado correctamente",
+        description: "Los datos financieros se han actualizado correctamente",
       });
     } catch (error) {
       toast({
