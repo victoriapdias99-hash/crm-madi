@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { TrendingUp, TrendingDown, Calculator, DollarSign, Target, BarChart3, Percent } from 'lucide-react';
@@ -21,6 +22,9 @@ interface FinanzasMetaAdsData {
   margenOperativo: number;
   inversionTotal: number;
   facturacionBruta: number;
+  iibb: number;
+  iva: number;
+  totalImpuestos: number;
   ganancia: number;
   roi: number;
   ventaPromedio: number;
@@ -39,8 +43,13 @@ interface FinanzasMetaAdsResponse {
     totalMargenOperativo: number;
     totalInversionTotal: number;
     totalFacturacion: number;
+    totalIIBB: number;
+    totalIVA: number;
+    totalImpuestos: number;
     totalGanancia: number;
     roiPromedio: number;
+    incluirIIBB: boolean;
+    incluirIVA: boolean;
   };
   timestamp: string;
 }
@@ -57,12 +66,14 @@ export default function FinanzasDashboardMetaAds() {
   });
 
   const [isManualQuery, setIsManualQuery] = useState(false);
+  const [incluirIIBB, setIncluirIIBB] = useState(false);
+  const [incluirIVA, setIncluirIVA] = useState(false);
 
   // Query para obtener datos financieros de Meta Ads
   const { data, isLoading, error, refetch } = useQuery<FinanzasMetaAdsResponse>({
-    queryKey: ['/api/finanzas-meta-ads', dateFrom, dateTo],
+    queryKey: ['/api/finanzas-meta-ads', dateFrom, dateTo, incluirIIBB, incluirIVA],
     queryFn: () => 
-      fetch(`/api/finanzas-meta-ads?dateFrom=${dateFrom}&dateTo=${dateTo}`)
+      fetch(`/api/finanzas-meta-ads?dateFrom=${dateFrom}&dateTo=${dateTo}&incluirIIBB=${incluirIIBB}&incluirIVA=${incluirIVA}`)
         .then(res => {
           if (!res.ok) {
             throw new Error(`Error ${res.status}: ${res.statusText}`);
