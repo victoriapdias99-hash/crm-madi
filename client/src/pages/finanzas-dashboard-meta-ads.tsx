@@ -18,7 +18,8 @@ interface FinanzasMetaAdsData {
   cplMetaAds: number;
   cplReal: number;
   inversionMetaAds: number;
-  inversionReal: number;
+  margenOperativo: number;
+  inversionTotal: number;
   facturacionBruta: number;
   ganancia: number;
   roi: number;
@@ -35,7 +36,8 @@ interface FinanzasMetaAdsResponse {
     totalLeadsMetaAds: number;
     totalLeadsReales: number;
     totalInversionMetaAds: number;
-    totalInversionReal: number;
+    totalMargenOperativo: number;
+    totalInversionTotal: number;
     totalFacturacion: number;
     totalGanancia: number;
     roiPromedio: number;
@@ -209,12 +211,26 @@ export default function FinanzasDashboardMetaAds() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Inversión Real (+2%)</p>
-                  <p className="text-2xl font-bold" data-testid="text-inversion-real">
-                    {formatCurrency(data.summary.totalInversionReal)}
+                  <p className="text-sm text-muted-foreground">Margen Operativo (2%)</p>
+                  <p className="text-2xl font-bold" data-testid="text-margen-operativo">
+                    {formatCurrency(data.summary.totalMargenOperativo)}
                   </p>
                 </div>
                 <Calculator className="h-8 w-8 text-orange-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Inversión Total</p>
+                  <p className="text-2xl font-bold" data-testid="text-inversion-total">
+                    {formatCurrency(data.summary.totalInversionTotal)}
+                  </p>
+                </div>
+                <DollarSign className="h-8 w-8 text-yellow-500" />
               </div>
             </CardContent>
           </Card>
@@ -281,7 +297,9 @@ export default function FinanzasDashboardMetaAds() {
                     <th className="text-right p-3 font-medium">LEADS META ADS</th>
                     <th className="text-right p-3 font-medium">LEADS REALES</th>
                     <th className="text-right p-3 font-medium">CPL REAL</th>
-                    <th className="text-right p-3 font-medium">INVERSIÓN REAL</th>
+                    <th className="text-right p-3 font-medium">INVERSIÓN META ADS</th>
+                    <th className="text-right p-3 font-medium">MARGEN (2%)</th>
+                    <th className="text-right p-3 font-medium">INVERSIÓN TOTAL</th>
                     <th className="text-right p-3 font-medium">FACTURACIÓN</th>
                     <th className="text-right p-3 font-medium">GANANCIA</th>
                     <th className="text-center p-3 font-medium">ROI</th>
@@ -324,8 +342,14 @@ export default function FinanzasDashboardMetaAds() {
                           Meta: {formatCurrency(item.cplMetaAds)}
                         </div>
                       </td>
-                      <td className="p-3 text-right font-mono" data-testid={`text-inversion-${index}`}>
-                        {formatCurrency(item.inversionReal)}
+                      <td className="p-3 text-right font-mono" data-testid={`text-inversion-meta-${index}`}>
+                        {formatCurrency(item.inversionMetaAds)}
+                      </td>
+                      <td className="p-3 text-right font-mono" data-testid={`text-margen-${index}`}>
+                        {formatCurrency(item.margenOperativo)}
+                      </td>
+                      <td className="p-3 text-right font-mono" data-testid={`text-inversion-total-${index}`}>
+                        {formatCurrency(item.inversionTotal)}
                       </td>
                       <td className="p-3 text-right font-mono" data-testid={`text-facturacion-${index}`}>
                         {formatCurrency(item.facturacionBruta)}
@@ -394,11 +418,12 @@ export default function FinanzasDashboardMetaAds() {
               Explicación del Análisis Financiero
             </h4>
             <div className="text-sm text-muted-foreground space-y-1">
-              <p><strong>Inversión Meta Ads:</strong> Gasto real reportado por Meta Ads</p>
-              <p><strong>Inversión Real:</strong> Gasto Meta Ads + 2% de margen operativo</p>
+              <p><strong>Inversión Meta Ads:</strong> Gasto real reportado por Meta Ads (puro, sin margen)</p>
+              <p><strong>Margen Operativo:</strong> 2% del gasto Meta Ads para costos administrativos</p>
+              <p><strong>Inversión Total:</strong> Inversión Meta Ads + Margen Operativo</p>
               <p><strong>Facturación:</strong> Valores reales de campañas comerciales registradas</p>
-              <p><strong>Ganancia:</strong> Facturación - Inversión Real (fórmula simplificada)</p>
-              <p><strong>ROI:</strong> (Ganancia / Inversión Real) × 100</p>
+              <p><strong>Ganancia:</strong> Facturación - Inversión Total (fórmula simplificada)</p>
+              <p><strong>ROI:</strong> (Ganancia / Inversión Total) × 100</p>
               <Separator className="my-2" />
               <p className="text-xs">
                 Los datos de inversión provienen directamente de Meta Ads API. 
