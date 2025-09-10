@@ -987,7 +987,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`🔍 DEBUG AVEC ${campana.marca}: cantidadDatosSolicitados=${campana.cantidadDatosSolicitados}, pedidosTotal=${pedidosTotal}, datosFinales=${datosFinales}`);
         }
         
-        const porcentajeDesvio = datosFinales > 0 ? ((pedidosTotal / datosFinales) * 100) : 0;
+        const porcentajeDesvio = datosFinales > 0 ? (pedidosTotal / datosFinales) : 0;
         const faltantesCorregidos = Math.max(0, pedidosTotal - datosFinales); // Pedidos Total - Enviados
         
         // Usar el valor real de pedidosPorDia de la campaña específica

@@ -1032,8 +1032,8 @@ export default function DatosDiariosDashboard() {
     const faltantes = Math.max(0, safePedidosTotal - safeEnviados);
     const inversionPendiente = safePorcentaje >= 100 ? 0 : faltantes * safeCpl * 1.02;
     
-    // Corregir porcentaje de desvío: (Pedidos Total / Enviados) × 100
-    const porcentajeDesvio = safeEnviados > 0 ? ((safePedidosTotal / safeEnviados) * 100) : 0;
+    // Corregir porcentaje de desvío: (Pedidos Total / Enviados)
+    const porcentajeDesvio = safeEnviados > 0 ? (safePedidosTotal / safeEnviados) : 0;
     
     return {
       inversionRealizada: isNaN(inversionRealizada) ? 0 : inversionRealizada,
