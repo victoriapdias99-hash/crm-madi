@@ -492,50 +492,7 @@ export default function DatosDiariosDashboard() {
     refetchOnReconnect: true,
   });
 
-  // Refresh manual completo al refrescar el navegador
-  const handleManualRefresh = useCallback(async () => {
-    console.log('🔄 Refresh manual iniciado');
-    
-    try {
-      // Invalidar todas las queries del dashboard
-      await queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
-      await queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
-      await queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
-      await queryClient.invalidateQueries({ queryKey: ['/api/campanas-comerciales'] });
-      await queryClient.invalidateQueries({ queryKey: ['/api/clientes'] });
-      await queryClient.invalidateQueries({ queryKey: ['/api/meta-ads/campaigns'] });
-      
-      // Refetch inmediato de la query principal
-      await refetch();
-      
-      toast({
-        title: "Datos actualizados",
-        description: "Todos los datos del dashboard han sido refrescados",
-      });
-      
-      console.log('✅ Refresh manual completado');
-    } catch (error) {
-      console.error('❌ Error en refresh manual:', error);
-      toast({
-        title: "Error al actualizar",
-        description: "No se pudieron refrescar algunos datos",
-        variant: "destructive",
-      });
-    }
-  }, [queryClient, refetch, toast]);
 
-  // Auto-refresh al cambiar el foco de la ventana
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden && !isLoading) {
-        console.log('🔄 Pestaña activa - refrescando datos del dashboard');
-        handleManualRefresh();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [handleManualRefresh, isLoading]);
 
   // Limpiar actualizaciones optimistas cuando lleguen los datos reales
   useEffect(() => {
@@ -1549,22 +1506,7 @@ export default function DatosDiariosDashboard() {
             <div className="absolute -top-2 -left-2 w-24 h-24 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full opacity-10 animate-pulse"></div>
           </div>
           <div className="flex gap-3">
-            <Button
-              onClick={handleManualRefresh}
-              disabled={isLoading}
-              className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold shadow-xl transform hover:scale-105 transition-all duration-300 px-4 py-3"
-              size="lg"
-              data-testid="button-manual-refresh"
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
-              )}
-              Refresh Manual
-            </Button>
-
-            <Button
+<Button
               onClick={() => syncAllSheetsMutation.mutate()}
               disabled={syncAllSheetsMutation.isPending}
               className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold shadow-xl transform hover:scale-105 transition-all duration-300 px-4 py-3"
