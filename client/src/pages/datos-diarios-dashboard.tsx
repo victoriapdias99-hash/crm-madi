@@ -180,10 +180,11 @@ export default function DatosDiariosDashboard() {
   const [editingCampana, setEditingCampana] = useState<CampanaComercial | null>(null);
 
   // Configurar useForm igual que campanas-management
-  const form = useForm<Omit<InsertCampanaComercial, 'fechaFin' | 'numeroCampana'>>({
-    resolver: zodResolver(insertCampanaComercialSchema.omit({ fechaFin: true, numeroCampana: true })),
+  const form = useForm<Omit<InsertCampanaComercial, 'fechaFin'>>({
+    resolver: zodResolver(insertCampanaComercialSchema.omit({ fechaFin: true })),
     defaultValues: {
       clienteId: 0,
+      numeroCampana: "",
       cantidadDatosSolicitados: 0,
       marca: "",
       zona: "",
@@ -227,7 +228,7 @@ export default function DatosDiariosDashboard() {
   });
 
   // Función onSubmit igual que campanas-management
-  const onSubmit = (data: Omit<InsertCampanaComercial, 'fechaFin' | 'numeroCampana'>) => {
+  const onSubmit = (data: Omit<InsertCampanaComercial, 'fechaFin'>) => {
     if (editingCampana) {
       updateMutation.mutate({ id: editingCampana.id, data });
     }
@@ -1428,13 +1429,14 @@ export default function DatosDiariosDashboard() {
       // Resetear el formulario con los datos de la campaña encontrada
       form.reset({
         clienteId: campanaEncontrada.clienteId,
+        numeroCampana: campanaEncontrada.numeroCampana,
         cantidadDatosSolicitados: campanaEncontrada.cantidadDatosSolicitados,
         marca: campanaEncontrada.marca,
         zona: campanaEncontrada.zona,
         fechaCampana: campanaEncontrada.fechaCampana || "",
         pedidosPorDia: campanaEncontrada.pedidosPorDia || 0,
         facturacionBruta: campanaEncontrada.facturacionBruta || 0,
-        localizacion: campanaEncontrada.localizacion || "",
+        localizado: campanaEncontrada.localizado || "",
       });
       
       setIsDetailsModalOpen(false);
@@ -2637,6 +2639,27 @@ export default function DatosDiariosDashboard() {
                 )}
               />
 
+              {/* Número de Campaña */}
+              <FormField
+                control={form.control}
+                name="numeroCampana"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Número de Campaña *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Ej: 1, 2, 3..." 
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                    <p className="text-sm text-muted-foreground">
+                      Número secuencial de la campaña para este cliente
+                    </p>
+                  </FormItem>
+                )}
+              />
+
               {/* Cantidad de Datos */}
               <FormField
                 control={form.control}
@@ -2745,7 +2768,7 @@ export default function DatosDiariosDashboard() {
               {/* Campo Localizado */}
               <FormField
                 control={form.control}
-                name="localizacion"
+                name="localizado"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Localización Específica</FormLabel>
