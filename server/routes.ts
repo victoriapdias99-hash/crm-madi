@@ -3360,7 +3360,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { opLeadsRep } = await import('../shared/schema');
       const { and, gte, lte, sql, count } = await import('drizzle-orm');
       
-      // 5. Calcular métricas financieras por marca
+      // 5. Obtener todas las campañas comerciales para acceder a facturación bruta real
+      const campanasComerciales = await storage.getAllCampanasComerciales();
+      
+      // 6. Calcular métricas financieras por marca
       const resultadoFinanciero = [];
       
       for (const marca of Object.keys(marcasFinanzas)) {
@@ -3380,6 +3383,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const leadsReales = leadsRealesResult[0]?.count || 0;
         
+        // Obtener facturación bruta real de campañas comerciales para esta marca
+        const campanasDelaMarca = campanasComerciales.filter((campana: any) => 
+          campana.marca?.toLowerCase() === marca.toLowerCase()
+        );
+        
+        let facturacionBrutaReal = 0;
+        campanasDelaMarca.forEach((campana: any) => {
+          if (campana.facturacionBruta && parseFloat(campana.facturacionBruta.toString()) > 0) {
+            facturacionBrutaReal += parseFloat(campana.facturacionBruta.toString());
+          }
+        });
+        
+        console.log(`💰 ${marca}: Encontradas ${campanasDelaMarca.length} campañas, Facturación real: $${facturacionBrutaReal}`);
+        
         // Configuración por marca (puedes ajustar estos valores)
         const configPorMarca: Record<string, { ventaPromedio: number; comisionPorcentaje: number }> = {
           'PEUGEOT': { ventaPromedio: 0.12, comisionPorcentaje: 15 },
@@ -3398,8 +3415,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Calcular CPL real basado en leads reales vs inversión Meta Ads
         const cplReal = leadsReales > 0 ? metaData.importeGastado / leadsReales : 0;
         
-        // Calcular facturación estimada usando LEADS REALES para mayor precisión
-        const facturacionBruta = leadsReales * cplReal * config.ventaPromedio;
+        // Usar facturación bruta REAL de campañas comerciales si está disponible
+        let facturacionBruta = facturacionBrutaReal;
+        
+        // Si no hay facturación real registrada, calcular estimación
+        if (facturacionBruta === 0) {
+          facturacionBruta = leadsReales * cplReal * config.ventaPromedio;
+          console.log(`💡 ${marca}: Usando facturación calculada $${facturacionBruta.toFixed(2)} (sin datos reales)`);
+        } else {
+          console.log(`✅ ${marca}: Usando facturación REAL $${facturacionBruta.toFixed(2)} de campañas comerciales`);
+        }
         
         // Calcular inversión real (Meta Ads + 2% de margen operativo)
         const inversionReal = metaData.importeGastado * 1.02;
