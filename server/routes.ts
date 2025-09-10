@@ -3279,6 +3279,166 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== MÓDULO DE FINANZAS CON META ADS ==========
+  
+  // Endpoint para análisis financiero con datos reales de Meta Ads por marca
+  app.get('/api/finanzas-meta-ads', async (req, res) => {
+    try {
+      const { dateFrom, dateTo } = req.query;
+      
+      // Validar fechas requeridas
+      if (!dateFrom || !dateTo) {
+        return res.status(400).json({ 
+          error: 'Parámetros dateFrom y dateTo son requeridos (formato YYYY-MM-DD)' 
+        });
+      }
+
+      console.log(`💰 Análisis Financiero Meta Ads iniciado para rango: ${dateFrom} - ${dateTo}`);
+      
+      // 1. Obtener instancia del servicio Meta Ads
+      const { getMetaAdsService } = await import('./meta-ads-routes');
+      const metaAdsService = getMetaAdsService();
+      
+      if (!metaAdsService) {
+        return res.status(400).json({ 
+          error: 'Meta Ads service not configured. Please configure Meta Ads first.' 
+        });
+      }
+      
+      // 2. Obtener datos de Meta Ads con filtro de fechas
+      const metaAdsData = await metaAdsService.getCampaignSpendData({
+        since: dateFrom as string,
+        until: dateTo as string
+      });
+      
+      console.log(`📊 Meta Ads Finanzas: ${metaAdsData.length} campañas obtenidas`);
+      
+      // 3. Agrupar campañas Meta Ads por marca
+      const marcasFinanzas: Record<string, {
+        importeGastado: number;
+        leadsMetaAds: number;
+        cplMetaAds: number;
+        campanas: string[];
+      }> = {};
+      
+      const marcas = ['PEUGEOT', 'FIAT', 'TOYOTA', 'CHEVROLET', 'RENAULT', 'CITROEN', 'VW', 'JEEP', 'FORD'];
+      
+      metaAdsData.forEach(campaign => {
+        const nombreCampana = campaign.campaignName.toUpperCase();
+        
+        // Encontrar marca que coincida con el nombre de campaña
+        const marcaEncontrada = marcas.find(marca => 
+          nombreCampana.includes(marca) || nombreCampana.includes(marca.toLowerCase())
+        );
+        
+        if (marcaEncontrada) {
+          if (!marcasFinanzas[marcaEncontrada]) {
+            marcasFinanzas[marcaEncontrada] = {
+              importeGastado: 0,
+              leadsMetaAds: 0,
+              cplMetaAds: 0,
+              campanas: []
+            };
+          }
+          
+          marcasFinanzas[marcaEncontrada].importeGastado += campaign.spend;
+          marcasFinanzas[marcaEncontrada].leadsMetaAds += campaign.results;
+          marcasFinanzas[marcaEncontrada].campanas.push(campaign.campaignName);
+        }
+      });
+      
+      // Calcular CPL Meta Ads promedio por marca
+      Object.keys(marcasFinanzas).forEach(marca => {
+        const data = marcasFinanzas[marca];
+        data.cplMetaAds = data.leadsMetaAds > 0 ? data.importeGastado / data.leadsMetaAds : 0;
+      });
+      
+      console.log(`🎯 Marcas procesadas para Finanzas: ${Object.keys(marcasFinanzas).join(', ')}`);
+      
+      // 4. Calcular métricas financieras por marca
+      const resultadoFinanciero = [];
+      
+      for (const marca of Object.keys(marcasFinanzas)) {
+        const metaData = marcasFinanzas[marca];
+        
+        // Configuración por marca (puedes ajustar estos valores)
+        const configPorMarca: Record<string, { ventaPromedio: number; comisionPorcentaje: number }> = {
+          'PEUGEOT': { ventaPromedio: 0.12, comisionPorcentaje: 15 },
+          'FIAT': { ventaPromedio: 0.10, comisionPorcentaje: 12 },
+          'TOYOTA': { ventaPromedio: 0.15, comisionPorcentaje: 18 },
+          'CHEVROLET': { ventaPromedio: 0.11, comisionPorcentaje: 14 },
+          'RENAULT': { ventaPromedio: 0.09, comisionPorcentaje: 11 },
+          'CITROEN': { ventaPromedio: 0.10, comisionPorcentaje: 12 },
+          'VW': { ventaPromedio: 0.13, comisionPorcentaje: 16 },
+          'JEEP': { ventaPromedio: 0.14, comisionPorcentaje: 17 },
+          'FORD': { ventaPromedio: 0.12, comisionPorcentaje: 15 }
+        };
+        
+        const config = configPorMarca[marca] || { ventaPromedio: 0.12, comisionPorcentaje: 15 };
+        
+        // Calcular facturación estimada
+        const facturacionBruta = metaData.leadsMetaAds * metaData.cplMetaAds * config.ventaPromedio;
+        
+        // Calcular inversión real (Meta Ads + 2% de margen operativo)
+        const inversionReal = metaData.importeGastado * 1.02;
+        
+        // Calcular ganancia neta
+        const gananciaBruta = facturacionBruta - inversionReal;
+        
+        // Calcular impuestos (4% IIBB + 2.5% otros)
+        const impuestos = facturacionBruta * 0.065;
+        
+        // Ganancia neta después de impuestos
+        const gananciaNeta = gananciaBruta - impuestos;
+        
+        // ROI (Return on Investment)
+        const roi = inversionReal > 0 ? (gananciaNeta / inversionReal) * 100 : 0;
+        
+        resultadoFinanciero.push({
+          marca,
+          leadsMetaAds: metaData.leadsMetaAds,
+          cplMetaAds: Math.round(metaData.cplMetaAds * 100) / 100,
+          inversionMetaAds: Math.round(metaData.importeGastado * 100) / 100,
+          inversionReal: Math.round(inversionReal * 100) / 100,
+          facturacionBruta: Math.round(facturacionBruta * 100) / 100,
+          gananciaBruta: Math.round(gananciaBruta * 100) / 100,
+          impuestos: Math.round(impuestos * 100) / 100,
+          gananciaNeta: Math.round(gananciaNeta * 100) / 100,
+          roi: Math.round(roi * 100) / 100,
+          ventaPromedio: config.ventaPromedio,
+          campanasMetaAds: metaData.campanas
+        });
+        
+        console.log(`💰 ${marca}: Inversión=$${inversionReal.toFixed(2)}, Facturación=$${facturacionBruta.toFixed(2)}, Ganancia=$${gananciaNeta.toFixed(2)}, ROI=${roi.toFixed(2)}%`);
+      }
+      
+      // Ordenar por inversión descendente
+      resultadoFinanciero.sort((a, b) => b.inversionReal - a.inversionReal);
+      
+      res.json({
+        success: true,
+        dateRange: { from: dateFrom, to: dateTo },
+        data: resultadoFinanciero,
+        summary: {
+          totalMarcas: resultadoFinanciero.length,
+          totalInversionMetaAds: Math.round(resultadoFinanciero.reduce((sum, item) => sum + item.inversionMetaAds, 0) * 100) / 100,
+          totalInversionReal: Math.round(resultadoFinanciero.reduce((sum, item) => sum + item.inversionReal, 0) * 100) / 100,
+          totalFacturacion: Math.round(resultadoFinanciero.reduce((sum, item) => sum + item.facturacionBruta, 0) * 100) / 100,
+          totalGananciaNeta: Math.round(resultadoFinanciero.reduce((sum, item) => sum + item.gananciaNeta, 0) * 100) / 100,
+          roiPromedio: resultadoFinanciero.length > 0 ? Math.round((resultadoFinanciero.reduce((sum, item) => sum + item.roi, 0) / resultadoFinanciero.length) * 100) / 100 : 0
+        },
+        timestamp: new Date()
+      });
+      
+    } catch (error) {
+      console.error('❌ Error en análisis financiero Meta Ads:', error);
+      res.status(500).json({ 
+        error: 'Error obteniendo análisis financiero Meta Ads',
+        details: error instanceof Error ? error.message : 'Error desconocido'
+      });
+    }
+  });
+
   // ========== REGISTRO DE RUTAS DEL SISTEMA REFACTORIZADO ==========
   
   // Importar y registrar rutas del sync refactorizado
