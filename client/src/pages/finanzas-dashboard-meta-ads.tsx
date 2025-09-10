@@ -12,7 +12,11 @@ import { Navigation } from '@/components/navigation';
 interface FinanzasMetaAdsData {
   marca: string;
   leadsMetaAds: number;
+  leadsReales: number;
+  diferenciALeads: number;
+  diferencPorcentajeLeads: number;
   cplMetaAds: number;
+  cplReal: number;
   inversionMetaAds: number;
   inversionReal: number;
   facturacionBruta: number;
@@ -30,6 +34,8 @@ interface FinanzasMetaAdsResponse {
   data: FinanzasMetaAdsData[];
   summary: {
     totalMarcas: number;
+    totalLeadsMetaAds: number;
+    totalLeadsReales: number;
     totalInversionMetaAds: number;
     totalInversionReal: number;
     totalFacturacion: number;
@@ -158,7 +164,35 @@ export default function FinanzasDashboardMetaAds() {
 
       {/* Resumen financiero */}
       {data?.summary && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Leads Meta Ads</p>
+                  <p className="text-2xl font-bold" data-testid="text-leads-meta">
+                    {data.summary.totalLeadsMetaAds.toLocaleString()}
+                  </p>
+                </div>
+                <Target className="h-8 w-8 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Leads Reales BD</p>
+                  <p className="text-2xl font-bold" data-testid="text-leads-reales">
+                    {data.summary.totalLeadsReales.toLocaleString()}
+                  </p>
+                </div>
+                <BarChart3 className="h-8 w-8 text-green-500" />
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -246,8 +280,9 @@ export default function FinanzasDashboardMetaAds() {
                 <thead>
                   <tr className="border-b">
                     <th className="text-left p-3 font-medium">MARCA</th>
-                    <th className="text-right p-3 font-medium">LEADS</th>
-                    <th className="text-right p-3 font-medium">CPL META ADS</th>
+                    <th className="text-right p-3 font-medium">LEADS META ADS</th>
+                    <th className="text-right p-3 font-medium">LEADS REALES</th>
+                    <th className="text-right p-3 font-medium">CPL REAL</th>
                     <th className="text-right p-3 font-medium">INVERSIÓN REAL</th>
                     <th className="text-right p-3 font-medium">FACTURACIÓN</th>
                     <th className="text-right p-3 font-medium">GANANCIA NETA</th>
@@ -269,11 +304,27 @@ export default function FinanzasDashboardMetaAds() {
                           </Badge>
                         </div>
                       </td>
-                      <td className="p-3 text-right" data-testid={`text-leads-${index}`}>
-                        {item.leadsMetaAds.toLocaleString()}
+                      <td className="p-3 text-right" data-testid={`text-leads-meta-${index}`}>
+                        <div className="text-blue-600 font-medium">
+                          {item.leadsMetaAds.toLocaleString()}
+                        </div>
                       </td>
-                      <td className="p-3 text-right font-mono" data-testid={`text-cpl-${index}`}>
-                        {formatCurrency(item.cplMetaAds)}
+                      <td className="p-3 text-right" data-testid={`text-leads-reales-${index}`}>
+                        <div className="text-green-600 font-medium">
+                          {item.leadsReales.toLocaleString()}
+                        </div>
+                        {item.diferenciALeads !== 0 && (
+                          <div className="text-xs text-muted-foreground">
+                            {item.diferenciALeads > 0 ? '+' : ''}{item.diferenciALeads} 
+                            ({item.diferencPorcentajeLeads > 0 ? '+' : ''}{item.diferencPorcentajeLeads.toFixed(1)}%)
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-3 text-right font-mono" data-testid={`text-cpl-real-${index}`}>
+                        <div>{formatCurrency(item.cplReal)}</div>
+                        <div className="text-xs text-muted-foreground">
+                          Meta: {formatCurrency(item.cplMetaAds)}
+                        </div>
                       </td>
                       <td className="p-3 text-right font-mono" data-testid={`text-inversion-${index}`}>
                         {formatCurrency(item.inversionReal)}

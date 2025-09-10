@@ -3355,11 +3355,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`🎯 Marcas procesadas para Finanzas: ${Object.keys(marcasFinanzas).join(', ')}`);
       
-      // 4. Calcular métricas financieras por marca
+      // 4. Obtener leads reales de la BD por fecha y marca
+      const { db } = await import('./db');
+      const { opLeadsRep } = await import('../shared/schema');
+      const { and, gte, lte, sql, count } = await import('drizzle-orm');
+      
+      // 5. Calcular métricas financieras por marca
       const resultadoFinanciero = [];
       
       for (const marca of Object.keys(marcasFinanzas)) {
         const metaData = marcasFinanzas[marca];
+        
+        // Query para contar leads reales de la BD
+        const leadsRealesResult = await db
+          .select({ count: count() })
+          .from(opLeadsRep)
+          .where(
+            and(
+              sql`lower(${opLeadsRep.marca}) LIKE ${`%${marca.toLowerCase()}%`}`,
+              gte(sql`date(${opLeadsRep.fechaCreacion})`, dateFrom),
+              lte(sql`date(${opLeadsRep.fechaCreacion})`, dateTo)
+            )
+          );
+        
+        const leadsReales = leadsRealesResult[0]?.count || 0;
         
         // Configuración por marca (puedes ajustar estos valores)
         const configPorMarca: Record<string, { ventaPromedio: number; comisionPorcentaje: number }> = {
@@ -3376,8 +3395,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const config = configPorMarca[marca] || { ventaPromedio: 0.12, comisionPorcentaje: 15 };
         
-        // Calcular facturación estimada
-        const facturacionBruta = metaData.leadsMetaAds * metaData.cplMetaAds * config.ventaPromedio;
+        // Calcular CPL real basado en leads reales vs inversión Meta Ads
+        const cplReal = leadsReales > 0 ? metaData.importeGastado / leadsReales : 0;
+        
+        // Calcular facturación estimada usando LEADS REALES para mayor precisión
+        const facturacionBruta = leadsReales * cplReal * config.ventaPromedio;
         
         // Calcular inversión real (Meta Ads + 2% de margen operativo)
         const inversionReal = metaData.importeGastado * 1.02;
@@ -3394,10 +3416,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // ROI (Return on Investment)
         const roi = inversionReal > 0 ? (gananciaNeta / inversionReal) * 100 : 0;
         
+        // Comparación de leads
+        const diferenciALeads = metaData.leadsMetaAds - leadsReales;
+        const diferencPorcentajeLeads = metaData.leadsMetaAds > 0 ? 
+          Math.round(((metaData.leadsMetaAds - leadsReales) / metaData.leadsMetaAds) * 100 * 100) / 100 : 0;
+        
         resultadoFinanciero.push({
           marca,
           leadsMetaAds: metaData.leadsMetaAds,
+          leadsReales: leadsReales,
+          diferenciALeads,
+          diferencPorcentajeLeads,
           cplMetaAds: Math.round(metaData.cplMetaAds * 100) / 100,
+          cplReal: Math.round(cplReal * 100) / 100,
           inversionMetaAds: Math.round(metaData.importeGastado * 100) / 100,
           inversionReal: Math.round(inversionReal * 100) / 100,
           facturacionBruta: Math.round(facturacionBruta * 100) / 100,
@@ -3409,7 +3440,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           campanasMetaAds: metaData.campanas
         });
         
-        console.log(`💰 ${marca}: Inversión=$${inversionReal.toFixed(2)}, Facturación=$${facturacionBruta.toFixed(2)}, Ganancia=$${gananciaNeta.toFixed(2)}, ROI=${roi.toFixed(2)}%`);
+        console.log(`💰 ${marca}: Meta=${metaData.leadsMetaAds} leads, Real=${leadsReales} leads, Inversión=$${inversionReal.toFixed(2)}, Facturación=$${facturacionBruta.toFixed(2)}, ROI=${roi.toFixed(2)}%`);
       }
       
       // Ordenar por inversión descendente
@@ -3421,6 +3452,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         data: resultadoFinanciero,
         summary: {
           totalMarcas: resultadoFinanciero.length,
+          totalLeadsMetaAds: resultadoFinanciero.reduce((sum, item) => sum + item.leadsMetaAds, 0),
+          totalLeadsReales: resultadoFinanciero.reduce((sum, item) => sum + item.leadsReales, 0),
           totalInversionMetaAds: Math.round(resultadoFinanciero.reduce((sum, item) => sum + item.inversionMetaAds, 0) * 100) / 100,
           totalInversionReal: Math.round(resultadoFinanciero.reduce((sum, item) => sum + item.inversionReal, 0) * 100) / 100,
           totalFacturacion: Math.round(resultadoFinanciero.reduce((sum, item) => sum + item.facturacionBruta, 0) * 100) / 100,
