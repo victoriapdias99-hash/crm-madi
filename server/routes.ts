@@ -3284,7 +3284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Endpoint para análisis financiero con datos reales de Meta Ads por marca
   app.get('/api/finanzas-meta-ads', async (req, res) => {
     try {
-      const { dateFrom, dateTo } = req.query;
+      const { dateFrom, dateTo, incluirIIBB, incluirIVA } = req.query;
       
       // Validar fechas requeridas
       if (!dateFrom || !dateTo) {
@@ -3426,6 +3426,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`✅ ${marca}: Usando facturación REAL $${facturacionBruta.toFixed(2)} de campañas comerciales`);
         }
         
+        // Calcular impuestos opcionales
+        const iibb = (incluirIIBB === 'true') ? facturacionBruta * 0.04 : 0;
+        const iva = (incluirIVA === 'true') ? facturacionBruta * 0.21 : 0;
+        const totalImpuestos = iibb + iva;
+        
         // Inversión pura de Meta Ads (sin margen)
         const inversionMetaAdsPura = metaData.importeGastado;
         
@@ -3435,8 +3440,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Inversión total (Meta Ads + margen)
         const inversionTotal = inversionMetaAdsPura + margenOperativo;
         
-        // Calcular ganancia simplificada: Facturado - Inversión Total
-        const ganancia = facturacionBruta - inversionTotal;
+        // Calcular ganancia simplificada: Facturado - Inversión Total - Impuestos
+        const ganancia = facturacionBruta - inversionTotal - totalImpuestos;
         
         // ROI (Return on Investment)
         const roi = inversionTotal > 0 ? (ganancia / inversionTotal) * 100 : 0;
@@ -3458,13 +3463,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           margenOperativo: Math.round(margenOperativo * 100) / 100,
           inversionTotal: Math.round(inversionTotal * 100) / 100,
           facturacionBruta: Math.round(facturacionBruta * 100) / 100,
+          iibb: Math.round(iibb * 100) / 100,
+          iva: Math.round(iva * 100) / 100,
+          totalImpuestos: Math.round(totalImpuestos * 100) / 100,
           ganancia: Math.round(ganancia * 100) / 100,
           roi: Math.round(roi * 100) / 100,
           ventaPromedio: config.ventaPromedio,
           campanasMetaAds: metaData.campanas
         });
         
-        console.log(`💰 ${marca}: Meta=${metaData.leadsMetaAds} leads, Real=${leadsReales} leads, Inversión Meta=$${inversionMetaAdsPura.toFixed(2)}, Margen=$${margenOperativo.toFixed(2)}, Total=$${inversionTotal.toFixed(2)}, Facturación=$${facturacionBruta.toFixed(2)}, Ganancia=$${ganancia.toFixed(2)}, ROI=${roi.toFixed(2)}%`);
+        console.log(`💰 ${marca}: Meta=${metaData.leadsMetaAds} leads, Real=${leadsReales} leads, Inversión Meta=$${inversionMetaAdsPura.toFixed(2)}, Margen=$${margenOperativo.toFixed(2)}, Total=$${inversionTotal.toFixed(2)}, Facturación=$${facturacionBruta.toFixed(2)}, Impuestos=$${totalImpuestos.toFixed(2)}, Ganancia=$${ganancia.toFixed(2)}, ROI=${roi.toFixed(2)}%`);
       }
       
       // Ordenar por inversión total descendente
@@ -3482,8 +3490,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalMargenOperativo: Math.round(resultadoFinanciero.reduce((sum, item) => sum + item.margenOperativo, 0) * 100) / 100,
           totalInversionTotal: Math.round(resultadoFinanciero.reduce((sum, item) => sum + item.inversionTotal, 0) * 100) / 100,
           totalFacturacion: Math.round(resultadoFinanciero.reduce((sum, item) => sum + item.facturacionBruta, 0) * 100) / 100,
+          totalIIBB: Math.round(resultadoFinanciero.reduce((sum, item) => sum + item.iibb, 0) * 100) / 100,
+          totalIVA: Math.round(resultadoFinanciero.reduce((sum, item) => sum + item.iva, 0) * 100) / 100,
+          totalImpuestos: Math.round(resultadoFinanciero.reduce((sum, item) => sum + item.totalImpuestos, 0) * 100) / 100,
           totalGanancia: Math.round(resultadoFinanciero.reduce((sum, item) => sum + item.ganancia, 0) * 100) / 100,
-          roiPromedio: resultadoFinanciero.length > 0 ? Math.round((resultadoFinanciero.reduce((sum, item) => sum + item.roi, 0) / resultadoFinanciero.length) * 100) / 100 : 0
+          roiPromedio: resultadoFinanciero.length > 0 ? Math.round((resultadoFinanciero.reduce((sum, item) => sum + item.roi, 0) / resultadoFinanciero.length) * 100) / 100 : 0,
+          incluirIIBB: incluirIIBB === 'true',
+          incluirIVA: incluirIVA === 'true'
         },
         timestamp: new Date()
       });
