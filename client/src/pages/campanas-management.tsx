@@ -132,7 +132,7 @@ export default function CampanasManagement() {
       zona: "",
       fechaCampana: "",
       pedidosPorDia: 0,
-      facturacionBruta: 0,
+      facturacionBruta: "0",
     },
   });
 
@@ -240,7 +240,7 @@ export default function CampanasManagement() {
         zona: campana.zona,
         fechaCampana: campana.fechaCampana || "",
         pedidosPorDia: campana.pedidosPorDia || 0,
-        facturacionBruta: parseFloat(campana.facturacionBruta || "0"),
+        facturacionBruta: campana.facturacionBruta || "0",
       });
     } else {
       setEditingCampana(null);
@@ -251,7 +251,7 @@ export default function CampanasManagement() {
         zona: "",
         fechaCampana: "",
         pedidosPorDia: 0,
-        facturacionBruta: 0,
+        facturacionBruta: "0",
       });
     }
     setIsDialogOpen(true);
@@ -266,7 +266,7 @@ export default function CampanasManagement() {
       zona: campana.zona,
       fechaCampana: "", // Clear date for new campaign
       pedidosPorDia: campana.pedidosPorDia || 0,
-      facturacionBruta: parseFloat(campana.facturacionBruta || "0"),
+      facturacionBruta: campana.facturacionBruta || "0",
     });
     setIsDialogOpen(true);
   };
