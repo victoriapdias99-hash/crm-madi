@@ -3426,14 +3426,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`✅ ${marca}: Usando facturación REAL $${facturacionBruta.toFixed(2)} de campañas comerciales`);
         }
         
-        // Calcular inversión real (Meta Ads + 2% de margen operativo)
-        const inversionReal = metaData.importeGastado * 1.02;
+        // Inversión pura de Meta Ads (sin margen)
+        const inversionMetaAdsPura = metaData.importeGastado;
         
-        // Calcular ganancia simplificada: Facturado - Inversión
-        const ganancia = facturacionBruta - inversionReal;
+        // Margen operativo (2%)
+        const margenOperativo = metaData.importeGastado * 0.02;
+        
+        // Inversión total (Meta Ads + margen)
+        const inversionTotal = inversionMetaAdsPura + margenOperativo;
+        
+        // Calcular ganancia simplificada: Facturado - Inversión Total
+        const ganancia = facturacionBruta - inversionTotal;
         
         // ROI (Return on Investment)
-        const roi = inversionReal > 0 ? (ganancia / inversionReal) * 100 : 0;
+        const roi = inversionTotal > 0 ? (ganancia / inversionTotal) * 100 : 0;
         
         // Comparación de leads
         const diferenciALeads = metaData.leadsMetaAds - leadsReales;
@@ -3448,8 +3454,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           diferencPorcentajeLeads,
           cplMetaAds: Math.round(metaData.cplMetaAds * 100) / 100,
           cplReal: Math.round(cplReal * 100) / 100,
-          inversionMetaAds: Math.round(metaData.importeGastado * 100) / 100,
-          inversionReal: Math.round(inversionReal * 100) / 100,
+          inversionMetaAds: Math.round(inversionMetaAdsPura * 100) / 100,
+          margenOperativo: Math.round(margenOperativo * 100) / 100,
+          inversionTotal: Math.round(inversionTotal * 100) / 100,
           facturacionBruta: Math.round(facturacionBruta * 100) / 100,
           ganancia: Math.round(ganancia * 100) / 100,
           roi: Math.round(roi * 100) / 100,
@@ -3457,11 +3464,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           campanasMetaAds: metaData.campanas
         });
         
-        console.log(`💰 ${marca}: Meta=${metaData.leadsMetaAds} leads, Real=${leadsReales} leads, Inversión=$${inversionReal.toFixed(2)}, Facturación=$${facturacionBruta.toFixed(2)}, Ganancia=$${ganancia.toFixed(2)}, ROI=${roi.toFixed(2)}%`);
+        console.log(`💰 ${marca}: Meta=${metaData.leadsMetaAds} leads, Real=${leadsReales} leads, Inversión Meta=$${inversionMetaAdsPura.toFixed(2)}, Margen=$${margenOperativo.toFixed(2)}, Total=$${inversionTotal.toFixed(2)}, Facturación=$${facturacionBruta.toFixed(2)}, Ganancia=$${ganancia.toFixed(2)}, ROI=${roi.toFixed(2)}%`);
       }
       
-      // Ordenar por inversión descendente
-      resultadoFinanciero.sort((a, b) => b.inversionReal - a.inversionReal);
+      // Ordenar por inversión total descendente
+      resultadoFinanciero.sort((a, b) => b.inversionTotal - a.inversionTotal);
       
       res.json({
         success: true,
@@ -3472,7 +3479,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalLeadsMetaAds: resultadoFinanciero.reduce((sum, item) => sum + item.leadsMetaAds, 0),
           totalLeadsReales: resultadoFinanciero.reduce((sum, item) => sum + item.leadsReales, 0),
           totalInversionMetaAds: Math.round(resultadoFinanciero.reduce((sum, item) => sum + item.inversionMetaAds, 0) * 100) / 100,
-          totalInversionReal: Math.round(resultadoFinanciero.reduce((sum, item) => sum + item.inversionReal, 0) * 100) / 100,
+          totalMargenOperativo: Math.round(resultadoFinanciero.reduce((sum, item) => sum + item.margenOperativo, 0) * 100) / 100,
+          totalInversionTotal: Math.round(resultadoFinanciero.reduce((sum, item) => sum + item.inversionTotal, 0) * 100) / 100,
           totalFacturacion: Math.round(resultadoFinanciero.reduce((sum, item) => sum + item.facturacionBruta, 0) * 100) / 100,
           totalGanancia: Math.round(resultadoFinanciero.reduce((sum, item) => sum + item.ganancia, 0) * 100) / 100,
           roiPromedio: resultadoFinanciero.length > 0 ? Math.round((resultadoFinanciero.reduce((sum, item) => sum + item.roi, 0) / resultadoFinanciero.length) * 100) / 100 : 0
