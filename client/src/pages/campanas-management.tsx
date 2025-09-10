@@ -383,26 +383,28 @@ export default function CampanasManagement() {
                   )}
                 />
 
-                {/* Número de Campaña */}
-                <FormField
-                  control={form.control}
-                  name="numeroCampana"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Número de Campaña *</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Ej: 1, 2, 3..." 
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                      <p className="text-sm text-muted-foreground">
-                        Número secuencial de la campaña para este cliente
-                      </p>
-                    </FormItem>
-                  )}
-                />
+                {/* Número de Campaña - Solo mostrar en edición */}
+                {editingCampana && (
+                  <FormField
+                    control={form.control}
+                    name="numeroCampana"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Número de Campaña *</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Ej: 1, 2, 3..." 
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                        <p className="text-sm text-muted-foreground">
+                          Número secuencial de la campaña para este cliente
+                        </p>
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 {/* Cantidad de Datos */}
                 <FormField
