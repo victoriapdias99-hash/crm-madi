@@ -589,7 +589,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Calcular métricas como el sistema actual
           const cantidadSolicitados = campana.cantidadDatosSolicitados;
           const porcentajeDatosEnviados = cantidadSolicitados > 0 
-            ? Math.round((enviadosFinales / cantidadSolicitados) * 100) 
+            ? Math.round(enviadosFinales / cantidadSolicitados) 
             : 0;
           const faltantesAEnviar = Math.max(0, cantidadSolicitados - enviadosFinales);
 
@@ -972,7 +972,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Para el porcentaje de datos enviados, usar SIEMPRE la cantidad original solicitada
         // Las correcciones solo afectan la visualización de "Enviados", no el porcentaje
-        const porcentajeDatosEnviados = Math.min(100, (datosFinales / campana.cantidadDatosSolicitados) * 100);
+        const porcentajeDatosEnviados = Math.min(1, datosFinales / campana.cantidadDatosSolicitados);
         const faltantesAEnviar = Math.max(0, campana.cantidadDatosSolicitados - datosFinales); // Pedidos Total - Enviados
         // Obtener valores almacenados para esta campaña específica usando clienteNombre y numeroCampana
         const storedCpl = await storage.getCplByClienteAndCampana(cliente.nombreCliente, campana.numeroCampana);
