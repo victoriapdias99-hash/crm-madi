@@ -19,7 +19,7 @@ interface FinanzasMetaAdsData {
   cplMetaAds: number;
   cplReal: number;
   inversionMetaAds: number;
-  margenOperativo: number;
+  impuestosMetaAds: number;
   inversionTotal: number;
   facturacionBruta: number;
   iibb: number;
@@ -40,7 +40,7 @@ interface FinanzasMetaAdsResponse {
     totalLeadsMetaAds: number;
     totalLeadsReales: number;
     totalInversionMetaAds: number;
-    totalMargenOperativo: number;
+    totalImpuestosMetaAds: number;
     totalInversionTotal: number;
     totalFacturacion: number;
     totalIIBB: number;
@@ -250,9 +250,9 @@ export default function FinanzasDashboardMetaAds() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Margen Operativo (2%)</p>
-                  <p className="text-2xl font-bold" data-testid="text-margen-operativo">
-                    {formatCurrency(data.summary.totalMargenOperativo)}
+                  <p className="text-sm text-muted-foreground">Impuestos Meta Ads (2%)</p>
+                  <p className="text-2xl font-bold" data-testid="text-impuestos-meta-ads">
+                    {formatCurrency(data.summary.totalImpuestosMetaAds)}
                   </p>
                 </div>
                 <Calculator className="h-8 w-8 text-orange-500" />
@@ -385,7 +385,7 @@ export default function FinanzasDashboardMetaAds() {
                         {formatCurrency(item.inversionMetaAds)}
                       </td>
                       <td className="p-3 text-right font-mono" data-testid={`text-margen-${index}`}>
-                        {formatCurrency(item.margenOperativo)}
+                        {formatCurrency(item.impuestosMetaAds)}
                       </td>
                       <td className="p-3 text-right font-mono" data-testid={`text-inversion-total-${index}`}>
                         {formatCurrency(item.inversionTotal)}
@@ -458,8 +458,8 @@ export default function FinanzasDashboardMetaAds() {
             </h4>
             <div className="text-sm text-muted-foreground space-y-1">
               <p><strong>Inversión Meta Ads:</strong> Gasto real reportado por Meta Ads (puro, sin margen)</p>
-              <p><strong>Margen Operativo:</strong> 2% del gasto Meta Ads para costos administrativos</p>
-              <p><strong>Inversión Total:</strong> Inversión Meta Ads + Margen Operativo</p>
+              <p><strong>Impuestos Meta Ads:</strong> 2% del gasto Meta Ads para costos administrativos</p>
+              <p><strong>Inversión Total:</strong> Inversión Meta Ads + Impuestos Meta Ads</p>
               <p><strong>Facturación:</strong> Valores reales de campañas comerciales registradas</p>
               <p><strong>Ganancia:</strong> Facturación - Inversión Total (fórmula simplificada)</p>
               <p><strong>ROI:</strong> (Ganancia / Inversión Total) × 100</p>
