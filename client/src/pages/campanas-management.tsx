@@ -123,10 +123,11 @@ export default function CampanasManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const form = useForm<Omit<InsertCampanaComercial, 'fechaFin' | 'numeroCampana'>>({
-    resolver: zodResolver(insertCampanaComercialSchema.omit({ fechaFin: true, numeroCampana: true })),
+  const form = useForm<Omit<InsertCampanaComercial, 'fechaFin'>>({
+    resolver: zodResolver(insertCampanaComercialSchema.omit({ fechaFin: true })),
     defaultValues: {
       clienteId: 0,
+      numeroCampana: "",
       cantidadDatosSolicitados: 0,
       marca: "",
       zona: "",
@@ -147,7 +148,7 @@ export default function CampanasManagement() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: Omit<InsertCampanaComercial, 'fechaFin' | 'numeroCampana'>) => {
+    mutationFn: async (data: Omit<InsertCampanaComercial, 'fechaFin'>) => {
       // Asegurar que la fecha se envía en formato correcto
       const dataToSend = {
         ...data,
@@ -235,6 +236,7 @@ export default function CampanasManagement() {
       setEditingCampana(campana);
       form.reset({
         clienteId: campana.clienteId,
+        numeroCampana: campana.numeroCampana,
         cantidadDatosSolicitados: campana.cantidadDatosSolicitados,
         marca: campana.marca,
         zona: campana.zona,
@@ -246,6 +248,7 @@ export default function CampanasManagement() {
       setEditingCampana(null);
       form.reset({
         clienteId: 0,
+        numeroCampana: "",
         cantidadDatosSolicitados: 0,
         marca: "",
         zona: "",
@@ -261,6 +264,7 @@ export default function CampanasManagement() {
     setEditingCampana(null); // No editing, creating new
     form.reset({
       clienteId: campana.clienteId,
+      numeroCampana: "", // Clear campaign number for new campaign
       cantidadDatosSolicitados: campana.cantidadDatosSolicitados,
       marca: campana.marca,
       zona: campana.zona,
@@ -375,6 +379,27 @@ export default function CampanasManagement() {
                         </SelectContent>
                       </Select>
                       <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Número de Campaña */}
+                <FormField
+                  control={form.control}
+                  name="numeroCampana"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Número de Campaña *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Ej: 1, 2, 3..." 
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                      <p className="text-sm text-muted-foreground">
+                        Número secuencial de la campaña para este cliente
+                      </p>
                     </FormItem>
                   )}
                 />
