@@ -140,35 +140,63 @@ export default function FinanzasDashboardMetaAds() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-            <div className="space-y-2">
-              <Label htmlFor="date-from">Fecha Desde</Label>
-              <Input
-                id="date-from"
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                data-testid="input-date-from"
-              />
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+              <div className="space-y-2">
+                <Label htmlFor="date-from">Fecha Desde</Label>
+                <Input
+                  id="date-from"
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  data-testid="input-date-from"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="date-to">Fecha Hasta</Label>
+                <Input
+                  id="date-to"
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  data-testid="input-date-to"
+                />
+              </div>
+              <Button 
+                onClick={handleAnalyze} 
+                disabled={isLoading}
+                className="w-full md:w-auto"
+                data-testid="button-analyze"
+              >
+                {isLoading ? 'Analizando...' : 'Ejecutar Análisis'}
+              </Button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="date-to">Fecha Hasta</Label>
-              <Input
-                id="date-to"
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                data-testid="input-date-to"
-              />
+            
+            {/* Checkboxes para impuestos */}
+            <div className="flex flex-wrap gap-6 p-4 bg-muted/30 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="incluir-iibb"
+                  checked={incluirIIBB}
+                  onCheckedChange={(checked) => setIncluirIIBB(checked as boolean)}
+                  data-testid="checkbox-iibb"
+                />
+                <Label htmlFor="incluir-iibb" className="text-sm font-medium">
+                  Incluir IIBB (4% sobre facturación)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="incluir-iva"
+                  checked={incluirIVA}
+                  onCheckedChange={(checked) => setIncluirIVA(checked as boolean)}
+                  data-testid="checkbox-iva"
+                />
+                <Label htmlFor="incluir-iva" className="text-sm font-medium">
+                  Incluir IVA (21% sobre facturación)
+                </Label>
+              </div>
             </div>
-            <Button 
-              onClick={handleAnalyze} 
-              disabled={isLoading}
-              className="w-full md:w-auto"
-              data-testid="button-analyze"
-            >
-              {isLoading ? 'Analizando...' : 'Ejecutar Análisis'}
-            </Button>
           </div>
         </CardContent>
       </Card>
