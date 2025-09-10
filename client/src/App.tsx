@@ -42,6 +42,7 @@ function Router() {
       <Route path="/meta-ads-config" component={MetaAdsConfig} />
       <Route path="/finanzas" component={FinanzasDashboard} />
       <Route path="/finanzas-simple" component={FinanzasDashboard} />
+      <Route path="/finanzas-dashboard-meta-ads" component={FinanzasDashboard} />
       <Route path="/reportes" component={ReportesDashboard} />
       <Route path="/reportes-graficos" component={ReportesGraficos} />
       <Route path="/cpl-simple" component={CPLSimple} />
