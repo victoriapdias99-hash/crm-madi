@@ -77,6 +77,7 @@ export interface IStorage {
   createCampanaComercial(campana: InsertCampanaComercial): Promise<CampanaComercial>;
   updateCampanaComercial(id: number, updates: Partial<CampanaComercial>): Promise<CampanaComercial | undefined>;
   deleteCampanaComercial(id: number): Promise<boolean>;
+  recalcularNumerosCampana(clienteId: number): Promise<void>;
 
   // Google Sheets data operations (nuevas funciones)
   getGoogleSheetsData(filters?: { marca?: string; cliente?: string; limit?: number }): Promise<GoogleSheetsData[]>;
@@ -779,6 +780,22 @@ export class MemStorage implements IStorage {
     return this.campanasComerciales.delete(id);
   }
 
+  async recalcularNumerosCampana(clienteId: number): Promise<void> {
+    // Obtener todas las campañas del cliente ordenadas por fecha de creación
+    const campanas = Array.from(this.campanasComerciales.values())
+      .filter(campana => campana.clienteId === clienteId)
+      .sort((a, b) => (a.fechaCreacion?.getTime() || 0) - (b.fechaCreacion?.getTime() || 0));
+
+    // Recalcular números secuenciales (1, 2, 3...)
+    for (let i = 0; i < campanas.length; i++) {
+      const nuevoNumero = `${i + 1}`;
+      if (campanas[i].numeroCampana !== nuevoNumero) {
+        const campanaActualizada = { ...campanas[i], numeroCampana: nuevoNumero };
+        this.campanasComerciales.set(campanas[i].id, campanaActualizada);
+      }
+    }
+  }
+
   async getDashboardCampaigns(): Promise<any[]> {
     // Return all commercial campaigns for dashboard fallback
     return this.getAllCampanasComerciales();
@@ -1108,6 +1125,24 @@ export class DatabaseStorage implements IStorage {
   async deleteCampanaComercial(id: number): Promise<boolean> {
     const result = await db.delete(campanasComerciales).where(eq(campanasComerciales.id, id));
     return (result.rowCount || 0) > 0;
+  }
+
+  async recalcularNumerosCampana(clienteId: number): Promise<void> {
+    // Obtener todas las campañas del cliente ordenadas por fecha de creación
+    const campanas = await db.select()
+      .from(campanasComerciales)
+      .where(eq(campanasComerciales.clienteId, clienteId))
+      .orderBy(campanasComerciales.fechaCreacion);
+
+    // Recalcular números secuenciales (1, 2, 3...)
+    for (let i = 0; i < campanas.length; i++) {
+      const nuevoNumero = `${i + 1}`;
+      if (campanas[i].numeroCampana !== nuevoNumero) {
+        await db.update(campanasComerciales)
+          .set({ numeroCampana: nuevoNumero })
+          .where(eq(campanasComerciales.id, campanas[i].id));
+      }
+    }
   }
 
   async getDashboardCampaigns(): Promise<any[]> {

@@ -2260,11 +2260,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/campanas-comerciales/:id', async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      
+      // Primero obtener la campaña para saber qué cliente tiene
+      const campanaAEliminar = await storage.getCampanaComercial(id);
+      if (!campanaAEliminar) {
+        return res.status(404).json({ error: 'Campaña comercial not found' });
+      }
+      
+      const clienteId = campanaAEliminar.clienteId;
+      
+      // Eliminar la campaña
       const deleted = await storage.deleteCampanaComercial(id);
       
       if (!deleted) {
         return res.status(404).json({ error: 'Campaña comercial not found' });
       }
+      
+      // Recalcular números de campaña para el cliente
+      await storage.recalcularNumerosCampana(clienteId);
+      console.log(`🔄 Números de campaña recalculados para cliente ${clienteId}`);
       
       // CRÍTICO: Invalidar cache para actualización inmediata en datos-diarios
       console.log('⚡ Campaña eliminada - invalidando cache del dashboard datos-diarios');
@@ -2274,6 +2288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({ success: true });
     } catch (error) {
+      console.error('Error deleting campaña comercial:', error);
       res.status(500).json({ error: 'Failed to delete campaña comercial' });
     }
   });
