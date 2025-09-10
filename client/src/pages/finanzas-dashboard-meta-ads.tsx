@@ -20,9 +20,7 @@ interface FinanzasMetaAdsData {
   inversionMetaAds: number;
   inversionReal: number;
   facturacionBruta: number;
-  gananciaBruta: number;
-  impuestos: number;
-  gananciaNeta: number;
+  ganancia: number;
   roi: number;
   ventaPromedio: number;
   campanasMetaAds: string[];
@@ -39,7 +37,7 @@ interface FinanzasMetaAdsResponse {
     totalInversionMetaAds: number;
     totalInversionReal: number;
     totalFacturacion: number;
-    totalGananciaNeta: number;
+    totalGanancia: number;
     roiPromedio: number;
   };
   timestamp: string;
@@ -239,9 +237,9 @@ export default function FinanzasDashboardMetaAds() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Ganancia Neta</p>
+                  <p className="text-sm text-muted-foreground">Ganancia Total</p>
                   <p className="text-2xl font-bold" data-testid="text-ganancia">
-                    {formatCurrency(data.summary.totalGananciaNeta)}
+                    {formatCurrency(data.summary.totalGanancia)}
                   </p>
                 </div>
                 <TrendingUp className="h-8 w-8 text-green-500" />
@@ -285,7 +283,7 @@ export default function FinanzasDashboardMetaAds() {
                     <th className="text-right p-3 font-medium">CPL REAL</th>
                     <th className="text-right p-3 font-medium">INVERSIÓN REAL</th>
                     <th className="text-right p-3 font-medium">FACTURACIÓN</th>
-                    <th className="text-right p-3 font-medium">GANANCIA NETA</th>
+                    <th className="text-right p-3 font-medium">GANANCIA</th>
                     <th className="text-center p-3 font-medium">ROI</th>
                   </tr>
                 </thead>
@@ -333,7 +331,7 @@ export default function FinanzasDashboardMetaAds() {
                         {formatCurrency(item.facturacionBruta)}
                       </td>
                       <td className="p-3 text-right font-mono" data-testid={`text-ganancia-${index}`}>
-                        {formatCurrency(item.gananciaNeta)}
+                        {formatCurrency(item.ganancia)}
                       </td>
                       <td className="p-3 text-center">
                         <div className="flex items-center justify-center gap-2">
@@ -398,9 +396,9 @@ export default function FinanzasDashboardMetaAds() {
             <div className="text-sm text-muted-foreground space-y-1">
               <p><strong>Inversión Meta Ads:</strong> Gasto real reportado por Meta Ads</p>
               <p><strong>Inversión Real:</strong> Gasto Meta Ads + 2% de margen operativo</p>
-              <p><strong>Facturación:</strong> Leads × CPL × Tasa de conversión por marca</p>
-              <p><strong>Ganancia Neta:</strong> Facturación - Inversión Real - Impuestos (6.5%)</p>
-              <p><strong>ROI:</strong> (Ganancia Neta / Inversión Real) × 100</p>
+              <p><strong>Facturación:</strong> Valores reales de campañas comerciales registradas</p>
+              <p><strong>Ganancia:</strong> Facturación - Inversión Real (fórmula simplificada)</p>
+              <p><strong>ROI:</strong> (Ganancia / Inversión Real) × 100</p>
               <Separator className="my-2" />
               <p className="text-xs">
                 Los datos de inversión provienen directamente de Meta Ads API. 

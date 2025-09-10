@@ -3429,17 +3429,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Calcular inversión real (Meta Ads + 2% de margen operativo)
         const inversionReal = metaData.importeGastado * 1.02;
         
-        // Calcular ganancia neta
-        const gananciaBruta = facturacionBruta - inversionReal;
-        
-        // Calcular impuestos (4% IIBB + 2.5% otros)
-        const impuestos = facturacionBruta * 0.065;
-        
-        // Ganancia neta después de impuestos
-        const gananciaNeta = gananciaBruta - impuestos;
+        // Calcular ganancia simplificada: Facturado - Inversión
+        const ganancia = facturacionBruta - inversionReal;
         
         // ROI (Return on Investment)
-        const roi = inversionReal > 0 ? (gananciaNeta / inversionReal) * 100 : 0;
+        const roi = inversionReal > 0 ? (ganancia / inversionReal) * 100 : 0;
         
         // Comparación de leads
         const diferenciALeads = metaData.leadsMetaAds - leadsReales;
@@ -3457,15 +3451,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           inversionMetaAds: Math.round(metaData.importeGastado * 100) / 100,
           inversionReal: Math.round(inversionReal * 100) / 100,
           facturacionBruta: Math.round(facturacionBruta * 100) / 100,
-          gananciaBruta: Math.round(gananciaBruta * 100) / 100,
-          impuestos: Math.round(impuestos * 100) / 100,
-          gananciaNeta: Math.round(gananciaNeta * 100) / 100,
+          ganancia: Math.round(ganancia * 100) / 100,
           roi: Math.round(roi * 100) / 100,
           ventaPromedio: config.ventaPromedio,
           campanasMetaAds: metaData.campanas
         });
         
-        console.log(`💰 ${marca}: Meta=${metaData.leadsMetaAds} leads, Real=${leadsReales} leads, Inversión=$${inversionReal.toFixed(2)}, Facturación=$${facturacionBruta.toFixed(2)}, ROI=${roi.toFixed(2)}%`);
+        console.log(`💰 ${marca}: Meta=${metaData.leadsMetaAds} leads, Real=${leadsReales} leads, Inversión=$${inversionReal.toFixed(2)}, Facturación=$${facturacionBruta.toFixed(2)}, Ganancia=$${ganancia.toFixed(2)}, ROI=${roi.toFixed(2)}%`);
       }
       
       // Ordenar por inversión descendente
@@ -3482,7 +3474,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalInversionMetaAds: Math.round(resultadoFinanciero.reduce((sum, item) => sum + item.inversionMetaAds, 0) * 100) / 100,
           totalInversionReal: Math.round(resultadoFinanciero.reduce((sum, item) => sum + item.inversionReal, 0) * 100) / 100,
           totalFacturacion: Math.round(resultadoFinanciero.reduce((sum, item) => sum + item.facturacionBruta, 0) * 100) / 100,
-          totalGananciaNeta: Math.round(resultadoFinanciero.reduce((sum, item) => sum + item.gananciaNeta, 0) * 100) / 100,
+          totalGanancia: Math.round(resultadoFinanciero.reduce((sum, item) => sum + item.ganancia, 0) * 100) / 100,
           roiPromedio: resultadoFinanciero.length > 0 ? Math.round((resultadoFinanciero.reduce((sum, item) => sum + item.roi, 0) / resultadoFinanciero.length) * 100) / 100 : 0
         },
         timestamp: new Date()
