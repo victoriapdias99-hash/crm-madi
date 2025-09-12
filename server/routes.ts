@@ -995,9 +995,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const entregadosPorDiaPromedio = datosFinales > 0 ? Math.round((datosFinales / diasHabilesMes) * 100) / 100 : 0;
         const pedidosPorDiaCalculado = pedidosPorDiaReal > 0 ? pedidosPorDiaReal : (pedidosTotal > 0 ? Math.round((pedidosTotal / diasHabilesMes) * 100) / 100 : 0);
         
-        // Calcular % de desvío usando métricas de entregas por día
-        const porcentajeDesvio = (pedidosPorDiaCalculado > 0 && entregadosPorDiaPromedio > 0) ? 
-          ((entregadosPorDiaPromedio - pedidosPorDiaCalculado) / pedidosPorDiaCalculado * 100) : 0;
+        // Calcular % de desvío: Pedidos/día entre Entregados/día
+        const porcentajeDesvio = (entregadosPorDiaPromedio > 0) ? 
+          (pedidosPorDiaCalculado / entregadosPorDiaPromedio) : 0;
         const faltantesCorregidos = Math.max(0, pedidosTotal - datosFinales); // Pedidos Total - Enviados
         
         // Calcular CPA usando Meta Ads data
