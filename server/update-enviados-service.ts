@@ -120,7 +120,6 @@ export class UpdateEnviadosService {
         ilike(opLeadsRep.campaign, `%${campana.marca.toLowerCase()}%`),
         eq(opLeadsRep.cliente, nombreComercial), // ✅ CORRECCIÓN: Comparación exacta (igual que routes.ts)
         eq(opLeadsRep.localizacion, localizacionFiltro),
-        eq(opLeadsRep.source, 'google_sheets'),
         gte(sql`date(${opLeadsRep.fechaCreacion})`, campana.fechaCampana)
       ];
       
