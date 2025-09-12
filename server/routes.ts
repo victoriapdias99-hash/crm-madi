@@ -987,9 +987,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`🔍 DEBUG AVEC ${campana.marca}: cantidadDatosSolicitados=${campana.cantidadDatosSolicitados}, pedidosTotal=${pedidosTotal}, datosFinales=${datosFinales}`);
         }
         
-        const porcentajeDesvio = datosFinales > 0 ? (pedidosTotal / datosFinales) : 0;
-        const faltantesCorregidos = Math.max(0, pedidosTotal - datosFinales); // Pedidos Total - Enviados
-        
         // Usar el valor real de pedidosPorDia de la campaña específica
         const pedidosPorDiaReal = campana.pedidosPorDia || 0;
         
@@ -997,6 +994,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const diasHabilesMes = 20;
         const entregadosPorDiaPromedio = datosFinales > 0 ? Math.round((datosFinales / diasHabilesMes) * 100) / 100 : 0;
         const pedidosPorDiaCalculado = pedidosPorDiaReal > 0 ? pedidosPorDiaReal : (pedidosTotal > 0 ? Math.round((pedidosTotal / diasHabilesMes) * 100) / 100 : 0);
+        
+        // Calcular % de desvío usando métricas de entregas por día
+        const porcentajeDesvio = (pedidosPorDiaCalculado > 0 && entregadosPorDiaPromedio > 0) ? 
+          ((entregadosPorDiaPromedio - pedidosPorDiaCalculado) / pedidosPorDiaCalculado * 100) : 0;
+        const faltantesCorregidos = Math.max(0, pedidosTotal - datosFinales); // Pedidos Total - Enviados
         
         // Calcular CPA usando Meta Ads data
         let cpaValue = 0;
