@@ -91,6 +91,44 @@ export default function FinanzasDashboardMetaAds() {
     refetch();
   };
 
+  // Funciones para filtros rápidos de fecha
+  const setDateFilter = (type: string) => {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    switch (type) {
+      case 'hoy':
+        setDateFrom(todayStr);
+        setDateTo(todayStr);
+        break;
+      case 'ayer':
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        setDateFrom(yesterdayStr);
+        setDateTo(yesterdayStr);
+        break;
+      case '7dias':
+        const week = new Date(today);
+        week.setDate(week.getDate() - 6);
+        setDateFrom(week.toISOString().split('T')[0]);
+        setDateTo(todayStr);
+        break;
+      case '14dias':
+        const twoWeeks = new Date(today);
+        twoWeeks.setDate(twoWeeks.getDate() - 13);
+        setDateFrom(twoWeeks.toISOString().split('T')[0]);
+        setDateTo(todayStr);
+        break;
+      case '30dias':
+        const month = new Date(today);
+        month.setDate(month.getDate() - 29);
+        setDateFrom(month.toISOString().split('T')[0]);
+        setDateTo(todayStr);
+        break;
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-AR', {
       style: 'currency',
@@ -170,6 +208,53 @@ export default function FinanzasDashboardMetaAds() {
               >
                 {isLoading ? 'Analizando...' : 'Ejecutar Análisis'}
               </Button>
+            </div>
+            
+            {/* Filtros rápidos de fecha */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Filtros Rápidos</Label>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDateFilter('hoy')}
+                  data-testid="button-filter-today"
+                >
+                  Hoy
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDateFilter('ayer')}
+                  data-testid="button-filter-yesterday"
+                >
+                  Ayer
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDateFilter('7dias')}
+                  data-testid="button-filter-7days"
+                >
+                  Últimos 7 días
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDateFilter('14dias')}
+                  data-testid="button-filter-14days"
+                >
+                  Últimos 14 días
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDateFilter('30dias')}
+                  data-testid="button-filter-30days"
+                >
+                  Último mes
+                </Button>
+              </div>
             </div>
             
             {/* Checkboxes para impuestos */}
