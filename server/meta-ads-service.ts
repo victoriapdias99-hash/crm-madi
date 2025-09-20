@@ -214,7 +214,28 @@ class MetaAdsService {
 
       return [];
     } catch (error) {
-      throw new Error(`Meta Ads API Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Mejorar logging del error para debugging
+      console.error('🔴 Meta Ads API Error Details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        response: (error as any)?.response?.data,
+        status: (error as any)?.response?.status,
+        config: {
+          url: (error as any)?.config?.url,
+          params: (error as any)?.config?.params
+        }
+      });
+      
+      // Crear mensaje de error más específico
+      let errorMessage = 'Meta Ads API Error: ';
+      if ((error as any)?.response?.data?.error?.message) {
+        errorMessage += (error as any).response.data.error.message;
+      } else if ((error as any)?.response?.status === 400) {
+        errorMessage += `Bad Request (400) - Posible problema con fechas o configuración de la cuenta`;
+      } else {
+        errorMessage += error instanceof Error ? error.message : 'Unknown error';
+      }
+      
+      throw new Error(errorMessage);
     }
   }
 
