@@ -8,6 +8,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
@@ -120,6 +121,7 @@ export default function CampanasManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCampana, setEditingCampana] = useState<CampanaComercial | null>(null);
   const [clienteFiltro, setClienteFiltro] = useState<string>('todos');
+  const [marcasCount, setMarcasCount] = useState(1); // Número de pares marca/zona visibles
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -131,6 +133,20 @@ export default function CampanasManagement() {
       cantidadDatosSolicitados: 0,
       marca: "",
       zona: "",
+      marca2: "",
+      zona2: "",
+      marca3: "",
+      zona3: "",
+      marca4: "",
+      zona4: "",
+      marca5: "",
+      zona5: "",
+      porcentaje: 100,
+      porcentaje2: 0,
+      porcentaje3: 0,
+      porcentaje4: 0,
+      porcentaje5: 0,
+      asignacionAutomatica: false,
       fechaCampana: "",
       pedidosPorDia: 0,
       facturacionBruta: "0",
@@ -223,7 +239,42 @@ export default function CampanasManagement() {
   const onSubmit = (data: InsertCampanaComercial) => {
     console.log('Form submitted with data:', data);
     console.log('Form errors:', form.formState.errors);
-    
+
+    // Validación de porcentajes si asignación automática está desactivada y hay más de una marca
+    if (!data.asignacionAutomatica && marcasCount > 1) {
+      const porcentajes = [
+        data.porcentaje || 0,
+        data.porcentaje2 || 0,
+        data.porcentaje3 || 0,
+        data.porcentaje4 || 0,
+        data.porcentaje5 || 0,
+      ];
+
+      // Solo sumar porcentajes de marcas activas
+      let totalPorcentaje = 0;
+      for (let i = 0; i < marcasCount; i++) {
+        totalPorcentaje += porcentajes[i];
+      }
+
+      if (totalPorcentaje !== 100) {
+        toast({
+          title: "Error en porcentajes",
+          description: `La suma de porcentajes debe ser exactamente 100%. Actual: ${totalPorcentaje}%`,
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
+    // Si es asignación automática o una sola marca, asegurar que porcentaje principal sea 100
+    if (data.asignacionAutomatica || marcasCount === 1) {
+      data.porcentaje = 100;
+      data.porcentaje2 = 0;
+      data.porcentaje3 = 0;
+      data.porcentaje4 = 0;
+      data.porcentaje5 = 0;
+    }
+
     if (editingCampana) {
       updateMutation.mutate({ id: editingCampana.id, data });
     } else {
@@ -231,27 +282,101 @@ export default function CampanasManagement() {
     }
   };
 
+  // Funciones para manejar marcas dinámicas
+  const addMarca = () => {
+    if (marcasCount < 5) {
+      setMarcasCount(marcasCount + 1);
+    }
+  };
+
+  const removeMarca = (index: number) => {
+    if (marcasCount > 1) {
+      // Limpiar los valores del par que se va a eliminar
+      if (index === 0) {
+        form.setValue('marca', '');
+        form.setValue('zona', '');
+        form.setValue('porcentaje', 100);
+      } else if (index === 1) {
+        form.setValue('marca2', '');
+        form.setValue('zona2', '');
+        form.setValue('porcentaje2', 0);
+      } else if (index === 2) {
+        form.setValue('marca3', '');
+        form.setValue('zona3', '');
+        form.setValue('porcentaje3', 0);
+      } else if (index === 3) {
+        form.setValue('marca4', '');
+        form.setValue('zona4', '');
+        form.setValue('porcentaje4', 0);
+      } else if (index === 4) {
+        form.setValue('marca5', '');
+        form.setValue('zona5', '');
+        form.setValue('porcentaje5', 0);
+      }
+
+      setMarcasCount(marcasCount - 1);
+    }
+  };
+
   const openDialog = (campana?: CampanaComercial) => {
     if (campana) {
       setEditingCampana(campana);
+
+      // Contar cuántas marcas tiene la campaña existente
+      let count = 1; // Siempre hay al menos marca 1
+      if (campana.marca2) count = 2;
+      if (campana.marca3) count = 3;
+      if (campana.marca4) count = 4;
+      if (campana.marca5) count = 5;
+      setMarcasCount(count);
+
       form.reset({
         clienteId: campana.clienteId,
         numeroCampana: campana.numeroCampana,
         cantidadDatosSolicitados: campana.cantidadDatosSolicitados,
         marca: campana.marca,
         zona: campana.zona,
+        marca2: campana.marca2 || "",
+        zona2: campana.zona2 || "",
+        marca3: campana.marca3 || "",
+        zona3: campana.zona3 || "",
+        marca4: campana.marca4 || "",
+        zona4: campana.zona4 || "",
+        marca5: campana.marca5 || "",
+        zona5: campana.zona5 || "",
+        porcentaje: campana.porcentaje || 100,
+        porcentaje2: campana.porcentaje2 || 0,
+        porcentaje3: campana.porcentaje3 || 0,
+        porcentaje4: campana.porcentaje4 || 0,
+        porcentaje5: campana.porcentaje5 || 0,
+        asignacionAutomatica: campana.asignacionAutomatica || false,
         fechaCampana: campana.fechaCampana || "",
         pedidosPorDia: campana.pedidosPorDia || 0,
         facturacionBruta: campana.facturacionBruta || "0",
       });
     } else {
       setEditingCampana(null);
+      setMarcasCount(1); // Resetear a 1 marca para nuevas campañas
       form.reset({
         clienteId: 0,
         numeroCampana: "",
         cantidadDatosSolicitados: 0,
         marca: "",
         zona: "",
+        marca2: "",
+        zona2: "",
+        marca3: "",
+        zona3: "",
+        marca4: "",
+        zona4: "",
+        marca5: "",
+        zona5: "",
+        porcentaje: 100,
+        porcentaje2: 0,
+        porcentaje3: 0,
+        porcentaje4: 0,
+        porcentaje5: 0,
+        asignacionAutomatica: false,
         fechaCampana: "",
         pedidosPorDia: 0,
         facturacionBruta: "0",
@@ -437,7 +562,7 @@ export default function CampanasManagement() {
                       <FormControl>
                         <Input 
                           type="date"
-                          value={field.value}
+                          value={field.value || ""}
                           onChange={(e) => {
                             // Asegurar que la fecha se mantenga exacta
                             const dateValue = e.target.value;
@@ -454,61 +579,218 @@ export default function CampanasManagement() {
                   )}
                 />
 
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Marca */}
+                {/* TOGGLE ASIGNACIÓN AUTOMÁTICA */}
+                <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
                   <FormField
                     control={form.control}
-                    name="marca"
+                    name="asignacionAutomatica"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Marca *</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar marca" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {MARCAS_DISPONIBLES.map((marca) => (
-                              <SelectItem key={marca} value={marca}>
-                                {marca}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
+                      <FormItem className="flex flex-row items-center justify-between">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-lg font-semibold text-blue-800">
+                            🔄 Asignación Automática
+                          </FormLabel>
+                          <p className="text-sm text-blue-600">
+                            Si está activada: distribución aleatoria automática. Si está desactivada: debes especificar porcentajes manualmente.
+                          </p>
+                        </div>
+                        <FormControl>
+                          <input
+                            type="checkbox"
+                            checked={field.value}
+                            onChange={(e) => field.onChange(e.target.checked)}
+                            className="w-6 h-6"
+                          />
+                        </FormControl>
                       </FormItem>
                     )}
                   />
+                </div>
 
-                  {/* Zona */}
-                  <FormField
-                    control={form.control}
-                    name="zona"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Provincia/Zona *</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar provincia" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent className="max-h-60">
-                            {ZONAS_DISPONIBLES.map((zona) => (
-                              <SelectItem key={zona} value={zona}>
-                                {zona}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        <p className="text-xs text-muted-foreground">
-                          Selecciona la provincia de Argentina o AMBA/NACIONAL
-                        </p>
-                      </FormItem>
-                    )}
-                  />
+                {/* Marcas y Zonas Dinámicas */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium">Marcas y Zonas</h3>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addMarca}
+                        disabled={marcasCount >= 5}
+                        className="flex items-center gap-1"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Agregar marca más
+                      </Button>
+                    </div>
+                  </div>
+
+                  {Array.from({ length: marcasCount }, (_, index) => {
+                    // Helper para obtener nombres de campos tipados
+                    const getFieldNames = (idx: number) => {
+                      if (idx === 0) return { marca: 'marca' as const, zona: 'zona' as const, porcentaje: 'porcentaje' as const };
+                      if (idx === 1) return { marca: 'marca2' as const, zona: 'zona2' as const, porcentaje: 'porcentaje2' as const };
+                      if (idx === 2) return { marca: 'marca3' as const, zona: 'zona3' as const, porcentaje: 'porcentaje3' as const };
+                      if (idx === 3) return { marca: 'marca4' as const, zona: 'zona4' as const, porcentaje: 'porcentaje4' as const };
+                      if (idx === 4) return { marca: 'marca5' as const, zona: 'zona5' as const, porcentaje: 'porcentaje5' as const };
+                      return { marca: 'marca' as const, zona: 'zona' as const, porcentaje: 'porcentaje' as const };
+                    };
+
+                    const { marca: marcaName, zona: zonaName, porcentaje: porcentajeName } = getFieldNames(index);
+
+                    const asignacionAutomatica = form.watch('asignacionAutomatica');
+                    const shouldShowPercentage = !asignacionAutomatica && (marcasCount > 1 || index === 0);
+
+                    return (
+                      <div key={index} className={`grid ${shouldShowPercentage ? 'grid-cols-3' : 'grid-cols-2'} gap-4 p-4 border border-gray-200 rounded-lg relative`}>
+                        <div className="absolute top-2 right-2 flex items-center gap-2">
+                          <span className="text-sm text-gray-500 font-medium">
+                            Marca {index + 1}
+                          </span>
+                          {index > 0 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeMarca(index)}
+                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+
+                        {/* Marca */}
+                        <FormField
+                          control={form.control}
+                          name={marcaName}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>
+                                Marca {index === 0 ? '*' : '(opcional)'}
+                              </FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value || ""}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Seleccionar marca" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {MARCAS_DISPONIBLES.map((marca) => (
+                                    <SelectItem key={marca} value={marca}>
+                                      {marca}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Zona */}
+                        <FormField
+                          control={form.control}
+                          name={zonaName}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>
+                                Provincia/Zona {index === 0 ? '*' : '(opcional)'}
+                              </FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value || ""}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Seleccionar provincia" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent className="max-h-60">
+                                  {ZONAS_DISPONIBLES.map((zona) => (
+                                    <SelectItem key={zona} value={zona}>
+                                      {zona}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                              {index === 0 && (
+                                <p className="text-xs text-muted-foreground">
+                                  Selecciona la provincia de Argentina o AMBA/NACIONAL
+                                </p>
+                              )}
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Porcentaje - Solo mostrar cuando asignación manual y más de una marca */}
+                        {shouldShowPercentage && (
+                          <FormField
+                            control={form.control}
+                            name={porcentajeName}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>
+                                  Porcentaje % {marcasCount === 1 ? '(automático)' : '*'}
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    placeholder={marcasCount === 1 ? "100" : "Ej: 50"}
+                                    {...field}
+                                    value={field.value || (marcasCount === 1 ? 100 : 0)}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                    disabled={marcasCount === 1}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                                {index === 0 && marcasCount > 1 && (
+                                  <p className="text-xs text-muted-foreground">
+                                    La suma de todos los porcentajes debe ser 100%
+                                  </p>
+                                )}
+                              </FormItem>
+                            )}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* Validación de porcentajes en tiempo real */}
+                  {!form.watch('asignacionAutomatica') && marcasCount > 1 && (
+                    <div className="mt-4 p-3 bg-gray-50 rounded-lg border">
+                      {(() => {
+                        const porcentajes = [
+                          form.watch('porcentaje') || 0,
+                          form.watch('porcentaje2') || 0,
+                          form.watch('porcentaje3') || 0,
+                          form.watch('porcentaje4') || 0,
+                          form.watch('porcentaje5') || 0,
+                        ];
+
+                        // Solo sumar porcentajes de marcas activas
+                        let totalPorcentaje = 0;
+                        for (let i = 0; i < marcasCount; i++) {
+                          totalPorcentaje += porcentajes[i];
+                        }
+
+                        const isValid = totalPorcentaje === 100;
+
+                        return (
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">
+                              Suma total de porcentajes:
+                            </span>
+                            <span className={`text-sm font-bold ${isValid ? 'text-green-600' : totalPorcentaje > 100 ? 'text-red-600' : 'text-orange-600'}`}>
+                              {totalPorcentaje}% {isValid ? '✓' : totalPorcentaje > 100 ? '(excede 100%)' : '(falta para 100%)'}
+                            </span>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
                 </div>
 
                 {/* Campo Localizado */}
@@ -519,9 +801,10 @@ export default function CampanasManagement() {
                     <FormItem>
                       <FormLabel>Localización Específica</FormLabel>
                       <FormControl>
-                        <Input 
+                        <Input
                           placeholder="Ej: Ciudades específicas, zonas, radios de targeting..."
                           {...field}
+                          value={field.value || ""}
                         />
                       </FormControl>
                       <FormMessage />
@@ -541,11 +824,12 @@ export default function CampanasManagement() {
                       <FormItem>
                         <FormLabel>Pedidos por Día</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="number" 
+                          <Input
+                            type="number"
                             min="0"
-                            placeholder="Ej: 20" 
-                            {...field} 
+                            placeholder="Ej: 20"
+                            {...field}
+                            value={field.value || 0}
                             onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                           />
                         </FormControl>

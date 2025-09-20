@@ -215,8 +215,22 @@ export const campanasComerciales = pgTable("campanas_comerciales", {
   clienteId: integer("cliente_id").references(() => clientes.id).notNull(),
   numeroCampana: text("numero_campana").notNull(),
   cantidadDatosSolicitados: integer("cantidad_datos_solicitados").notNull(),
-  marca: text("marca").notNull(), // Una de las marcas disponibles
-  zona: text("zona").notNull(), // Provincia de Argentina o AMBA, NACIONAL
+  marca: text("marca").notNull(), // Primera marca (obligatoria)
+  zona: text("zona").notNull(), // Primera zona (obligatoria)
+  porcentaje: integer("porcentaje").notNull().default(100), // Porcentaje de leads para marca 1
+  marca2: text("marca2"), // Segunda marca (opcional)
+  zona2: text("zona2"), // Segunda zona (opcional)
+  porcentaje2: integer("porcentaje2"), // Porcentaje de leads para marca 2
+  marca3: text("marca3"), // Tercera marca (opcional)
+  zona3: text("zona3"), // Tercera zona (opcional)
+  porcentaje3: integer("porcentaje3"), // Porcentaje de leads para marca 3
+  marca4: text("marca4"), // Cuarta marca (opcional)
+  zona4: text("zona4"), // Cuarta zona (opcional)
+  porcentaje4: integer("porcentaje4"), // Porcentaje de leads para marca 4
+  marca5: text("marca5"), // Quinta marca (opcional)
+  zona5: text("zona5"), // Quinta zona (opcional)
+  porcentaje5: integer("porcentaje5"), // Porcentaje de leads para marca 5
+  asignacionAutomatica: boolean("asignacion_automatica").notNull().default(false), // Si está activada, distribución aleatoria
   localizado: text("localizado"), // Campo para targeting específico o localización
   fechaCampana: date("fecha_campana"), // Campo fecha cuando se da de alta la campaña
   fechaFin: date("fecha_fin"), // Fecha de finalización para rangos de matching
@@ -513,6 +527,20 @@ export const insertCampanaComercialSchema = createInsertSchema(campanasComercial
   cantidadDatosSolicitados: true,
   marca: true,
   zona: true,
+  porcentaje: true,
+  marca2: true,
+  zona2: true,
+  porcentaje2: true,
+  marca3: true,
+  zona3: true,
+  porcentaje3: true,
+  marca4: true,
+  zona4: true,
+  porcentaje4: true,
+  marca5: true,
+  zona5: true,
+  porcentaje5: true,
+  asignacionAutomatica: true,
   localizado: true,
   fechaCampana: true,
   fechaFin: true,
