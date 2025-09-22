@@ -110,9 +110,10 @@ export class UpdateEnviadosService {
       // Mapeo de zonas (igual que en routes.ts)
       const mapeoZonas = {
         'NACIONAL': 'Pais',
-        'AMBA': 'Amba', 
+        'AMBA': 'Amba',
         'Córdoba': 'Cordoba',
-        'Santa Fe': 'Santa Fe'
+        'Santa Fe': 'Santa Fe',
+        'Mendoza': 'Mendoza'
       };
       const localizacionFiltro = mapeoZonas[campana.zona as keyof typeof mapeoZonas] || campana.zona || 'Pais';
       

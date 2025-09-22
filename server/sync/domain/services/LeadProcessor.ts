@@ -1,5 +1,6 @@
 import { RawSheetLead, SyncLead, ProcessedSyncLead } from '../entities/SyncLead';
 import { nanoid } from 'nanoid';
+import { normalizeClientName } from '../../../../shared/utils/client-normalization';
 
 /**
  * Servicio de dominio para procesamiento de leads
@@ -45,7 +46,7 @@ export class LeadProcessor {
     // Normalizar datos
     const normalizedPhone = this.normalizePhone(syncLead.telefono);
     const normalizedEmail = this.normalizeEmail(syncLead.email);
-    const normalizedClient = this.normalizeClientName(syncLead.cliente);
+    const normalizedClient = normalizeClientName(syncLead.cliente);
     
     // Normalizar nombre: usar 'S/D' si está vacío
     const normalizedName = syncLead.nombre?.trim() || 'S/D';
@@ -78,7 +79,7 @@ export class LeadProcessor {
     // Generar ID único garantizado con nanoid + timestamp
     const timestamp = Date.now();
     const uniqueId = nanoid(12); // 12 caracteres únicos
-    const cliente = this.normalizeClientName(rawLead.cliente || '').substring(0, 10);
+    const cliente = normalizeClientName(rawLead.cliente || '').substring(0, 10);
     const campaign = this.sanitizeCampaignName(rawLead.campaign).substring(0, 15);
     
     // Formato: SHEET_[timestamp]_[nanoid]_[cliente]_[campaign]
@@ -206,18 +207,8 @@ export class LeadProcessor {
     return email.trim().toLowerCase();
   }
 
-  private normalizeClientName(clientName: any): string {
-    // ✅ CORRECCIÓN: Convertir cualquier tipo a string para evitar números en BD
-    const stringValue = String(clientName || 'S/D');
-    
-    // Cliente normalizado exitosamente
-    
-    return stringValue
-      .toLowerCase()
-      .trim()
-      .replace(/[^\w\s]/g, '') // Remover caracteres especiales
-      .replace(/\s+/g, '_'); // Reemplazar espacios con _
-  }
+  // NOTA: normalizeClientName ahora se importa de shared/utils/client-normalization.ts
+  // para garantizar consistencia en toda la aplicación
 
   private isValidPhone(phone: string): boolean {
     // Validar formato de teléfono (mínimo 10 dígitos)

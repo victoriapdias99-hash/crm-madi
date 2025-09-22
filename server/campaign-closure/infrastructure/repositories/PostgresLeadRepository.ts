@@ -2,6 +2,7 @@ import { sql, eq, and, ilike, isNull, desc, asc, inArray } from 'drizzle-orm';
 import { AvailableLead } from '../../domain/entities/CampaignClosure';
 import { ILeadRepository } from '../../domain/interfaces/ILeadRepository';
 import { opLeadsRep, opLead } from '@shared/schema';
+import { normalizeClientName } from '../../../../shared/utils/client-normalization';
 
 /**
  * Implementación PostgreSQL del repositorio de leads
@@ -39,7 +40,7 @@ export class PostgresLeadRepository implements ILeadRepository {
     
     try {
       // Normalizar nombres para matching
-      const normalizedClient = this.normalizeClientName(clientName);
+      const normalizedClient = normalizeClientName(clientName);
       const normalizedBrand = brandName.toLowerCase();
       const normalizedZone = this.normalizeZoneName(zone);
 
@@ -108,7 +109,7 @@ export class PostgresLeadRepository implements ILeadRepository {
     try {
 
       
-      const normalizedClient = this.normalizeClientName(clientName);
+      const normalizedClient = normalizeClientName(clientName);
       const normalizedBrand = brandName.toLowerCase();
       const normalizedZone = this.normalizeZoneName(zone);
 
@@ -302,7 +303,7 @@ export class PostgresLeadRepository implements ILeadRepository {
     await this.ensureDbInitialized();
     
     try {
-      const normalizedClient = this.normalizeClientName(clientName);
+      const normalizedClient = normalizeClientName(clientName);
       const normalizedBrand = brandName.toLowerCase();
       const normalizedZone = this.normalizeZoneName(zone);
 
@@ -472,22 +473,8 @@ export class PostgresLeadRepository implements ILeadRepository {
   /**
    * Normaliza nombres de clientes para matching consistente
    */
-  private normalizeClientName(clientName: string): string {
-    // Extraer el nombre real del cliente si tiene formato "MARCA # #cliente"
-    const parts = clientName.split(' ');
-    if (parts.length > 2 && parts[1] === '#' && parts[2] === '#') {
-      return parts.slice(3).join('_').toLowerCase();
-    }
-    
-    // Normalizar IGUAL que en la sincronización:
-    // 1. Remover caracteres especiales (incluye guiones)
-    // 2. Reemplazar espacios con underscores  
-    return clientName
-      .toLowerCase()
-      .trim()
-      .replace(/[^\w\s]/g, '') // Remover guiones y caracteres especiales
-      .replace(/\s+/g, '_');   // Reemplazar espacios con _
-  }
+  // NOTA: normalizeClientName ahora se importa de shared/utils/client-normalization.ts
+  // que incluye la lógica especial para formato "MARCA # #cliente"
 
   /**
    * Normaliza nombres de zonas para matching consistente
@@ -495,11 +482,13 @@ export class PostgresLeadRepository implements ILeadRepository {
   private normalizeZoneName(zone: string): string {
     const zoneMapping: Record<string, string> = {
       'NACIONAL': 'Pais',
-      'AMBA': 'Amba', 
+      'AMBA': 'Amba',
       'Córdoba': 'Cordoba',
       'CORDOBA': 'Cordoba',
       'Santa Fe': 'Santa Fe',
-      'SANTA FE': 'Santa Fe'
+      'SANTA FE': 'Santa Fe',
+      'Mendoza': 'Mendoza',
+      'MENDOZA': 'Mendoza'
     };
 
     return zoneMapping[zone] || zone;
@@ -569,7 +558,7 @@ export class PostgresLeadRepository implements ILeadRepository {
       console.log(`📋 Filtros: cliente=${clientName}, marca=${brandName}, zona=${zone}`);
 
       // Normalizar parámetros
-      const normalizedClient = this.normalizeClientName(clientName);
+      const normalizedClient = normalizeClientName(clientName);
       const normalizedBrand = brandName.toLowerCase();
       const normalizedZone = this.normalizeZoneName(zone);
 

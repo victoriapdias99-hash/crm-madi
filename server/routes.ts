@@ -8,6 +8,7 @@ import { registerMetaAdsRoutes } from "./meta-ads-routes";
 import { registerIntegracionManychatRoutes } from "./integracion-manychat-routes";
 import { MetaAdsService } from "./meta-ads-service";
 import { UpdateEnviadosService } from "./update-enviados-service";
+import { normalizeClientName } from "../shared/utils/client-normalization";
 import { centralizedDataService } from "./centralized-data-service";
 import { 
   insertLeadSchema, 
@@ -21,6 +22,9 @@ import {
 } from "@shared/schema";
 import { ClosureFactory } from './campaign-closure/infrastructure/factories/ClosureFactory';
 import { realtimeSync } from './realtime-sync';
+import { registerOptimizedRoute } from './optimized-route';
+import { registerSimpleOptimized } from './simple-optimized';
+import { registerDebugMaterialized } from './debug-materialized';
 
 // LEGACY CODE REMOVED: ClientMatchingSystem migrado al nuevo sistema refactorizado
 // Ver: server/sync/domain/services/ClientMatcher.ts
@@ -400,9 +404,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // MAPEO CORRECTO: Zona de campaña → Localización en datos sincronizados
     const mapeoZonas: Record<string, string> = {
       'NACIONAL': 'Pais',
-      'AMBA': 'Amba', 
+      'AMBA': 'Amba',
       'Córdoba': 'Cordoba',
-      'Santa Fe': 'Santa Fe'
+      'Santa Fe': 'Santa Fe',
+      'Mendoza': 'Mendoza'
     };
     const localizacionFiltro = mapeoZonas[campana.zona as keyof typeof mapeoZonas] || campana.zona || 'Pais';
     
@@ -433,7 +438,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             AND lower(${opLeadsRepTable.cliente}) LIKE ${`%${nombreComercial.toLowerCase()}%`}
             AND ${opLeadsRepTable.localizacion} = ${localizacionFiltro}
             AND ${opLeadsRepTable.source} = 'google_sheets'
-            AND ${opLeadsRepTable.campaignId} IS NULL
+            AND (${opLeadsRepTable.campaignId} IS NULL OR ${opLeadsRepTable.campaignId} = ${campana.id})
             ${/* 🚫 FILTRO_FECHA_DESHABILITADO: Comentado temporalmente para incluir todos los leads sin restricción de fecha
             AND date(${opLeadsRepTable.fechaCreacion}) >= ${campana.fechaCampana}
             ${fechaFinCalculada ? sql`AND date(${opLeadsRepTable.fechaCreacion}) <= ${fechaFinCalculada}` : sql``} */ sql``}`
@@ -464,20 +469,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     // 📊 CAMPAÑA EN PROCESO: Usar filtros genéricos
-    // NORMALIZAR nombre comercial igual que en la sincronización (espacios → underscores)
+    // NORMALIZAR nombre comercial usando la función centralizada
     const nombreComercialRaw = clienteData?.nombreComercial || '';
-    const nombreComercial = nombreComercialRaw
-      .toLowerCase()
-      .trim()
-      .replace(/[^\w\s]/g, '') // Remover caracteres especiales
-      .replace(/\s+/g, '_');   // Reemplazar espacios con _
+    const nombreComercial = normalizeClientName(nombreComercialRaw);
     
     // MAPEO CORRECTO: Zona de campaña → Localización en datos sincronizados
     const mapeoZonas: Record<string, string> = {
       'NACIONAL': 'Pais',
-      'AMBA': 'Amba', 
+      'AMBA': 'Amba',
       'Córdoba': 'Cordoba',
-      'Santa Fe': 'Santa Fe'
+      'Santa Fe': 'Santa Fe',
+      'Mendoza': 'Mendoza'
     };
     const localizacionFiltro = mapeoZonas[campana.zona as keyof typeof mapeoZonas] || campana.zona || 'Pais';
     
@@ -495,7 +497,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         eq(opLeadsRepTable.cliente, nombreComercial), // ✅ CORRECCIÓN: Comparación exacta en lugar de ILIKE con wildcards
         eq(opLeadsRepTable.localizacion, localizacionFiltro),
         eq(opLeadsRepTable.source, 'google_sheets'),
-        sql`${opLeadsRepTable.campaignId} IS NULL`, // Solo contar leads disponibles (no asignados)
+        sql`(${opLeadsRepTable.campaignId} IS NULL OR ${opLeadsRepTable.campaignId} = ${campana.id})`, // Contar leads disponibles o asignados a esta campaña
         // 🚫 FILTRO_FECHA_DESHABILITADO: Comentado temporalmente para incluir todos los leads sin restricción de fecha
         // gte(sql`date(${opLeadsRepTable.fechaCreacion})`, campana.fechaCampana)
       ];
@@ -3561,7 +3563,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.error('❌ Error registrando rutas del sistema refactorizado:', error);
   }
 
-
+  // Registrar ruta optimizada con vista materializada
+  try {
+    registerOptimizedRoute(app);
+    registerSimpleOptimized(app);
+    registerDebugMaterialized(app);
+    console.log('✅ Ruta optimizada con vista materializada registrada');
+    console.log('✅ Ruta de test simple registrada');
+    console.log('✅ Ruta de debug materializada registrada');
+  } catch (error) {
+    console.error('❌ Error registrando ruta optimizada:', error);
+  }
 
   return httpServer;
 }

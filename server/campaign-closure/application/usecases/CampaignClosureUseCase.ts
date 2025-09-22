@@ -5,6 +5,7 @@ import { ILeadRepository } from '../../domain/interfaces/ILeadRepository';
 import { CampaignProcessor } from '../../domain/services/CampaignProcessor';
 import { LeadAssigner } from '../../domain/services/LeadAssigner';
 import { ClosureOptions } from '../dto/ClosureOptions';
+import { normalizeClientName } from '../../../../shared/utils/client-normalization';
 
 /**
  * Caso de uso principal para el cierre manual de campañas
@@ -223,13 +224,8 @@ export class CampaignClosureUseCase {
   /**
    * Normaliza nombres de clientes usando la misma lógica que sincronización
    */
-  private normalizeClientName(clientName: string): string {
-    return String(clientName || '')
-      .toLowerCase()
-      .trim()
-      .replace(/[^\w\s]/g, '') // Remover caracteres especiales
-      .replace(/\s+/g, '_'); // Reemplazar espacios con _
-  }
+  // NOTA: normalizeClientName ahora se importa de shared/utils/client-normalization.ts
+  // para garantizar consistencia en toda la aplicación
 
   /**
    * Extrae el nombre comercial del input del usuario removiendo marcas conocidas
@@ -262,8 +258,8 @@ export class CampaignClosureUseCase {
         options.specificClients!.some(specified => {
           // CORREGIDO: Extraer solo el nombre comercial del input del usuario
           const commercialNameFromUser = this.extractCommercialName(specified);
-          const clientNormalized = this.normalizeClientName(client);
-          const commercialNormalized = this.normalizeClientName(commercialNameFromUser);
+          const clientNormalized = normalizeClientName(client);
+          const commercialNormalized = normalizeClientName(commercialNameFromUser);
           
           // Verificar matching usando solo nombres comerciales normalizados
           const result = clientNormalized.includes(commercialNormalized) || 

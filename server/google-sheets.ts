@@ -1,5 +1,6 @@
 import { google } from 'googleapis';
 import { analistaFuncional } from './analista-funcional';
+import { normalizeClientName } from '../shared/utils/client-normalization';
 
 interface SheetLead {
   timestamp: string;
@@ -392,7 +393,7 @@ class GoogleSheetsService {
         // Verificar coincidencia exacta del cliente
         const isClientMatch = leadData.includes(clientData) || 
                               clientData.includes(leadData) ||
-                              this.normalizeClientName(leadData) === this.normalizeClientName(clientData);
+                              normalizeClientName(leadData) === normalizeClientName(clientData);
         
         if (isClientMatch) {
           console.log(`✅ CLIENTE COINCIDE: "${lead.name}" matches "${clienteNombre}"`);
@@ -422,12 +423,8 @@ class GoogleSheetsService {
     }
   }
 
-  private normalizeClientName(name: string): string {
-    return name.toLowerCase()
-      .replace(/[^\w\s]/g, '') // Remover caracteres especiales
-      .replace(/\s+/g, ' ')    // Normalizar espacios
-      .trim();
-  }
+  // NOTA: normalizeClientName ahora se importa de shared/utils/client-normalization.ts
+  // para garantizar consistencia en toda la aplicación
 
   async getAvailableSheets(): Promise<string[]> {
     if (!this.sheets) {
