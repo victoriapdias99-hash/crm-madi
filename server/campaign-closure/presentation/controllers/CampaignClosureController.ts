@@ -25,8 +25,22 @@ export class CampaignClosureController {
    */
   public async executeClosure(req: Request, res: Response): Promise<void> {
     const startTime = Date.now();
-    
+    const requestId = `REQ-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    console.log(`🚀 [${requestId}] INICIO - Campaign closure request iniciada`);
+    console.log(`📋 [${requestId}] Request details:`, {
+      method: req.method,
+      url: req.url,
+      query: req.query,
+      body: req.body,
+      headers: {
+        'content-type': req.headers['content-type'],
+        'user-agent': req.headers['user-agent']
+      }
+    });
+
     try {
+      console.log(`⚙️ [${requestId}] PASO 1 - Procesando parámetros de entrada`);
 
       // Convertir query params y body a DTO
       const requestDto: ClosureRequestDto = {
@@ -34,37 +48,98 @@ export class CampaignClosureController {
         ...req.body
       };
 
+      console.log(`📊 [${requestId}] DTO creado:`, requestDto);
 
       // Mapear a opciones del dominio
       const options = mapClosureRequestToOptions(requestDto);
+      console.log(`🔧 [${requestId}] PASO 2 - Opciones mapeadas:`, options);
 
       // Obtener el use case y ejecutar
+      console.log(`🏭 [${requestId}] PASO 3 - Obteniendo use case del factory`);
       const useCase = this.closureFactory.getCampaignClosureUseCase();
+
+      console.log(`⏱️ [${requestId}] PASO 4 - Ejecutando use case (tiempo transcurrido: ${Date.now() - startTime}ms)`);
       const result = await useCase.execute(options);
+      console.log(`✅ [${requestId}] PASO 5 - Use case completado exitosamente (tiempo: ${Date.now() - startTime}ms)`);
 
 
+      console.log(`🔄 [${requestId}] PASO 6 - Mapeando resultado a response DTO`);
       // Mapear resultado a response DTO
       const response: ClosureResponseDto = mapClosureResultToResponse(result);
+      console.log(`📊 [${requestId}] Response DTO creado:`, {
+        success: response.success,
+        campaignsProcessed: response.campaignsProcessed,
+        campaignsClosed: response.campaignsClosed,
+        leadsAssigned: response.leadsAssigned,
+        duration: response.duration
+      });
 
       // Si el cierre fue exitoso, emitir evento de actualización del dashboard
       if (result.success && result.campaignsClosed > 0) {
-        console.log('🔄 Emitiendo evento de actualización del dashboard tras cierre exitoso');
-        
-        // Emitir evento de refresco del dashboard a todos los clientes conectados
-        realtimeSync.broadcastDashboardRefresh();
-        
-        // Emitir eventos específicos por cada campaña cerrada
-        if (result.closedCampaigns) {
-          result.closedCampaigns.forEach(campaign => {
-            realtimeSync.broadcastCampaignUpdate('updated', campaign.campaignId);
+        console.log(`📡 [${requestId}] PASO 7 - Emitiendo eventos WebSocket (${result.campaignsClosed} campañas cerradas)`);
+
+        try {
+          // Emitir evento de refresco del dashboard a todos los clientes conectados
+          console.log(`📢 [${requestId}] Broadcasting dashboard refresh`);
+          realtimeSync.broadcastDashboardRefresh();
+
+          // Emitir eventos específicos por cada campaña cerrada
+          if (result.closedCampaigns) {
+            console.log(`📢 [${requestId}] Broadcasting ${result.closedCampaigns.length} campaign updates`);
+            result.closedCampaigns.forEach((campaign, index) => {
+              console.log(`📢 [${requestId}] Broadcasting campaign ${index + 1}/${result.closedCampaigns!.length}: ${campaign.campaignId}`);
+              realtimeSync.broadcastCampaignUpdate('updated', campaign.campaignId);
+            });
+          }
+          console.log(`✅ [${requestId}] PASO 7 - Eventos WebSocket enviados exitosamente`);
+        } catch (wsError: any) {
+          console.error(`❌ [${requestId}] ERROR en notificaciones WebSocket:`, {
+            error: wsError.message,
+            stack: wsError.stack,
+            campaignsClosed: result.campaignsClosed,
+            timestamp: new Date().toISOString()
           });
+          // No fallar la request por errores de WebSocket
         }
+      } else {
+        console.log(`ℹ️ [${requestId}] No se emiten eventos WebSocket (success: ${result.success}, closed: ${result.campaignsClosed})`);
       }
 
+      console.log(`🎉 [${requestId}] PASO 8 - Enviando respuesta exitosa (tiempo total: ${Date.now() - startTime}ms)`);
       res.status(200).json(response);
 
     } catch (error: any) {
       const duration = Date.now() - startTime;
+
+      console.error(`💥 [${requestId}] ERROR CRÍTICO en campaign closure:`, {
+        errorMessage: error.message || 'Sin mensaje',
+        errorName: error.name || 'Sin nombre',
+        errorCode: error.code || 'Sin código',
+        errorStack: error.stack || 'Sin stack trace',
+        duration: `${duration}ms`,
+        timestamp: new Date().toISOString(),
+        requestDetails: {
+          method: req.method,
+          url: req.url,
+          query: req.query,
+          body: req.body
+        },
+        systemState: {
+          memoryUsage: process.memoryUsage(),
+          uptime: process.uptime()
+        }
+      });
+
+      // Log específicos por tipo de error
+      if (error.message?.includes('timeout') || error.message?.includes('Timeout')) {
+        console.error(`⏱️ [${requestId}] TIMEOUT ERROR detectado después de ${duration}ms`);
+      }
+      if (error.message?.includes('database') || error.message?.includes('sql') || error.message?.includes('connection')) {
+        console.error(`🗄️ [${requestId}] DATABASE ERROR detectado`);
+      }
+      if (error.message?.includes('websocket') || error.message?.includes('broadcast')) {
+        console.error(`📡 [${requestId}] WEBSOCKET ERROR detectado`);
+      }
 
       const errorResponse: ClosureResponseDto = {
         success: false,
@@ -78,6 +153,7 @@ export class CampaignClosureController {
         error: error.message
       };
 
+      console.error(`📤 [${requestId}] Enviando respuesta de error 500 (duración final: ${duration}ms)`);
       res.status(500).json(errorResponse);
     }
   }

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { CampaignClosureController } from '../controllers/CampaignClosureController';
+import { MultiBrandCampaignClosureController } from '../controllers/MultiBrandCampaignClosureController';
 
 /**
  * Rutas para el sistema de cierre manual de campañas
@@ -8,6 +9,7 @@ import { CampaignClosureController } from '../controllers/CampaignClosureControl
 export function createCampaignClosureRoutes(): Router {
   const router = Router();
   const controller = new CampaignClosureController();
+  const multiBrandController = new MultiBrandCampaignClosureController();
 
   console.log('🔄 Configurando rutas de cierre de campañas...');
 
@@ -77,6 +79,35 @@ export function createCampaignClosureRoutes(): Router {
     await controller.getProcessingStatus(req, res);
   });
 
+  /**
+   * POST /api/campaign-closure/multi-brand/execute/:id
+   * Cierra una campaña específica con distribución multi-marca
+   *
+   * Params:
+   * - id: number - ID de la campaña a cerrar
+   *
+   * Body:
+   * - clientName: string - Nombre del cliente
+   *
+   * Response: MultiBrandClosureResult
+   */
+  router.post('/multi-brand/execute/:id', async (req, res) => {
+    await multiBrandController.executeMultiBrandClosure(req, res);
+  });
+
+  /**
+   * GET /api/campaign-closure/multi-brand/validate/:id
+   * Valida si una campaña puede cerrarse con múltiples marcas
+   *
+   * Params:
+   * - id: number - ID de la campaña a validar
+   *
+   * Response: MultiBrandValidationResult
+   */
+  router.get('/multi-brand/validate/:id', async (req, res) => {
+    await multiBrandController.validateMultiBrandClosure(req, res);
+  });
+
   console.log('✅ Rutas de cierre de campañas configuradas:');
   console.log('   POST /api/campaign-closure/execute');
   console.log('   POST /api/campaign-closure/validate');
@@ -84,6 +115,8 @@ export function createCampaignClosureRoutes(): Router {
   console.log('   GET  /api/campaign-closure/pending-campaigns');
   console.log('   GET  /api/campaign-closure/clients');
   console.log('   GET  /api/campaign-closure/processing-status');
+  console.log('   POST /api/campaign-closure/multi-brand/execute/:id');
+  console.log('   GET  /api/campaign-closure/multi-brand/validate/:id');
 
   return router;
 }

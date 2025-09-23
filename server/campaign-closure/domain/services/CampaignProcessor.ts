@@ -212,8 +212,19 @@ export class CampaignProcessor {
     error?: string;
   }> {
     const startTime = Date.now();
-    console.log(`⏱️ [TIMING] Iniciando procesamiento de campaña ${campaign.id} - forceClose: ${forceClose}`);
-    
+    const campaignTrackingId = `CAMP-${campaign.id}-${Date.now()}`;
+
+    console.log(`🚀 [${campaignTrackingId}] INICIO procesamiento campaña ${campaign.id}`);
+    console.log(`📋 [${campaignTrackingId}] Detalles campaña:`, {
+      id: campaign.id,
+      clientName: campaign.clientName,
+      brandName: campaign.brandName,
+      targetLeads: campaign.targetLeads,
+      zone: campaign.zone,
+      forceClose,
+      campaignKey
+    });
+
     try {
       if (campaignKey) {
         this.progressManager.emitProgress(campaignKey, 40, 'Analizando leads actuales...');
@@ -221,19 +232,19 @@ export class CampaignProcessor {
 
       // Contar leads YA asignados a esta campaña
       const step1Start = Date.now();
-      console.log(`⏱️ [TIMING] Contando leads asignados...`);
+      console.log(`📊 [${campaignTrackingId}] PASO 1 - Contando leads ya asignados...`);
       const currentAssignedLeads = await this.leadRepository.countAssignedLeadsForCampaign(campaign.id);
-      console.log(`⏱️ [TIMING] Leads asignados contados en ${Date.now() - step1Start}ms`);
-      
+      console.log(`✅ [${campaignTrackingId}] PASO 1 completado en ${Date.now() - step1Start}ms - ${currentAssignedLeads} leads asignados`);
+
       // Contar leads únicos disponibles para este cliente (no asignados)
       const step2Start = Date.now();
-      console.log(`⏱️ [TIMING] Contando leads disponibles...`);
+      console.log(`🔍 [${campaignTrackingId}] PASO 2 - Contando leads disponibles...`);
       const availableLeadsCount = await this.leadRepository.countUniqueLeadsForClient(
         campaign.clientName,
         campaign.brandName,
         campaign.zone
       );
-      console.log(`⏱️ [TIMING] Leads disponibles contados en ${Date.now() - step2Start}ms`);
+      console.log(`✅ [${campaignTrackingId}] PASO 2 completado en ${Date.now() - step2Start}ms - ${availableLeadsCount} leads disponibles`);
 
       console.log(`📊 Leads ya asignados a campaña ${campaign.id}: ${currentAssignedLeads}`);
       console.log(`📊 Leads disponibles (no asignados): ${availableLeadsCount}`);
@@ -335,14 +346,14 @@ export class CampaignProcessor {
 
       // OPTIMIZACIÓN 1: Obtener SOLO los leads necesarios con límite
       const step3Start = Date.now();
-      console.log(`⏱️ [TIMING] Obteniendo máximo ${leadsToAssign} leads (optimizado)...`);
+      console.log(`🎯 [${campaignTrackingId}] PASO 3 - Obteniendo máximo ${leadsToAssign} leads optimizados...`);
       const leadsForAssignment = await this.leadRepository.getLeadsForAssignment(
         campaign.clientName,
         campaign.brandName,
         campaign.zone,
         leadsToAssign // Solo traer los necesarios
       );
-      console.log(`⏱️ [TIMING] ${leadsForAssignment.length} leads obtenidos en ${Date.now() - step3Start}ms`);
+      console.log(`✅ [${campaignTrackingId}] PASO 3 completado en ${Date.now() - step3Start}ms - ${leadsForAssignment.length} leads obtenidos`);
 
       if (campaignKey) {
         this.progressManager.emitProgress(campaignKey, 70, `Asignando ${leadsForAssignment.length} leads...`);
@@ -350,36 +361,53 @@ export class CampaignProcessor {
 
       // OPTIMIZACIÓN 2: Asignar leads en lotes con progreso
       const step5Start = Date.now();
-      console.log(`⏱️ [TIMING] Iniciando asignación en lotes de ${leadsForAssignment.length} leads...`);
-      
+      console.log(`💾 [${campaignTrackingId}] PASO 4 - Iniciando asignación en lotes de ${leadsForAssignment.length} leads...`);
+
       // Timeout dinámico basado en el volumen (50ms por lead, mínimo 30 segundos)
       const timeoutMs = Math.max(30000, leadsForAssignment.length * 50);
-      console.log(`⏱️ [TIMING] Timeout dinámico establecido: ${timeoutMs}ms`);
-      
+      console.log(`⏱️ [${campaignTrackingId}] Timeout dinámico establecido: ${timeoutMs}ms (${timeoutMs/1000}s)`);
+
       // Callback de progreso para actualizar WebSocket
       const progressCallback = (processed: number, total: number) => {
+        const elapsed = Date.now() - step5Start;
+        console.log(`📈 [${campaignTrackingId}] Progreso asignación: ${processed}/${total} leads (${elapsed}ms transcurridos)`);
         if (campaignKey) {
           const progressPercent = 70 + Math.floor((processed / total) * 20); // 70% a 90%
           this.progressManager.emitProgress(
-            campaignKey, 
-            progressPercent, 
+            campaignKey,
+            progressPercent,
             `Procesados ${processed}/${total} leads...`
           );
         }
       };
-      
-      const assignedCount = await Promise.race([
-        this.leadRepository.assignLeadsInBatches(
-          leadsForAssignment, 
-          campaign.id,
-          100, // Tamaño del lote
-          progressCallback
-        ),
-        new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error(`Timeout: Asignación tardó más de ${timeoutMs/1000} segundos`)), timeoutMs);
-        })
-      ]);
-      console.log(`⏱️ [TIMING] Asignación completada en ${Date.now() - step5Start}ms - ${assignedCount} leads asignados`);
+
+      console.log(`🚀 [${campaignTrackingId}] Iniciando Promise.race para asignación con timeout`);
+      try {
+        const assignedCount = await Promise.race([
+          this.leadRepository.assignLeadsInBatches(
+            leadsForAssignment,
+            campaign.id,
+            100, // Tamaño del lote
+            progressCallback
+          ),
+          new Promise<never>((_, reject) => {
+            setTimeout(() => {
+              console.error(`⏱️ [${campaignTrackingId}] TIMEOUT TRIGGERED después de ${timeoutMs}ms`);
+              reject(new Error(`Timeout: Asignación tardó más de ${timeoutMs/1000} segundos para campaña ${campaign.id}`));
+            }, timeoutMs);
+          })
+        ]);
+        console.log(`✅ [${campaignTrackingId}] PASO 4 completado en ${Date.now() - step5Start}ms - ${assignedCount} leads asignados`);
+      } catch (assignmentError: any) {
+        console.error(`❌ [${campaignTrackingId}] ERROR en asignación después de ${Date.now() - step5Start}ms:`, {
+          error: assignmentError.message,
+          campaignId: campaign.id,
+          leadsToAssign: leadsForAssignment.length,
+          timeoutMs,
+          isTimeout: assignmentError.message?.includes('Timeout')
+        });
+        throw assignmentError;
+      }
       
       console.log(`✅ Asignados ${assignedCount} leads a campaña ${campaign.id}`);
 
@@ -391,16 +419,20 @@ export class CampaignProcessor {
         }
 
         const step6Start = Date.now();
-        console.log(`⏱️ [TIMING] Cerrando campaña en base de datos...`);
+        console.log(`🔒 [${campaignTrackingId}] PASO 5 - Cerrando campaña en base de datos...`);
+
         // Obtener la fecha del último lead asignado
-        const finalLeadDate = leadsForAssignment.length > 0 
+        const finalLeadDate = leadsForAssignment.length > 0
           ? leadsForAssignment[leadsForAssignment.length - 1].fechaCreacion
           : await this.leadRepository.getLastLeadDateForCampaign(campaign.id);
-        
+
+        console.log(`📅 [${campaignTrackingId}] Fecha final calculada: ${finalLeadDate?.toISOString() || 'null'}`);
+
         if (finalLeadDate) {
+          console.log(`💾 [${campaignTrackingId}] Ejecutando closeCampaign en repositorio...`);
           await this.campaignRepository.closeCampaign(campaign.id, finalLeadDate);
-          console.log(`⏱️ [TIMING] Campaña cerrada en ${Date.now() - step6Start}ms`);
-          console.log(`🎯 Campaña ${campaign.id} cerrada. Fecha final: ${finalLeadDate.toISOString()}`);
+          console.log(`✅ [${campaignTrackingId}] PASO 5 completado en ${Date.now() - step6Start}ms - Campaña cerrada`);
+          console.log(`🎯 [${campaignTrackingId}] Campaña ${campaign.id} cerrada exitosamente. Fecha final: ${finalLeadDate.toISOString()}`);
 
           if (campaignKey) {
             this.progressManager.emitProgress(campaignKey, 100, `Campaña cerrada: ${assignedCount} leads asignados`);
@@ -424,11 +456,28 @@ export class CampaignProcessor {
         this.progressManager.emitProgress(campaignKey, 100, `${assignedCount} leads asignados`);
       }
 
-      console.log(`⏱️ [TIMING] Procesamiento completo de campaña ${campaign.id} en ${Date.now() - startTime}ms`);
+      console.log(`🎉 [${campaignTrackingId}] PROCESAMIENTO COMPLETO en ${Date.now() - startTime}ms`);
       return { success: true, leadsAssigned: assignedCount };
     } catch (error: any) {
-      console.error(`❌ Error procesando campaña ${campaign.id}:`, error);
-      console.log(`⏱️ [TIMING] Error después de ${Date.now() - startTime}ms`);
+      const errorDuration = Date.now() - startTime;
+      console.error(`💥 [${campaignTrackingId}] ERROR CRÍTICO después de ${errorDuration}ms:`, {
+        campaignId: campaign.id,
+        error: error.message,
+        stack: error.stack,
+        clientName: campaign.clientName,
+        brandName: campaign.brandName,
+        targetLeads: campaign.targetLeads,
+        forceClose,
+        campaignKey,
+        errorType: error.constructor?.name,
+        isTimeout: error.message?.includes('Timeout') || error.message?.includes('timeout'),
+        isDatabaseError: error.message?.includes('database') || error.message?.includes('sql'),
+        systemState: {
+          memoryUsage: process.memoryUsage(),
+          uptime: process.uptime()
+        }
+      });
+
       if (campaignKey) {
         this.progressManager.emitProgress(campaignKey, 100, `Error: ${error.message}`);
       }

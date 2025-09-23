@@ -1,6 +1,7 @@
 // Servicio específico para actualizar conteos de "enviados"
 import { DatabaseStorage } from './storage';
 import { GoogleSheetsService } from './google-sheets';
+import { extractBrandsFromCampaign, createMultiBrandCondition, getMultiBrandDebugInfo } from '../shared/utils/multi-brand-utils';
 
 export class UpdateEnviadosService {
   constructor(
@@ -24,6 +25,20 @@ export class UpdateEnviadosService {
       let campanasActualizadas = 0;
       
       // 3. Procesar cada campaña individualmente
+      console.log(`🔧 [CAMPAÑA LIST] Total campañas a procesar: ${campanasComerciales.length}`);
+      campanasComerciales.forEach(c => {
+        console.log(`  - ID: ${c.id}, numeroCampana: ${c.numeroCampana}, marca: ${c.marca}, clienteId: ${c.clienteId}`);
+      });
+
+      // ⚡ DEBUGGING ESPECÍFICO: Verificar si campaña 82 está en la lista
+      const campana82 = campanasComerciales.find(c => c.id === 82);
+      if (campana82) {
+        console.log(`🔍 [CAMPAÑA 82 ENCONTRADA] ID: ${campana82.id}, numeroCampana: ${campana82.numeroCampana}, marca: ${campana82.marca}, clienteId: ${campana82.clienteId}`);
+      } else {
+        console.log(`⚠️ [CAMPAÑA 82 NO ENCONTRADA] La campaña 82 NO está en la lista de campañas comerciales`);
+        console.log(`🔍 [DEBUG] Revisando todas las campañas en la lista:`, campanasComerciales.map(c => ({ id: c.id, clienteId: c.clienteId })));
+      }
+
       for (const campana of campanasComerciales) {
         try {
           const cliente = await this.storage.getCliente(campana.clienteId);
@@ -31,8 +46,8 @@ export class UpdateEnviadosService {
             console.log(`⚠️ Cliente no encontrado para campaña ${campana.numeroCampana}`);
             continue;
           }
-          
-          console.log(`\n🔍 PROCESANDO: ${cliente.nombreCliente} - Campaña ${campana.numeroCampana}`);
+
+          console.log(`\n🔍 PROCESANDO: ${cliente.nombreCliente} - Campaña ID:${campana.id} NumCampana:${campana.numeroCampana}`);
           
           // 4. Aplicar la misma lógica que usa el endpoint datos-diarios
           const enviadosAnterior = await this.getEnviadosActual(campana, cliente);
@@ -117,8 +132,26 @@ export class UpdateEnviadosService {
       };
       const localizacionFiltro = mapeoZonas[campana.zona as keyof typeof mapeoZonas] || campana.zona || 'Pais';
       
+      // 🎯 NUEVA LÓGICA: Soporte para múltiples marcas (modo automático usa TODAS las marcas)
+      console.log(`🔧 [DEBUG] CAMPAÑA ${campana.id} - Datos RAW:`, {
+        id: campana.id,
+        marca: campana.marca,
+        porcentaje: campana.porcentaje,
+        marca2: campana.marca2,
+        porcentaje2: campana.porcentaje2,
+        asignacionAutomatica: campana.asignacionAutomatica,
+        zona: campana.zona
+      });
+
+      const brands = extractBrandsFromCampaign(campana, campana.asignacionAutomatica);
+      console.log(`🏷️ MÚLTIPLES MARCAS (UPDATE SERVICE) - Campaña ${campana.id} - Modo: ${campana.asignacionAutomatica ? 'AUTOMÁTICO' : 'MANUAL'}`);
+      console.log(`🏷️ Marcas extraídas:`, brands);
+
+      // Crear condición para múltiples marcas (OR entre todas las marcas configuradas)
+      const multiBrandCondition = createMultiBrandCondition(brands, opLeadsRep.campaign);
+
       let conditions = [
-        ilike(opLeadsRep.campaign, `%${campana.marca.toLowerCase()}%`),
+        multiBrandCondition, // ✅ NUEVA LÓGICA: Incluye todas las marcas configuradas
         eq(opLeadsRep.cliente, nombreComercial), // ✅ CORRECCIÓN: Comparación exacta (igual que routes.ts)
         eq(opLeadsRep.localizacion, localizacionFiltro),
         gte(sql`date(${opLeadsRep.fechaCreacion})`, campana.fechaCampana)
@@ -128,11 +161,17 @@ export class UpdateEnviadosService {
         conditions.push(lte(sql`date(${opLeadsRep.fechaCreacion})`, fechaFinCalculada));
       }
 
+      console.log(`🔧 [SQL DEBUG] Ejecutando query con condiciones:`, conditions.length);
+      console.log(`🔧 [SQL DEBUG] Cliente normalizado: "${nombreComercial}"`);
+      console.log(`🔧 [SQL DEBUG] Zona filtro: "${localizacionFiltro}"`);
+      console.log(`🔧 [SQL DEBUG] Fecha inicio: "${campana.fechaCampana}"`);
+      console.log(`🔧 [SQL DEBUG] Fecha fin: "${fechaFinCalculada || 'Sin límite'}"`);
+
       const leadsCount = await db
         .select({ count: count() })
         .from(opLeadsRep)
         .where(and(...conditions));
-      
+
       console.log(`✅ Update Service - Leads encontrados: ${leadsCount[0]?.count || 0}`);
       
       const enviadosDB = leadsCount[0]?.count || 0;

@@ -41,7 +41,7 @@ export class PostgresLeadRepository implements ILeadRepository {
     try {
       // Normalizar nombres para matching
       const normalizedClient = normalizeClientName(clientName);
-      const normalizedBrand = brandName.toLowerCase();
+      const normalizedBrand = brandName?.toLowerCase() || '';
       const normalizedZone = this.normalizeZoneName(zone);
 
       console.log(`🔍 ⏱️ [TIMING] Iniciando búsqueda de leads desde op_leads_rep: cliente=${normalizedClient}, marca=${normalizedBrand}, zona=${normalizedZone}`);
@@ -110,7 +110,7 @@ export class PostgresLeadRepository implements ILeadRepository {
 
       
       const normalizedClient = normalizeClientName(clientName);
-      const normalizedBrand = brandName.toLowerCase();
+      const normalizedBrand = brandName?.toLowerCase() || '';
       const normalizedZone = this.normalizeZoneName(zone);
 
       const result = await this.db
@@ -304,7 +304,7 @@ export class PostgresLeadRepository implements ILeadRepository {
     
     try {
       const normalizedClient = normalizeClientName(clientName);
-      const normalizedBrand = brandName.toLowerCase();
+      const normalizedBrand = brandName?.toLowerCase() || '';
       const normalizedZone = this.normalizeZoneName(zone);
 
       console.log(`🚀 [OPTIMIZADO] Obteniendo máximo ${limit} leads ÚNICOS para asignación`);
@@ -479,7 +479,9 @@ export class PostgresLeadRepository implements ILeadRepository {
   /**
    * Normaliza nombres de zonas para matching consistente
    */
-  private normalizeZoneName(zone: string): string {
+  private normalizeZoneName(zone: string | null | undefined): string {
+    if (!zone) return 'Pais'; // Default to 'Pais' if zone is null/undefined
+
     const zoneMapping: Record<string, string> = {
       'NACIONAL': 'Pais',
       'AMBA': 'Amba',
@@ -492,6 +494,163 @@ export class PostgresLeadRepository implements ILeadRepository {
     };
 
     return zoneMapping[zone] || zone;
+  }
+
+  /**
+   * NUEVO: Obtiene pool unificado de leads para múltiples marcas ordenado cronológicamente
+   * Para modo AUTOMÁTICO: ignora porcentajes, pool unificado por fecha
+   */
+  async getUnifiedLeadsPoolChronologically(
+    clientName: string,
+    brands: string[],
+    zone: string,
+    campaignId: number,
+    targetCount: number
+  ): Promise<AvailableLead[]> {
+    await this.ensureDbInitialized();
+
+    try {
+      console.log(`🔄 OBTENIENDO POOL UNIFICADO CRONOLÓGICO:`);
+      console.log(`   Cliente: ${clientName}`);
+      console.log(`   Marcas: ${brands.join(', ')}`);
+      console.log(`   Zona: ${zone}`);
+      console.log(`   Solicitados: ${targetCount}`);
+
+      const normalizedClientName = normalizeClientName(clientName);
+      const normalizedZone = this.normalizeZoneName(zone);
+
+      // Crear condiciones OR para todas las marcas
+      const brandConditions = brands.map(brand =>
+        sql`lower(${opLeadsRep.campaign}) LIKE ${`%${(brand || '').toLowerCase()}%`}`
+      );
+      const multiBrandCondition = sql`(${sql.join(brandConditions, sql` OR `)})`;
+
+      console.log(`🔍 Buscando leads unificados para todas las marcas...`);
+
+      const availableLeads = await this.db
+        .select({
+          id: opLeadsRep.id,
+          metaLeadId: opLeadsRep.metaLeadId,
+          nombre: opLeadsRep.nombre,
+          telefono: opLeadsRep.telefono,
+          email: opLeadsRep.email,
+          ciudad: opLeadsRep.ciudad,
+          modelo: opLeadsRep.modelo,
+          comentarioHorario: opLeadsRep.comentarioHorario,
+          origen: opLeadsRep.origen,
+          localizacion: opLeadsRep.localizacion,
+          cliente: opLeadsRep.cliente,
+          marca: opLeadsRep.marca,
+          campaign: opLeadsRep.campaign,
+          campaignId: opLeadsRep.campaignId,
+          fechaCreacion: opLeadsRep.fechaCreacion,
+          createdAt: opLeadsRep.createdAt
+        })
+        .from(opLeadsRep)
+        .where(sql`
+          lower(${opLeadsRep.cliente}) LIKE ${`%${normalizedClientName}%`}
+          AND ${multiBrandCondition}
+          AND lower(${opLeadsRep.localizacion}) = ${(normalizedZone || '').toLowerCase()}
+          AND (${opLeadsRep.campaignId} IS NULL OR ${opLeadsRep.campaignId} = ${campaignId})
+        `)
+        .orderBy(sql`${opLeadsRep.createdAt} ASC`)  // ✅ ORDEN CRONOLÓGICO
+        .limit(targetCount);
+
+      console.log(`✅ Pool unificado encontrado: ${availableLeads.length} leads`);
+
+      if (availableLeads.length > 0) {
+        console.log(`📅 Rango de fechas: ${availableLeads[0].createdAt} a ${availableLeads[availableLeads.length - 1].createdAt}`);
+      }
+
+      return availableLeads.map(lead => ({
+        id: lead.id,
+        metaLeadId: lead.metaLeadId,
+        nombre: lead.nombre,
+        telefono: lead.telefono,
+        email: lead.email,
+        ciudad: lead.ciudad,
+        modelo: lead.modelo,
+        comentarioHorario: lead.comentarioHorario,
+        origen: lead.origen,
+        localizacion: lead.localizacion,
+        cliente: lead.cliente,
+        marca: lead.marca,
+        campaign: lead.campaign,
+        fechaCreacion: lead.fechaCreacion
+      }));
+    } catch (error: any) {
+      console.error(`❌ Error obteniendo pool unificado cronológico:`, error);
+      throw new Error(`Failed to get unified chronological pool: ${error.message}`);
+    }
+  }
+
+  /**
+   * NUEVO: Asigna leads en bloque cronológico (modo automático)
+   */
+  async assignLeadsChronologically(
+    leads: AvailableLead[],
+    campaignId: number
+  ): Promise<{
+    assigned: number;
+    finalLeadDate?: Date;
+    brandDistribution: { [marca: string]: number };
+  }> {
+    await this.ensureDbInitialized();
+
+    try {
+      if (leads.length === 0) {
+        return {
+          assigned: 0,
+          brandDistribution: {}
+        };
+      }
+
+      console.log(`🎯 ASIGNACIÓN CRONOLÓGICA EN BLOQUE:`);
+      console.log(`   Leads a asignar: ${leads.length}`);
+      console.log(`   Campaña ID: ${campaignId}`);
+
+      // Extraer IDs para actualización en bloque
+      const leadIds = leads.map(lead => lead.id);
+
+      // Actualización atómica en bloque
+      const result = await this.db
+        .update(opLead)
+        .set({
+          campaignId: campaignId,
+          updatedAt: new Date()
+        })
+        .where(inArray(opLead.id, leadIds))
+        .returning({
+          id: opLead.id,
+          campaign: opLead.campaign,
+          createdAt: opLead.createdAt
+        });
+
+      // Calcular distribución real por marca
+      const brandDistribution: { [marca: string]: number } = {};
+      result.forEach(lead => {
+        const campaign = lead.campaign || 'Desconocida';
+        brandDistribution[campaign] = (brandDistribution[campaign] || 0) + 1;
+      });
+
+      // Obtener fecha del último lead asignado
+      const finalLeadDate = result.length > 0
+        ? new Date(Math.max(...result.map(r => new Date(r.createdAt!).getTime())))
+        : undefined;
+
+      console.log(`✅ Asignación cronológica completada:`);
+      console.log(`   Leads asignados: ${result.length}`);
+      console.log(`   Distribución por marca:`, brandDistribution);
+
+      return {
+        assigned: result.length,
+        finalLeadDate,
+        brandDistribution
+      };
+    } catch (error: any) {
+      console.error(`❌ Error en asignación cronológica:`, error);
+      throw new Error(`Failed to assign leads chronologically: ${error.message}`);
+    }
   }
 
   /**
@@ -559,7 +718,7 @@ export class PostgresLeadRepository implements ILeadRepository {
 
       // Normalizar parámetros
       const normalizedClient = normalizeClientName(clientName);
-      const normalizedBrand = brandName.toLowerCase();
+      const normalizedBrand = brandName?.toLowerCase() || '';
       const normalizedZone = this.normalizeZoneName(zone);
 
       // TRANSACCIÓN ATÓMICA - TODO O NADA

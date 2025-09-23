@@ -6,6 +6,7 @@ import { CampaignProcessor } from '../../domain/services/CampaignProcessor';
 import { LeadAssigner } from '../../domain/services/LeadAssigner';
 import { ClosureOptions } from '../dto/ClosureOptions';
 import { normalizeClientName } from '../../../../shared/utils/client-normalization';
+import { extractBrandsFromCampaign, validateBrandPercentages } from '../../../../shared/utils/multi-brand-utils';
 
 /**
  * Caso de uso principal para el cierre manual de campañas

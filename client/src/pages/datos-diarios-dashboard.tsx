@@ -20,14 +20,16 @@ import { debounce, memoize, measurePerformance } from "@/lib/performance";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { 
-  insertCampanaComercialSchema, 
-  type CampanaComercial, 
+import {
+  insertCampanaComercialSchema,
+  type CampanaComercial,
   type InsertCampanaComercial,
   type Cliente,
   MARCAS_DISPONIBLES,
   ZONAS_DISPONIBLES
 } from "@shared/schema";
+import { BrandDisplay, useBrandInfo } from "@/components/ui/brand-display";
+import { getCampaignBrandInfo as getEnhancedCampaignBrandInfo, isAutomaticAssignment } from "@shared/utils/brand-display-utils";
 
 interface DatosDiariosData {
   cliente: string;
@@ -479,7 +481,7 @@ export default function DatosDiariosDashboard() {
 
 
 
-  // PostgreSQL optimized query for fast data updates (3s vs 15s)
+  // PostgreSQL query for data updates (using original endpoint while optimized is being debugged)
   const { data: datosDiarios, isLoading, error, refetch } = useQuery<DatosDiariosData[]>({
     queryKey: ['/api/dashboard/datos-diarios-db'],
     refetchInterval: 30 * 1000, // Refresh every 30 seconds (PostgreSQL is fast enough)
@@ -513,7 +515,7 @@ export default function DatosDiariosDashboard() {
         title: "Sincronización inteligente completada",
         description: data.message || "Sincronización smart ejecutada correctamente",
       });
-      // Invalidar queries para refrescar datos (ahora usando PostgreSQL)
+      // Invalidar queries para refrescar datos (ahora usando PostgreSQL optimizado)
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
     },
@@ -538,16 +540,7 @@ export default function DatosDiariosDashboard() {
     return zonas.sort();
   }, [datosDiarios]);
 
-  const opcionesMarca = useMemo(() => {
-    if (!datosDiarios || !Array.isArray(datosDiarios)) return [];
-    const marcasSet = new Set(datosDiarios.map((data: DatosDiariosData) => {
-      // Extraer marca del nombre del cliente (ej: "JEEP 1" -> "JEEP")
-      const match = data.cliente.match(/^([A-Z]+)/);
-      return match ? match[1] : data.cliente.split(' ')[0];
-    }).filter(Boolean));
-    const marcas = Array.from(marcasSet);
-    return marcas.sort();
-  }, [datosDiarios]);
+
 
   const opcionesCliente = useMemo(() => {
     if (!datosDiarios || !Array.isArray(datosDiarios)) return [];
@@ -611,6 +604,7 @@ export default function DatosDiariosDashboard() {
     
     if (filtroProcesoMarca) {
       campanasEnProcesoFiltradas = campanasEnProcesoFiltradas.filter((data: DatosDiariosData) => {
+        // Usar lógica simple para filtros (fallback antes de que campanasComerciales esté disponible)
         const marca = data.cliente.match(/^([A-Z]+)/)?.[1] || data.cliente.split(' ')[0];
         return marca === filtroProcesoMarca;
       });
@@ -648,6 +642,7 @@ export default function DatosDiariosDashboard() {
     
     if (filtroFinalizadasMarca) {
       campanasFinalizadasFiltradas = campanasFinalizadasFiltradas.filter((data: DatosDiariosData) => {
+        // Usar lógica simple para filtros (fallback antes de que campanasComerciales esté disponible)
         const marca = data.cliente.match(/^([A-Z]+)/)?.[1] || data.cliente.split(' ')[0];
         return marca === filtroFinalizadasMarca;
       });
@@ -820,6 +815,13 @@ export default function DatosDiariosDashboard() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Obtener campañas comerciales para información de marcas múltiples
+  const { data: campanasComerciales } = useQuery({
+    queryKey: ['/api/campanas-comerciales'],
+    refetchInterval: 60000, // Refetch every minute
+    staleTime: 30000,
+  });
+
   // Obtener datos de Meta Ads para CPL Real (con manejo de errores)
   const { data: metaCampaigns } = useQuery({
     queryKey: ['/api/meta-ads/campaigns'],
@@ -827,6 +829,70 @@ export default function DatosDiariosDashboard() {
     retry: false, // No retry Meta Ads if it fails
     enabled: true, // Enable Meta Ads query to show when available
   });
+
+  // Función para extraer marca del nombre del cliente (fallback)
+  const extractMarcaFallback = (clienteNombre: string): string => {
+    const marcaMap: Record<string, string> = {
+      'PEUGEOT': 'Peugeot',
+      'TOYOTA': 'Toyota',
+      'VW': 'Volkswagen',
+      'FIAT': 'Fiat',
+      'FORD': 'Ford',
+      'JEEP': 'Jeep',
+      'CHEVROLET': 'Chevrolet',
+      'CITROEN': 'Citroën',
+      'RENAULT': 'Renault'
+    };
+
+    // Buscar marcas conocidas en cualquier parte del nombre (case insensitive)
+    const nombreUpper = clienteNombre.toUpperCase();
+    for (const [key, value] of Object.entries(marcaMap)) {
+      if (nombreUpper.includes(key)) {
+        return value;
+      }
+    }
+
+    // Si no encuentra marca conocida, usar la primera palabra
+    const match = clienteNombre.match(/^([A-Z]+)/);
+    const marcaKey = match ? match[1] : clienteNombre.split(' ')[0].toUpperCase();
+    return marcaMap[marcaKey] || marcaKey;
+  };
+
+  // Función mejorada para obtener información de marcas de una campaña (incluyendo multimarca y asignación automática)
+  const getCampaignBrandInfo = (data: DatosDiariosData) => {
+    // Usar la nueva utilidad mejorada que maneja asignación automática
+    return getEnhancedCampaignBrandInfo(data, campanasComerciales);
+  };
+
+  // Helper para obtener información de campaña con asignación automática
+  const getCampaignWithAutoAssignment = (data: DatosDiariosData) => {
+    if (!campanasComerciales || !Array.isArray(campanasComerciales)) {
+      return null;
+    }
+
+    // Buscar la campaña correspondiente
+    const campana = campanasComerciales.find((c: any) =>
+      c.numeroCampana === data.numeroCampana.toString() &&
+      c.marca.toLowerCase() === (data.marca || extractMarcaFallback(data.cliente)).toLowerCase() &&
+      c.zona === data.zona
+    );
+
+    return campana;
+  };
+
+  // Generar opciones de marca basadas en campañas multimarca
+  const opcionesMarca = useMemo(() => {
+    if (!datosDiarios || !Array.isArray(datosDiarios)) return [];
+    const marcasSet = new Set<string>();
+
+    datosDiarios.forEach((data: DatosDiariosData) => {
+      const brands = getCampaignBrandInfo(data);
+      brands.forEach(brand => marcasSet.add(brand.marca));
+    });
+
+    const marcas = Array.from(marcasSet).filter(Boolean);
+    return marcas.sort();
+  }, [datosDiarios, campanasComerciales]);
 
   // Mutación para actualizar todos los datos y mapeos
   const refreshAllDataMutation = useMutation({
@@ -1043,33 +1109,6 @@ export default function DatosDiariosDashboard() {
     };
   }), []);
 
-  // Función para extraer marca del nombre del cliente
-  const extractMarca = (clienteNombre: string): string => {
-    const marcaMap: Record<string, string> = {
-      'PEUGEOT': 'Peugeot',
-      'TOYOTA': 'Toyota',
-      'VW': 'Volkswagen',
-      'FIAT': 'Fiat',
-      'FORD': 'Ford',
-      'JEEP': 'Jeep',
-      'CHEVROLET': 'Chevrolet',
-      'CITROEN': 'Citroën',
-      'RENAULT': 'Renault'
-    };
-    
-    // Buscar marcas conocidas en cualquier parte del nombre (case insensitive)
-    const nombreUpper = clienteNombre.toUpperCase();
-    for (const [key, value] of Object.entries(marcaMap)) {
-      if (nombreUpper.includes(key)) {
-        return value;
-      }
-    }
-    
-    // Si no encuentra marca conocida, usar la primera palabra
-    const match = clienteNombre.match(/^([A-Z]+)/);
-    const marcaKey = match ? match[1] : clienteNombre.split(' ')[0].toUpperCase();
-    return marcaMap[marcaKey] || marcaKey;
-  };
 
   // Debounced CPL input handling for better performance
   const handleCplChange = useCallback(
@@ -1665,7 +1704,6 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Acciones</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-left font-semibold text-amber-900 dark:text-amber-100">Cliente</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-left font-semibold text-amber-900 dark:text-amber-100">Marca</th>
-                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-left font-semibold text-amber-900 dark:text-amber-100">Zona</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Fecha de Inicio</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Pedidos Total</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Enviados</th>
@@ -1802,11 +1840,13 @@ export default function DatosDiariosDashboard() {
                           </div>
                         </td>
                         <td className="border border-amber-200 dark:border-amber-600 p-3">
-                          <div className="bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 p-2 rounded-lg text-center">
-                            <span className="font-semibold text-indigo-700 dark:text-indigo-300">{extractMarca(data.cliente)}</span>
-                          </div>
+                          <BrandDisplay
+                            campaignData={getCampaignWithAutoAssignment(data)}
+                            brands={getCampaignBrandInfo(data)}
+                            className="min-w-[120px]"
+                            variant="secondary"
+                          />
                         </td>
-                        <td className="border border-amber-200 dark:border-amber-600 p-3 font-medium text-slate-700 dark:text-slate-300">{data.zona}</td>
                         <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
                           <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-2 rounded-lg">
                             <div className="space-y-1">
@@ -2174,7 +2214,6 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Acciones</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-left font-semibold text-emerald-900 dark:text-emerald-100">Cliente</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-left font-semibold text-emerald-900 dark:text-emerald-100">Marca</th>
-                    <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-left font-semibold text-emerald-900 dark:text-emerald-100">Zona</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Fecha de Inicio</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Pedidos Total</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Enviados</th>
@@ -2240,11 +2279,13 @@ export default function DatosDiariosDashboard() {
                           </div>
                         </td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2">
-                          <div className="bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 p-2 rounded-lg text-center">
-                            <span className="font-semibold text-indigo-700 dark:text-indigo-300">{extractMarca(data.cliente)}</span>
-                          </div>
+                          <BrandDisplay
+                            campaignData={getCampaignWithAutoAssignment(data)}
+                            brands={getCampaignBrandInfo(data)}
+                            className="min-w-[120px]"
+                            variant="secondary"
+                          />
                         </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2">{data.zona}</td>
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
                           <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-2 rounded-lg">
                             <span className="font-medium text-green-700 dark:text-green-300">
@@ -2497,8 +2538,17 @@ export default function DatosDiariosDashboard() {
                   <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">Información General</h3>
                   <div className="space-y-2 text-sm">
                     <div><span className="font-medium">Cliente:</span> {selectedCampaign.clienteNombre}</div>
-                    <div><span className="font-medium">Marca:</span> {extractMarca(selectedCampaign.cliente)}</div>
-                    <div><span className="font-medium">Zona:</span> {selectedCampaign.zona}</div>
+                    <div>
+                      <span className="font-medium">Marcas:</span>
+                      <div className="mt-1">
+                        <BrandDisplay
+                          campaignData={getCampaignWithAutoAssignment(selectedCampaign)}
+                          brands={getCampaignBrandInfo(selectedCampaign)}
+                          className="text-sm"
+                          variant="outline"
+                        />
+                      </div>
+                    </div>
                     <div><span className="font-medium">Número de Campaña:</span> #{selectedCampaign.numeroCampana || 1}</div>
                     <div><span className="font-medium">Estado:</span> {selectedCampaign.estadoCampana || 'En proceso'}</div>
                   </div>
