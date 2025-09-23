@@ -9,10 +9,11 @@ import { registerIntegracionManychatRoutes } from "./integracion-manychat-routes
 import { MetaAdsService } from "./meta-ads-service";
 import { UpdateEnviadosService } from "./update-enviados-service";
 import { normalizeClientName } from "../shared/utils/client-normalization";
+import { extractBrandsFromCampaign, createMultiBrandCondition, getMultiBrandDebugInfo } from "../shared/utils/multi-brand-utils";
 import { centralizedDataService } from "./centralized-data-service";
-import { 
-  insertLeadSchema, 
-  insertCampaignSchema, 
+import {
+  insertLeadSchema,
+  insertCampaignSchema,
   insertDailyStatsSchema,
   insertLeadNoteSchema,
   insertUserSchema,
@@ -21,6 +22,7 @@ import {
   createCampanaComercialSchema
 } from "@shared/schema";
 import { ClosureFactory } from './campaign-closure/infrastructure/factories/ClosureFactory';
+import { calculateDatosEnviadosPercentage, calculateFaltantesAEnviar, calculatePorcentajeDesvio } from '../shared/utils/percentage-utils';
 import { realtimeSync } from './realtime-sync';
 import { registerOptimizedRoute } from './optimized-route';
 import { registerSimpleOptimized } from './simple-optimized';
@@ -393,13 +395,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     // 📊 CAMPAÑA EN PROCESO: Usar filtros genéricos para duplicados
-    // NORMALIZAR nombre comercial igual que en la sincronización (espacios → underscores)
+    // NORMALIZAR nombre comercial usando la función centralizada
     const nombreComercialRaw = clienteData?.nombreComercial || '';
-    const nombreComercial = nombreComercialRaw
-      .toLowerCase()
-      .trim()
-      .replace(/[^\w\s]/g, '') // Remover caracteres especiales
-      .replace(/\s+/g, '_');   // Reemplazar espacios con _
+    const nombreComercial = normalizeClientName(nombreComercialRaw);
     
     // MAPEO CORRECTO: Zona de campaña → Localización en datos sincronizados
     const mapeoZonas: Record<string, string> = {
@@ -430,19 +428,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
     
+    // 🎯 NUEVA LÓGICA: Soporte para múltiples marcas en duplicados
+    const brands = extractBrandsFromCampaign(campana, campana.asignacionAutomatica);
+    console.log(`🏷️ MÚLTIPLES MARCAS (DUPLICADOS) - ${getMultiBrandDebugInfo(campana)}`);
+
+    // Crear condición para múltiples marcas (OR entre todas las marcas configuradas)
+    const multiBrandCondition = createMultiBrandCondition(brands, opLeadsRepTable.campaign);
+
     return await db
       .select({ totalDuplicados: sql<number>`SUM(${opLeadsRepTable.cantidadDuplicados})` })
       .from(opLeadsRepTable)
-      .where(
-        sql`lower(${opLeadsRepTable.campaign}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
+      .where(sql`${multiBrandCondition}
             AND lower(${opLeadsRepTable.cliente}) LIKE ${`%${nombreComercial.toLowerCase()}%`}
             AND ${opLeadsRepTable.localizacion} = ${localizacionFiltro}
             AND ${opLeadsRepTable.source} = 'google_sheets'
             AND (${opLeadsRepTable.campaignId} IS NULL OR ${opLeadsRepTable.campaignId} = ${campana.id})
-            ${/* 🚫 FILTRO_FECHA_DESHABILITADO: Comentado temporalmente para incluir todos los leads sin restricción de fecha
             AND date(${opLeadsRepTable.fechaCreacion}) >= ${campana.fechaCampana}
-            ${fechaFinCalculada ? sql`AND date(${opLeadsRepTable.fechaCreacion}) <= ${fechaFinCalculada}` : sql``} */ sql``}`
-      );
+            ${fechaFinCalculada ? sql`AND date(${opLeadsRepTable.fechaCreacion}) <= ${fechaFinCalculada}` : sql``}`);
   }
 
   async function contarLeadsPorCampana(campana: any, clienteData: any, db: any, opLeadsRepTable: any, sql: any, count: any, todasLasCampanas: any[]) {
@@ -492,20 +494,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { ilike, eq, gte, lte, and } = await import('drizzle-orm');
       
       
+      // 🎯 NUEVA LÓGICA: Soporte para múltiples marcas
+      const brands = extractBrandsFromCampaign(campana, campana.asignacionAutomatica);
+      console.log(`🏷️ MÚLTIPLES MARCAS - ${getMultiBrandDebugInfo(campana)}`);
+
+      // Crear condición para múltiples marcas (OR entre todas las marcas configuradas)
+      const multiBrandCondition = createMultiBrandCondition(brands, opLeadsRepTable.campaign);
+
       let conditions = [
-        ilike(opLeadsRepTable.campaign, `%${campana.marca.toLowerCase()}%`),
+        multiBrandCondition, // ✅ NUEVA LÓGICA: Incluye todas las marcas configuradas
         eq(opLeadsRepTable.cliente, nombreComercial), // ✅ CORRECCIÓN: Comparación exacta en lugar de ILIKE con wildcards
         eq(opLeadsRepTable.localizacion, localizacionFiltro),
         eq(opLeadsRepTable.source, 'google_sheets'),
         sql`(${opLeadsRepTable.campaignId} IS NULL OR ${opLeadsRepTable.campaignId} = ${campana.id})`, // Contar leads disponibles o asignados a esta campaña
-        // 🚫 FILTRO_FECHA_DESHABILITADO: Comentado temporalmente para incluir todos los leads sin restricción de fecha
-        // gte(sql`date(${opLeadsRepTable.fechaCreacion})`, campana.fechaCampana)
+        gte(sql`date(${opLeadsRepTable.fechaCreacion})`, campana.fechaCampana) // ✅ FILTRO DE FECHA REHABILITADO
       ];
-      
-      // 🚫 FILTRO_FECHA_DESHABILITADO: Comentado temporalmente para incluir todos los leads sin restricción de fecha
-      // if (fechaFinCalculada) {
-      //   conditions.push(lte(sql`date(${opLeadsRepTable.fechaCreacion})`, fechaFinCalculada));
-      // }
+
+      if (fechaFinCalculada) {
+        conditions.push(lte(sql`date(${opLeadsRepTable.fechaCreacion})`, fechaFinCalculada)); // ✅ FILTRO DE FECHA FIN REHABILITADO
+      }
       
       const result = await db
         .select({ count: count() })
@@ -590,10 +597,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Calcular métricas como el sistema actual
           const cantidadSolicitados = campana.cantidadDatosSolicitados;
-          const porcentajeDatosEnviados = cantidadSolicitados > 0 
-            ? Math.round(enviadosFinales / cantidadSolicitados) 
-            : 0;
-          const faltantesAEnviar = Math.max(0, cantidadSolicitados - enviadosFinales);
+          const percentageResult = calculateDatosEnviadosPercentage(enviadosFinales, cantidadSolicitados);
+          const porcentajeDatosEnviados = percentageResult.percentage;
+          const faltantesAEnviar = calculateFaltantesAEnviar(enviadosFinales, cantidadSolicitados);
 
           // Obtener CPL desde la base de datos
           const storedCpl = await storage.getCplByClienteAndCampana(clienteIdentificador, campana.numeroCampana);
@@ -974,8 +980,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Para el porcentaje de datos enviados, usar SIEMPRE la cantidad original solicitada
         // Las correcciones solo afectan la visualización de "Enviados", no el porcentaje
-        const porcentajeDatosEnviados = Math.min(1, datosFinales / campana.cantidadDatosSolicitados);
-        const faltantesAEnviar = Math.max(0, campana.cantidadDatosSolicitados - datosFinales); // Pedidos Total - Enviados
+        const percentageResult = calculateDatosEnviadosPercentage(datosFinales, campana.cantidadDatosSolicitados);
+        const porcentajeDatosEnviados = percentageResult.percentage;
+        const faltantesAEnviar = calculateFaltantesAEnviar(datosFinales, campana.cantidadDatosSolicitados); // Pedidos Total - Enviados
         // Obtener valores almacenados para esta campaña específica usando clienteNombre y numeroCampana
         const storedCpl = await storage.getCplByClienteAndCampana(cliente.nombreCliente, campana.numeroCampana);
         const storedVenta = await storage.getVentaPorCampanaByClienteAndCampana(cliente.nombreCliente, campana.numeroCampana);
@@ -998,8 +1005,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const pedidosPorDiaCalculado = pedidosPorDiaReal > 0 ? pedidosPorDiaReal : (pedidosTotal > 0 ? Math.round((pedidosTotal / diasHabilesMes) * 100) / 100 : 0);
         
         // Calcular % de desvío: Pedidos/día entre Entregados/día
-        const porcentajeDesvio = (entregadosPorDiaPromedio > 0) ? 
-          (pedidosPorDiaCalculado / entregadosPorDiaPromedio) : 0;
+        const porcentajeDesvio = calculatePorcentajeDesvio(pedidosPorDiaCalculado, entregadosPorDiaPromedio);
         const faltantesCorregidos = Math.max(0, pedidosTotal - datosFinales); // Pedidos Total - Enviados
         
         // Calcular CPA usando Meta Ads data
