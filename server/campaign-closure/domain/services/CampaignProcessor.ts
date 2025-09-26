@@ -213,6 +213,7 @@ export class CampaignProcessor {
   }> {
     const startTime = Date.now();
     const campaignTrackingId = `CAMP-${campaign.id}-${Date.now()}`;
+    let assignedCount = 0; // Declarar fuera del try-catch para evitar scope issues
 
     console.log(`🚀 [${campaignTrackingId}] INICIO procesamiento campaña ${campaign.id}`);
     console.log(`📋 [${campaignTrackingId}] Detalles campaña:`, {
@@ -383,7 +384,7 @@ export class CampaignProcessor {
 
       console.log(`🚀 [${campaignTrackingId}] Iniciando Promise.race para asignación con timeout`);
       try {
-        const assignedCount = await Promise.race([
+        assignedCount = await Promise.race([
           this.leadRepository.assignLeadsInBatches(
             leadsForAssignment,
             campaign.id,
