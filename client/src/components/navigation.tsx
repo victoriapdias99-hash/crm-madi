@@ -61,12 +61,6 @@ export function Navigation() {
       icon: BarChart,
       active: location === "/cpl-analysis"
     },
-    {
-      href: "/integracion-manychat",
-      label: "Integración v2",
-      icon: Zap,
-      active: location === "/integracion-manychat"
-    }
   ];
 
   return (

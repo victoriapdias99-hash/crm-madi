@@ -32,97 +32,40 @@ export class CentralizedDataService {
   }
 
   /**
-   * Sincroniza TODOS los datos de Google Sheets a la base de datos
-   * y actualiza todas las métricas calculadas
+   * Actualiza todas las métricas calculadas de campañas usando datos de op_lead (sistema smart)
+   * NOTA: Google Sheets sync ahora es manejado independientemente por el sistema smart
    */
   async syncAllDataToDatabase(): Promise<{
     googleSheetsRecords: number;
     campaignsProcessed: number;
     metricsUpdated: number;
   }> {
-    
+
     try {
-      // 1. Sincronizar datos de Google Sheets a la base de datos
-      const googleSheetsData = await this.syncGoogleSheetsData();
-      
-      // 2. Actualizar todas las métricas calculadas de campañas
+      console.log('🔄 Iniciando actualización de métricas desde op_lead (sistema smart)...');
+
+      // 1. Actualizar todas las métricas calculadas de campañas (ahora usando op_lead)
       const campaignsProcessed = await this.updateAllCampaignMetrics();
-      
-      // 3. Sincronizar datos de Meta Ads si está disponible
+
+      // 2. Sincronizar datos de Meta Ads si está disponible
       const metaAdsMetrics = await this.syncMetaAdsData();
-      
-      // 4. Recalcular todas las finanzas basadas en datos de BD
+
+      // 3. Recalcular todas las finanzas basadas en datos de BD
       await this.recalculateFinancialMetrics();
-      
-      
+
+      console.log('✅ Actualización de métricas completada exitosamente');
+
       return {
-        googleSheetsRecords: googleSheetsData,
+        googleSheetsRecords: 0, // Ya no sincroniza Google Sheets aquí
         campaignsProcessed,
         metricsUpdated: metaAdsMetrics
       };
-      
+
     } catch (error) {
       throw error;
     }
   }
 
-  /**
-   * Sincroniza datos de Google Sheets usando el sistema refactorizado
-   */
-  private async syncGoogleSheetsData(): Promise<number> {
-    try {
-      
-      // Usar el nuevo sistema de sincronización refactorizado
-      const { SyncFactory } = await import('./sync/infrastructure/config/SyncFactory');
-      const syncFullUseCase = SyncFactory.createSyncFullUseCase();
-      
-      const result = await syncFullUseCase.execute({
-        forceFullSync: true,
-        includeDashboardUpdate: false,
-        includeMetricsUpdate: false,
-        validateData: true,
-        skipDuplicateDetection: false,
-        batchSize: 100,
-        concurrency: 3
-      });
-      
-      if (result.success) {
-        return result.leadsProcessed;
-      } else {
-        return 0;
-      }
-      
-    } catch (error) {
-      
-      // Fallback: usar solo datos diarios si el sistema refactorizado falla
-      try {
-        const datosDiarios = await googleSheetsService.getDatosDiariosData();
-        
-        // Limpiar datos antiguos de Google Sheets en BD
-        await storage.clearGoogleSheetsData();
-        
-        let recordsInserted = 0;
-        
-        // Almacenar datos diarios como fallback
-        for (const dato of datosDiarios) {
-          await storage.createGoogleSheetsData({
-            cliente: dato.cliente,
-            marca: this.extractMarcaFromCliente(dato.cliente),
-            fecha: new Date().toISOString().split('T')[0],
-            datosEnviados: dato.enviados || 0,
-            sourceSheet: 'datos-diarios',
-            rawData: JSON.stringify(dato)
-          });
-          recordsInserted++;
-        }
-        
-        return recordsInserted;
-        
-      } catch (fallbackError) {
-        return 0;
-      }
-    }
-  }
 
   /**
    * Actualiza todas las métricas de campañas basándose en datos de BD
@@ -136,8 +79,8 @@ export class CentralizedDataService {
         const cliente = await storage.getCliente(campana.clienteId);
         if (!cliente) continue;
         
-        // Calcular enviados desde datos de BD
-        const enviados = await this.calculateEnviadosFromDatabase(cliente.nombreCliente, campana);
+        // Calcular enviados desde op_lead (sistema smart)
+        const enviados = await this.calculateEnviadosFromOpLead(cliente.nombreCliente, campana);
         
         // Calcular inversión real desde Meta Ads + BD
         const inversion = await this.calculateInversionFromDatabase(cliente.nombreCliente, campana);
@@ -170,38 +113,49 @@ export class CentralizedDataService {
   }
 
   /**
-   * Calcula enviados desde la base de datos usando datos de Google Sheets almacenados
+   * Calcula enviados desde la tabla op_lead (sistema smart)
    */
-  private async calculateEnviadosFromDatabase(clienteNombre: string, campana: any): Promise<number> {
+  private async calculateEnviadosFromOpLead(clienteNombre: string, campana: any): Promise<number> {
     try {
-      // Obtener datos de Google Sheets desde BD
-      const data = await storage.getGoogleSheetsData({
-        cliente: clienteNombre,
-        marca: campana.marca
-      });
-      
-      // Aplicar misma lógica de cálculo pero desde BD
+      const { db } = await import('./db');
+      const { opLead } = await import('../shared/schema');
+      const { eq, and, like } = await import('drizzle-orm');
+
+      // Obtener datos desde op_lead (sistema smart) filtrados por marca y cliente
+      const leads = await db.select()
+        .from(opLead)
+        .where(
+          and(
+            eq(opLead.marca, campana.marca),
+            like(opLead.cliente, `%${clienteNombre}%`)
+          )
+        );
+
+      // Contar leads que coincidan con el cliente usando misma lógica de matching
       let enviados = 0;
-      
-      // Buscar datos que coincidan con el cliente
-      for (const registro of data) {
-        if (this.isClientMatch(clienteNombre, registro.cliente)) {
-          enviados += registro.datosEnviados;
+
+      for (const lead of leads) {
+        if (this.isClientMatch(clienteNombre, lead.cliente)) {
+          enviados++;
         }
       }
-      
+
       // Aplicar correcciones manuales específicas desde BD
       const correccionManual = await this.getManualCorrection(clienteNombre, campana.numeroCampana);
       if (correccionManual !== null) {
         enviados = correccionManual;
       }
-      
+
+      console.log(`📊 Enviados calculados para ${clienteNombre} (${campana.marca}): ${enviados} desde op_lead`);
+
       return enviados;
-      
+
     } catch (error) {
+      console.error(`❌ Error calculando enviados desde op_lead para ${clienteNombre}:`, error);
       return 0;
     }
   }
+
 
   /**
    * Calcula inversión desde datos de Meta Ads y BD
@@ -214,7 +168,7 @@ export class CentralizedDataService {
       if (this.metaAdsService) {
         const cpa = await this.metaAdsService.calculateCPA(campana.marca, campana.fechaCampana);
         if (cpa > 0) {
-          const enviados = await this.calculateEnviadosFromDatabase(clienteNombre, campana);
+          const enviados = await this.calculateEnviadosFromOpLead(clienteNombre, campana);
           inversion = cpa * enviados * 1.02; // + 2% impuestos
         }
       }
@@ -222,7 +176,7 @@ export class CentralizedDataService {
       // Fallback: usar CPL desde BD
       if (inversion === 0) {
         const cpl = await storage.getCplByClienteAndCampana(clienteNombre, campana.numeroCampana);
-        const enviados = await this.calculateEnviadosFromDatabase(clienteNombre, campana);
+        const enviados = await this.calculateEnviadosFromOpLead(clienteNombre, campana);
         inversion = cpl * enviados * 1.02;
       }
       
@@ -283,8 +237,8 @@ export class CentralizedDataService {
         const cliente = await storage.getCliente(campana.clienteId);
         if (!cliente) continue;
         
-        // Obtener todos los datos desde BD
-        const enviados = await this.calculateEnviadosFromDatabase(cliente.nombreCliente, campana);
+        // Obtener todos los datos desde op_lead
+        const enviados = await this.calculateEnviadosFromOpLead(cliente.nombreCliente, campana);
         const cpl = await storage.getCplByClienteAndCampana(cliente.nombreCliente, campana.numeroCampana);
         const venta = await storage.getVentaPorCampanaByClienteAndCampana(cliente.nombreCliente, campana.numeroCampana);
         const facturacion = parseFloat(campana.facturacionBruta?.toString() || '0');

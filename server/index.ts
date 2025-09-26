@@ -57,18 +57,6 @@ app.use((req, res, next) => {
     console.warn('⚠️ Meta Ads no disponible:', (error as Error)?.message || 'Error desconocido');
   }
 
-  // Inicializar servicio de Manychat
-  try {
-    const { initializeManychatService } = await import('./manychat-service');
-    const manychatService = initializeManychatService();
-    if (manychatService) {
-      console.log('✅ Servicio de Manychat inicializado');
-    } else {
-      console.log('⚠️ Servicio de Manychat no disponible - API key faltante');
-    }
-  } catch (error) {
-    console.error('❌ Error iniciando servicio Manychat:', (error as Error)?.message || 'Error desconocido');
-  }
 
   // NOTA: Sincronización automática ahora manejada por el sistema refactorizado
   console.log('🧪 Modo testing activado - sincronización manual únicamente');

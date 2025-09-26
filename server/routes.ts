@@ -5,7 +5,6 @@ import { storage } from "./storage";
 import { googleSheetsService, type SheetLead } from "./google-sheets";
 import { AnalistaFuncional } from "./analista-funcional";
 import { registerMetaAdsRoutes } from "./meta-ads-routes";
-import { registerIntegracionManychatRoutes } from "./integracion-manychat-routes";
 import { MetaAdsService } from "./meta-ads-service";
 import { UpdateEnviadosService } from "./update-enviados-service";
 import { normalizeClientName } from "../shared/utils/client-normalization";
@@ -2359,17 +2358,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Registrar rutas de Meta Ads (módulo de prueba)
   registerMetaAdsRoutes(app);
   
-  // Registrar rutas de Integración Manychat v2
-  registerIntegracionManychatRoutes(app);
-  
-  // Registrar rutas directas de Manychat
-  try {
-    const { registerManychatDirectRoutes } = await import('./manychat-service');
-    registerManychatDirectRoutes(app);
-    console.log('✅ Rutas directas de Manychat registradas');
-  } catch (error) {
-    console.warn('⚠️ Error registrando rutas directas de Manychat:', error);
-  }
 
   // Campaign routes
   app.get('/api/campaigns', async (req, res) => {
@@ -3057,27 +3045,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/google-sheets/data', async (req, res) => {
-    try {
-      const { marca, cliente, limit } = req.query;
-      const filters = {
-        marca: marca as string,
-        cliente: cliente as string,
-        limit: limit ? parseInt(limit as string) : undefined
-      };
-      
-      const data = await storage.getGoogleSheetsData(filters);
-      
-      res.json({
-        data,
-        count: data.length,
-        filters: filters
-      });
-    } catch (error) {
-      console.error('Error getting Google Sheets data:', error);
-      res.status(500).json({ error: 'Failed to get Google Sheets data' });
-    }
-  });
 
   // Nuevos endpoints para usar SyncService en diferentes contextos del CRM
   
