@@ -543,17 +543,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Función para verificar si existe una campaña anterior abierta con mismo cliente, marca y zona
   async function tieneCampanaAnteriorAbierta(campanaActual: any, todasLasCampanas: any[]): Promise<boolean> {
     try {
+      // Adaptarse a estructuras con id o campanaId
+      const campanaId = campanaActual.id || campanaActual.campanaId;
+
       // Buscar campañas anteriores del mismo cliente con la misma marca y zona
-      const campanasAnteriores = todasLasCampanas.filter(c => 
-        c.clienteId === campanaActual.clienteId && // Mismo cliente
-        c.marca === campanaActual.marca && // Misma marca
-        c.zona === campanaActual.zona && // Misma zona
-        c.id !== campanaActual.id && // No incluir la campaña actual
-        new Date(c.fechaCampana) < new Date(campanaActual.fechaCampana) && // Anterior en el tiempo
-        !c.fechaFin // Sin fecha de fin (campaña abierta)
-      );
-      
-      
+      const campanasAnteriores = todasLasCampanas.filter(c => {
+        const cId = c.id || c.campanaId;
+        return c.clienteId === campanaActual.clienteId && // Mismo cliente
+          c.marca === campanaActual.marca && // Misma marca
+          c.zona === campanaActual.zona && // Misma zona
+          cId !== campanaId && // No incluir la campaña actual
+          new Date(c.fechaCampana) < new Date(campanaActual.fechaCampana) && // Anterior en el tiempo
+          !c.fechaFin; // Sin fecha de fin (campaña abierta)
+      });
+
+
       return campanasAnteriores.length > 0;
     } catch (error) {
       console.error('Error verificando campañas anteriores abiertas:', error);
@@ -562,26 +566,290 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Endpoint principal para datos diarios usando PostgreSQL con filtrado por nombre comercial
+  // 🚀 ENDPOINT OPTIMIZADO: Batch query con JOINs (elimina N+1)
+  app.get('/api/dashboard/datos-diarios-db-optimized', async (req, res) => {
+    try {
+      const startTime = Date.now();
+      const { db } = await import('./db');
+      const { opLeadsRep, opLead, clientes: clientesTable, campanasComerciales, dashboardManualValues } = await import('../shared/schema');
+      const { count, sql, eq, and, inArray, gte, lte, ilike } = await import('drizzle-orm');
+
+      console.log('🚀 [OPTIMIZED] Iniciando carga optimizada de datos diarios...');
+
+      // 1️⃣ SINGLE QUERY: Obtener todas las campañas con sus clientes en una sola query (JOIN)
+      const campanasConClientes = await db
+        .select({
+          campanaId: campanasComerciales.id,
+          clienteId: campanasComerciales.clienteId,
+          numeroCampana: campanasComerciales.numeroCampana,
+          marca: campanasComerciales.marca,
+          zona: campanasComerciales.zona,
+          cantidadDatosSolicitados: campanasComerciales.cantidadDatosSolicitados,
+          fechaCampana: campanasComerciales.fechaCampana,
+          fechaFin: campanasComerciales.fechaFin,
+          facturacionBruta: campanasComerciales.facturacionBruta,
+          pedidosPorDia: campanasComerciales.pedidosPorDia,
+          asignacionAutomatica: campanasComerciales.asignacionAutomatica,
+          // Cliente data (JOIN)
+          clienteNombre: clientesTable.nombreCliente,
+          clienteComercial: clientesTable.nombreComercial,
+        })
+        .from(campanasComerciales)
+        .leftJoin(clientesTable, eq(campanasComerciales.clienteId, clientesTable.id));
+
+      console.log(`📊 [OPTIMIZED] ${campanasConClientes.length} campañas obtenidas en ${Date.now() - startTime}ms`);
+
+      // 2️⃣ BATCH QUERY: Contar leads por campaña usando SQL directo (evita N queries)
+      // Para campañas finalizadas: usar campaign_id directo
+      const campanasFinalizadas = campanasConClientes.filter(c => c.fechaFin);
+      const campanasEnProceso = campanasConClientes.filter(c => !c.fechaFin);
+
+      let leadsCountMap = new Map<number, number>();
+      let duplicadosCountMap = new Map<number, number>();
+
+      // Contar leads de campañas finalizadas (query batch optimizada)
+      if (campanasFinalizadas.length > 0) {
+        const leadsFinalizados = await db
+          .select({
+            campaignId: opLeadsRep.campaignId,
+            count: count(),
+          })
+          .from(opLeadsRep)
+          .where(inArray(opLeadsRep.campaignId, campanasFinalizadas.map(c => c.campanaId)))
+          .groupBy(opLeadsRep.campaignId);
+
+        leadsFinalizados.forEach(row => {
+          if (row.campaignId) leadsCountMap.set(row.campaignId, row.count);
+        });
+
+        console.log(`✅ [OPTIMIZED] Leads finalizados contados: ${leadsFinalizados.length} campañas`);
+      }
+
+      // 3️⃣ Para campañas en proceso: necesitamos hacer queries individuales por filtros complejos
+      // (esto es inevitable debido a la lógica de filtrado por marca/zona/cliente)
+      for (const campana of campanasEnProceso) {
+        try {
+          const clienteData = { nombreComercial: campana.clienteComercial };
+          // Mapear campos del JOIN a estructura esperada por contarLeadsPorCampana
+          const campanaAdaptada = {
+            id: campana.campanaId,
+            marca: campana.marca,
+            zona: campana.zona,
+            fechaCampana: campana.fechaCampana,
+            fechaFin: campana.fechaFin,
+            asignacionAutomatica: campana.asignacionAutomatica,
+            cantidadDatosSolicitados: campana.cantidadDatosSolicitados
+          };
+          const leadsCount = await contarLeadsPorCampana(
+            campanaAdaptada,
+            clienteData,
+            db,
+            opLeadsRep,
+            sql,
+            count,
+            campanasConClientes
+          );
+          leadsCountMap.set(campana.campanaId, leadsCount[0]?.count || 0);
+        } catch (error) {
+          console.error(`Error contando leads para campaña ${campana.campanaId}:`, error);
+          leadsCountMap.set(campana.campanaId, 0);
+        }
+      }
+
+      console.log(`✅ [OPTIMIZED] Leads en proceso contados: ${campanasEnProceso.length} campañas`);
+
+      // 4️⃣ BATCH QUERY: Contar duplicados para campañas finalizadas
+      if (campanasFinalizadas.length > 0) {
+        const campaignIds = campanasFinalizadas.map(c => c.campanaId);
+
+        // Obtener meta_lead_ids de leads asignados a estas campañas
+        const leadsAsignados = await db
+          .select({
+            campaignId: opLead.campaignId,
+            metaLeadId: opLead.metaLeadId,
+          })
+          .from(opLead)
+          .where(inArray(opLead.campaignId, campaignIds));
+
+        // Agrupar meta_lead_ids por campaignId
+        const metaLeadIdsByCampaign = new Map<number, string[]>();
+        leadsAsignados.forEach(lead => {
+          if (lead.campaignId && lead.metaLeadId) {
+            if (!metaLeadIdsByCampaign.has(lead.campaignId)) {
+              metaLeadIdsByCampaign.set(lead.campaignId, []);
+            }
+            metaLeadIdsByCampaign.get(lead.campaignId)!.push(lead.metaLeadId);
+          }
+        });
+
+        // Buscar duplicados en batch
+        const allMetaLeadIds = Array.from(new Set(leadsAsignados.map(l => l.metaLeadId).filter(Boolean)));
+
+        if (allMetaLeadIds.length > 0) {
+          const duplicadosData = await db
+            .select({
+              metaLeadId: opLeadsRep.metaLeadId,
+              duplicateIds: opLeadsRep.duplicateIds,
+            })
+            .from(opLeadsRep)
+            .where(inArray(opLeadsRep.metaLeadId, allMetaLeadIds as string[]));
+
+          // Mapear duplicados por metaLeadId
+          const duplicadosByMetaId = new Map<string, number>();
+          duplicadosData.forEach(row => {
+            if (row.metaLeadId) {
+              duplicadosByMetaId.set(row.metaLeadId, row.duplicateIds?.length || 0);
+            }
+          });
+
+          // Sumar duplicados por campaña
+          metaLeadIdsByCampaign.forEach((metaIds, campaignId) => {
+            let totalDups = 0;
+            metaIds.forEach(metaId => {
+              totalDups += duplicadosByMetaId.get(metaId) || 0;
+            });
+            duplicadosCountMap.set(campaignId, totalDups);
+          });
+        }
+
+        console.log(`✅ [OPTIMIZED] Duplicados contados: ${campanasFinalizadas.length} campañas`);
+      }
+
+      // 5️⃣ BATCH QUERY: Obtener todos los CPLs en una sola query
+      const cplData = await db
+        .select({
+          clienteNombre: dashboardManualValues.clienteNombre,
+          numeroCampana: dashboardManualValues.numeroCampana,
+          cpl: dashboardManualValues.cpl,
+        })
+        .from(dashboardManualValues);
+
+      const cplMap = new Map<string, number>();
+      cplData.forEach(row => {
+        if (row.clienteNombre && row.numeroCampana) {
+          const key = `${row.clienteNombre}_${row.numeroCampana}`;
+          cplMap.set(key, row.cpl || 0);
+        }
+      });
+
+      console.log(`✅ [OPTIMIZED] CPLs obtenidos: ${cplData.length} registros`);
+
+      // 6️⃣ Procesar datos (sin queries adicionales - usa Maps precargados)
+      const processedData = [];
+
+      for (const campana of campanasConClientes) {
+        try {
+          // ✅ OPTIMIZADO: Obtener conteos desde Maps (sin queries)
+          const enviadosDB = leadsCountMap.get(campana.campanaId) || 0;
+          const totalDuplicados = duplicadosCountMap.get(campana.campanaId) || 0;
+
+          // Verificar si existe una campaña anterior abierta con mismo cliente, marca y zona
+          const tieneCampanaAnterior = await tieneCampanaAnteriorAbierta(campana, campanasConClientes);
+
+          // Aplicar correcciones específicas (mantener la lógica actual)
+          let enviadosFinales = enviadosDB;
+          const clienteIdentificador = `${campana.marca.toUpperCase()} ${campana.numeroCampana}`;
+          const clienteNombreReal = campana.clienteNombre || `${campana.marca.toUpperCase()} ${campana.numeroCampana}`;
+
+          // Calcular métricas como el sistema actual
+          const cantidadSolicitados = campana.cantidadDatosSolicitados;
+          const percentageResult = calculateDatosEnviadosPercentage(enviadosFinales, cantidadSolicitados);
+          const porcentajeDatosEnviados = percentageResult.percentage;
+          const faltantesAEnviar = calculateFaltantesAEnviar(enviadosFinales, cantidadSolicitados);
+
+          // ✅ OPTIMIZADO: Obtener CPL desde Map (sin query)
+          const cplKey = `${clienteIdentificador}_${campana.numeroCampana}`;
+          const storedCpl = cplMap.get(cplKey) || 0;
+
+          // Aplicar guión si hay campaña anterior abierta
+          let enviadosDisplay: string | number = enviadosFinales;
+          let duplicadosDisplay: string | number = totalDuplicados;
+
+          if (tieneCampanaAnterior) {
+            enviadosDisplay = "-"; // Mostrar guión en lugar del número
+            duplicadosDisplay = "-"; // Mostrar guión en lugar del número
+          }
+
+          // Usar fecha fin de la campaña sin cálculo automático
+          // Las fechas fin solo se deben calcular cuando realmente se completa la campaña
+          let fechaFinExacta = campana.fechaFin;
+
+          const record = {
+            campaignId: campana.campanaId, // ID directo de la campaña comercial para reapertura
+            cliente: clienteIdentificador, // Identificador técnico (JEEP 1, VW 1, etc.)
+            clienteNombre: clienteNombreReal, // Nombre real del cliente desde la base de datos
+            zona: campana.zona,
+            enviados: enviadosDisplay,
+            cantidadDatosSolicitados: cantidadSolicitados,
+            porcentajeDatosEnviados,
+            faltantesAEnviar,
+            numeroCampana: campana.numeroCampana,
+            cpl: storedCpl || 0,
+            marca: campana.marca,
+            fechaCampana: campana.fechaCampana,
+            fechaFin: fechaFinExacta, // Usar fecha con timestamp exacto
+            fechaFinReal: fechaFinExacta, // Campo que usa el frontend para filtros
+            facturacionBruta: campana.facturacionBruta,
+            pedidosPorDia: campana.pedidosPorDia ?? 0, // Campo "Día" desde tabla campañas
+            pedidosTotal: campana.cantidadDatosSolicitados, // Campo "Pedidos Total" (Datos Solicitados)
+            faltantes: tieneCampanaAnterior ? "-" : Math.max(0, campana.cantidadDatosSolicitados - enviadosFinales), // Faltantes = Pedidos Total - Enviados
+            entregadosPorDia: (() => {
+              // Calcular días transcurridos desde fecha de campaña hasta hoy o fecha fin
+              const fechaInicio = campana.fechaCampana ? new Date(campana.fechaCampana) : new Date();
+              const fechaReferencia = fechaFinExacta && fechaFinExacta !== null ? new Date(fechaFinExacta) : new Date();
+              const diasTranscurridos = Math.max(1, Math.ceil((fechaReferencia.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24)));
+              return tieneCampanaAnterior ? "-" : enviadosFinales / diasTranscurridos;
+            })(), // Entregados por día = enviados / días transcurridos
+            // Campos calculados adicionales
+            inversionRealizada: tieneCampanaAnterior ? "-" : (enviadosFinales * (storedCpl || 0)),
+            inversionPendiente: tieneCampanaAnterior ? "-" : (faltantesAEnviar * (storedCpl || 0)),
+            estado: fechaFinExacta ? 'Finalizada' : 'En proceso', // Estado basado en fecha_fin
+            duplicados: duplicadosDisplay
+          };
+
+          processedData.push(record);
+
+        } catch (campaignError) {
+          console.error(`Error procesando campaña ${campana.numeroCampana}:`, campaignError);
+        }
+      }
+
+      const totalTime = Date.now() - startTime;
+      console.log(`🎉 [OPTIMIZED] Procesamiento completado en ${totalTime}ms (${(totalTime / 1000).toFixed(2)}s)`);
+      console.log(`📊 [OPTIMIZED] Total campañas procesadas: ${processedData.length}`);
+
+      res.json(processedData);
+
+    } catch (error) {
+      console.error('❌ [OPTIMIZED] Error obteniendo datos:', error);
+      res.status(500).json({ error: 'Failed to fetch data from PostgreSQL' });
+    }
+  });
+
   app.get('/api/dashboard/datos-diarios-db', async (req, res) => {
     try {
+      const startTime = Date.now();
       // Obtener todos los datos desde PostgreSQL
       const { db } = await import('./db');
       const { opLeadsRep, campanasComerciales } = await import('../shared/schema');
       const { count, sql, desc } = await import('drizzle-orm');
 
 
-      // Obtener campañas comerciales para mapeo
+      // 🚀 OPTIMIZACIÓN 1: Obtener campañas y clientes una sola vez
       const campanas = await storage.getAllCampanasComerciales();
       const clientes = await storage.getAllClientes();
-      
-      
+
+      // 🚀 OPTIMIZACIÓN 2: Crear Map de clientes para evitar queries repetidas
+      const clientesMap = new Map(clientes.map(c => [c.id, c]));
+      console.log(`✅ [OPTIMIZED] ${clientes.length} clientes cargados en memoria`);
+
       const processedData = [];
 
       for (const campana of campanas) {
         try {
-          // Obtener datos del cliente para filtro preciso por nombre comercial
-          const clienteData = await storage.getCliente(campana.clienteId);
-          
+          // 🚀 OPTIMIZACIÓN 3: Usar Map en lugar de query
+          const clienteData = clientesMap.get(campana.clienteId);
+
           // Usar función auxiliar para contar leads con filtro inteligente
           const leadsCount = await contarLeadsPorCampana(campana, clienteData, db, opLeadsRep, sql, count, campanas);
 
@@ -590,21 +858,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Contar duplicados con los mismos filtros que la campaña
           const duplicadosResult = await contarDuplicadosPorCampana(campana, clienteData, db, opLeadsRep, sql, campanas);
           let totalDuplicados = duplicadosResult?.[0]?.totalDuplicados || 0;
-          
+
           // Verificar si existe una campaña anterior abierta con mismo cliente, marca y zona
           const tieneCampanaAnterior = await tieneCampanaAnteriorAbierta(campana, campanas);
-          
+
           // Aplicar correcciones específicas (mantener la lógica actual)
           let enviadosFinales = enviadosDB;
           const clienteIdentificador = `${campana.marca.toUpperCase()} ${campana.numeroCampana}`;
           const clienteNombreReal = clienteData?.nombreCliente || `${campana.marca.toUpperCase()} ${campana.numeroCampana}`;
-          
+
           // Aplicar mismas correcciones que el sistema actual
           // RENAULT_FIX_DISABLED: Corrección temporal deshabilitada
           /*
           if (clienteIdentificador.toLowerCase().includes('renault')) {
             enviadosFinales = 45;
-          } else 
+          } else
           */
 
           // Calcular métricas como el sistema actual
@@ -619,7 +887,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Aplicar guión si hay campaña anterior abierta
           let enviadosDisplay: string | number = enviadosFinales;
           let duplicadosDisplay: string | number = totalDuplicados;
-          
+
           if (tieneCampanaAnterior) {
             enviadosDisplay = "-"; // Mostrar guión en lugar del número
             duplicadosDisplay = "-"; // Mostrar guión en lugar del número
@@ -668,6 +936,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error(`Error procesando campaña ${campana.numeroCampana}:`, campaignError);
         }
       }
+
+      const totalTime = Date.now() - startTime;
+      console.log(`⏱️ [PERFORMANCE] Datos diarios cargados en ${totalTime}ms (${(totalTime / 1000).toFixed(2)}s) - ${processedData.length} campañas`);
 
       res.json(processedData);
 
