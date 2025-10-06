@@ -8,11 +8,13 @@
  * - Preserva metaLeadId en actualizaciones
  */
 
+import 'dotenv/config';
 import { db } from '../db';
 import { opLead } from '@shared/schema';
 import { google } from 'googleapis';
-import { sql, and, eq } from 'drizzle-orm';
-import { generateStableMetaLeadId, parseSheetDate } from './utils/generate-stable-id';
+import { sql, and, eq, like } from 'drizzle-orm';
+import { generateStableMetaLeadId, parseSheetDate, getBaseMetaLeadId } from './utils/generate-stable-id';
+import { normalizeClientName } from '../../shared/utils/client-normalization';
 
 const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
 const EXCLUDED_SHEETS = ['Datos Diarios', 'Control Campañas', 'datos diarios', 'control campañas'];
@@ -73,13 +75,9 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
     throw new Error('GOOGLE_SHEETS_API_KEY no configurado en .env');
   }
 
-  // 🔍 LOG TEMPORAL: Mostrar tokens de conexión
-  console.log('\n' + '='.repeat(70));
-  console.log('🔑 TOKENS DE CONEXIÓN GOOGLE SHEETS (TEMPORAL)');
-  console.log('='.repeat(70));
-  console.log(`📋 Spreadsheet ID: ${SPREADSHEET_ID}`);
-  console.log(`🔐 API Key: ${apiKey}`);
-  console.log('='.repeat(70) + '\n');
+  // 🔍 Verificar conexión (sin mostrar credenciales completas)
+  console.log('🔑 Conexión a Google Sheets: ✅');
+  console.log(`📋 Spreadsheet: ${SPREADSHEET_ID.substring(0, 12)}...***\n`);
 
   const sheets = google.sheets({
     version: 'v4',
@@ -125,7 +123,17 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
         continue;
       }
 
-      // Procesar cada fila
+      // 📦 BATCH PROCESSING: Preparar todos los datos con detección de duplicados
+      const batchData: Array<{
+        metaLeadId: string;
+        leadData: LeadData;
+        createdAt: Date;
+        updatedAt: Date;
+      }> = [];
+
+      // Mapa para rastrear duplicados dentro del mismo batch de Sheets
+      const duplicateTracker = new Map<string, number>();
+
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
 
@@ -150,7 +158,7 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
           comentarioHorario: row[5]?.toString().trim() || null,
           origen: row[6]?.toString().trim() || null,
           localizacion: row[7]?.toString().trim() || null,
-          cliente: row[8]?.toString().trim() || null,
+          cliente: normalizeClientName(row[8]), // ✅ Normalización centralizada
           marca,
           campaign: sheetName,
           googleSheetsRowNumber: rowNumber,
@@ -158,35 +166,86 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
           source: 'google_sheets'
         };
 
-        try {
-          // ✅ SIEMPRE INSERTAR: Generar ID único con timestamp
-          const now = new Date();
-          const newMetaLeadId = generateStableMetaLeadId(
-            telefono,
-            fechaCreacion,
-            marca,
-            now // Agregar timestamp para unicidad en duplicados
-          );
+        // Generar ID base (sin índice de duplicado)
+        const baseId = generateStableMetaLeadId(telefono, fechaCreacion, marca, 0);
 
-          await db.insert(opLead)
-            .values({
-              metaLeadId: newMetaLeadId,
-              ...leadData,
-              createdAt: now,
-              updatedAt: now
+        // Verificar si ya existe en el batch actual
+        const currentCount = duplicateTracker.get(baseId) || 0;
+        duplicateTracker.set(baseId, currentCount + 1);
+
+        // Generar ID final con índice de duplicado si es necesario
+        const finalMetaLeadId = generateStableMetaLeadId(
+          telefono,
+          fechaCreacion,
+          marca,
+          currentCount
+        );
+
+        const now = new Date();
+        batchData.push({
+          metaLeadId: finalMetaLeadId,
+          leadData,
+          createdAt: now,
+          updatedAt: now
+        });
+      }
+
+      // 🚀 UPSERT EN LOTES usando ON CONFLICT nativo de PostgreSQL
+      const BATCH_SIZE = 50;
+      let totalBatchesProcessed = 0;
+      let batchInserted = 0;
+      let batchUpdated = 0;
+
+      for (let i = 0; i < batchData.length; i += BATCH_SIZE) {
+        const batch = batchData.slice(i, i + BATCH_SIZE);
+
+        try {
+          // Preparar valores para upsert batch
+          const batchValues = batch.map(item => ({
+            metaLeadId: item.metaLeadId,
+            ...item.leadData,
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt
+          }));
+
+          // UPSERT batch usando ON CONFLICT DO UPDATE
+          await db
+            .insert(opLead)
+            .values(batchValues)
+            .onConflictDoUpdate({
+              target: opLead.metaLeadId,
+              set: {
+                nombre: sql`EXCLUDED.nombre`,
+                telefono: sql`EXCLUDED.telefono`,
+                email: sql`EXCLUDED.email`,
+                ciudad: sql`EXCLUDED.ciudad`,
+                modelo: sql`EXCLUDED.modelo`,
+                comentarioHorario: sql`EXCLUDED.comentario_horario`,
+                origen: sql`EXCLUDED.origen`,
+                localizacion: sql`EXCLUDED.localizacion`,
+                cliente: sql`EXCLUDED.cliente`,
+                marca: sql`EXCLUDED.marca`,
+                campaign: sql`EXCLUDED.campaign`,
+                googleSheetsRowNumber: sql`EXCLUDED.google_sheets_row_number`,
+                fechaCreacion: sql`EXCLUDED.fecha_creacion`,
+                updatedAt: sql`EXCLUDED.updated_at`
+              }
             });
 
-          marcaInserted++;
-          stats.inserted++;
-          stats.totalProcessed++;
+          // Asumimos que son inserts (primera ejecución) o updates (re-ejecución)
+          marcaInserted += batch.length;
+          stats.inserted += batch.length;
+          stats.totalProcessed += batch.length;
+          totalBatchesProcessed++;
 
-          if (marcaInserted <= 5) { // Log solo primeros 5 para no saturar
-            console.log(`   ✅ Fila ${rowNumber}: Insertado - ID: ${newMetaLeadId}`);
-          }
+          // Mostrar progreso cada batch
+          const progress = Math.min(i + BATCH_SIZE, batchData.length);
+          const percentage = ((progress / batchData.length) * 100).toFixed(1);
+          console.log(`   ⏳ Progreso: ${progress}/${batchData.length} (${percentage}%)`);
 
         } catch (error: any) {
-          console.error(`   ❌ Error fila ${rowNumber}:`, error.message);
-          stats.errors++;
+          console.error(`   ❌ Error en batch ${totalBatchesProcessed + 1}:`, error.message);
+          stats.errors += batch.length;
         }
       }
 
@@ -250,7 +309,5 @@ async function main() {
   }
 }
 
-// Ejecutar migración si se llama directamente
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main();
-}
+// Ejecutar migración
+main();

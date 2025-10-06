@@ -1,38 +1,49 @@
 import { Request, Response } from 'express';
-import { SyncSmartUseCase } from '../../application/usecases/SyncSmartUseCase';
-import { mapSyncRequestToOptions, SyncRequestDto } from '../../application/dto/SyncOptions';
-import { mapSyncResultToResponse } from '../../application/dto/SyncResultDto';
 import { GoogleSheetsGateway } from '../../infrastructure/gateways/GoogleSheetsGateway';
+import { migrateSmartFast } from '../../sync-smart-fast/migrate-smart-fast';
 
 /**
- * Controlador simplificado para sincronización inteligente de Google Sheets
+ * Controlador para sincronización de Google Sheets usando Smart-Fast
+ *
+ * Sistema anterior deprecado - Ver SyncSmartUseCase.ts para detalles
  */
 export class SyncController {
   constructor(
-    private syncSmartUseCase: SyncSmartUseCase,
     private sheetsGateway: GoogleSheetsGateway
   ) {}
 
   /**
    * POST /api/sync/smart
-   * Sincronización inteligente que analiza y sincroniza automáticamente
+   * Sincronización inteligente usando Smart-Fast (ID estable + UPSERT)
    */
   async syncSmart(req: Request, res: Response): Promise<void> {
     try {
-      const requestDto: SyncRequestDto = req.body;
-      const options = mapSyncRequestToOptions(requestDto);
-      
-      console.log('🧠 SyncController: Iniciando sincronización inteligente...', options);
-      
-      const result = await this.syncSmartUseCase.execute(options);
-      const response = mapSyncResultToResponse(result);
-      
-      console.log(`${result.success ? '✅' : '❌'} SyncController: Sincronización inteligente ${result.success ? 'exitosa' : 'fallida'}`);
-      
-      const statusCode = result.success ? 200 : 500;
-      res.status(statusCode).json(response);
+      console.log('🚀 SyncController: Iniciando sincronización Smart-Fast...');
+
+      const startTime = Date.now();
+      const stats = await migrateSmartFast();
+      const duration = Date.now() - startTime;
+
+      console.log(`✅ SyncController: Sincronización Smart-Fast exitosa en ${(duration / 1000).toFixed(2)}s`);
+
+      res.status(200).json({
+        success: true,
+        message: `Sincronización completada: ${stats.inserted} insertados, ${stats.updated} actualizados`,
+        timestamp: new Date().toISOString(),
+        leadsProcessed: stats.totalProcessed,
+        duration: duration,
+        durationFormatted: `${(duration / 1000).toFixed(2)}s`,
+        stats: {
+          totalProcessed: stats.totalProcessed,
+          inserted: stats.inserted,
+          updated: stats.updated,
+          skipped: stats.skipped,
+          errors: stats.errors
+        },
+        details: stats.details
+      });
     } catch (error: any) {
-      console.error('❌ SyncController: Error en sincronización inteligente:', error);
+      console.error('❌ SyncController: Error en sincronización Smart-Fast:', error);
       res.status(500).json({
         success: false,
         message: 'Error interno del servidor',

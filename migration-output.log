@@ -1,0 +1,294 @@
+🚀 SMART-FAST Migration System
+📋 ID Estable: teléfono + fecha + marca
+
+🔑 Conexión a Google Sheets: ✅
+📋 Spreadsheet: 1jgi8XIWFUdu...***
+
+📋 Marcas encontradas: Citroen, Dodge, Mercedez, Nissan, Toyota, Chevrolet, Jeep, Renault, VW, Peugeot, Fiat, Ford
+
+🔄 Procesando: Citroen
+   📊 522 filas encontradas
+   ⏳ Progreso: 50/522 (9.6%)
+   ⏳ Progreso: 100/522 (19.2%)
+   ⏳ Progreso: 150/522 (28.7%)
+   ⏳ Progreso: 200/522 (38.3%)
+   ⏳ Progreso: 250/522 (47.9%)
+   ⏳ Progreso: 300/522 (57.5%)
+   ⏳ Progreso: 350/522 (67.0%)
+   ⏳ Progreso: 400/522 (76.6%)
+   ⏳ Progreso: 450/522 (86.2%)
+   ⏳ Progreso: 500/522 (95.8%)
+   ⏳ Progreso: 522/522 (100.0%)
+   ✅ Insertados: 522 | Actualizados: 0 | Movidos: 0
+
+🔄 Procesando: Dodge
+   📊 0 filas encontradas
+   ⏭️  Sin datos, omitiendo
+
+🔄 Procesando: Mercedez
+   📊 0 filas encontradas
+   ⏭️  Sin datos, omitiendo
+
+🔄 Procesando: Nissan
+   📊 0 filas encontradas
+   ⏭️  Sin datos, omitiendo
+
+🔄 Procesando: Toyota
+   📊 102 filas encontradas
+   ⏳ Progreso: 50/102 (49.0%)
+   ⏳ Progreso: 100/102 (98.0%)
+   ⏳ Progreso: 102/102 (100.0%)
+   ✅ Insertados: 102 | Actualizados: 0 | Movidos: 0
+
+🔄 Procesando: Chevrolet
+   📊 1057 filas encontradas
+   ⏳ Progreso: 50/1057 (4.7%)
+   ⏳ Progreso: 100/1057 (9.5%)
+   ⏳ Progreso: 150/1057 (14.2%)
+   ⏳ Progreso: 200/1057 (18.9%)
+   ⏳ Progreso: 250/1057 (23.7%)
+   ⏳ Progreso: 300/1057 (28.4%)
+   ⏳ Progreso: 350/1057 (33.1%)
+   ⏳ Progreso: 400/1057 (37.8%)
+   ⏳ Progreso: 450/1057 (42.6%)
+   ⏳ Progreso: 500/1057 (47.3%)
+   ⏳ Progreso: 550/1057 (52.0%)
+   ⏳ Progreso: 600/1057 (56.8%)
+   ⏳ Progreso: 650/1057 (61.5%)
+   ⏳ Progreso: 700/1057 (66.2%)
+   ⏳ Progreso: 750/1057 (71.0%)
+   ⏳ Progreso: 800/1057 (75.7%)
+   ⏳ Progreso: 850/1057 (80.4%)
+   ⏳ Progreso: 900/1057 (85.1%)
+   ⏳ Progreso: 950/1057 (89.9%)
+   ⏳ Progreso: 1000/1057 (94.6%)
+   ⏳ Progreso: 1050/1057 (99.3%)
+   ⏳ Progreso: 1057/1057 (100.0%)
+   ✅ Insertados: 1057 | Actualizados: 0 | Movidos: 0
+
+🔄 Procesando: Jeep
+   📊 149 filas encontradas
+   ⏳ Progreso: 50/149 (33.6%)
+   ⏳ Progreso: 100/149 (67.1%)
+   ⏳ Progreso: 149/149 (100.0%)
+   ✅ Insertados: 149 | Actualizados: 0 | Movidos: 0
+
+🔄 Procesando: Renault
+   📊 516 filas encontradas
+   ⏳ Progreso: 50/516 (9.7%)
+   ⏳ Progreso: 100/516 (19.4%)
+   ⏳ Progreso: 150/516 (29.1%)
+   ⏳ Progreso: 200/516 (38.8%)
+   ⏳ Progreso: 250/516 (48.4%)
+   ⏳ Progreso: 300/516 (58.1%)
+   ⏳ Progreso: 350/516 (67.8%)
+   ⏳ Progreso: 400/516 (77.5%)
+   ⏳ Progreso: 450/516 (87.2%)
+   ⏳ Progreso: 500/516 (96.9%)
+   ⏳ Progreso: 516/516 (100.0%)
+   ✅ Insertados: 516 | Actualizados: 0 | Movidos: 0
+
+🔄 Procesando: VW
+   📊 1618 filas encontradas
+   ⏳ Progreso: 50/1618 (3.1%)
+   ⏳ Progreso: 100/1618 (6.2%)
+   ⏳ Progreso: 150/1618 (9.3%)
+   ⏳ Progreso: 200/1618 (12.4%)
+   ⏳ Progreso: 250/1618 (15.5%)
+   ⏳ Progreso: 300/1618 (18.5%)
+   ⏳ Progreso: 350/1618 (21.6%)
+   ⏳ Progreso: 400/1618 (24.7%)
+   ⏳ Progreso: 450/1618 (27.8%)
+   ⏳ Progreso: 500/1618 (30.9%)
+   ⏳ Progreso: 550/1618 (34.0%)
+   ⏳ Progreso: 600/1618 (37.1%)
+   ⏳ Progreso: 650/1618 (40.2%)
+   ⏳ Progreso: 700/1618 (43.3%)
+   ⏳ Progreso: 750/1618 (46.4%)
+   ⏳ Progreso: 800/1618 (49.4%)
+   ⏳ Progreso: 850/1618 (52.5%)
+   ⏳ Progreso: 900/1618 (55.6%)
+   ⏳ Progreso: 950/1618 (58.7%)
+   ⏳ Progreso: 1000/1618 (61.8%)
+   ⏳ Progreso: 1050/1618 (64.9%)
+   ⏳ Progreso: 1100/1618 (68.0%)
+   ⏳ Progreso: 1150/1618 (71.1%)
+   ⏳ Progreso: 1200/1618 (74.2%)
+   ⏳ Progreso: 1250/1618 (77.3%)
+   ⏳ Progreso: 1300/1618 (80.3%)
+   ⏳ Progreso: 1350/1618 (83.4%)
+   ⏳ Progreso: 1400/1618 (86.5%)
+   ⏳ Progreso: 1450/1618 (89.6%)
+   ⏳ Progreso: 1500/1618 (92.7%)
+   ⏳ Progreso: 1550/1618 (95.8%)
+   ⏳ Progreso: 1600/1618 (98.9%)
+   ⏳ Progreso: 1618/1618 (100.0%)
+   ✅ Insertados: 1618 | Actualizados: 0 | Movidos: 0
+
+🔄 Procesando: Peugeot
+   📊 3680 filas encontradas
+   ⏳ Progreso: 50/3680 (1.4%)
+   ⏳ Progreso: 100/3680 (2.7%)
+   ⏳ Progreso: 150/3680 (4.1%)
+   ⏳ Progreso: 200/3680 (5.4%)
+   ⏳ Progreso: 250/3680 (6.8%)
+   ⏳ Progreso: 300/3680 (8.2%)
+   ⏳ Progreso: 350/3680 (9.5%)
+   ⏳ Progreso: 400/3680 (10.9%)
+   ⏳ Progreso: 450/3680 (12.2%)
+   ⏳ Progreso: 500/3680 (13.6%)
+   ⏳ Progreso: 550/3680 (14.9%)
+   ⏳ Progreso: 600/3680 (16.3%)
+   ⏳ Progreso: 650/3680 (17.7%)
+   ⏳ Progreso: 700/3680 (19.0%)
+   ⏳ Progreso: 750/3680 (20.4%)
+   ⏳ Progreso: 800/3680 (21.7%)
+   ⏳ Progreso: 850/3680 (23.1%)
+   ⏳ Progreso: 900/3680 (24.5%)
+   ⏳ Progreso: 950/3680 (25.8%)
+   ⏳ Progreso: 1000/3680 (27.2%)
+   ⏳ Progreso: 1050/3680 (28.5%)
+   ⏳ Progreso: 1100/3680 (29.9%)
+   ⏳ Progreso: 1150/3680 (31.3%)
+   ⏳ Progreso: 1200/3680 (32.6%)
+   ⏳ Progreso: 1250/3680 (34.0%)
+   ⏳ Progreso: 1300/3680 (35.3%)
+   ⏳ Progreso: 1350/3680 (36.7%)
+   ⏳ Progreso: 1400/3680 (38.0%)
+   ⏳ Progreso: 1450/3680 (39.4%)
+   ⏳ Progreso: 1500/3680 (40.8%)
+   ⏳ Progreso: 1550/3680 (42.1%)
+   ⏳ Progreso: 1600/3680 (43.5%)
+   ⏳ Progreso: 1650/3680 (44.8%)
+   ⏳ Progreso: 1700/3680 (46.2%)
+   ⏳ Progreso: 1750/3680 (47.6%)
+   ⏳ Progreso: 1800/3680 (48.9%)
+   ⏳ Progreso: 1850/3680 (50.3%)
+   ⏳ Progreso: 1900/3680 (51.6%)
+   ⏳ Progreso: 1950/3680 (53.0%)
+   ⏳ Progreso: 2000/3680 (54.3%)
+   ⏳ Progreso: 2050/3680 (55.7%)
+   ⏳ Progreso: 2100/3680 (57.1%)
+   ⏳ Progreso: 2150/3680 (58.4%)
+   ⏳ Progreso: 2200/3680 (59.8%)
+   ⏳ Progreso: 2250/3680 (61.1%)
+   ⏳ Progreso: 2300/3680 (62.5%)
+   ⏳ Progreso: 2350/3680 (63.9%)
+   ⏳ Progreso: 2400/3680 (65.2%)
+   ⏳ Progreso: 2450/3680 (66.6%)
+   ⏳ Progreso: 2500/3680 (67.9%)
+   ⏳ Progreso: 2550/3680 (69.3%)
+   ⏳ Progreso: 2600/3680 (70.7%)
+   ⏳ Progreso: 2650/3680 (72.0%)
+   ⏳ Progreso: 2700/3680 (73.4%)
+   ⏳ Progreso: 2750/3680 (74.7%)
+   ⏳ Progreso: 2800/3680 (76.1%)
+   ⏳ Progreso: 2850/3680 (77.4%)
+   ⏳ Progreso: 2900/3680 (78.8%)
+   ⏳ Progreso: 2950/3680 (80.2%)
+   ⏳ Progreso: 3000/3680 (81.5%)
+   ⏳ Progreso: 3050/3680 (82.9%)
+   ⏳ Progreso: 3100/3680 (84.2%)
+   ⏳ Progreso: 3150/3680 (85.6%)
+   ⏳ Progreso: 3200/3680 (87.0%)
+   ⏳ Progreso: 3250/3680 (88.3%)
+   ⏳ Progreso: 3300/3680 (89.7%)
+   ⏳ Progreso: 3350/3680 (91.0%)
+   ⏳ Progreso: 3400/3680 (92.4%)
+   ⏳ Progreso: 3450/3680 (93.8%)
+   ⏳ Progreso: 3500/3680 (95.1%)
+   ⏳ Progreso: 3550/3680 (96.5%)
+   ⏳ Progreso: 3600/3680 (97.8%)
+   ⏳ Progreso: 3650/3680 (99.2%)
+   ⏳ Progreso: 3680/3680 (100.0%)
+   ✅ Insertados: 3680 | Actualizados: 0 | Movidos: 0
+
+🔄 Procesando: Fiat
+   📊 2678 filas encontradas
+   ⏳ Progreso: 50/2678 (1.9%)
+   ⏳ Progreso: 100/2678 (3.7%)
+   ⏳ Progreso: 150/2678 (5.6%)
+   ⏳ Progreso: 200/2678 (7.5%)
+   ⏳ Progreso: 250/2678 (9.3%)
+   ⏳ Progreso: 300/2678 (11.2%)
+   ⏳ Progreso: 350/2678 (13.1%)
+   ⏳ Progreso: 400/2678 (14.9%)
+   ⏳ Progreso: 450/2678 (16.8%)
+   ⏳ Progreso: 500/2678 (18.7%)
+   ⏳ Progreso: 550/2678 (20.5%)
+   ⏳ Progreso: 600/2678 (22.4%)
+   ⏳ Progreso: 650/2678 (24.3%)
+   ⏳ Progreso: 700/2678 (26.1%)
+   ⏳ Progreso: 750/2678 (28.0%)
+   ⏳ Progreso: 800/2678 (29.9%)
+   ⏳ Progreso: 850/2678 (31.7%)
+   ⏳ Progreso: 900/2678 (33.6%)
+   ⏳ Progreso: 950/2678 (35.5%)
+   ⏳ Progreso: 1000/2678 (37.3%)
+   ⏳ Progreso: 1050/2678 (39.2%)
+   ⏳ Progreso: 1100/2678 (41.1%)
+   ⏳ Progreso: 1150/2678 (42.9%)
+   ⏳ Progreso: 1200/2678 (44.8%)
+   ⏳ Progreso: 1250/2678 (46.7%)
+   ⏳ Progreso: 1300/2678 (48.5%)
+   ⏳ Progreso: 1350/2678 (50.4%)
+   ⏳ Progreso: 1400/2678 (52.3%)
+   ⏳ Progreso: 1450/2678 (54.1%)
+   ⏳ Progreso: 1500/2678 (56.0%)
+   ⏳ Progreso: 1550/2678 (57.9%)
+   ⏳ Progreso: 1600/2678 (59.7%)
+   ⏳ Progreso: 1650/2678 (61.6%)
+   ⏳ Progreso: 1700/2678 (63.5%)
+   ⏳ Progreso: 1750/2678 (65.3%)
+   ⏳ Progreso: 1800/2678 (67.2%)
+   ⏳ Progreso: 1850/2678 (69.1%)
+   ⏳ Progreso: 1900/2678 (70.9%)
+   ⏳ Progreso: 1950/2678 (72.8%)
+   ⏳ Progreso: 2000/2678 (74.7%)
+   ⏳ Progreso: 2050/2678 (76.5%)
+   ⏳ Progreso: 2100/2678 (78.4%)
+   ⏳ Progreso: 2150/2678 (80.3%)
+   ⏳ Progreso: 2200/2678 (82.2%)
+   ⏳ Progreso: 2250/2678 (84.0%)
+   ⏳ Progreso: 2300/2678 (85.9%)
+   ⏳ Progreso: 2350/2678 (87.8%)
+   ⏳ Progreso: 2400/2678 (89.6%)
+   ⏳ Progreso: 2450/2678 (91.5%)
+   ⏳ Progreso: 2500/2678 (93.4%)
+   ⏳ Progreso: 2550/2678 (95.2%)
+   ⏳ Progreso: 2600/2678 (97.1%)
+   ⏳ Progreso: 2650/2678 (99.0%)
+   ⏳ Progreso: 2678/2678 (100.0%)
+   ✅ Insertados: 2678 | Actualizados: 0 | Movidos: 0
+
+🔄 Procesando: Ford
+   📊 42 filas encontradas
+   ⏳ Progreso: 42/42 (100.0%)
+   ✅ Insertados: 42 | Actualizados: 0 | Movidos: 0
+
+
+======================================================================
+🎉 MIGRACIÓN SMART-FAST COMPLETADA
+======================================================================
+📊 Total procesado:     10364
+✅ Nuevos insertados:   10364
+🔄 Actualizados:        0
+⏭️  Omitidos (sin tel): 0
+❌ Errores:             0
+======================================================================
+
+📋 DETALLE POR MARCA:
+----------------------------------------------------------------------
+   Citroen              → 522 nuevos, 0 actualizados
+   Toyota               → 102 nuevos, 0 actualizados
+   Chevrolet            → 1057 nuevos, 0 actualizados
+   Jeep                 → 149 nuevos, 0 actualizados
+   Renault              → 516 nuevos, 0 actualizados
+   VW                   → 1618 nuevos, 0 actualizados
+   Peugeot              → 3680 nuevos, 0 actualizados
+   Fiat                 → 2678 nuevos, 0 actualizados
+   Ford                 → 42 nuevos, 0 actualizados
+----------------------------------------------------------------------
+
+✅ Migración exitosa - IDs estables preservados
+

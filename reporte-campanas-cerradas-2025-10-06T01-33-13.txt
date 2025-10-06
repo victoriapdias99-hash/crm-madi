@@ -1,0 +1,89 @@
+╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                      REPORTE DE CAMPAÑAS CERRADAS                                                 ║
+║                                     Generado: 5/10/2025, 07:33:13                                         ║
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+Total de campañas cerradas: 32
+
+════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+ID    Cliente                  Campaña   Marca          Zona        Meta    Fecha Inicio        Fecha Cierre
+════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+79    Borussia                 3         VW             NACIONAL    300     2025-09-08          2025-09-24
+85    Noemi Suarez             1         Peugeot        AMBA        100     2025-09-19          2025-09-24
+77    Vesubio                  1         Peugeot        Córdoba     100     2025-09-01          2025-09-12
+63    Borussia                 2         VW             NACIONAL    450     2025-08-25          2025-09-10
+72    CDN                      3         VW             NACIONAL    200     2025-08-25          2025-09-10
+45    Nicolas Gold             1         Chevrolet      AMBA        100     2025-08-07          2025-09-08
+47    GRUPO MAIPU              1         Chevrolet      Córdoba     150     2025-08-15          2025-09-04
+41    GRUPO SVA                1         Citroen        AMBA        200     2025-08-09          2025-09-04
+70    Javier Cagiao            2         Renault        AMBA        50      2025-08-16          2025-08-30
+50    Autos del Sol            3         Fiat           AMBA        500     2025-08-07          2025-08-28
+37    Borussia                 1         VW             NACIONAL    300     2025-08-15          2025-08-25
+60    jorge Mungo              1         Peugeot        AMBA        100     2025-08-11          2025-08-25
+51    SOFIA                    1         Fiat           NACIONAL    100     2025-08-20          2025-08-24
+46    Nicolas Gold             2         Chevrolet      NACIONAL    100     2025-08-07          2025-08-22
+62    CDN                      2         VW             NACIONAL    100     2025-08-10          2025-08-20
+59    ALBENS                   8         Peugeot        NACIONAL    200     2025-07-27          2025-08-10
+61    CDN                      1         VW             NACIONAL    100     2025-08-04          2025-08-10
+58    ALBENS                   7         Peugeot        NACIONAL    200     2025-07-21          2025-08-03
+44    Javier Cagiao            1         Renault        AMBA        100     2025-07-14          2025-07-29
+57    ALBENS                   6         Peugeot        NACIONAL    200     2025-07-17          2025-07-27
+39    Avec                     1         Citroen        AMBA        100     2025-07-17          2025-07-27
+49    Autos del Sol            2         Fiat           AMBA        500     2025-07-02          2025-07-25
+75    Avec                     1         Peugeot        Córdoba     100     2025-07-17          2025-07-24
+42    Chevrolet Italy          1         Chevrolet      AMBA        100     2025-07-14          2025-07-20
+36    Mariano - Pichetti       1         Toyota         AMBA        100     2025-07-05          2025-07-19
+48    Pamela Novo Group        1         Fiat           NACIONAL    100     2025-07-14          2025-07-17
+56    ALBENS                   5         Peugeot        NACIONAL    200     2025-07-07          2025-07-16
+55    ALBENS                   4         Peugeot        NACIONAL    200     2025-06-28          2025-07-06
+43    Autos del Sol            1         Fiat           AMBA        500     2025-06-13          2025-07-03
+54    ALBENS                   3         Peugeot        NACIONAL    200     2025-06-24          2025-06-27
+53    ALBENS                   2         Peugeot        NACIONAL    200     2025-06-19          2025-06-23
+52    ALBENS                   1         Peugeot        NACIONAL    100     2025-06-06          2025-06-17
+════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+📈 ESTADÍSTICAS POR CLIENTE
+────────────────────────────────────────────────────────────────────────────────
+ALBENS                                  Campañas: 8         Leads totales: 1500
+Borussia                                Campañas: 3         Leads totales: 1050
+CDN                                     Campañas: 3         Leads totales: 400
+Autos del Sol                           Campañas: 3         Leads totales: 1500
+Nicolas Gold                            Campañas: 2         Leads totales: 200
+Javier Cagiao                           Campañas: 2         Leads totales: 150
+Avec                                    Campañas: 2         Leads totales: 200
+Noemi Suarez                            Campañas: 1         Leads totales: 100
+Vesubio                                 Campañas: 1         Leads totales: 100
+GRUPO MAIPU                             Campañas: 1         Leads totales: 150
+GRUPO SVA                               Campañas: 1         Leads totales: 200
+jorge Mungo                             Campañas: 1         Leads totales: 100
+SOFIA                                   Campañas: 1         Leads totales: 100
+Chevrolet Italy                         Campañas: 1         Leads totales: 100
+Mariano - Pichetti                      Campañas: 1         Leads totales: 100
+Pamela Novo Group                       Campañas: 1         Leads totales: 100
+
+📊 ESTADÍSTICAS POR MARCA
+────────────────────────────────────────────────────────────────────────────────
+Peugeot                                 Campañas: 12        Leads totales: 1900
+VW                                      Campañas: 6         Leads totales: 1450
+Fiat                                    Campañas: 5         Leads totales: 1700
+Chevrolet                               Campañas: 4         Leads totales: 450
+Citroen                                 Campañas: 2         Leads totales: 300
+Renault                                 Campañas: 2         Leads totales: 150
+Toyota                                  Campañas: 1         Leads totales: 100
+
+🗺️  ESTADÍSTICAS POR ZONA
+────────────────────────────────────────────────────────────────────────────────
+NACIONAL                                Campañas: 17        Leads totales: 3250
+AMBA                                    Campañas: 12        Leads totales: 2450
+Córdoba                                 Campañas: 3         Leads totales: 350
+
+════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+📊 RESUMEN GENERAL
+────────────────────────────────────────────────────────────────────────────────
+Total de campañas cerradas: 32
+Total de leads procesados: 6050
+Promedio de leads por campaña: 189
+Clientes únicos: 16
+Marcas únicas: 7
+Zonas únicas: 3
+════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════

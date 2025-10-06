@@ -6,6 +6,26 @@ import { LeadProcessor } from '../../domain/services/LeadProcessor';
 import { DuplicateDetector } from '../../domain/services/DuplicateDetector';
 
 /**
+ * @deprecated Este sistema de sincronización está DEPRECADO desde 2025-10-06
+ *
+ * ⚠️ NO USAR - Reemplazado por Smart-Fast System
+ *
+ * Razones de deprecación:
+ * 1. IDs inestables basados en timestamp/nanoid aleatorio
+ * 2. Sin UPSERT - duplicaba registros en cada ejecución
+ * 3. No resistente a movimiento de filas en Google Sheets
+ * 4. Performance inferior (~10 leads/segundo vs ~199 leads/segundo)
+ * 5. Sin manejo correcto de duplicados reales
+ *
+ * USAR EN SU LUGAR: migrateSmartFast() de server/sync-smart-fast/migrate-smart-fast.ts
+ *
+ * Sistema Smart-Fast ofrece:
+ * ✅ IDs estables: MARCA_YYYYMMDD_TELEFONO8DIGITOS[-N]
+ * ✅ UPSERT automático (sin duplicados)
+ * ✅ Duplicados reales con sufijo -1, -2, etc.
+ * ✅ Performance 20x superior
+ * ✅ 100% normalización de clientes
+ *
  * Caso de uso para sincronización inteligente
  * Analiza el estado actual y continúa desde donde se quedó cada marca
  */

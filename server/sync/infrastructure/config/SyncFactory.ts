@@ -16,21 +16,22 @@ export class SyncFactory {
 
   /**
    * Crea y configura el controlador de sincronización
+   * Ahora usa Smart-Fast en lugar del sistema deprecado
    */
   static createSyncController(): SyncController {
-    const syncSmartUseCase = this.createSyncSmartUseCase();
     const sheetsGateway = this.getSheetsGateway();
 
     return new SyncController(
-      syncSmartUseCase,
       sheetsGateway
     );
   }
 
   /**
+   * @deprecated Sistema de sincronización deprecado - Usar Smart-Fast
    * Crea caso de uso para sincronización inteligente
    */
   static createSyncSmartUseCase(): SyncSmartUseCase {
+    console.warn('⚠️ SyncSmartUseCase está deprecado - Usar migrateSmartFast() de sync-smart-fast/migrate-smart-fast.ts');
     return new SyncSmartUseCase(
       this.getSyncRepository(),
       this.getSheetsGateway(),

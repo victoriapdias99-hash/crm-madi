@@ -1,23 +1,26 @@
-import { nanoid } from 'nanoid';
-
 /**
- * Genera un metaLeadId ÚNICO basado en teléfono + fecha + marca + timestamp
- * Permite duplicados exactos insertando cada registro con un ID diferente
+ * Genera un metaLeadId ESTABLE basado en teléfono + fecha + marca
+ * Soporta duplicados reales mediante sufijo secuencial
  *
- * Formato: {MARCA}_{YYYYMMDD}_{TEL_INICIO_4}{TEL_FIN_4}_{TIMESTAMP}_{NANOID_4}
- * Ejemplo: "FIAT_20250104_12347890_1704394800000_a8B9"
+ * Formato Base: {MARCA}_{YYYYMMDD}_{TELEFONO_8DIGITOS}
+ * Con duplicados: {MARCA}_{YYYYMMDD}_{TELEFONO_8DIGITOS}-{N}
+ *
+ * Ejemplos:
+ *   Primer registro: "FIAT_20250718_54911234_5678"
+ *   Duplicado 1:     "FIAT_20250718_54911234_5678-1"
+ *   Duplicado 2:     "FIAT_20250718_54911234_5678-2"
  *
  * @param telefono - Teléfono del lead (puede tener formato, se normaliza)
  * @param fechaCreacion - Fecha de creación del lead
  * @param marca - Marca/campaña
- * @param timestamp - Timestamp para garantizar unicidad en duplicados
- * @returns ID único garantizado
+ * @param duplicateIndex - Índice de duplicado (0 = primero, 1 = segundo, etc.)
+ * @returns ID estable (mismo para mismos datos)
  */
 export function generateStableMetaLeadId(
   telefono: string,
   fechaCreacion: Date,
   marca: string,
-  timestamp: Date = new Date()
+  duplicateIndex: number = 0
 ): string {
   // Normalizar teléfono: solo dígitos
   const normalizedPhone = telefono.replace(/[^\d]/g, '');
@@ -37,14 +40,20 @@ export function generateStableMetaLeadId(
   const phoneSuffix = normalizedPhone.slice(-4);
   const phoneDigits = phonePrefix + phoneSuffix;
 
-  // Timestamp en milisegundos para unicidad en duplicados
-  const timestampMs = timestamp.getTime();
+  // ID base estable
+  const baseId = `${marca.toUpperCase()}_${dateStr}_${phoneDigits}`;
 
-  // NanoID corto para garantizar unicidad adicional
-  const uniqueId = nanoid(4);
+  // Agregar sufijo solo si es duplicado
+  return duplicateIndex > 0 ? `${baseId}-${duplicateIndex}` : baseId;
+}
 
-  // Formato final: MARCA_FECHA_TELEFONO_TIMESTAMP_NANO
-  return `${marca.toUpperCase()}_${dateStr}_${phoneDigits}_${timestampMs}_${uniqueId}`;
+/**
+ * Extrae el ID base de un metaLeadId (sin sufijo de duplicado)
+ *
+ * Ejemplo: "FIAT_20250718_54911234_5678-2" → "FIAT_20250718_54911234_5678"
+ */
+export function getBaseMetaLeadId(metaLeadId: string): string {
+  return metaLeadId.split('-')[0];
 }
 
 /**

@@ -30,6 +30,7 @@ import {
 } from "@shared/schema";
 import { BrandDisplay, useBrandInfo } from "@/components/ui/brand-display";
 import { getCampaignBrandInfo as getEnhancedCampaignBrandInfo, isAutomaticAssignment } from "@shared/utils/brand-display-utils";
+import { TableSkeleton, LoadingProgress } from "@/components/ui/table-skeleton";
 
 interface DatosDiariosData {
   cliente: string;
@@ -1694,10 +1695,14 @@ export default function DatosDiariosDashboard() {
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse border border-gray-300 dark:border-gray-600">
-                <thead>
-                  <tr className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20">
-                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Acciones</th>
+              {isLoading ? (
+                <TableSkeleton rows={10} columns={17} />
+              ) : (
+                <>
+                  <table className="w-full border-collapse border border-gray-300 dark:border-gray-600">
+                    <thead>
+                      <tr className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20">
+                        <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Acciones</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-left font-semibold text-amber-900 dark:text-amber-100">Cliente</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-left font-semibold text-amber-900 dark:text-amber-100">Marca</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Fecha de Inicio</th>
@@ -2065,11 +2070,13 @@ export default function DatosDiariosDashboard() {
                     </tr>
                   )}
                 </tbody>
-              </table>
-              {campanasEnProceso.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  No hay campañas en proceso actualmente
-                </div>
+                  </table>
+                  {campanasEnProceso.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      No hay campañas en proceso actualmente
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </CardContent>
@@ -2204,10 +2211,14 @@ export default function DatosDiariosDashboard() {
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse border border-gray-300 dark:border-gray-600">
-                <thead>
-                  <tr className="bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20">
-                    <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Acciones</th>
+              {isLoading ? (
+                <TableSkeleton rows={8} columns={16} />
+              ) : (
+                <>
+                  <table className="w-full border-collapse border border-gray-300 dark:border-gray-600">
+                    <thead>
+                      <tr className="bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20">
+                        <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Acciones</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-left font-semibold text-emerald-900 dark:text-emerald-100">Cliente</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-left font-semibold text-emerald-900 dark:text-emerald-100">Marca</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Fecha de Inicio</th>
@@ -2442,11 +2453,13 @@ export default function DatosDiariosDashboard() {
                     </tr>
                   )}
                 </tbody>
-              </table>
-              {/* Sin campañas finalizadas automáticas */}
-              <div className="text-center py-8 text-gray-500">
-                Las campañas finalizadas se gestionan manualmente
-              </div>
+                  </table>
+                  {/* Sin campañas finalizadas automáticas */}
+                  <div className="text-center py-8 text-gray-500">
+                    Las campañas finalizadas se gestionan manualmente
+                  </div>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>

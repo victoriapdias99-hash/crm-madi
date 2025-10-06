@@ -1,0 +1,953 @@
+{
+  "config": {
+    "configFile": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\playwright.config.ts",
+    "rootDir": "C:/Users/ST/Documents/claude/crm-madi/crm-madi/e2e",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        {
+          "outputFolder": "playwright-report"
+        }
+      ],
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "C:/Users/ST/Documents/claude/crm-madi/crm-madi/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "C:/Users/ST/Documents/claude/crm-madi/crm-madi/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 180000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.55.1",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "campaign-closure-ux.spec.ts",
+      "file": "campaign-closure-ux.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "UX - Cierre de Campaña Completo",
+          "file": "campaign-closure-ux.spec.ts",
+          "line": 19,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Debe mostrar progreso en tiempo real durante cierre de campaña",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 180000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 31145,
+                      "error": {
+                        "message": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.",
+                        "stack": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:31:16",
+                        "location": {
+                          "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                          "column": 16,
+                          "line": 31
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 29 |\u001b[39m\n \u001b[90m 30 |\u001b[39m     \u001b[90m// Esperar que cargue completamente\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 31 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForLoadState(\u001b[32m'networkidle'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 32 |\u001b[39m\n \u001b[90m 33 |\u001b[39m     \u001b[90m// Esperar que aparezca el título del dashboard\u001b[39m\n \u001b[90m 34 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForSelector(\u001b[32m'text=Datos Diarios'\u001b[39m\u001b[33m,\u001b[39m { timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                            "column": 16,
+                            "line": 31
+                          },
+                          "message": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.\n\n  29 |\n  30 |     // Esperar que cargue completamente\n> 31 |     await page.waitForLoadState('networkidle');\n     |                ^\n  32 |\n  33 |     // Esperar que aparezca el título del dashboard\n  34 |     await page.waitForSelector('text=Datos Diarios', { timeout: 10000 });\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:31:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-06T04:31:29.349Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---C-b5089-l-durante-cierre-de-campaña-chromium\\test-failed-1.png"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                        "column": 16,
+                        "line": 31
+                      }
+                    },
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 31244,
+                      "error": {
+                        "message": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.",
+                        "stack": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:31:16",
+                        "location": {
+                          "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                          "column": 16,
+                          "line": 31
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 29 |\u001b[39m\n \u001b[90m 30 |\u001b[39m     \u001b[90m// Esperar que cargue completamente\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 31 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForLoadState(\u001b[32m'networkidle'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 32 |\u001b[39m\n \u001b[90m 33 |\u001b[39m     \u001b[90m// Esperar que aparezca el título del dashboard\u001b[39m\n \u001b[90m 34 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForSelector(\u001b[32m'text=Datos Diarios'\u001b[39m\u001b[33m,\u001b[39m { timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                            "column": 16,
+                            "line": 31
+                          },
+                          "message": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.\n\n  29 |\n  30 |     // Esperar que cargue completamente\n> 31 |     await page.waitForLoadState('networkidle');\n     |                ^\n  32 |\n  33 |     // Esperar que aparezca el título del dashboard\n  34 |     await page.waitForSelector('text=Datos Diarios', { timeout: 10000 });\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:31:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2025-10-06T04:32:02.118Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---C-b5089-l-durante-cierre-de-campaña-chromium-retry1\\test-failed-1.png"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---C-b5089-l-durante-cierre-de-campaña-chromium-retry1\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                        "column": 16,
+                        "line": 31
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "857d2b2ee0459a051819-1c890935a1bb82f2a413",
+              "file": "campaign-closure-ux.spec.ts",
+              "line": 49,
+              "column": 3
+            },
+            {
+              "title": "Debe actualizar tabla automáticamente sin reload",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 180000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 31124,
+                      "error": {
+                        "message": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.",
+                        "stack": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:31:16",
+                        "location": {
+                          "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                          "column": 16,
+                          "line": 31
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 29 |\u001b[39m\n \u001b[90m 30 |\u001b[39m     \u001b[90m// Esperar que cargue completamente\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 31 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForLoadState(\u001b[32m'networkidle'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 32 |\u001b[39m\n \u001b[90m 33 |\u001b[39m     \u001b[90m// Esperar que aparezca el título del dashboard\u001b[39m\n \u001b[90m 34 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForSelector(\u001b[32m'text=Datos Diarios'\u001b[39m\u001b[33m,\u001b[39m { timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                            "column": 16,
+                            "line": 31
+                          },
+                          "message": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.\n\n  29 |\n  30 |     // Esperar que cargue completamente\n> 31 |     await page.waitForLoadState('networkidle');\n     |                ^\n  32 |\n  33 |     // Esperar que aparezca el título del dashboard\n  34 |     await page.waitForSelector('text=Datos Diarios', { timeout: 10000 });\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:31:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-06T04:32:34.821Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---C-682ba--automáticamente-sin-reload-chromium\\test-failed-1.png"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                        "column": 16,
+                        "line": 31
+                      }
+                    },
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 31224,
+                      "error": {
+                        "message": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.",
+                        "stack": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:31:16",
+                        "location": {
+                          "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                          "column": 16,
+                          "line": 31
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 29 |\u001b[39m\n \u001b[90m 30 |\u001b[39m     \u001b[90m// Esperar que cargue completamente\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 31 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForLoadState(\u001b[32m'networkidle'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 32 |\u001b[39m\n \u001b[90m 33 |\u001b[39m     \u001b[90m// Esperar que aparezca el título del dashboard\u001b[39m\n \u001b[90m 34 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForSelector(\u001b[32m'text=Datos Diarios'\u001b[39m\u001b[33m,\u001b[39m { timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                            "column": 16,
+                            "line": 31
+                          },
+                          "message": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.\n\n  29 |\n  30 |     // Esperar que cargue completamente\n> 31 |     await page.waitForLoadState('networkidle');\n     |                ^\n  32 |\n  33 |     // Esperar que aparezca el título del dashboard\n  34 |     await page.waitForSelector('text=Datos Diarios', { timeout: 10000 });\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:31:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2025-10-06T04:33:07.214Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---C-682ba--automáticamente-sin-reload-chromium-retry1\\test-failed-1.png"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---C-682ba--automáticamente-sin-reload-chromium-retry1\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                        "column": 16,
+                        "line": 31
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "857d2b2ee0459a051819-1d8d81914a13033d03fe",
+              "file": "campaign-closure-ux.spec.ts",
+              "line": 209,
+              "column": 3
+            },
+            {
+              "title": "Debe deshabilitar botón durante procesamiento",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 180000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 31124,
+                      "error": {
+                        "message": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.",
+                        "stack": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:31:16",
+                        "location": {
+                          "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                          "column": 16,
+                          "line": 31
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 29 |\u001b[39m\n \u001b[90m 30 |\u001b[39m     \u001b[90m// Esperar que cargue completamente\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 31 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForLoadState(\u001b[32m'networkidle'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 32 |\u001b[39m\n \u001b[90m 33 |\u001b[39m     \u001b[90m// Esperar que aparezca el título del dashboard\u001b[39m\n \u001b[90m 34 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForSelector(\u001b[32m'text=Datos Diarios'\u001b[39m\u001b[33m,\u001b[39m { timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                            "column": 16,
+                            "line": 31
+                          },
+                          "message": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.\n\n  29 |\n  30 |     // Esperar que cargue completamente\n> 31 |     await page.waitForLoadState('networkidle');\n     |                ^\n  32 |\n  33 |     // Esperar que aparezca el título del dashboard\n  34 |     await page.waitForSelector('text=Datos Diarios', { timeout: 10000 });\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:31:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-06T04:33:39.965Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---C-981c5-botón-durante-procesamiento-chromium\\test-failed-1.png"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                        "column": 16,
+                        "line": 31
+                      }
+                    },
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 31229,
+                      "error": {
+                        "message": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.",
+                        "stack": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:31:16",
+                        "location": {
+                          "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                          "column": 16,
+                          "line": 31
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 29 |\u001b[39m\n \u001b[90m 30 |\u001b[39m     \u001b[90m// Esperar que cargue completamente\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 31 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForLoadState(\u001b[32m'networkidle'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 32 |\u001b[39m\n \u001b[90m 33 |\u001b[39m     \u001b[90m// Esperar que aparezca el título del dashboard\u001b[39m\n \u001b[90m 34 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForSelector(\u001b[32m'text=Datos Diarios'\u001b[39m\u001b[33m,\u001b[39m { timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                            "column": 16,
+                            "line": 31
+                          },
+                          "message": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.\n\n  29 |\n  30 |     // Esperar que cargue completamente\n> 31 |     await page.waitForLoadState('networkidle');\n     |                ^\n  32 |\n  33 |     // Esperar que aparezca el título del dashboard\n  34 |     await page.waitForSelector('text=Datos Diarios', { timeout: 10000 });\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:31:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2025-10-06T04:34:12.260Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---C-981c5-botón-durante-procesamiento-chromium-retry1\\test-failed-1.png"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---C-981c5-botón-durante-procesamiento-chromium-retry1\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                        "column": 16,
+                        "line": 31
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "857d2b2ee0459a051819-3393f1b8607b7aa80087",
+              "file": "campaign-closure-ux.spec.ts",
+              "line": 244,
+              "column": 3
+            },
+            {
+              "title": "Debe mostrar mensaje de error claro si falla",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 180000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 31118,
+                      "error": {
+                        "message": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.",
+                        "stack": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:31:16",
+                        "location": {
+                          "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                          "column": 16,
+                          "line": 31
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 29 |\u001b[39m\n \u001b[90m 30 |\u001b[39m     \u001b[90m// Esperar que cargue completamente\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 31 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForLoadState(\u001b[32m'networkidle'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 32 |\u001b[39m\n \u001b[90m 33 |\u001b[39m     \u001b[90m// Esperar que aparezca el título del dashboard\u001b[39m\n \u001b[90m 34 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForSelector(\u001b[32m'text=Datos Diarios'\u001b[39m\u001b[33m,\u001b[39m { timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                            "column": 16,
+                            "line": 31
+                          },
+                          "message": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.\n\n  29 |\n  30 |     // Esperar que cargue completamente\n> 31 |     await page.waitForLoadState('networkidle');\n     |                ^\n  32 |\n  33 |     // Esperar que aparezca el título del dashboard\n  34 |     await page.waitForSelector('text=Datos Diarios', { timeout: 10000 });\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:31:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-06T04:34:44.975Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---C-bbcec-aje-de-error-claro-si-falla-chromium\\test-failed-1.png"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                        "column": 16,
+                        "line": 31
+                      }
+                    },
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 31275,
+                      "error": {
+                        "message": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.",
+                        "stack": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:31:16",
+                        "location": {
+                          "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                          "column": 16,
+                          "line": 31
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 29 |\u001b[39m\n \u001b[90m 30 |\u001b[39m     \u001b[90m// Esperar que cargue completamente\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 31 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForLoadState(\u001b[32m'networkidle'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 32 |\u001b[39m\n \u001b[90m 33 |\u001b[39m     \u001b[90m// Esperar que aparezca el título del dashboard\u001b[39m\n \u001b[90m 34 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForSelector(\u001b[32m'text=Datos Diarios'\u001b[39m\u001b[33m,\u001b[39m { timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                            "column": 16,
+                            "line": 31
+                          },
+                          "message": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.\n\n  29 |\n  30 |     // Esperar que cargue completamente\n> 31 |     await page.waitForLoadState('networkidle');\n     |                ^\n  32 |\n  33 |     // Esperar que aparezca el título del dashboard\n  34 |     await page.waitForSelector('text=Datos Diarios', { timeout: 10000 });\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:31:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2025-10-06T04:35:17.175Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---C-bbcec-aje-de-error-claro-si-falla-chromium-retry1\\test-failed-1.png"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---C-bbcec-aje-de-error-claro-si-falla-chromium-retry1\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                        "column": 16,
+                        "line": 31
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "857d2b2ee0459a051819-e7442f006c5019997b78",
+              "file": "campaign-closure-ux.spec.ts",
+              "line": 279,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "UX - Validaciones Visuales",
+          "file": "campaign-closure-ux.spec.ts",
+          "line": 297,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Progress bar debe ser visible y tener colores correctos",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 180000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 8,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 31131,
+                      "error": {
+                        "message": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.",
+                        "stack": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:300:16",
+                        "location": {
+                          "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                          "column": 16,
+                          "line": 300
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 298 |\u001b[39m   test(\u001b[32m'Progress bar debe ser visible y tener colores correctos'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 299 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'http://localhost:5000/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 300 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForLoadState(\u001b[32m'networkidle'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 301 |\u001b[39m\n \u001b[90m 302 |\u001b[39m     \u001b[90m// Verificar que el componente Progress existe en la página\u001b[39m\n \u001b[90m 303 |\u001b[39m     \u001b[36mconst\u001b[39m progressComponent \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'[role=\"progressbar\"]'\u001b[39m)\u001b[33m.\u001b[39mfirst()\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                            "column": 16,
+                            "line": 300
+                          },
+                          "message": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.\n\n  298 |   test('Progress bar debe ser visible y tener colores correctos', async ({ page }) => {\n  299 |     await page.goto('http://localhost:5000/');\n> 300 |     await page.waitForLoadState('networkidle');\n      |                ^\n  301 |\n  302 |     // Verificar que el componente Progress existe en la página\n  303 |     const progressComponent = page.locator('[role=\"progressbar\"]').first();\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:300:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-06T04:35:49.916Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---V-15683-e-y-tener-colores-correctos-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---V-15683-e-y-tener-colores-correctos-chromium\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---V-15683-e-y-tener-colores-correctos-chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                        "column": 16,
+                        "line": 300
+                      }
+                    },
+                    {
+                      "workerIndex": 9,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 31399,
+                      "error": {
+                        "message": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.",
+                        "stack": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:300:16",
+                        "location": {
+                          "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                          "column": 16,
+                          "line": 300
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 298 |\u001b[39m   test(\u001b[32m'Progress bar debe ser visible y tener colores correctos'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 299 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'http://localhost:5000/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 300 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForLoadState(\u001b[32m'networkidle'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 301 |\u001b[39m\n \u001b[90m 302 |\u001b[39m     \u001b[90m// Verificar que el componente Progress existe en la página\u001b[39m\n \u001b[90m 303 |\u001b[39m     \u001b[36mconst\u001b[39m progressComponent \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'[role=\"progressbar\"]'\u001b[39m)\u001b[33m.\u001b[39mfirst()\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                            "column": 16,
+                            "line": 300
+                          },
+                          "message": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.\n\n  298 |   test('Progress bar debe ser visible y tener colores correctos', async ({ page }) => {\n  299 |     await page.goto('http://localhost:5000/');\n> 300 |     await page.waitForLoadState('networkidle');\n      |                ^\n  301 |\n  302 |     // Verificar que el componente Progress existe en la página\n  303 |     const progressComponent = page.locator('[role=\"progressbar\"]').first();\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:300:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2025-10-06T04:36:22.397Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---V-15683-e-y-tener-colores-correctos-chromium-retry1\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---V-15683-e-y-tener-colores-correctos-chromium-retry1\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---V-15683-e-y-tener-colores-correctos-chromium-retry1\\error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---V-15683-e-y-tener-colores-correctos-chromium-retry1\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                        "column": 16,
+                        "line": 300
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "857d2b2ee0459a051819-1b8bfde06cdc5d2893ab",
+              "file": "campaign-closure-ux.spec.ts",
+              "line": 298,
+              "column": 3
+            },
+            {
+              "title": "Modal de confirmación debe tener diseño apropiado",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 180000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 10,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 31047,
+                      "error": {
+                        "message": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.",
+                        "stack": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:311:16",
+                        "location": {
+                          "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                          "column": 16,
+                          "line": 311
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 309 |\u001b[39m   test(\u001b[32m'Modal de confirmación debe tener diseño apropiado'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 310 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'http://localhost:5000/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 311 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForLoadState(\u001b[32m'networkidle'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 312 |\u001b[39m\n \u001b[90m 313 |\u001b[39m     \u001b[90m// Abrir modal\u001b[39m\n \u001b[90m 314 |\u001b[39m     \u001b[36mconst\u001b[39m primeraFila \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'table tbody tr'\u001b[39m)\u001b[33m.\u001b[39mfirst()\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                            "column": 16,
+                            "line": 311
+                          },
+                          "message": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.\n\n  309 |   test('Modal de confirmación debe tener diseño apropiado', async ({ page }) => {\n  310 |     await page.goto('http://localhost:5000/');\n> 311 |     await page.waitForLoadState('networkidle');\n      |                ^\n  312 |\n  313 |     // Abrir modal\n  314 |     const primeraFila = page.locator('table tbody tr').first();\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:311:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-06T04:36:55.157Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---V-00f98-debe-tener-diseño-apropiado-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---V-00f98-debe-tener-diseño-apropiado-chromium\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---V-00f98-debe-tener-diseño-apropiado-chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                        "column": 16,
+                        "line": 311
+                      }
+                    },
+                    {
+                      "workerIndex": 11,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 31265,
+                      "error": {
+                        "message": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.",
+                        "stack": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:311:16",
+                        "location": {
+                          "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                          "column": 16,
+                          "line": 311
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 309 |\u001b[39m   test(\u001b[32m'Modal de confirmación debe tener diseño apropiado'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 310 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'http://localhost:5000/'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 311 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForLoadState(\u001b[32m'networkidle'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 312 |\u001b[39m\n \u001b[90m 313 |\u001b[39m     \u001b[90m// Abrir modal\u001b[39m\n \u001b[90m 314 |\u001b[39m     \u001b[36mconst\u001b[39m primeraFila \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'table tbody tr'\u001b[39m)\u001b[33m.\u001b[39mfirst()\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                            "column": 16,
+                            "line": 311
+                          },
+                          "message": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.\n\n  309 |   test('Modal de confirmación debe tener diseño apropiado', async ({ page }) => {\n  310 |     await page.goto('http://localhost:5000/');\n> 311 |     await page.waitForLoadState('networkidle');\n      |                ^\n  312 |\n  313 |     // Abrir modal\n  314 |     const primeraFila = page.locator('table tbody tr').first();\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:311:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2025-10-06T04:37:27.325Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---V-00f98-debe-tener-diseño-apropiado-chromium-retry1\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---V-00f98-debe-tener-diseño-apropiado-chromium-retry1\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---V-00f98-debe-tener-diseño-apropiado-chromium-retry1\\error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---V-00f98-debe-tener-diseño-apropiado-chromium-retry1\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                        "column": 16,
+                        "line": 311
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "857d2b2ee0459a051819-9327e334fb82161ba0d9",
+              "file": "campaign-closure-ux.spec.ts",
+              "line": 309,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "UX - Performance",
+          "file": "campaign-closure-ux.spec.ts",
+          "line": 340,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Tiempo de respuesta inicial debe ser < 1 segundo",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 180000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 12,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 11026,
+                      "error": {
+                        "message": "TimeoutError: locator.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('table tbody tr').first().locator('button[role=\"combobox\"]').first()\u001b[22m\n",
+                        "stack": "TimeoutError: locator.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('table tbody tr').first().locator('button[role=\"combobox\"]').first()\u001b[22m\n\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:349:22",
+                        "location": {
+                          "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                          "column": 22,
+                          "line": 349
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 347 |\u001b[39m     \u001b[36mconst\u001b[39m menuButton \u001b[33m=\u001b[39m primeraFila\u001b[33m.\u001b[39mlocator(\u001b[32m'button[role=\"combobox\"]'\u001b[39m)\u001b[33m.\u001b[39mfirst()\u001b[33m;\u001b[39m\n \u001b[90m 348 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 349 |\u001b[39m     \u001b[36mawait\u001b[39m menuButton\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 350 |\u001b[39m\n \u001b[90m 351 |\u001b[39m     \u001b[36mconst\u001b[39m tiempoRespuesta \u001b[33m=\u001b[39m \u001b[33mDate\u001b[39m\u001b[33m.\u001b[39mnow() \u001b[33m-\u001b[39m startTime\u001b[33m;\u001b[39m\n \u001b[90m 352 |\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                            "column": 22,
+                            "line": 349
+                          },
+                          "message": "TimeoutError: locator.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('table tbody tr').first().locator('button[role=\"combobox\"]').first()\u001b[22m\n\n\n  347 |     const menuButton = primeraFila.locator('button[role=\"combobox\"]').first();\n  348 |\n> 349 |     await menuButton.click();\n      |                      ^\n  350 |\n  351 |     const tiempoRespuesta = Date.now() - startTime;\n  352 |\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:349:22"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-06T04:37:59.876Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---P-4b83f--inicial-debe-ser-1-segundo-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---P-4b83f--inicial-debe-ser-1-segundo-chromium\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---P-4b83f--inicial-debe-ser-1-segundo-chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                        "column": 22,
+                        "line": 349
+                      }
+                    },
+                    {
+                      "workerIndex": 13,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 11215,
+                      "error": {
+                        "message": "TimeoutError: locator.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('table tbody tr').first().locator('button[role=\"combobox\"]').first()\u001b[22m\n",
+                        "stack": "TimeoutError: locator.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('table tbody tr').first().locator('button[role=\"combobox\"]').first()\u001b[22m\n\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:349:22",
+                        "location": {
+                          "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                          "column": 22,
+                          "line": 349
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 347 |\u001b[39m     \u001b[36mconst\u001b[39m menuButton \u001b[33m=\u001b[39m primeraFila\u001b[33m.\u001b[39mlocator(\u001b[32m'button[role=\"combobox\"]'\u001b[39m)\u001b[33m.\u001b[39mfirst()\u001b[33m;\u001b[39m\n \u001b[90m 348 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 349 |\u001b[39m     \u001b[36mawait\u001b[39m menuButton\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 350 |\u001b[39m\n \u001b[90m 351 |\u001b[39m     \u001b[36mconst\u001b[39m tiempoRespuesta \u001b[33m=\u001b[39m \u001b[33mDate\u001b[39m\u001b[33m.\u001b[39mnow() \u001b[33m-\u001b[39m startTime\u001b[33m;\u001b[39m\n \u001b[90m 352 |\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                            "column": 22,
+                            "line": 349
+                          },
+                          "message": "TimeoutError: locator.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('table tbody tr').first().locator('button[role=\"combobox\"]').first()\u001b[22m\n\n\n  347 |     const menuButton = primeraFila.locator('button[role=\"combobox\"]').first();\n  348 |\n> 349 |     await menuButton.click();\n      |                      ^\n  350 |\n  351 |     const tiempoRespuesta = Date.now() - startTime;\n  352 |\n    at C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts:349:22"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2025-10-06T04:38:12.010Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---P-4b83f--inicial-debe-ser-1-segundo-chromium-retry1\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---P-4b83f--inicial-debe-ser-1-segundo-chromium-retry1\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---P-4b83f--inicial-debe-ser-1-segundo-chromium-retry1\\error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\test-results\\campaign-closure-ux-UX---P-4b83f--inicial-debe-ser-1-segundo-chromium-retry1\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\ST\\Documents\\claude\\crm-madi\\crm-madi\\e2e\\campaign-closure-ux.spec.ts",
+                        "column": 22,
+                        "line": 349
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "857d2b2ee0459a051819-130a5a9968c145a9ce1d",
+              "file": "campaign-closure-ux.spec.ts",
+              "line": 341,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-10-06T04:31:28.359Z",
+    "duration": 415324.054,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 7,
+    "flaky": 0
+  }
+}
