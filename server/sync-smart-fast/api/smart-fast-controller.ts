@@ -92,7 +92,7 @@ export class SmartFastController {
           byMarca: byMarca
         },
         system: 'smart-fast',
-        idFormat: '{MARCA}_{YYYYMMDD}_{TELEFONO}_{NANO}'
+        idFormat: '{MARCA}_{YYYYMMDD}_{TELEFONO}_{TIMESTAMP}_{NANO}'
       });
 
     } catch (error: any) {
@@ -108,7 +108,7 @@ export class SmartFastController {
 
   /**
    * GET /api/sync/smart-fast/validate
-   * Valida integridad de datos (sin duplicados)
+   * Muestra estadísticas de duplicados (ahora permitidos)
    */
   async validateIntegrity(req: Request, res: Response): Promise<void> {
     try {
@@ -116,35 +116,39 @@ export class SmartFastController {
       const { opLead } = await import('@shared/schema');
       const { sql } = await import('drizzle-orm');
 
-      // Buscar duplicados por telefono+fecha+marca
+      // Contar duplicados por telefono+fecha+marca (ahora son válidos)
       const duplicates = await db.execute(sql`
         SELECT
           telefono,
           fecha_creacion,
           marca,
           COUNT(*) as count,
-          array_agg(meta_lead_id) as ids
+          array_agg(meta_lead_id ORDER BY created_at) as ids
         FROM ${opLead}
         WHERE telefono IS NOT NULL
           AND fecha_creacion IS NOT NULL
           AND marca IS NOT NULL
         GROUP BY telefono, fecha_creacion, marca
         HAVING COUNT(*) > 1
+        ORDER BY COUNT(*) DESC
+        LIMIT 20
       `);
 
-      const hasDuplicates = duplicates.rows.length > 0;
+      const totalDuplicateGroups = duplicates.rows.length;
+      const totalDuplicateRecords = duplicates.rows.reduce((sum: number, row: any) => sum + parseInt(row.count), 0);
 
       res.status(200).json({
         success: true,
         timestamp: new Date().toISOString(),
-        integrity: {
-          isValid: !hasDuplicates,
-          duplicatesFound: duplicates.rows.length,
-          duplicates: duplicates.rows
+        stats: {
+          duplicateGroups: totalDuplicateGroups,
+          totalDuplicateRecords: totalDuplicateRecords,
+          examples: duplicates.rows.slice(0, 10) // Top 10 grupos con más duplicados
         },
-        message: hasDuplicates
-          ? `⚠️ Encontrados ${duplicates.rows.length} grupos duplicados`
-          : '✅ Sin duplicados - integridad OK'
+        message: totalDuplicateGroups > 0
+          ? `📊 ${totalDuplicateGroups} grupos con duplicados (${totalDuplicateRecords} registros totales)`
+          : '✅ Sin duplicados registrados',
+        note: 'Los duplicados ahora son permitidos y se registran como entradas separadas'
       });
 
     } catch (error: any) {

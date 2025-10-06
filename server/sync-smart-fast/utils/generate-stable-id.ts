@@ -1,21 +1,23 @@
 import { nanoid } from 'nanoid';
 
 /**
- * Genera un metaLeadId ESTABLE basado en teléfono + fecha + marca
- * Este ID permanece constante aunque la fila cambie de posición en Google Sheets
+ * Genera un metaLeadId ÚNICO basado en teléfono + fecha + marca + timestamp
+ * Permite duplicados exactos insertando cada registro con un ID diferente
  *
- * Formato: {MARCA}_{YYYYMMDD}_{TEL_INICIO_4}{TEL_FIN_4}_{NANOID_6}
- * Ejemplo: "FIAT_20250104_12347890_a8B9cD"
+ * Formato: {MARCA}_{YYYYMMDD}_{TEL_INICIO_4}{TEL_FIN_4}_{TIMESTAMP}_{NANOID_4}
+ * Ejemplo: "FIAT_20250104_12347890_1704394800000_a8B9"
  *
  * @param telefono - Teléfono del lead (puede tener formato, se normaliza)
  * @param fechaCreacion - Fecha de creación del lead
  * @param marca - Marca/campaña
- * @returns ID único y estable
+ * @param timestamp - Timestamp para garantizar unicidad en duplicados
+ * @returns ID único garantizado
  */
 export function generateStableMetaLeadId(
   telefono: string,
   fechaCreacion: Date,
-  marca: string
+  marca: string,
+  timestamp: Date = new Date()
 ): string {
   // Normalizar teléfono: solo dígitos
   const normalizedPhone = telefono.replace(/[^\d]/g, '');
@@ -35,11 +37,14 @@ export function generateStableMetaLeadId(
   const phoneSuffix = normalizedPhone.slice(-4);
   const phoneDigits = phonePrefix + phoneSuffix;
 
-  // NanoID para garantizar unicidad (colisiones muy improbables)
-  const uniqueId = nanoid(6);
+  // Timestamp en milisegundos para unicidad en duplicados
+  const timestampMs = timestamp.getTime();
 
-  // Formato final: MARCA_FECHA_TELEFONO_NANO
-  return `${marca.toUpperCase()}_${dateStr}_${phoneDigits}_${uniqueId}`;
+  // NanoID corto para garantizar unicidad adicional
+  const uniqueId = nanoid(4);
+
+  // Formato final: MARCA_FECHA_TELEFONO_TIMESTAMP_NANO
+  return `${marca.toUpperCase()}_${dateStr}_${phoneDigits}_${timestampMs}_${uniqueId}`;
 }
 
 /**

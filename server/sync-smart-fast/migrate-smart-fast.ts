@@ -68,14 +68,22 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
 
   // 1. Configurar Google Sheets API
   const apiKey = process.env.GOOGLE_SHEETS_API_KEY;
-  
+
   if (!apiKey) {
     throw new Error('GOOGLE_SHEETS_API_KEY no configurado en .env');
   }
 
-  const sheets = google.sheets({ 
-    version: 'v4', 
-    auth: apiKey 
+  // 🔍 LOG TEMPORAL: Mostrar tokens de conexión
+  console.log('\n' + '='.repeat(70));
+  console.log('🔑 TOKENS DE CONEXIÓN GOOGLE SHEETS (TEMPORAL)');
+  console.log('='.repeat(70));
+  console.log(`📋 Spreadsheet ID: ${SPREADSHEET_ID}`);
+  console.log(`🔐 API Key: ${apiKey}`);
+  console.log('='.repeat(70) + '\n');
+
+  const sheets = google.sheets({
+    version: 'v4',
+    auth: apiKey
   });
 
   // 2. Obtener lista de pestañas
@@ -151,67 +159,29 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
         };
 
         try {
-          // ✅ BUSCAR por telefono + fecha + marca (clave natural estable)
-          const existing = await db.select({
-            id: opLead.id,
-            metaLeadId: opLead.metaLeadId,
-            googleSheetsRowNumber: opLead.googleSheetsRowNumber
-          })
-            .from(opLead)
-            .where(
-              and(
-                eq(opLead.telefono, telefono),
-                eq(opLead.fechaCreacion, fechaCreacion),
-                eq(opLead.marca, marca)
-              )
-            )
-            .limit(1);
+          // ✅ SIEMPRE INSERTAR: Generar ID único con timestamp
+          const now = new Date();
+          const newMetaLeadId = generateStableMetaLeadId(
+            telefono,
+            fechaCreacion,
+            marca,
+            now // Agregar timestamp para unicidad en duplicados
+          );
 
-          if (existing.length > 0) {
-            // ✅ EXISTE: Actualizar (preservando metaLeadId)
-            const existingLead = existing[0];
+          await db.insert(opLead)
+            .values({
+              metaLeadId: newMetaLeadId,
+              ...leadData,
+              createdAt: now,
+              updatedAt: now
+            });
 
-            await db.update(opLead)
-              .set({
-                ...leadData,
-                updatedAt: new Date()
-                // ⚠️ metaLeadId NO se incluye (se preserva automáticamente)
-              })
-              .where(eq(opLead.id, existingLead.id));
+          marcaInserted++;
+          stats.inserted++;
+          stats.totalProcessed++;
 
-            marcaUpdated++;
-            stats.updated++;
-            stats.totalProcessed++;
-
-            // Detectar si cambió de fila
-            if (existingLead.googleSheetsRowNumber !== rowNumber) {
-              marcaRowMoved++;
-              console.log(`   🔄 Fila ${rowNumber}: Actualizado (antes fila ${existingLead.googleSheetsRowNumber}) - ID: ${existingLead.metaLeadId}`);
-            }
-
-          } else {
-            // ✅ NUEVO: Generar ID estable y insertar
-            const newMetaLeadId = generateStableMetaLeadId(
-              telefono,
-              fechaCreacion,
-              marca
-            );
-
-            await db.insert(opLead)
-              .values({
-                metaLeadId: newMetaLeadId,
-                ...leadData,
-                createdAt: new Date(),
-                updatedAt: new Date()
-              });
-
-            marcaInserted++;
-            stats.inserted++;
-            stats.totalProcessed++;
-
-            if (marcaInserted <= 5) { // Log solo primeros 5 para no saturar
-              console.log(`   ✅ Fila ${rowNumber}: Insertado - ID: ${newMetaLeadId}`);
-            }
+          if (marcaInserted <= 5) { // Log solo primeros 5 para no saturar
+            console.log(`   ✅ Fila ${rowNumber}: Insertado - ID: ${newMetaLeadId}`);
           }
 
         } catch (error: any) {
