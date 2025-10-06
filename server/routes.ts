@@ -26,6 +26,7 @@ import { realtimeSync } from './realtime-sync';
 import { registerOptimizedRoute } from './optimized-route';
 import { registerSimpleOptimized } from './simple-optimized';
 import { registerDebugMaterialized } from './debug-materialized';
+import { registerWebhookRoutes } from './webhook';
 
 // LEGACY CODE REMOVED: ClientMatchingSystem migrado al nuevo sistema refactorizado
 // Ver: server/sync/domain/services/ClientMatcher.ts
@@ -2672,18 +2673,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/webhook/lead', async (req, res) => {
     try {
       console.log('Webhook received:', req.body);
-      
+
       // Validate required fields
       const requiredFields = ['email', 'firstName', 'lastName'];
       const missing = requiredFields.filter(field => !req.body[field]);
-      
+
       if (missing.length > 0) {
-        return res.status(400).json({ 
-          error: 'Missing required fields', 
-          missing 
+        return res.status(400).json({
+          error: 'Missing required fields',
+          missing
         });
       }
-      
+
       // Create lead from webhook data
       const leadData = {
         metaLeadId: req.body.metaLeadId || `WEBHOOK_${Date.now()}`,
@@ -2702,15 +2703,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cost: req.body.cost,
         leadDate: req.body.leadDate ? new Date(req.body.leadDate) : new Date()
       };
-      
+
       const lead = await storage.createLead(leadData);
-      
+
       // Broadcast real-time update
       const stats = await getRealtimeStats();
       broadcastDashboardUpdate(stats);
-      
-      res.status(201).json({ 
-        success: true, 
+
+      res.status(201).json({
+        success: true,
         leadId: lead.id,
         message: 'Lead created successfully'
       });
@@ -2719,6 +2720,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to process webhook' });
     }
   });
+
+  // Sistema de webhooks (refactorizado a Clean Architecture)
+  // Las rutas se registran desde el módulo webhook
+  // Ver: server/webhook/*
 
   // Test runner endpoint para pruebas funcionales
   app.post('/api/run-tests', async (req, res) => {
@@ -3558,6 +3563,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('✅ Ruta de debug materializada registrada');
   } catch (error) {
     console.error('❌ Error registrando ruta optimizada:', error);
+  }
+
+  // Registrar rutas del sistema de webhooks
+  try {
+    registerWebhookRoutes(app);
+  } catch (error) {
+    console.error('❌ Error registrando rutas de webhooks:', error);
   }
 
   return httpServer;

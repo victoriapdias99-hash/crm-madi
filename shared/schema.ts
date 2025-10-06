@@ -278,6 +278,19 @@ export const enviadosMetrics = pgTable("enviados_metrics", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Tabla para recibir leads desde webhooks externos
+export const opLeadWebhook = pgTable("op_lead_webhook", {
+  id: serial("id").primaryKey(),
+  nombre: text("nombre").notNull(),
+  telefono: text("telefono").notNull(),
+  auto: text("auto"), // Modelo o tipo de auto
+  localidad: text("localidad"),
+  comentarios: text("comentarios"),
+  source: text("source").notNull().default("webhook"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 
 // Zod schemas
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -373,6 +386,15 @@ export const insertEnviadosMetricsSchema = createInsertSchema(enviadosMetrics).p
   fechaInicio: true,
   fechaFin: true,
   lastCalculatedAt: true,
+});
+
+export const insertOpLeadWebhookSchema = createInsertSchema(opLeadWebhook).pick({
+  nombre: true,
+  telefono: true,
+  auto: true,
+  localidad: true,
+  comentarios: true,
+  source: true,
 });
 
 
@@ -496,6 +518,9 @@ export type InsertSyncControl = z.infer<typeof insertSyncControlSchema>;
 
 export type EnviadosMetrics = typeof enviadosMetrics.$inferSelect;
 export type InsertEnviadosMetrics = z.infer<typeof insertEnviadosMetricsSchema>;
+
+export type OpLeadWebhook = typeof opLeadWebhook.$inferSelect;
+export type InsertOpLeadWebhook = z.infer<typeof insertOpLeadWebhookSchema>;
 
 
 export const CAMPAIGN_STATUS = {
