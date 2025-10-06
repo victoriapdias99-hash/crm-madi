@@ -177,10 +177,13 @@ export class PostgresCampaignRepository implements ICampaignRepository {
         throw new Error(`Verificación falló: fechaFin sigue siendo null después del UPDATE`);
       }
 
+      // Ensure updatedFechaFin is a Date object before calling toISOString()
+      const fechaFinDate = updatedFechaFin instanceof Date ? updatedFechaFin : new Date(updatedFechaFin);
+
       const totalDuration = Date.now() - startTime;
       console.log(`🎉 [${dbTrackingId}] ÉXITO TOTAL en ${totalDuration}ms`);
       console.log(`✅ [${dbTrackingId}] Campaña ${campaignId} cerrada exitosamente`);
-      console.log(`📅 [${dbTrackingId}] Fecha final verificada: ${updatedFechaFin.toISOString()}`);
+      console.log(`📅 [${dbTrackingId}] Fecha final verificada: ${fechaFinDate.toISOString()}`);
 
     } catch (error: any) {
       const errorDuration = Date.now() - startTime;

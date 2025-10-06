@@ -409,14 +409,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const localizacionFiltro = mapeoZonas[campana.zona as keyof typeof mapeoZonas] || campana.zona || 'Pais';
     
     // NUEVA LÓGICA: Calcular fecha_fin automáticamente si no existe
+    // DESHABILITADO: No calcular fecha fin automática para duplicados
     let fechaFinCalculada = campana.fechaFin;
-    
+
+    // Comentado para que NO limite duplicados por fecha fin automática
+    /*
     if (!fechaFinCalculada) {
       // Buscar la siguiente campaña del mismo cliente para calcular fecha límite
       const campanasDelCliente = todasLasCampanas
         .filter(c => c.clienteId === campana.clienteId)
         .sort((a, b) => new Date(a.fechaCampana).getTime() - new Date(b.fechaCampana).getTime());
-      
+
       const indiceCampanaActual = campanasDelCliente.findIndex(c => c.id === campana.id);
       if (indiceCampanaActual !== -1 && indiceCampanaActual < campanasDelCliente.length - 1) {
         // Hay una campaña siguiente, usar día anterior como límite
@@ -426,6 +429,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fechaFinCalculada = fechaSiguiente.toISOString().split('T')[0];
       }
     }
+    */
     
     // 🎯 NUEVA LÓGICA: Soporte para múltiples marcas en duplicados
     const brands = extractBrandsFromCampaign(campana, campana.asignacionAutomatica);
@@ -434,7 +438,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Crear condición para múltiples marcas (OR entre todas las marcas configuradas)
     const multiBrandCondition = createMultiBrandCondition(brands, opLeadsRepTable.campaign);
 
-    return await db
+    const result = await db
       .select({ totalDuplicados: sql<number>`SUM(${opLeadsRepTable.cantidadDuplicados})` })
       .from(opLeadsRepTable)
       .where(sql`${multiBrandCondition}
@@ -444,6 +448,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             AND (${opLeadsRepTable.campaignId} IS NULL OR ${opLeadsRepTable.campaignId} = ${campana.id})
             AND date(${opLeadsRepTable.fechaCreacion}) >= ${campana.fechaCampana}
             ${fechaFinCalculada ? sql`AND date(${opLeadsRepTable.fechaCreacion}) <= ${fechaFinCalculada}` : sql``}`);
+
+    console.log(`📊 DUPLICADOS QUERY - Campaña ${campana.numeroCampana} (${campana.nombreComercial}):`, {
+      fechaInicio: campana.fechaCampana,
+      fechaFin: fechaFinCalculada || 'SIN LÍMITE',
+      resultado: result[0]?.totalDuplicados || 0
+    });
+
+    return result;
   }
 
   async function contarLeadsPorCampana(campana: any, clienteData: any, db: any, opLeadsRepTable: any, sql: any, count: any, todasLasCampanas: any[]) {

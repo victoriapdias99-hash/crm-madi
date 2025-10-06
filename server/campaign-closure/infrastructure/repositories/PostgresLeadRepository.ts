@@ -3,6 +3,7 @@ import { AvailableLead } from '../../domain/entities/CampaignClosure';
 import { ILeadRepository } from '../../domain/interfaces/ILeadRepository';
 import { opLeadsRep, opLead } from '@shared/schema';
 import { normalizeClientName } from '../../../../shared/utils/client-normalization';
+import { createMultiBrandCondition } from '../../../../shared/utils/multi-brand-utils';
 
 /**
  * Implementación PostgreSQL del repositorio de leads
@@ -37,14 +38,17 @@ export class PostgresLeadRepository implements ILeadRepository {
    */
   async getAvailableLeadsForClient(clientName: string, brandName: string, zone: string): Promise<AvailableLead[]> {
     await this.ensureDbInitialized();
-    
+
     try {
       // Normalizar nombres para matching
       const normalizedClient = normalizeClientName(clientName);
-      const normalizedBrand = brandName?.toLowerCase() || '';
       const normalizedZone = this.normalizeZoneName(zone);
 
-      console.log(`🔍 ⏱️ [TIMING] Iniciando búsqueda de leads desde op_leads_rep: cliente=${normalizedClient}, marca=${normalizedBrand}, zona=${normalizedZone}`);
+      console.log(`🔍 ⏱️ [TIMING] Iniciando búsqueda de leads desde op_leads_rep: cliente=${normalizedClient}, marca=${brandName}, zona=${normalizedZone}`);
+
+      // ✅ USAR FUNCIÓN CENTRALIZADA para condición de marca
+      const brandsInfo = [{ marca: brandName, porcentaje: 100 }];
+      const multiBrandCondition = createMultiBrandCondition(brandsInfo, opLeadsRep.campaign);
 
       // NUEVA LÓGICA: Buscar desde op_leads_rep para obtener leads únicos con duplicate_ids
       // CORREGIDO: Solo buscar leads que NO estén asignados (campaignId IS NULL)
@@ -54,9 +58,9 @@ export class PostgresLeadRepository implements ILeadRepository {
         .where(
           and(
             isNull(opLeadsRep.campaignId), // CRÍTICO: Solo leads no asignados
-            ilike(opLeadsRep.marca, `%${normalizedBrand}%`),
-            ilike(opLeadsRep.cliente, `%${normalizedClient}%`),
-            ilike(opLeadsRep.localizacion, `%${normalizedZone}%`)
+            multiBrandCondition,           // ✅ Usar función centralizada
+            eq(opLeadsRep.cliente, normalizedClient),  // ✅ Comparación exacta
+            eq(opLeadsRep.localizacion, normalizedZone) // ✅ Comparación exacta
           )
         )
         .orderBy(asc(opLeadsRep.fechaCreacion));
@@ -519,11 +523,9 @@ export class PostgresLeadRepository implements ILeadRepository {
       const normalizedClientName = normalizeClientName(clientName);
       const normalizedZone = this.normalizeZoneName(zone);
 
-      // Crear condiciones OR para todas las marcas
-      const brandConditions = brands.map(brand =>
-        sql`lower(${opLeadsRep.campaign}) LIKE ${`%${(brand || '').toLowerCase()}%`}`
-      );
-      const multiBrandCondition = sql`(${sql.join(brandConditions, sql` OR `)})`;
+      // ✅ USAR FUNCIÓN CENTRALIZADA para multi-marca
+      const brandsInfo = brands.map(marca => ({ marca, porcentaje: 0 })); // Porcentaje no importa aquí
+      const multiBrandCondition = createMultiBrandCondition(brandsInfo, opLeadsRep.campaign);
 
       console.log(`🔍 Buscando leads unificados para todas las marcas...`);
 
@@ -548,9 +550,9 @@ export class PostgresLeadRepository implements ILeadRepository {
         })
         .from(opLeadsRep)
         .where(sql`
-          lower(${opLeadsRep.cliente}) LIKE ${`%${normalizedClientName}%`}
-          AND ${multiBrandCondition}
-          AND lower(${opLeadsRep.localizacion}) = ${(normalizedZone || '').toLowerCase()}
+          ${multiBrandCondition}
+          AND ${opLeadsRep.cliente} = ${normalizedClientName}
+          AND ${opLeadsRep.localizacion} = ${normalizedZone}
           AND (${opLeadsRep.campaignId} IS NULL OR ${opLeadsRep.campaignId} = ${campaignId})
         `)
         .orderBy(sql`${opLeadsRep.createdAt} ASC`)  // ✅ ORDEN CRONOLÓGICO

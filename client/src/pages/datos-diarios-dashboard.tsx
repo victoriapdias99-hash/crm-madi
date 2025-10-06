@@ -604,9 +604,7 @@ export default function DatosDiariosDashboard() {
     
     if (filtroProcesoMarca) {
       campanasEnProcesoFiltradas = campanasEnProcesoFiltradas.filter((data: DatosDiariosData) => {
-        // Usar lógica simple para filtros (fallback antes de que campanasComerciales esté disponible)
-        const marca = data.cliente.match(/^([A-Z]+)/)?.[1] || data.cliente.split(' ')[0];
-        return marca === filtroProcesoMarca;
+        return data.marca === filtroProcesoMarca;
       });
     }
     
@@ -642,9 +640,7 @@ export default function DatosDiariosDashboard() {
     
     if (filtroFinalizadasMarca) {
       campanasFinalizadasFiltradas = campanasFinalizadasFiltradas.filter((data: DatosDiariosData) => {
-        // Usar lógica simple para filtros (fallback antes de que campanasComerciales esté disponible)
-        const marca = data.cliente.match(/^([A-Z]+)/)?.[1] || data.cliente.split(' ')[0];
-        return marca === filtroFinalizadasMarca;
+        return data.marca === filtroFinalizadasMarca;
       });
     }
     
@@ -2005,7 +2001,7 @@ export default function DatosDiariosDashboard() {
                       <td className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100">
                         —
                       </td>
-                      <td colSpan={showDuplicatesOnly ? 13 : 12} className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100 text-lg">
+                      <td colSpan={showDuplicatesOnly ? 11 : 10} className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100 text-lg">
                         TOTAL CAMPAÑAS EN PROCESO
                       </td>
                       <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
