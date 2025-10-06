@@ -67,25 +67,30 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
   };
 
   // 1. Configurar Google Sheets API
-  const auth = await google.auth.getClient({
-    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly']
-  });
+  const apiKey = process.env.GOOGLE_SHEETS_API_KEY;
+  
+  if (!apiKey) {
+    throw new Error('GOOGLE_SHEETS_API_KEY no configurado en .env');
+  }
 
-  const sheets = google.sheets({ version: 'v4', auth });
+  const sheets = google.sheets({ 
+    version: 'v4', 
+    auth: apiKey 
+  });
 
   // 2. Obtener lista de pestañas
   const spreadsheet = await sheets.spreadsheets.get({
     spreadsheetId: SPREADSHEET_ID
   });
 
-  const sheetNames = spreadsheet.data.sheets
+  const sheetNames = (spreadsheet.data.sheets
     ?.map(s => s.properties?.title)
-    .filter(name =>
-      name &&
+    .filter((name): name is string =>
+      !!name &&
       !EXCLUDED_SHEETS.some(excluded =>
         name.toLowerCase().includes(excluded.toLowerCase())
       )
-    ) || [];
+    ) || []) as string[];
 
   console.log(`📋 Marcas encontradas: ${sheetNames.join(', ')}\n`);
 
@@ -237,44 +242,45 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
   return stats;
 }
 
-// Ejecutar migración si se llama directamente
-if (require.main === module) {
-  async function main() {
-    try {
-      const stats = await migrateSmartFast();
+// Función principal para ejecutar migración
+async function main() {
+  try {
+    const stats = await migrateSmartFast();
 
-      console.log('\n' + '='.repeat(70));
-      console.log('🎉 MIGRACIÓN SMART-FAST COMPLETADA');
-      console.log('='.repeat(70));
-      console.log(`📊 Total procesado:     ${stats.totalProcessed}`);
-      console.log(`✅ Nuevos insertados:   ${stats.inserted}`);
-      console.log(`🔄 Actualizados:        ${stats.updated}`);
-      console.log(`⏭️  Omitidos (sin tel): ${stats.skipped}`);
-      console.log(`❌ Errores:             ${stats.errors}`);
-      console.log('='.repeat(70));
+    console.log('\n' + '='.repeat(70));
+    console.log('🎉 MIGRACIÓN SMART-FAST COMPLETADA');
+    console.log('='.repeat(70));
+    console.log(`📊 Total procesado:     ${stats.totalProcessed}`);
+    console.log(`✅ Nuevos insertados:   ${stats.inserted}`);
+    console.log(`🔄 Actualizados:        ${stats.updated}`);
+    console.log(`⏭️  Omitidos (sin tel): ${stats.skipped}`);
+    console.log(`❌ Errores:             ${stats.errors}`);
+    console.log('='.repeat(70));
 
-      if (stats.details.length > 0) {
-        console.log('\n📋 DETALLE POR MARCA:');
-        console.log('-'.repeat(70));
-        stats.details.forEach(detail => {
-          const moved = detail.rowMoved > 0 ? ` (${detail.rowMoved} movidos)` : '';
-          console.log(
-            `   ${detail.marca.padEnd(20)} → ` +
-            `${detail.inserted} nuevos, ${detail.updated} actualizados${moved}`
-          );
-        });
-        console.log('-'.repeat(70));
-      }
-
-      console.log('\n✅ Migración exitosa - IDs estables preservados\n');
-      process.exit(0);
-
-    } catch (error: any) {
-      console.error('\n❌ ERROR FATAL:', error.message);
-      console.error(error.stack);
-      process.exit(1);
+    if (stats.details.length > 0) {
+      console.log('\n📋 DETALLE POR MARCA:');
+      console.log('-'.repeat(70));
+      stats.details.forEach(detail => {
+        const moved = detail.rowMoved > 0 ? ` (${detail.rowMoved} movidos)` : '';
+        console.log(
+          `   ${detail.marca.padEnd(20)} → ` +
+          `${detail.inserted} nuevos, ${detail.updated} actualizados${moved}`
+        );
+      });
+      console.log('-'.repeat(70));
     }
-  }
 
+    console.log('\n✅ Migración exitosa - IDs estables preservados\n');
+    process.exit(0);
+
+  } catch (error: any) {
+    console.error('\n❌ ERROR FATAL:', error.message);
+    console.error(error.stack);
+    process.exit(1);
+  }
+}
+
+// Ejecutar migración si se llama directamente
+if (import.meta.url === `file://${process.argv[1]}`) {
   main();
 }
