@@ -305,17 +305,16 @@ export class PostgresLeadRepository implements ILeadRepository {
     limit: number
   ): Promise<AvailableLead[]> {
     await this.ensureDbInitialized();
-    
+
     try {
       const normalizedClient = normalizeClientName(clientName);
       const normalizedBrand = brandName?.toLowerCase() || '';
       const normalizedZone = this.normalizeZoneName(zone);
 
-      console.log(`🚀 [OPTIMIZADO] Obteniendo máximo ${limit} leads ÚNICOS para asignación`);
+      console.log(`🚀 [OPTIMIZADO V2] Obteniendo máximo ${limit} leads ÚNICOS para asignación`);
       const startTime = Date.now();
 
-      // IMPORTANTE: Usar opLeadsRep para obtener leads únicos con duplicateIds
-      // CORREGIDO: Solo buscar leads que NO estén asignados (campaignId IS NULL)
+      // PASO 1: Obtener leads únicos candidatos
       const uniqueLeads = await this.db
         .select()
         .from(opLeadsRep)
@@ -328,35 +327,53 @@ export class PostgresLeadRepository implements ILeadRepository {
           )
         )
         .orderBy(asc(opLeadsRep.fechaCreacion))
-        .limit(limit * 2); // Traer más para compensar por leads ya asignados
+        .limit(limit * 3); // Traer más para compensar por leads ya asignados
 
-      console.log(`📊 Query completada: ${uniqueLeads.length} leads únicos obtenidos`);
-      
-      // Filtrar solo los que no tienen ninguno de sus duplicados asignados
+      console.log(`📊 [PASO 1] ${uniqueLeads.length} leads únicos candidatos obtenidos`);
+
+      if (uniqueLeads.length === 0) {
+        console.log(`⚠️ No hay leads únicos disponibles`);
+        return [];
+      }
+
+      // PASO 2: ✅ OPTIMIZACIÓN - Una sola query para verificar todos los duplicados
+      const step2Start = Date.now();
+      const allDuplicateIds = uniqueLeads.flatMap(lead => lead.duplicateIds || [lead.id]);
+
+      console.log(`🔍 [PASO 2] Verificando ${allDuplicateIds.length} duplicados con UNA sola query...`);
+
+      // ✅ Query única para obtener todos los leads asignados
+      const assignedLeads = await this.db
+        .select({
+          id: opLead.id,
+          campaignId: opLead.campaignId
+        })
+        .from(opLead)
+        .where(
+          and(
+            inArray(opLead.id, allDuplicateIds),
+            sql`${opLead.campaignId} IS NOT NULL`
+          )
+        );
+
+      console.log(`✅ [PASO 2] Query completada en ${Date.now() - step2Start}ms - ${assignedLeads.length} duplicados asignados encontrados`);
+
+      // PASO 3: Crear Set para lookup O(1) y filtrar leads disponibles
+      const step3Start = Date.now();
+      const assignedSet = new Set(assignedLeads.map(l => l.id));
+
       const availableUniqueLeads: AvailableLead[] = [];
-      let checkedCount = 0;
-      
+
       for (const uniqueLead of uniqueLeads) {
         if (availableUniqueLeads.length >= limit) break; // Ya tenemos suficientes
-        
-        checkedCount++;
-        const duplicateIds = uniqueLead.duplicateIds || [uniqueLead.id];
-        
-        // Verificar si alguno de los duplicados ya está asignado
-        const assignedCheck = await this.db
-          .select({ count: sql<number>`count(*)::int` })
-          .from(opLead)
-          .where(
-            and(
-              inArray(opLead.id, duplicateIds),
-              sql`${opLead.campaignId} IS NOT NULL`
-            )
-          );
 
-        const alreadyAssigned = assignedCheck[0]?.count || 0;
-        
-        if (alreadyAssigned === 0) {
-          // Ningún duplicado está asignado, incluir este lead único con sus duplicateIds
+        const duplicateIds = uniqueLead.duplicateIds || [uniqueLead.id];
+
+        // Verificar si alguno de los duplicados está en el Set (O(1) por verificación)
+        const hasAssignedDuplicate = duplicateIds.some(id => assignedSet.has(id));
+
+        if (!hasAssignedDuplicate) {
+          // Ningún duplicado está asignado, incluir este lead único
           availableUniqueLeads.push({
             ...this.mapOpLeadRepToAvailableLead(uniqueLead),
             duplicateIds: duplicateIds // IMPORTANTE: Incluir los duplicateIds
@@ -364,9 +381,12 @@ export class PostgresLeadRepository implements ILeadRepository {
         }
       }
 
+      console.log(`✅ [PASO 3] Filtrado completado en ${Date.now() - step3Start}ms`);
+
       const queryTime = Date.now() - startTime;
-      console.log(`✅ [OPTIMIZADO] ${availableUniqueLeads.length} leads únicos disponibles de ${checkedCount} verificados en ${queryTime}ms`);
+      console.log(`🎯 [OPTIMIZADO V2] ${availableUniqueLeads.length} leads únicos disponibles en ${queryTime}ms`);
       console.log(`📦 Total de duplicados a asignar: ${availableUniqueLeads.reduce((sum, lead) => sum + (lead.duplicateIds?.length || 1), 0)}`);
+      console.log(`⚡ Mejora: ${uniqueLeads.length} queries evitadas → 1 query única`);
 
       return availableUniqueLeads;
     } catch (error: any) {

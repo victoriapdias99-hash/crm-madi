@@ -843,6 +843,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const clientesMap = new Map(clientes.map(c => [c.id, c]));
       console.log(`✅ [OPTIMIZED] ${clientes.length} clientes cargados en memoria`);
 
+      // 🚀 OPTIMIZACIÓN 4: Batch query para CPLs - cargar todos de una vez
+      const { dashboardManualValues } = await import('../shared/schema');
+      const allCplsData = await db.select().from(dashboardManualValues);
+
+      // Crear Map de CPLs usando hash de clienteNombre_numeroCampana
+      const cplsMap = new Map<string, number>();
+      for (const campana of campanas) {
+        const clienteData = clientesMap.get(campana.clienteId);
+        if (clienteData) {
+          const clienteIdentificador = `${campana.marca.toUpperCase()} ${campana.numeroCampana}`;
+          const uniqueKey = `${clienteIdentificador}-${campana.numeroCampana}`;
+          const hash = (storage as any).hashString ? (storage as any).hashString(uniqueKey) : 0;
+
+          const cplEntry = allCplsData.find(c => c.clienteIndex === hash);
+          if (cplEntry?.cpl) {
+            cplsMap.set(uniqueKey, parseFloat(cplEntry.cpl));
+          }
+        }
+      }
+      console.log(`✅ [OPTIMIZED] ${cplsMap.size} CPLs cargados en memoria (de ${allCplsData.length} registros)`);
+
       const processedData = [];
 
       for (const campana of campanas) {
@@ -881,8 +902,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const porcentajeDatosEnviados = percentageResult.percentage;
           const faltantesAEnviar = calculateFaltantesAEnviar(enviadosFinales, cantidadSolicitados);
 
-          // Obtener CPL desde la base de datos
-          const storedCpl = await storage.getCplByClienteAndCampana(clienteIdentificador, campana.numeroCampana);
+          // 🚀 OPTIMIZACIÓN 5: Obtener CPL desde Map (sin query)
+          const uniqueKey = `${clienteIdentificador}-${campana.numeroCampana}`;
+          const storedCpl = cplsMap.get(uniqueKey) || 0;
 
           // Aplicar guión si hay campaña anterior abierta
           let enviadosDisplay: string | number = enviadosFinales;

@@ -31,6 +31,8 @@ import {
 import { BrandDisplay, useBrandInfo } from "@/components/ui/brand-display";
 import { getCampaignBrandInfo as getEnhancedCampaignBrandInfo, isAutomaticAssignment } from "@shared/utils/brand-display-utils";
 import { TableSkeleton, LoadingProgress } from "@/components/ui/table-skeleton";
+import { CampaignClosureProgress } from "@/components/ui/campaign-closure-progress";
+import { useCampaignClosureProgress } from "@/hooks/use-campaign-closure-progress";
 
 interface DatosDiariosData {
   cliente: string;
@@ -483,6 +485,7 @@ export default function DatosDiariosDashboard() {
 
 
   // PostgreSQL query for data updates (using original endpoint while optimized is being debugged)
+  // PostgreSQL query for data updates (usando endpoint original por ahora)
   const { data: datosDiarios, isLoading, error, refetch } = useQuery<DatosDiariosData[]>({
     queryKey: ['/api/dashboard/datos-diarios-db'],
     refetchInterval: 30 * 1000, // Refresh every 30 seconds (PostgreSQL is fast enough)
@@ -3008,6 +3011,31 @@ export default function DatosDiariosDashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Componente de progreso flotante - se muestra cuando hay una campaña cerrándose */}
+      {Array.from(closingCampaigns).map(campaignKey => (
+        <CampaignClosureProgress
+          key={campaignKey}
+          campaignKey={campaignKey}
+          onComplete={() => {
+            setClosingCampaigns(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(campaignKey);
+              return newSet;
+            });
+            // Refrescar datos
+            queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+          }}
+          onError={(error) => {
+            setClosingCampaigns(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(campaignKey);
+              return newSet;
+            });
+          }}
+        />
+      ))}
     </div>
   );
 }

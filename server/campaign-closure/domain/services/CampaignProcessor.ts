@@ -12,6 +12,14 @@ export interface ProgressEvent {
   timestamp: Date;
 }
 
+// Interfaz para eventos de error
+export interface ProgressErrorEvent {
+  type: 'campaign-error';
+  campaignKey: string;
+  error: string;
+  timestamp: Date;
+}
+
 // Manager de WebSocket para eventos de progreso
 class ProgressEventManager {
   private static instance: ProgressEventManager;
@@ -54,14 +62,14 @@ class ProgressEventManager {
       message,
       startTime: this.processingCampaigns.get(campaignKey)?.startTime || new Date()
     });
-    
+
     // Si llegó al 100%, remover después de un tiempo
     if (progress >= 100) {
       setTimeout(() => {
         this.processingCampaigns.delete(campaignKey);
       }, 5000); // 5 segundos después de completar
     }
-    
+
     const connection = this.connections.get(campaignKey);
     if (connection && connection.readyState === WebSocket.OPEN) {
       const event: ProgressEvent = {
@@ -75,6 +83,25 @@ class ProgressEventManager {
       console.log(`📡 Progreso emitido para ${campaignKey}: ${progress}% - ${message}`);
     } else {
       console.log(`📡 Progreso almacenado para ${campaignKey}: ${progress}% - ${message} (sin conexión WebSocket)`);
+    }
+  }
+
+  emitError(campaignKey: string, error: string) {
+    // Remover del tracking de procesamiento
+    this.processingCampaigns.delete(campaignKey);
+
+    const connection = this.connections.get(campaignKey);
+    if (connection && connection.readyState === WebSocket.OPEN) {
+      const event: ProgressErrorEvent = {
+        type: 'campaign-error',
+        campaignKey,
+        error,
+        timestamp: new Date()
+      };
+      connection.send(JSON.stringify(event));
+      console.log(`❌ Error emitido para ${campaignKey}: ${error}`);
+    } else {
+      console.log(`❌ Error almacenado para ${campaignKey}: ${error} (sin conexión WebSocket)`);
     }
   }
 }
@@ -479,8 +506,9 @@ export class CampaignProcessor {
         }
       });
 
+      // ✅ Emitir evento de error específico (NO al 100%)
       if (campaignKey) {
-        this.progressManager.emitProgress(campaignKey, 100, `Error: ${error.message}`);
+        this.progressManager.emitError(campaignKey, error.message);
       }
       return { success: false, leadsAssigned: 0, error: error.message };
     }
