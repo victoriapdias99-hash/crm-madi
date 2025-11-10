@@ -3,6 +3,26 @@
 
 ---
 
+## 📚 SUITE DE DOCUMENTACIÓN
+
+Este documento es parte de una suite completa de documentación del módulo Campaign Closure:
+
+| Documento | Descripción | Audiencia |
+|-----------|-------------|-----------|
+| **[README.md](./README.md)** | 📖 Punto de entrada, inicio rápido y conceptos clave | Todos |
+| **[CIERRE_CAMPANAS_GUIA_COMPLETA.md](./CIERRE_CAMPANAS_GUIA_COMPLETA.md)** | 📘 Guía técnica detallada con diagramas y troubleshooting | Desarrolladores / IA |
+| **[ARCHITECTURE.md](./ARCHITECTURE.md)** | 🏛️ Arquitectura Clean, patrones y decisiones de diseño | Arquitectos / Desarrolladores Senior |
+| **[API.md](./API.md)** | 🔌 Referencia completa de endpoints HTTP y WebSocket | Backend Developers / QA |
+| **[FRONTEND.md](./FRONTEND.md)** | 🎨 Componentes React, hooks y ejemplos de integración | Frontend Developers |
+
+**💡 Recomendación de Lectura**:
+1. Empieza por [README.md](./README.md) para una visión general
+2. Lee este documento (CIERRE_CAMPANAS_GUIA_COMPLETA.md) para entender el flujo técnico completo
+3. Consulta [ARCHITECTURE.md](./ARCHITECTURE.md) para decisiones de diseño
+4. Usa [API.md](./API.md) y [FRONTEND.md](./FRONTEND.md) como referencia durante desarrollo
+
+---
+
 ## 📋 TABLA DE CONTENIDOS
 
 1. [Resumen Ejecutivo](#resumen-ejecutivo)
@@ -649,6 +669,8 @@ for (let i = 0; i < allDuplicateIds.length; i += batchSize) {
 
 ## ENDPOINTS API
 
+> 📖 **Documentación Completa**: Para referencia detallada de todos los endpoints con ejemplos de request/response, ver [API.md](./API.md)
+
 ### Archivo: `server/campaign-closure/presentation/routes/campaign-closure-routes.ts`
 
 ### 1. POST `/api/campaign-closure/execute`
@@ -1289,13 +1311,41 @@ Usar esta checklist para verificar que el proceso funciona correctamente:
 
 ---
 
+## DOCUMENTACIÓN RELACIONADA
+
+### Otras Guías
+
+Para información específica sobre temas relacionados, consultar:
+
+- **Arquitectura**: [ARCHITECTURE.md](./ARCHITECTURE.md) - Clean Architecture, SOLID, patrones
+- **API Reference**: [API.md](./API.md) - Todos los endpoints con ejemplos
+- **Frontend**: [FRONTEND.md](./FRONTEND.md) - Componentes React y hooks
+- **Inicio Rápido**: [README.md](./README.md) - Conceptos clave y ejemplos básicos
+
+### Archivos de Código Clave
+
+| Ubicación | Descripción | Ver en |
+|-----------|-------------|--------|
+| `domain/services/CampaignProcessor.ts` | Servicio principal de procesamiento | [Líneas 235-571](#flujo-principal-de-cierre) |
+| `infrastructure/repositories/PostgresLeadRepository.ts` | Acceso a leads | [Líneas 415-624](#asignación-de-leads) |
+| `shared/utils/multi-brand-utils.ts` | Filtros centralizados | [Líneas 231-277](#filtros-de-leads) |
+| `presentation/controllers/CampaignClosureController.ts` | Controller HTTP principal | [API.md](./API.md#post-execute) |
+| `client/src/components/ui/campaign-closure-progress.tsx` | Componente de progreso | [FRONTEND.md](./FRONTEND.md#campaignclosureprogress) |
+| `client/src/hooks/use-campaign-closure-progress.tsx` | Hook WebSocket | [FRONTEND.md](./FRONTEND.md#usecampaignclosureprogress) |
+
+---
+
 ## VERSIÓN DEL DOCUMENTO
 
-- **Versión**: 1.0.0
-- **Fecha**: 2025-10-30
-- **Autor**: Sistema de Documentación Automática
+- **Versión**: 1.1.0
+- **Fecha**: 2025-01-15
+- **Autor**: Sistema de Documentación CRM MADI
 - **Verificado contra código**: ✅ 100% alineado
-- **Última actualización del código**: 2025-10-30
+- **Última actualización del código**: 2025-01-15
+- **Cambios en v1.1.0**:
+  - Agregada suite completa de documentación
+  - Referencias cruzadas entre documentos
+  - Mejorada navegación
 
 ---
 

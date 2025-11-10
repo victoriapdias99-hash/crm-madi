@@ -2,6 +2,17 @@
 
 Módulo refactorizado para reset de campañas usando Clean Architecture.
 
+## 📚 Documentación Completa
+
+| Documento | Descripción |
+|-----------|-------------|
+| [README.md](./README.md) | Guía general y API endpoints (este archivo) |
+| [TECHNICAL-ANALYSIS.md](./TECHNICAL-ANALYSIS.md) | Análisis técnico detallado del código |
+| [SQL-OPERATIONS.md](./SQL-OPERATIONS.md) | Queries SQL y análisis de rendimiento |
+| [PERFORMANCE-GUIDE.md](./PERFORMANCE-GUIDE.md) | Guía de optimizaciones con código implementable |
+| [MIGRATION-GUIDE.md](./MIGRATION-GUIDE.md) | Migración de scripts CLI a API REST |
+| [test-api.sh](./test-api.sh) | Script de pruebas de API |
+
 ## 📁 Estructura
 
 ```
@@ -285,6 +296,59 @@ POST http://localhost:5000/api/campaign-reset/batch?dryRun=true
 5. **API REST estándar**
    - Endpoints HTTP en lugar de scripts CLI
    - Integrable con frontend o herramientas
+
+---
+
+## 📊 Métricas de Rendimiento
+
+### Estado Actual (Sin optimizar)
+
+#### Reset Individual
+- **Tiempo:** ~30ms
+- **Queries:** 5 (3 SELECT + 2 UPDATE)
+- **Casos de uso:** Campaña con 100 leads
+
+#### Reset Batch
+- **Tiempo:** ~1740ms (1.74 segundos)
+- **Queries:** 161 (81 SELECT + 80 UPDATE)
+- **Casos de uso:** 40 campañas con avg 200 leads
+
+### Rendimiento Optimizado (Propuesto)
+
+Ver [PERFORMANCE-GUIDE.md](./PERFORMANCE-GUIDE.md) para detalles completos.
+
+#### Reset Batch Optimizado
+- **Tiempo:** ~150ms (91% más rápido)
+- **Queries:** 6 (96% menos queries)
+- **Mejoras principales:**
+  - Bulk UPDATEs
+  - Filtros SQL en lugar de memoria
+  - Transacciones atómicas
+
+---
+
+## 🔍 Análisis Técnico
+
+Para entender el funcionamiento interno del módulo:
+
+- **[TECHNICAL-ANALYSIS.md](./TECHNICAL-ANALYSIS.md)**: Análisis completo línea por línea
+  - Arquitectura detallada
+  - Flujos de ejecución
+  - Modelos de datos
+  - Manejo de errores
+  - Consideraciones de seguridad
+
+- **[SQL-OPERATIONS.md](./SQL-OPERATIONS.md)**: Operaciones de base de datos
+  - Queries SQL generadas
+  - Análisis de performance
+  - EXPLAIN ANALYZE
+  - Índices recomendados
+
+- **[PERFORMANCE-GUIDE.md](./PERFORMANCE-GUIDE.md)**: Guía práctica de optimización
+  - Código implementable
+  - Benchmarks
+  - Plan de migración
+  - Testing de performance
 
 ---
 

@@ -28,7 +28,7 @@ import CplAnalysis from "@/pages/cpl-analysis";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={DatosDiariosDashboard} />
+      <Route path="/" component={CampanasPendientes} />
       <Route path="/datos-diarios" component={DatosDiariosDashboard} />
       <Route path="/datos-diarios-dashboard" component={DatosDiariosDashboard} />
       <Route path="/datos-diarios-centralized" component={DatosDiariosCentralized} />
