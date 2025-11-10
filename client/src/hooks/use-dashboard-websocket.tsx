@@ -56,9 +56,7 @@ export function useDashboardWebSocket(): DashboardWebSocketHook {
 
     try {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      // En desarrollo, usar puerto 5000 explícitamente
-      const host = import.meta.env.DEV ? 'localhost:5000' : window.location.host;
-      const wsUrl = `${protocol}//${host}/ws`;
+      const wsUrl = `${protocol}//${window.location.host}/ws`;
 
       console.log(`🔗 Conectando WebSocket del dashboard: ${wsUrl}`);
       const ws = new WebSocket(wsUrl);

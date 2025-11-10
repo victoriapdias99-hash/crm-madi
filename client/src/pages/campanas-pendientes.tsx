@@ -189,9 +189,7 @@ export default function CampanasPendientes() {
   // Función para conectar WebSocket
   const connectCampaignWebSocket = useCallback((campaignKey: string): WebSocket => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // En desarrollo, usar puerto 5000 explícitamente
-    const host = import.meta.env.DEV ? 'localhost:5000' : window.location.host;
-    const wsUrl = `${protocol}//${host}/ws`;
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
     const ws = new WebSocket(wsUrl);
 
     const timeoutId = setTimeout(() => {
@@ -618,9 +616,7 @@ export default function CampanasPendientes() {
   // Configurar listeners de WebSocket para refrescar automáticamente
   useEffect(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // En desarrollo, usar puerto 5000 explícitamente
-    const host = import.meta.env.DEV ? 'localhost:5000' : window.location.host;
-    const wsUrl = `${protocol}//${host}/ws`;
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
