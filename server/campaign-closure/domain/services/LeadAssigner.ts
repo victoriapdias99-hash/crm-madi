@@ -248,7 +248,6 @@ export class LeadAssigner {
 
       console.log(`✅ ASIGNACIÓN ATÓMICA COMPLETADA:`);
       console.log(`   📊 Leads asignados: ${result.assigned}`);
-      console.log(`   📅 Continuidad verificada: ${result.continuityVerified ? '✅' : '⚠️'}`);
       console.log(`   🔢 Conteo exacto verificado: ${result.exactCountVerified ? '✅' : '⚠️'}`);
       console.log(`   📅 Fecha final: ${result.finalLeadDate?.toISOString()}`);
 

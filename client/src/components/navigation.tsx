@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { BarChart3, Building2, Calendar, Settings, TrendingUp, Calculator, Target, Home, ArrowLeft, Link2, PieChart, Zap, BarChart } from "lucide-react";
+import { BarChart3, Building2, Calendar, Settings, TrendingUp, Calculator, Target, Home, ArrowLeft, Link2, PieChart, Zap, BarChart, Clock, CheckCircle } from "lucide-react";
 
 export function Navigation() {
   const [location] = useLocation();
@@ -17,7 +17,18 @@ export function Navigation() {
       icon: BarChart3,
       active: location === "/"
     },
-
+    {
+      href: "/campanas-pendientes",
+      label: "Campañas Pendientes",
+      icon: Clock,
+      active: location === "/campanas-pendientes"
+    },
+    {
+      href: "/campanas-finalizadas",
+      label: "Campañas Finalizadas",
+      icon: CheckCircle,
+      active: location === "/campanas-finalizadas"
+    },
 
     {
       href: "/clientes",

@@ -2,9 +2,19 @@ import { useState, useEffect } from 'react';
 import { Navigation } from '@/components/navigation';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, Edit2, Power } from 'lucide-react';
+import { Eye, Edit2, Power, AlertTriangle } from 'lucide-react';
 
 interface DashboardData {
   cliente: string;
@@ -68,6 +78,7 @@ export default function DashboardSimple() {
   const [closingCampaign, setClosingCampaign] = useState<string | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<DashboardData | null>(null);
+  const [confirmCloseCampaign, setConfirmCloseCampaign] = useState<DashboardData | null>(null);
   const { toast } = useToast();
 
   const fetchData = async () => {
@@ -332,7 +343,7 @@ export default function DashboardSimple() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleCloseCampaign(item)}
+                            onClick={() => setConfirmCloseCampaign(item)}
                             disabled={closingCampaign === item.numeroCampana}
                             className="h-8 px-3"
                             data-testid={`button-close-campaign-${item.numeroCampana}`}
@@ -543,43 +554,43 @@ export default function DashboardSimple() {
                   <p className="text-sm font-medium">{editingCampaign.clienteNombre}</p>
                   <p className="text-xs text-gray-600">Campaña #{editingCampaign.numeroCampana}</p>
                 </div>
-                
+
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium mb-1">Cantidad Solicitada</label>
-                    <Input 
-                      type="number" 
+                    <Input
+                      type="number"
                       defaultValue={editingCampaign.cantidadSolicitada}
                       className="w-full"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium mb-1">Zona</label>
-                    <Input 
+                    <Input
                       defaultValue={editingCampaign.zona}
                       className="w-full"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium mb-1">Pedidos por Día</label>
-                    <Input 
-                      type="number" 
+                    <Input
+                      type="number"
                       defaultValue={editingCampaign.pedidosPorDia}
                       className="w-full"
                     />
                   </div>
                 </div>
-                
+
                 <div className="flex justify-end space-x-2 pt-4">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => setEditModalOpen(false)}
                   >
                     Cancelar
                   </Button>
-                  <Button 
+                  <Button
                     className="bg-blue-600 hover:bg-blue-700"
                     onClick={() => {
                       toast({
@@ -596,6 +607,67 @@ export default function DashboardSimple() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* AlertDialog para confirmar cierre de campaña */}
+        <AlertDialog open={!!confirmCloseCampaign} onOpenChange={(open) => !open && setConfirmCloseCampaign(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-orange-500" />
+                Confirmar Cierre de Campaña
+              </AlertDialogTitle>
+              <AlertDialogDescription className="space-y-3">
+                {confirmCloseCampaign && (
+                  <>
+                    <p>
+                      ¿Estás seguro que deseas cerrar la campaña <strong>#{confirmCloseCampaign.numeroCampana}</strong> de{' '}
+                      <strong>{confirmCloseCampaign.clienteNombre}</strong>?
+                    </p>
+                    <div className="bg-gray-50 p-3 rounded space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Enviados:</span>
+                        <span className="font-medium">{confirmCloseCampaign.enviados}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Total solicitado:</span>
+                        <span className="font-medium">{confirmCloseCampaign.pedidosTotal}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Progreso:</span>
+                        <span className="font-medium">{confirmCloseCampaign.porcentajeDatosEnviados.toFixed(1)}%</span>
+                      </div>
+                    </div>
+                    {confirmCloseCampaign.porcentajeDatosEnviados < 100 && (
+                      <div className="bg-yellow-50 border border-yellow-200 p-3 rounded">
+                        <p className="text-sm text-yellow-800">
+                          ⚠️ <strong>Nota:</strong> La campaña aún no ha alcanzado su meta. Faltan{' '}
+                          <strong>{confirmCloseCampaign.faltantesAEnviar}</strong> leads por enviar.
+                        </p>
+                      </div>
+                    )}
+                    <p className="text-sm text-gray-600">
+                      Esta acción cerrará la campaña y no podrá deshacerse.
+                    </p>
+                  </>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (confirmCloseCampaign) {
+                    handleCloseCampaign(confirmCloseCampaign);
+                    setConfirmCloseCampaign(null);
+                  }
+                }}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Cerrar Campaña
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
       </div>
     </div>

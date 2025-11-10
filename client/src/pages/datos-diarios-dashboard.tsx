@@ -136,11 +136,15 @@ export default function DatosDiariosDashboard() {
   const [cplValues, setCplValues] = useState<Record<number, number>>({});
   
   // WebSocket para refresh automático inmediato tras cierre de campañas
-  const { isConnected: wsConnected, connectionError, reconnectCount } = useDashboardWebSocket();
+  const { isConnected: wsConnected, connectionError, reconnectCount, isRefreshing: wsRefreshing } = useDashboardWebSocket();
+
+  // Log para debug
+  useEffect(() => {
+    console.log('🎨 wsRefreshing cambió a:', wsRefreshing);
+  }, [wsRefreshing]);
 
   const [forceShowContent, setForceShowContent] = useState(false);
   const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
-  const [exportingCSV, setExportingCSV] = useState(false);
   const [sortByDate, setSortByDate] = useState<'desc' | 'asc'>('desc'); // Por defecto más reciente primero
   
   // Estados para filtros de Campañas en Proceso
@@ -239,117 +243,6 @@ export default function DatosDiariosDashboard() {
     }
   };
 
-  // Función para exportar una campaña individual a CSV
-  const handleExportCampanaCSV = async (campana: DatosDiariosData) => {
-    const campaignKey = `${campana.cliente}-export`;
-    setExportingCSV(true);
-    
-    try {
-      const response = await apiRequest(`/api/export/campana-leads/${encodeURIComponent(campana.cliente)}`, 'GET');
-      
-      const data = await response.json();
-      
-      const leads = data.leads || [];
-      
-      // Generar CSV para esta campaña específica
-      const csvContent = generateCSVFromSingleCampana(campana, leads);
-      
-      // Crear blob y descargar archivo
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      
-      // Nombre de archivo específico para la campaña
-      const fileName = `${campana.cliente.replace(/\s+/g, '_')}_leads_${new Date().toISOString().split('T')[0]}.csv`;
-      
-      link.setAttribute('href', url);
-      link.setAttribute('download', fileName);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      URL.revokeObjectURL(url);
-
-      toast({
-        title: "Exportación completada",
-        description: `${campana.cliente}: ${leads.length} leads exportados correctamente`,
-      });
-
-    } catch (error) {
-      toast({
-        title: "Error en exportación",
-        description: `No se pudo exportar CSV para ${campana.cliente}`,
-        variant: "destructive",
-      });
-    } finally {
-      setExportingCSV(false);
-    }
-  };
-
-  // Función para generar contenido CSV de una campaña individual
-  const generateCSVFromSingleCampana = (campana: DatosDiariosData, leads: any[]) => {
-    const headers = [
-      'Campaña',
-      'Zona',
-      'Fecha Inicio',
-      'Fecha Fin',
-      'Estado',
-      'Total Enviados',
-      'Nombre Completo',
-      'Teléfono',
-      'Email',
-      'Ciudad',
-      'Marca',
-      'Origen',
-      'Localización',
-      'Cliente Lead',
-      'Fecha Lead'
-    ];
-
-    let csvContent = headers.join(',') + '\n';
-
-    if (leads.length === 0) {
-      // Si no hay leads, agregar una fila con información de la campaña
-      csvContent += [
-        `"${campana.cliente}"`,
-        `"${campana.zona}"`,
-        `"${campana.fechaCampana}"`,
-        `"${campana.fechaFinReal || 'En proceso'}"`,
-        `"${campana.estadoCampana || 'Activa'}"`,
-        campana.enviados,
-        '"Sin leads disponibles"',
-        '""', '""', '""', '""', '""', '""', '""', '""'
-      ].join(',') + '\n';
-    } else {
-      leads.forEach((lead: any) => {
-        const nombreCompleto = `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Sin nombre';
-        const fechaLead = lead.leadDate ? new Date(lead.leadDate).toISOString().split('T')[0] : '';
-        
-        csvContent += [
-          `"${campana.cliente}"`,
-          `"${campana.zona}"`,
-          `"${campana.fechaCampana}"`,
-          `"${campana.fechaFinReal || 'En proceso'}"`,
-          `"${campana.estadoCampana || 'Activa'}"`,
-          campana.enviados,
-          `"${nombreCompleto}"`,
-          `"${lead.phone || ''}"`,
-          `"${lead.email || ''}"`,
-          `"${lead.city || ''}"`,
-          `"${lead.campaignName || ''}"`,
-          `"${lead.origen || ''}"`,
-          `"${lead.localizacion || ''}"`,
-          `"${lead.cliente || ''}"`,
-          `"${fechaLead}"`
-        ].join(',') + '\n';
-      });
-    }
-
-    return csvContent;
-  };
-
-  
   // Función para conectar WebSocket y recibir progreso real
   const connectCampaignWebSocket = useCallback((campaignKey: string): WebSocket => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -1523,26 +1416,35 @@ export default function DatosDiariosDashboard() {
                 <span className="text-sm text-green-600 font-medium">Datos actualizándose cada 30 segundos</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${wsConnected 
-                  ? 'bg-green-500 animate-pulse' 
-                  : connectionError 
-                    ? 'bg-red-500 animate-pulse' 
+                <div className={`w-2 h-2 rounded-full ${wsConnected
+                  ? 'bg-green-500 animate-pulse'
+                  : connectionError
+                    ? 'bg-red-500 animate-pulse'
                     : 'bg-yellow-500 animate-pulse'
                 }`}></div>
-                <span className={`text-xs font-medium ${wsConnected 
-                  ? 'text-green-600' 
-                  : connectionError 
-                    ? 'text-red-600' 
+                <span className={`text-xs font-medium ${wsConnected
+                  ? 'text-green-600'
+                  : connectionError
+                    ? 'text-red-600'
                     : 'text-yellow-600'
                 }`}>
-                  {wsConnected 
-                    ? 'WebSocket conectado • Refresh automático activo' 
-                    : connectionError 
-                      ? 'WebSocket desconectado' 
+                  {wsConnected
+                    ? 'WebSocket conectado • Refresh automático activo'
+                    : connectionError
+                      ? 'WebSocket desconectado'
                       : `Reconectando... (${reconnectCount > 0 ? `intento ${reconnectCount}` : 'conectando'})`
                   }
                 </span>
               </div>
+              {wsRefreshing && (
+                <div className="flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+                  <svg className="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span className="text-xs font-semibold text-blue-700">Actualizando datos...</span>
+                </div>
+              )}
             </div>
             <div className="absolute -top-2 -left-2 w-24 h-24 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full opacity-10 animate-pulse"></div>
           </div>
@@ -1726,7 +1628,6 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">CPL Guardado</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Inversión Realizada</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Inversión Pendiente</th>
-                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Exportar CSV</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1985,21 +1886,6 @@ export default function DatosDiariosDashboard() {
                             );
                           })()}
                         </td>
-                        <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
-                          <Button
-                            onClick={() => handleExportCampanaCSV(data)}
-                            disabled={exportingCSV}
-                            size="sm"
-                            className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold shadow-lg"
-                            data-testid={`button-export-csv-${data.cliente.replace(/\s+/g, '-')}`}
-                          >
-                            {exportingCSV ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Download className="w-4 h-4" />
-                            )}
-                          </Button>
-                        </td>
                       </tr>
                     );
                   })}
@@ -2237,7 +2123,6 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">CPL Guardado</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Inversión Realizada</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Inversión Pendiente</th>
-                    <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Exportar CSV</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2389,21 +2274,6 @@ export default function DatosDiariosDashboard() {
                             </span>
                             <div className="text-xs text-gray-500 mt-1">Completada</div>
                           </div>
-                        </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
-                          <Button
-                            onClick={() => handleExportCampanaCSV(data)}
-                            disabled={exportingCSV}
-                            size="sm"
-                            className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold shadow-lg"
-                            data-testid={`button-export-csv-finalized-${data.cliente.replace(/\s+/g, '-')}`}
-                          >
-                            {exportingCSV ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Download className="w-4 h-4" />
-                            )}
-                          </Button>
                         </td>
                       </tr>
                     );

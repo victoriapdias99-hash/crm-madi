@@ -309,5 +309,6 @@ async function main() {
   }
 }
 
-// Ejecutar migración
-main();
+// Ejecutar migración SOLO si se ejecuta directamente (no como import)
+// Comentado para evitar ejecución automática al importar
+// main();

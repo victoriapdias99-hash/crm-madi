@@ -9,6 +9,8 @@ import DatosDiariosDashboard from "@/pages/datos-diarios-dashboard";
 import DatosDiariosCentralized from "@/pages/datos-diarios-centralized";
 import DashboardSimple from "@/pages/dashboard-simple";
 import DatosDiariosMatching from "@/pages/datos-diarios-matching";
+import CampanasPendientes from "@/pages/campanas-pendientes";
+import CampanasFinalizadas from "@/pages/campanas-finalizadas";
 import Login from "@/pages/login";
 import LeadDetails from "@/pages/lead-details";
 import ClientesManagement from "@/pages/clientes-management";
@@ -31,6 +33,8 @@ function Router() {
       <Route path="/datos-diarios-dashboard" component={DatosDiariosDashboard} />
       <Route path="/datos-diarios-centralized" component={DatosDiariosCentralized} />
       <Route path="/simple" component={DashboardSimple} />
+      <Route path="/campanas-pendientes" component={CampanasPendientes} />
+      <Route path="/campanas-finalizadas" component={CampanasFinalizadas} />
 
       <Route path="/matching" component={DatosDiariosMatching} />
       <Route path="/clientes" component={ClientesManagement} />

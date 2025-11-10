@@ -28,6 +28,8 @@ import {
 import { BrandDisplay } from "@/components/ui/brand-display";
 import { getCampaignBrandInfo as getEnhancedCampaignBrandInfo } from "@shared/utils/brand-display-utils";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { SentLeadsModal } from "@/components/sent-leads-modal";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DatosDiariosData {
   cliente: string;
@@ -80,9 +82,9 @@ export default function CampanasPendientes() {
   // WebSocket para refresh automático inmediato
   const { isConnected: wsConnected, connectionError, reconnectCount, isRefreshing: wsRefreshing } = useDashboardWebSocket();
 
-  const [exportingCSV, setExportingCSV] = useState(false);
   const [sortByDate, setSortByDate] = useState<'desc' | 'asc'>('desc');
   const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
+  const [showReadyToCloseOnly, setShowReadyToCloseOnly] = useState(true); // NUEVO: Filtro activo por defecto
 
   // Estados para filtros
   const [filtroZona, setFiltroZona] = useState<string>('');
@@ -95,11 +97,16 @@ export default function CampanasPendientes() {
   const [selectedCampaign, setSelectedCampaign] = useState<DatosDiariosData | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
+  // Estados para modal de leads enviados
+  const [isSentLeadsModalOpen, setIsSentLeadsModalOpen] = useState(false);
+  const [selectedCampaignForLeads, setSelectedCampaignForLeads] = useState<DatosDiariosData | null>(null);
+
   // Estados para loading individual por campaña
   const [closingCampaigns, setClosingCampaigns] = useState<Set<string>>(new Set());
   const [campaignProgress, setCampaignProgress] = useState<Record<string, number>>({});
   const [campaignMessages, setCampaignMessages] = useState<Record<string, string>>({});
   const [websocketConnections, setWebsocketConnections] = useState<Record<string, WebSocket>>({});
+  const [closedCampaignIds, setClosedCampaignIds] = useState<Set<string>>(new Set());
 
   const [showCloseCampaignDialog, setShowCloseCampaignDialog] = useState(false);
   const [campaignToClose, setCampaignToClose] = useState<DatosDiariosData | null>(null);
@@ -127,13 +134,18 @@ export default function CampanasPendientes() {
   });
 
   // Fetch datos desde el endpoint exclusivo de campañas pendientes
-  const { data: datosDiarios, isLoading, error, refetch } = useQuery<DatosDiariosData[]>({
+  const { data: datosDiarios, isLoading, error, refetch, isFetching } = useQuery<DatosDiariosData[]>({
     queryKey: ['/api/dashboard/campanas-pendientes'],
     refetchInterval: 30 * 1000,
-    staleTime: 0, // CAMBIO: No usar caché, siempre considerar datos como stale
-    gcTime: 0, // CAMBIO: No mantener datos en caché después de que el componente se desmonta
+    staleTime: 0,
+    gcTime: 5 * 60 * 1000, // Mantener en caché 5 minutos
     retry: 2,
     retryDelay: 1000,
+    // OPTIMIZACIÓN: Mantener datos previos mientras carga nuevos
+    placeholderData: (previousData) => previousData,
+    // Refetch en segundo plano sin bloquear UI
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 
   // Obtener campañas comerciales
@@ -211,26 +223,24 @@ export default function CampanasPendientes() {
           [campaignKey]: data.message
         }));
 
-        // Refrescar cuando el progreso llega al 90% (casi terminado)
+        // Preparar actualización cuando el progreso llega al 90%
         if (data.progress >= 90 && data.progress < 100) {
-          console.log(`🔄 [WEBSOCKET-PROGRESS] Progreso al 90%, preparando refresco...`);
-          queryClient.invalidateQueries({ queryKey: ['/api/dashboard/campanas-pendientes'] });
+          console.log(`🔄 [WEBSOCKET-PROGRESS] Progreso al 90%, preparando actualización...`);
+          queryClient.invalidateQueries({
+            queryKey: ['/api/dashboard/campanas-pendientes'],
+            refetchType: 'active'
+          });
         }
 
         if (data.progress >= 100) {
           console.log(`🎉 [WEBSOCKET-PROGRESS] Campaña ${campaignKey} completada al 100%`);
-          console.log(`🔄 [WEBSOCKET-PROGRESS] Forzando refresco inmediato...`);
 
-          // REFRESCO INMEDIATO cuando llega al 100%
+          // Actualización suave en segundo plano - sin refresco de página
           queryClient.invalidateQueries({
             queryKey: ['/api/dashboard/campanas-pendientes'],
-            exact: true
+            exact: true,
+            refetchType: 'active'
           });
-          queryClient.removeQueries({
-            queryKey: ['/api/dashboard/campanas-pendientes'],
-            exact: true
-          });
-          refetch();
 
           clearTimeout(timeoutId);
           setTimeout(() => {
@@ -257,12 +267,7 @@ export default function CampanasPendientes() {
               delete newConnections[campaignKey];
               return newConnections;
             });
-
-            // Refresco adicional después de limpiar
-            console.log(`🔄 [WEBSOCKET-PROGRESS] Refresco adicional después de limpiar estado`);
-            queryClient.refetchQueries({ queryKey: ['/api/dashboard/campanas-pendientes'] });
-            refetch();
-          }, 2000);
+          }, 1000);
         }
       }
     };
@@ -325,28 +330,36 @@ export default function CampanasPendientes() {
         const result = await response.json();
         console.log('✅ [FRONTEND] Resultado del cierre:', result);
 
+        // Actualización optimista: ocultar la campaña inmediatamente
+        setClosedCampaignIds(prev => new Set([...Array.from(prev), campaignKey]));
+
+        // MEJORA 3: Timeout de seguridad para limpiar closedCampaignIds
+        // Esto previene que la campaña quede oculta permanentemente si hay problemas
+        setTimeout(() => {
+          setClosedCampaignIds(prev => {
+            const newSet = new Set(prev);
+            const wasDeleted = newSet.delete(campaignKey);
+            if (wasDeleted) {
+              console.log(`⏱️ [TIMEOUT] Limpiando campaña ${campaignKey} del estado optimista (timeout 5s)`);
+            }
+            return newSet;
+          });
+        }, 5000); // 5 segundos: suficiente para que el servidor actualice
+
         toast({
           title: "Campaña cerrada exitosamente",
           description: `${result.campaignsClosed || 0} campañas cerradas, ${result.leadsAssigned || 0} leads asignados`,
         });
 
-        // REFRESCO INMEDIATO Y FORZADO
-        console.log('🔄 [FRONTEND] PASO 1 - Invalidando queries...');
+        // Actualización suave en segundo plano - sin refresco de página
+        console.log('🔄 [FRONTEND] Invalidando queries en segundo plano...');
         await queryClient.invalidateQueries({
           queryKey: ['/api/dashboard/campanas-pendientes'],
-          exact: true
+          exact: true,
+          refetchType: 'active' // Solo actualiza queries activas en segundo plano
         });
 
-        console.log('🔄 [FRONTEND] PASO 2 - Removiendo queries del caché...');
-        queryClient.removeQueries({
-          queryKey: ['/api/dashboard/campanas-pendientes'],
-          exact: true
-        });
-
-        console.log('🔄 [FRONTEND] PASO 3 - Ejecutando refetch directo (forzado)...');
-        await refetch();
-
-        console.log('✅ [FRONTEND] Refrescos completados exitosamente');
+        console.log('✅ [FRONTEND] Actualización en segundo plano completada');
 
         if (ws && ws.readyState === WebSocket.OPEN) {
           console.log('📢 [FRONTEND] Notificando al servidor vía WebSocket');
@@ -356,15 +369,6 @@ export default function CampanasPendientes() {
             leadsAssigned: result.leadsAssigned
           }));
         }
-
-        // Refresco adicional después de 2 segundos por si acaso
-        console.log('⏱️ [FRONTEND] Programando refresco adicional en 2 segundos...');
-        setTimeout(async () => {
-          console.log('🔄 [FRONTEND] Ejecutando refresco adicional (timeout 2s)');
-          await queryClient.refetchQueries({ queryKey: ['/api/dashboard/campanas-pendientes'] });
-          await refetch();
-          console.log('✅ [FRONTEND] Refresco adicional completado');
-        }, 2000);
 
       } else {
         const errorData = await response.json().catch(() => ({}));
@@ -380,6 +384,14 @@ export default function CampanasPendientes() {
         error: error.message,
         stack: error.stack,
         campaignKey
+      });
+
+      // MEJORA 2: Revertir actualización optimista en caso de error
+      console.log('🔄 [FRONTEND] Revirtiendo actualización optimista por error');
+      setClosedCampaignIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(campaignKey); // Volver a mostrar la campaña
+        return newSet;
       });
 
       setCampaignProgress(prev => ({ ...prev, [campaignKey]: 100 }));
@@ -415,8 +427,10 @@ export default function CampanasPendientes() {
           return newMessages;
         });
 
-        queryClient.invalidateQueries({ queryKey: ['/api/dashboard/campanas-pendientes'] });
-        refetch();
+        queryClient.invalidateQueries({
+          queryKey: ['/api/dashboard/campanas-pendientes'],
+          refetchType: 'active'
+        });
       }, 2000);
     }
   };
@@ -427,66 +441,6 @@ export default function CampanasPendientes() {
     setShowCloseCampaignDialog(false);
     await handleCloseCampaignInline(campaignToClose);
     setCampaignToClose(null);
-  };
-
-  // Función para exportar CSV
-  const handleExportCampanaCSV = async (campana: DatosDiariosData) => {
-    setExportingCSV(true);
-
-    try {
-      const response = await apiRequest(`/api/export/campana-leads/${encodeURIComponent(campana.cliente)}`, 'GET');
-      const data = await response.json();
-      const leads = data.leads || [];
-
-      // Generar CSV
-      const headers = ['Campaña', 'Zona', 'Fecha Inicio', 'Estado', 'Total Enviados', 'Nombre Completo', 'Teléfono', 'Email'];
-      let csvContent = headers.join(',') + '\n';
-
-      if (leads.length === 0) {
-        csvContent += `"${campana.cliente}","${campana.zona}","${campana.fechaCampana}","Activa",${campana.enviados},"Sin leads"\n`;
-      } else {
-        leads.forEach((lead: any) => {
-          const nombreCompleto = `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Sin nombre';
-          csvContent += [
-            `"${campana.cliente}"`,
-            `"${campana.zona}"`,
-            `"${campana.fechaCampana}"`,
-            '"Activa"',
-            campana.enviados,
-            `"${nombreCompleto}"`,
-            `"${lead.phone || ''}"`,
-            `"${lead.email || ''}"`
-          ].join(',') + '\n';
-        });
-      }
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      const fileName = `${campana.cliente.replace(/\s+/g, '_')}_leads_${new Date().toISOString().split('T')[0]}.csv`;
-
-      link.setAttribute('href', url);
-      link.setAttribute('download', fileName);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      toast({
-        title: "Exportación completada",
-        description: `${campana.cliente}: ${leads.length} leads exportados correctamente`,
-      });
-
-    } catch (error) {
-      toast({
-        title: "Error en exportación",
-        description: `No se pudo exportar CSV para ${campana.cliente}`,
-        variant: "destructive",
-      });
-    } finally {
-      setExportingCSV(false);
-    }
   };
 
   // Función para verificar si una campaña tiene conteo activo
@@ -532,7 +486,10 @@ export default function CampanasPendientes() {
     }
 
     if (filtroMarca) {
-      filtered = filtered.filter(data => data.marca === filtroMarca);
+      filtered = filtered.filter(data => {
+        const brands = getEnhancedCampaignBrandInfo(data, campanasComerciales);
+        return brands.some(brand => brand.marca === filtroMarca);
+      });
     }
 
     if (filtroCliente) {
@@ -551,6 +508,11 @@ export default function CampanasPendientes() {
       filtered = filtered.filter(data => (data.duplicados || 0) > 0);
     }
 
+    // NUEVO: Filtrar solo campañas listas para cerrar
+    if (showReadyToCloseOnly) {
+      filtered = filtered.filter(data => hasActiveCounting(data));
+    }
+
     // Ordenar por fecha
     filtered.sort((a, b) => {
       const fechaA = a.fechaCampana || '1970-01-01';
@@ -561,7 +523,7 @@ export default function CampanasPendientes() {
     });
 
     return filtered;
-  }, [datosDiarios, filtroZona, filtroMarca, filtroCliente, filtroFechaInicio, filtroFechaFin, showDuplicatesOnly, sortByDate]);
+  }, [datosDiarios, filtroZona, filtroMarca, filtroCliente, filtroFechaInicio, filtroFechaFin, showDuplicatesOnly, showReadyToCloseOnly, sortByDate, campanasComerciales]);
 
   // Opciones para filtros
   const opcionesZona = useMemo(() => {
@@ -624,6 +586,35 @@ export default function CampanasPendientes() {
     return campana;
   };
 
+  // MEJORA 1: Sincronizar closedCampaignIds con datos reales del servidor
+  useEffect(() => {
+    if (datosDiarios && closedCampaignIds.size > 0) {
+      // Obtener IDs actuales de campañas que SÍ existen en el servidor
+      const existingCampaignKeys = new Set(
+        datosDiarios.map(c => `${c.cliente}-${c.numeroCampana}`)
+      );
+
+      // Limpiar IDs de campañas que ya no existen (fueron cerradas exitosamente)
+      setClosedCampaignIds(prev => {
+        const updated = new Set<string>();
+        let hasChanges = false;
+
+        prev.forEach(key => {
+          if (existingCampaignKeys.has(key)) {
+            // Mantener solo si aún existe en el servidor (campaña no se cerró correctamente)
+            updated.add(key);
+          } else {
+            // La campaña fue cerrada exitosamente en el servidor
+            hasChanges = true;
+            console.log(`🧹 [SYNC] Limpiando campaña cerrada exitosamente: ${key}`);
+          }
+        });
+
+        return hasChanges ? updated : prev;
+      });
+    }
+  }, [datosDiarios, closedCampaignIds]);
+
   // Configurar listeners de WebSocket para refrescar automáticamente
   useEffect(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -652,39 +643,27 @@ export default function CampanasPendientes() {
             campaignId: data.campaignId
           });
 
-          console.log('🔄 [WEBSOCKET] Invalidando queries...');
+          // Actualización suave en segundo plano
+          console.log('🔄 [WEBSOCKET] Invalidando queries en segundo plano...');
           await queryClient.invalidateQueries({
             queryKey: ['/api/dashboard/campanas-pendientes'],
-            exact: true
+            exact: true,
+            refetchType: 'active' // Solo actualiza queries activas
           });
 
-          console.log('🔄 [WEBSOCKET] Removiendo del caché...');
-          queryClient.removeQueries({
-            queryKey: ['/api/dashboard/campanas-pendientes'],
-            exact: true
-          });
-
-          console.log('🔄 [WEBSOCKET] Ejecutando refetch directo...');
-          const result = await refetch();
-          console.log('📊 [WEBSOCKET] Datos recibidos:', result.data?.length || 0, 'campañas');
-
-          console.log('✅ [WEBSOCKET] Refresco completado exitosamente');
+          console.log('✅ [WEBSOCKET] Actualización en segundo plano completada');
         }
 
         if (data.type === 'campaign-completed') {
           console.log('🎯 [WEBSOCKET] Campaña completada:', data);
 
-          console.log('🔄 [WEBSOCKET] Refrescando después de campaign-completed...');
+          // Actualización suave en segundo plano
+          console.log('🔄 [WEBSOCKET] Actualizando después de campaign-completed...');
           await queryClient.invalidateQueries({
             queryKey: ['/api/dashboard/campanas-pendientes'],
-            exact: true
+            exact: true,
+            refetchType: 'active'
           });
-          queryClient.removeQueries({
-            queryKey: ['/api/dashboard/campanas-pendientes'],
-            exact: true
-          });
-          const result = await refetch();
-          console.log('📊 [WEBSOCKET] Datos recibidos:', result.data?.length || 0, 'campañas');
 
           if (data.success) {
             toast({
@@ -692,7 +671,7 @@ export default function CampanasPendientes() {
               description: `${data.leadsAssigned || 0} leads asignados. Dashboard actualizado.`,
             });
           }
-          console.log('✅ [WEBSOCKET] Refresco de campaign-completed completado');
+          console.log('✅ [WEBSOCKET] Actualización de campaign-completed completada');
         }
       } catch (error) {
         console.error('❌ [WEBSOCKET] Error procesando mensaje:', error);
@@ -726,33 +705,35 @@ export default function CampanasPendientes() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 p-6">
+      <div className="max-w-[1600px] mx-auto space-y-5">
         <Navigation />
 
-        <div className="flex items-center justify-between">
-          <div className="relative">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+        <div className="flex items-start justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-800 mb-2">
               Campañas Pendientes
             </h1>
-            <p className="text-slate-600 mt-2 text-lg font-medium">
-              🚀 Campañas activas sin fecha de finalización
+            <p className="text-slate-600 text-sm">
+              Campañas activas sin fecha de finalización
             </p>
-            <div className="mt-2 flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-sm text-green-600 font-medium">Actualización automática cada 30s</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-                <span className={`text-xs font-medium ${wsConnected ? 'text-green-600' : 'text-red-600'}`}>
-                  {wsConnected ? 'WebSocket conectado' : 'WebSocket desconectado'}
+            <div className="mt-3 flex items-center gap-4 text-xs">
+              <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md border border-slate-200">
+                <div className={`w-1.5 h-1.5 rounded-full ${wsConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                <span className={`font-medium ${wsConnected ? 'text-green-700' : 'text-red-700'}`}>
+                  {wsConnected ? 'Conectado' : 'Desconectado'}
                 </span>
               </div>
-              {wsRefreshing && (
-                <div className="flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
-                  <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
-                  <span className="text-xs font-semibold text-blue-700">Actualizando datos...</span>
+              <div className="flex items-center gap-1.5 text-slate-500">
+                <RefreshCw className={`h-3 w-3 ${isFetching ? 'animate-spin text-blue-600' : ''}`} />
+                <span>Auto-actualización cada 30s</span>
+              </div>
+              {(wsRefreshing || isFetching) && (
+                <div className="flex items-center gap-1.5 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200">
+                  <Loader2 className="h-3 w-3 text-blue-600 animate-spin" />
+                  <span className="text-blue-700 font-medium">
+                    {isFetching && !isLoading ? 'Actualizando en segundo plano...' : 'Actualizando...'}
+                  </span>
                 </div>
               )}
             </div>
@@ -761,58 +742,66 @@ export default function CampanasPendientes() {
           <Button
             onClick={() => refetch()}
             disabled={isLoading}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold shadow-xl"
-            size="lg"
+            className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+            size="sm"
           >
             {isLoading ? (
-              <Loader2 className="h-5 w-5 mr-3 animate-spin" />
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
-              <RefreshCw className="h-5 w-5 mr-3" />
+              <RefreshCw className="h-4 w-4 mr-2" />
             )}
             Actualizar
           </Button>
         </div>
 
         {/* Tarjeta de Campañas Pendientes */}
-        <Card className="border-0 shadow-2xl bg-gradient-to-r from-white via-amber-50 to-orange-50">
-          <CardHeader className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-t-lg">
+        <Card className="border border-slate-200 shadow-sm bg-white">
+          <CardHeader className="bg-slate-50 border-b border-slate-200 px-6 py-4">
             <div className="space-y-4">
-              <CardTitle className="flex items-center gap-3 flex-wrap">
-                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                  🚀
-                </div>
-                <span className="text-xl font-bold">Campañas Activas</span>
-                <Badge variant="secondary" className="bg-white/20 text-white border-white/30 font-bold">
-                  {campanasPendientes.length} en proceso
-                </Badge>
-                <Button
-                  onClick={() => setSortByDate(sortByDate === 'desc' ? 'asc' : 'desc')}
-                  variant="secondary"
-                  size="sm"
-                  className="bg-white/20 text-white border border-white/30 hover:bg-white/30"
-                >
-                  📅 {sortByDate === 'desc' ? 'Más reciente primero ↓' : 'Más antigua primero ↑'}
-                </Button>
-                <Button
-                  onClick={() => setShowDuplicatesOnly(!showDuplicatesOnly)}
-                  variant="secondary"
-                  size="sm"
-                  className={`border-white/30 hover:bg-white/30 ${showDuplicatesOnly ? 'bg-red-500/80 text-white' : 'bg-white/20 text-white'}`}
-                >
-                  🔍 Datos Duplicados {showDuplicatesOnly ? '(Activo)' : ''}
-                </Button>
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-3">
+                  <span className="text-lg font-semibold text-slate-800">Campañas Activas</span>
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-0 font-medium">
+                    {campanasPendientes.length} campañas
+                  </Badge>
+                </CardTitle>
 
-              {/* Filtros */}
-              <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4" />
-                  <span className="text-sm font-medium">Filtros:</span>
+                  <Button
+                    onClick={() => setSortByDate(sortByDate === 'desc' ? 'asc' : 'desc')}
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-8"
+                  >
+                    {sortByDate === 'desc' ? '↓ Más reciente' : '↑ Más antigua'}
+                  </Button>
+                  <Button
+                    onClick={() => setShowReadyToCloseOnly(!showReadyToCloseOnly)}
+                    variant={showReadyToCloseOnly ? "default" : "outline"}
+                    size="sm"
+                    className={`text-xs h-8 ${showReadyToCloseOnly ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                    title={showReadyToCloseOnly ? "Mostrando solo campañas listas para cerrar" : "Mostrando todas las campañas"}
+                  >
+                    {showReadyToCloseOnly ? '✓ ' : ''}Listas para cerrar
+                  </Button>
+                  <Button
+                    onClick={() => setShowDuplicatesOnly(!showDuplicatesOnly)}
+                    variant={showDuplicatesOnly ? "default" : "outline"}
+                    size="sm"
+                    className={`text-xs h-8 ${showDuplicatesOnly ? 'bg-orange-500 hover:bg-orange-600' : ''}`}
+                  >
+                    {showDuplicatesOnly ? '✓ ' : ''}Duplicados
+                  </Button>
                 </div>
+              </div>
+
+              {/* Filtros compactos */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <Filter className="h-3.5 w-3.5 text-slate-400" />
 
                 <Select value={filtroZona || "all"} onValueChange={(value) => setFiltroZona(value === "all" ? "" : value)}>
-                  <SelectTrigger className="w-40 bg-white/20 text-white border-white/30 hover:bg-white/30 text-sm">
-                    <SelectValue placeholder="Todas las zonas" />
+                  <SelectTrigger className="h-8 w-36 text-xs bg-white">
+                    <SelectValue placeholder="Zona" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todas las zonas</SelectItem>
@@ -823,8 +812,8 @@ export default function CampanasPendientes() {
                 </Select>
 
                 <Select value={filtroMarca || "all"} onValueChange={(value) => setFiltroMarca(value === "all" ? "" : value)}>
-                  <SelectTrigger className="w-40 bg-white/20 text-white border-white/30 hover:bg-white/30 text-sm">
-                    <SelectValue placeholder="Todas las marcas" />
+                  <SelectTrigger className="h-8 w-36 text-xs bg-white">
+                    <SelectValue placeholder="Marca" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todas las marcas</SelectItem>
@@ -835,8 +824,8 @@ export default function CampanasPendientes() {
                 </Select>
 
                 <Select value={filtroCliente || "all"} onValueChange={(value) => setFiltroCliente(value === "all" ? "" : value)}>
-                  <SelectTrigger className="w-48 bg-white/20 text-white border-white/30 hover:bg-white/30 text-sm">
-                    <SelectValue placeholder="Todos los clientes" />
+                  <SelectTrigger className="h-8 w-44 text-xs bg-white">
+                    <SelectValue placeholder="Cliente" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos los clientes</SelectItem>
@@ -850,17 +839,19 @@ export default function CampanasPendientes() {
                   type="date"
                   value={filtroFechaInicio}
                   onChange={(e) => setFiltroFechaInicio(e.target.value)}
-                  className="w-44 bg-white/20 text-white border-white/30 hover:bg-white/30 placeholder:text-white/60 text-sm"
+                  className="h-8 w-36 text-xs bg-white"
+                  placeholder="Desde"
                 />
 
                 <Input
                   type="date"
                   value={filtroFechaFin}
                   onChange={(e) => setFiltroFechaFin(e.target.value)}
-                  className="w-44 bg-white/20 text-white border-white/30 hover:bg-white/30 placeholder:text-white/60 text-sm"
+                  className="h-8 w-36 text-xs bg-white"
+                  placeholder="Hasta"
                 />
 
-                {(filtroZona || filtroMarca || filtroCliente || filtroFechaInicio || filtroFechaFin) && (
+                {(filtroZona || filtroMarca || filtroCliente || filtroFechaInicio || filtroFechaFin || !showReadyToCloseOnly || showDuplicatesOnly) && (
                   <Button
                     onClick={() => {
                       setFiltroZona('');
@@ -868,47 +859,70 @@ export default function CampanasPendientes() {
                       setFiltroCliente('');
                       setFiltroFechaInicio('');
                       setFiltroFechaFin('');
+                      setShowReadyToCloseOnly(true); // Restablecer a valor por defecto
+                      setShowDuplicatesOnly(false);
                     }}
-                    variant="secondary"
+                    variant="ghost"
                     size="sm"
-                    className="bg-red-500/80 hover:bg-red-600/80 text-white border-red-300 text-sm"
+                    className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
                   >
-                    ✕ Limpiar filtros
+                    <X className="h-3 w-3 mr-1" />
+                    Limpiar
                   </Button>
                 )}
               </div>
             </div>
           </CardHeader>
 
-          <CardContent>
+          <CardContent className="p-0">
             <div className="overflow-x-auto">
-              {isLoading ? (
-                <TableSkeleton rows={8} columns={16} />
+              {isLoading && !datosDiarios ? (
+                <div className="p-6">
+                  <TableSkeleton rows={8} columns={16} />
+                </div>
               ) : (
                 <>
-                  <table className="w-full border-collapse border border-amber-300">
+                  <table className={`w-full border-collapse transition-opacity duration-300 ${isFetching && !isLoading ? 'opacity-90' : 'opacity-100'}`}>
                     <thead>
-                      <tr className="bg-gradient-to-r from-amber-100 to-orange-100">
-                        <th className="border border-amber-200 p-3 text-center font-semibold text-amber-900">Acciones</th>
-                        <th className="border border-amber-200 p-3 text-left font-semibold text-amber-900">Cliente</th>
-                        <th className="border border-amber-200 p-3 text-left font-semibold text-amber-900">Marca</th>
-                        <th className="border border-amber-200 p-3 text-center font-semibold text-amber-900">Zona</th>
-                        <th className="border border-amber-200 p-3 text-center font-semibold text-amber-900">Fecha Inicio</th>
-                        <th className="border border-amber-200 p-3 text-center font-semibold text-amber-900">Pedidos Total</th>
-                        <th className="border border-amber-200 p-3 text-center font-semibold text-amber-900">Enviados</th>
-                        <th className="border border-amber-200 p-3 text-center font-semibold text-amber-900">Duplicados</th>
-                        <th className="border border-amber-200 p-3 text-center font-semibold text-amber-900">Entregados/día</th>
-                        <th className="border border-amber-200 p-3 text-center font-semibold text-amber-900">Pedidos/día</th>
-                        <th className="border border-amber-200 p-3 text-center font-semibold text-amber-900">% Desvío</th>
-                        <th className="border border-amber-200 p-3 text-center font-semibold text-amber-900">% Enviados</th>
-                        <th className="border border-amber-200 p-3 text-center font-semibold text-amber-900">Faltantes</th>
-                        <th className="border border-amber-200 p-3 text-center font-semibold text-amber-900">CPL</th>
-                        <th className="border border-amber-200 p-3 text-center font-semibold text-amber-900">Inversión Realizada</th>
-                        <th className="border border-amber-200 p-3 text-center font-semibold text-amber-900">Inversión Pendiente</th>
-                        <th className="border border-amber-200 p-3 text-center font-semibold text-amber-900">Exportar</th>
+                      <tr className="bg-slate-50 border-b border-slate-200">
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Fecha Inicio</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Cliente</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Marca</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger className="cursor-help">
+                                Leads x Día
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <div className="space-y-1 text-xs">
+                                  <p className="font-semibold">Fórmula del Desvío:</p>
+                                  <p className="font-mono bg-slate-100 p-1 rounded">
+                                    ((Entregados - Pedidos) / Pedidos) × 100
+                                  </p>
+                                  <p className="text-slate-600 mt-2">
+                                    <span className="font-medium">Positivo (+):</span> Entregamos más de lo pedido
+                                  </p>
+                                  <p className="text-slate-600">
+                                    <span className="font-medium">Negativo (-):</span> Entregamos menos de lo pedido
+                                  </p>
+                                  <p className="text-slate-600">
+                                    <span className="font-medium">Cero (0%):</span> Entregamos exactamente lo pedido
+                                  </p>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Leads</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Progreso</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Faltantes</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">CPL</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Inversión</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Acciones</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-slate-100">
                       {campanasPendientes.map((data: DatosDiariosData, index: number) => {
                         const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0;
                         const inversions = calculateInversions(data, currentCpl);
@@ -916,154 +930,211 @@ export default function CampanasPendientes() {
                         const isProcessing = closingCampaigns.has(campaignKey);
                         const progress = campaignProgress[campaignKey] || 0;
                         const message = campaignMessages[campaignKey] || '';
+                        const isClosed = closedCampaignIds.has(campaignKey);
+
+                        // Si la campaña fue cerrada, no mostrarla (actualización optimista)
+                        if (isClosed) return null;
 
                         return (
-                          <tr key={`pending-${index}`} className="hover:bg-amber-50">
-                            <td className="border border-amber-200 p-2 text-center">
-                              <div className="flex flex-col items-center gap-2">
-                                {/* Mostrar progreso si está procesando */}
-                                {isProcessing ? (
-                                  <div className="w-full space-y-1">
-                                    <div className="w-full bg-gray-200 rounded-full h-2">
-                                      <div
-                                        className="bg-blue-600 h-2 rounded-full transition-all"
-                                        style={{ width: `${progress}%` }}
-                                      />
-                                    </div>
-                                    <p className="text-xs text-gray-600">{message}</p>
-                                  </div>
-                                ) : (
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-8 w-8 p-0"
-                                        data-testid={`dropdown-actions-${data.cliente.replace(/\s+/g, '-')}`}
-                                      >
-                                        <MoreVertical className="h-4 w-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem
-                                        onClick={() => {
-                                          setSelectedCampaign(data);
-                                          setIsDetailsModalOpen(true);
-                                        }}
-                                        className="cursor-pointer"
-                                        data-testid={`menu-view-details-${data.cliente.replace(/\s+/g, '-')}`}
-                                      >
-                                        <Eye className="mr-2 h-4 w-4" />
-                                        Visualizar Campaña
-                                      </DropdownMenuItem>
-                                      {/* Mostrar opción de cerrar o mensaje de espera */}
-                                      {hasActiveCounting(data) && (
-                                        isAnyProcessing ? (
-                                          <DropdownMenuItem
-                                            disabled={true}
-                                            className="cursor-not-allowed text-orange-500 focus:text-orange-500"
-                                          >
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            Cerrando campaña. Espere
-                                          </DropdownMenuItem>
-                                        ) : (
-                                          <DropdownMenuItem
-                                            onClick={() => {
-                                              setCampaignToClose(data);
-                                              setShowCloseCampaignDialog(true);
-                                            }}
-                                            disabled={isProcessing}
-                                            className="cursor-pointer text-red-600 focus:text-red-600"
-                                            data-testid={`menu-close-campaign-${data.cliente.replace(/\s+/g, '-')}`}
-                                          >
-                                            <Power className="mr-2 h-4 w-4" />
-                                            Cerrar Campaña
-                                          </DropdownMenuItem>
-                                        )
-                                      )}
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                )}
+                          <tr key={`pending-${index}`} className="hover:bg-slate-50 transition-colors">
+                            {/* Fecha Inicio */}
+                            <td className="px-4 py-3 text-center text-sm text-slate-600">
+                              {data.fechaCampana || 'N/A'}
+                            </td>
+
+                            {/* Cliente */}
+                            <td className="px-4 py-3">
+                              <div className="flex flex-col">
+                                <span className="font-medium text-slate-900 text-sm">{data.clienteNombre}</span>
+                                <span className="text-xs text-slate-500">Campaña #{data.numeroCampana || 1}</span>
                               </div>
                             </td>
-                            <td className="border border-amber-200 p-2">
-                              <div className="font-medium">{data.clienteNombre}</div>
-                              <div className="text-xs text-blue-600 font-semibold">#{data.numeroCampana || 1}</div>
-                            </td>
-                            <td className="border border-amber-200 p-2">
+
+                            {/* Marca */}
+                            <td className="px-4 py-3">
                               <BrandDisplay
                                 campaignData={getCampaignWithAutoAssignment(data)}
                                 brands={getCampaignBrandInfo(data)}
-                                className="min-w-[120px]"
+                                className="min-w-[100px]"
                                 variant="secondary"
                               />
                             </td>
-                            <td className="border border-amber-200 p-2 text-center">
-                              <Badge variant="outline">{data.zona}</Badge>
+
+                            {/* Leads x Día */}
+                            <td className="px-4 py-3">
+                              {(() => {
+                                const leadsRealRaw = typeof data.entregadosPorDia === 'number'
+                                  ? data.entregadosPorDia
+                                  : (typeof data.entregadosPorDia === 'string' && data.entregadosPorDia !== '-'
+                                      ? parseFloat(data.entregadosPorDia)
+                                      : 0);
+                                const leadsReal = Math.round(leadsRealRaw * 10) / 10;
+                                const leadsEsperados = data.pedidosPorDia || 0;
+
+                                // Calcular desvío: ((entregados - pedidos) / pedidos) * 100
+                                const desvio = leadsEsperados > 0
+                                  ? ((leadsReal - leadsEsperados) / leadsEsperados) * 100
+                                  : 0;
+
+                                // Determinar color según el desvío
+                                // Si desvío > 0: entregamos MÁS de lo pedido (verde)
+                                // Si desvío < 0: entregamos MENOS de lo pedido (rojo)
+                                // Si desvío = 0: entregamos exactamente lo pedido (gris)
+                                const desvioColor = desvio > 0
+                                  ? 'text-green-600'
+                                  : desvio < 0
+                                    ? 'text-red-600'
+                                    : 'text-slate-600';
+
+                                const desvioSign = desvio > 0 ? '+' : '';
+
+                                return (
+                                  <div className="flex flex-col items-center gap-0.5">
+                                    <span className="text-sm">
+                                      <span className="font-semibold text-slate-700">{leadsReal}</span>
+                                      <span className="text-slate-400 mx-1">/</span>
+                                      <span className="font-medium text-slate-600">{leadsEsperados}</span>
+                                    </span>
+                                    <span className={`text-xs font-medium ${desvioColor}`}>
+                                      Desvío: {desvioSign}{Math.round(desvio * 10) / 10}%
+                                    </span>
+                                  </div>
+                                );
+                              })()}
                             </td>
-                            <td className="border border-amber-200 p-2 text-center">{data.fechaCampana || 'N/A'}</td>
-                            <td className="border border-amber-200 p-2 text-center font-bold text-purple-700">{data.pedidosTotal || 0}</td>
-                            <td className="border border-amber-200 p-2 text-center">{data.enviados}</td>
-                            <td className="border border-amber-200 p-2 text-center">
-                              <div className="bg-gradient-to-r from-orange-50 to-red-50 p-2 rounded-lg">
-                                <span className="font-bold text-orange-700">{data.duplicados || 0}</span>
-                              </div>
+
+                            {/* Leads (Enviados / Duplicados / Pedidos) */}
+                            <td className="px-4 py-3 text-center">
+                              <span className="text-sm">
+                                <button
+                                  onClick={() => {
+                                    if (data.enviados && typeof data.enviados === 'number' && data.enviados > 0) {
+                                      setSelectedCampaignForLeads(data);
+                                      setIsSentLeadsModalOpen(true);
+                                    }
+                                  }}
+                                  className={`font-semibold ${
+                                    data.enviados && typeof data.enviados === 'number' && data.enviados > 0
+                                      ? 'text-green-600 hover:text-green-700 hover:underline cursor-pointer'
+                                      : 'text-green-600'
+                                  }`}
+                                  disabled={!data.enviados || typeof data.enviados !== 'number' || data.enviados === 0}
+                                >
+                                  {data.enviados || 0}
+                                </button>
+                                <span className="text-slate-400 mx-1">/</span>
+                                <span className="font-semibold text-orange-600">{data.duplicados || 0}</span>
+                                <span className="text-slate-400 mx-1">/</span>
+                                <span className="font-semibold text-blue-600">{data.pedidosTotal || 0}</span>
+                              </span>
                             </td>
-                            <td className="border border-amber-200 p-2 text-center">{formatNumber(data.entregadosPorDia, 2)}</td>
-                            <td className="border border-amber-200 p-2 text-center">
-                              <span className="font-medium text-blue-600">{formatNumber(data.pedidosPorDia, 2)}</span>
-                            </td>
-                            <td className="border border-amber-200 p-2 text-center">
-                              <Badge variant={inversions.porcentajeDesvio < 0 ? "destructive" : "default"}>
-                                {formatNumber(inversions.porcentajeDesvio, 2)}%
-                              </Badge>
-                            </td>
-                            <td className="border border-amber-200 p-2 text-center">
+
+                            {/* Progreso */}
+                            <td className="px-4 py-3">
                               <div className="flex flex-col items-center gap-1">
-                                <div className="w-20 h-3 bg-gray-200 rounded-full overflow-hidden">
+                                <div className="w-full max-w-[80px] h-2 bg-slate-200 rounded-full overflow-hidden">
                                   <div
-                                    className="h-full bg-green-500 transition-all"
+                                    className={`h-full transition-all ${
+                                      (data.porcentajeDatosEnviados || 0) > 100
+                                        ? 'bg-gradient-to-r from-green-500 to-green-600 animate-pulse'
+                                        : 'bg-gradient-to-r from-blue-500 to-blue-600'
+                                    }`}
                                     style={{ width: `${Math.min(data.porcentajeDatosEnviados || 0, 100)}%` }}
                                   />
                                 </div>
-                                <span className="text-xs font-bold">{formatNumber(data.porcentajeDatosEnviados, 1)}%</span>
+                                <span className={`text-xs font-medium ${
+                                  (data.porcentajeDatosEnviados || 0) > 100
+                                    ? 'text-green-600 font-bold animate-pulse'
+                                    : 'text-slate-600'
+                                }`}>{formatNumber(data.porcentajeDatosEnviados, 0)}%</span>
                               </div>
                             </td>
-                            <td className="border border-amber-200 p-2 text-center">
-                              <span className="font-bold text-red-700">{inversions.faltantes}</span>
+
+                            {/* Faltantes */}
+                            <td className="px-4 py-3 text-center">
+                              <span className="font-semibold text-red-600 text-sm">{inversions.faltantes}</span>
                             </td>
-                            <td className="border border-amber-200 p-2 text-center">
+
+                            {/* CPL */}
+                            <td className="px-4 py-3 text-center">
                               {currentCpl > 0 ? (
-                                <Badge variant="secondary" className="bg-gradient-to-r from-blue-500 to-purple-600 text-white">
-                                  ARS ${currentCpl.toLocaleString('es-AR')}
-                                </Badge>
+                                <span className="text-xs font-medium text-slate-700">
+                                  ${currentCpl.toLocaleString('es-AR')}
+                                </span>
                               ) : (
-                                <span className="text-gray-400 text-sm">Sin CPL</span>
+                                <span className="text-xs text-slate-400">-</span>
                               )}
                             </td>
-                            <td className="border border-amber-200 p-2 text-center">
-                              <span className="text-green-700 font-bold">
-                                ARS ${inversions.inversionRealizada.toLocaleString('es-AR')}
-                              </span>
+
+                            {/* Inversión (combinada) */}
+                            <td className="px-4 py-3">
+                              <div className="flex flex-col items-end gap-1">
+                                <span className="text-xs font-medium text-green-700">
+                                  ${(inversions.inversionRealizada / 1000).toFixed(0)}k
+                                </span>
+                                <span className="text-xs text-slate-500">
+                                  Pend: ${(inversions.inversionPendiente / 1000).toFixed(0)}k
+                                </span>
+                              </div>
                             </td>
-                            <td className="border border-amber-200 p-2 text-center">
-                              <span className="text-orange-700 font-bold">
-                                ARS ${inversions.inversionPendiente.toLocaleString('es-AR')}
-                              </span>
-                            </td>
-                            <td className="border border-amber-200 p-2 text-center">
-                              <Button
-                                onClick={() => handleExportCampanaCSV(data)}
-                                disabled={exportingCSV}
-                                size="sm"
-                                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
-                              >
-                                {exportingCSV ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <Download className="w-4 h-4" />
-                                )}
-                              </Button>
+
+                            {/* Acciones */}
+                            <td className="px-4 py-3">
+                              {isProcessing ? (
+                                <div className="flex flex-col items-center gap-1">
+                                  <div className="w-full max-w-[100px] bg-slate-200 rounded-full h-1.5">
+                                    <div
+                                      className="bg-blue-600 h-1.5 rounded-full transition-all"
+                                      style={{ width: `${progress}%` }}
+                                    />
+                                  </div>
+                                  <p className="text-xs text-slate-500">{message}</p>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-center gap-1">
+                                  <Button
+                                    onClick={() => {
+                                      setSelectedCampaign(data);
+                                      setIsDetailsModalOpen(true);
+                                    }}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0"
+                                    title="Ver detalles"
+                                  >
+                                    <Eye className="h-4 w-4 text-slate-600" />
+                                  </Button>
+
+
+                                  {hasActiveCounting(data) && (
+                                    isAnyProcessing ? (
+                                      <Button
+                                        disabled={true}
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 px-2 cursor-not-allowed"
+                                        title="Procesando otra campaña..."
+                                      >
+                                        <Loader2 className="h-4 w-4 animate-spin text-orange-500" />
+                                      </Button>
+                                    ) : (
+                                      <Button
+                                        onClick={() => {
+                                          setCampaignToClose(data);
+                                          setShowCloseCampaignDialog(true);
+                                        }}
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                        title="Cerrar campaña"
+                                        data-testid={`close-campaign-${data.cliente.replace(/\s+/g, '-')}`}
+                                      >
+                                        <Power className="h-4 w-4" />
+                                      </Button>
+                                    )
+                                  )}
+                                </div>
+                              )}
                             </td>
                           </tr>
                         );
@@ -1072,8 +1143,8 @@ export default function CampanasPendientes() {
                   </table>
 
                   {campanasPendientes.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                      No hay campañas pendientes actualmente
+                    <div className="text-center py-12">
+                      <p className="text-slate-500 text-sm">No hay campañas pendientes actualmente</p>
                     </div>
                   )}
                 </>
@@ -1126,6 +1197,13 @@ export default function CampanasPendientes() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Modal de leads enviados */}
+        <SentLeadsModal
+          isOpen={isSentLeadsModalOpen}
+          onClose={() => setIsSentLeadsModalOpen(false)}
+          campaignData={selectedCampaignForLeads}
+        />
       </div>
     </div>
   );

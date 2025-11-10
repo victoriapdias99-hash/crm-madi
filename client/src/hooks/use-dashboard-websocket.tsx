@@ -5,6 +5,7 @@ interface DashboardWebSocketHook {
   isConnected: boolean;
   connectionError: string | null;
   reconnectCount: number;
+  isRefreshing: boolean;
 }
 
 /**
@@ -15,6 +16,7 @@ export function useDashboardWebSocket(): DashboardWebSocketHook {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [reconnectCount, setReconnectCount] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
   const queryClient = useQueryClient();
@@ -22,7 +24,11 @@ export function useDashboardWebSocket(): DashboardWebSocketHook {
   // Función para invalidar todas las queries del dashboard
   const refreshAllDashboardData = useCallback(() => {
     console.log('🔄 Refrescando todos los datos del dashboard tras evento WebSocket');
-    
+
+    // Activar el loading indicator
+    console.log('✅ Activando isRefreshing = true');
+    setIsRefreshing(true);
+
     // Invalidar queries principales del dashboard
     queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
     queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
@@ -33,8 +39,13 @@ export function useDashboardWebSocket(): DashboardWebSocketHook {
     queryClient.invalidateQueries({ queryKey: ['/api/meta-ads/stats'] });
     queryClient.invalidateQueries({ queryKey: ['/api/campanas-comerciales'] });
     queryClient.invalidateQueries({ queryKey: ['/api/clientes'] });
-    
+
     console.log('✅ Todas las queries del dashboard han sido invalidadas');
+
+    // Desactivar el loading después de 30 segundos (máximo esperado)
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 30000);
   }, [queryClient]);
 
   const connect = useCallback(() => {
@@ -45,8 +56,10 @@ export function useDashboardWebSocket(): DashboardWebSocketHook {
 
     try {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
-      
+      // En desarrollo, usar puerto 5000 explícitamente
+      const host = import.meta.env.DEV ? 'localhost:5000' : window.location.host;
+      const wsUrl = `${protocol}//${host}/ws`;
+
       console.log(`🔗 Conectando WebSocket del dashboard: ${wsUrl}`);
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
@@ -178,6 +191,7 @@ export function useDashboardWebSocket(): DashboardWebSocketHook {
   return {
     isConnected,
     connectionError,
-    reconnectCount
+    reconnectCount,
+    isRefreshing
   };
 }

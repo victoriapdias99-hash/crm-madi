@@ -34,7 +34,7 @@ export function BrandDisplay({
 
   if (!brands || brands.length === 0) {
     return (
-      <Badge variant="outline" className={`text-gray-500 ${className}`}>
+      <Badge variant="outline" className={`text-gray-500 text-xs ${className}`}>
         Sin marcas
       </Badge>
     );
@@ -43,65 +43,59 @@ export function BrandDisplay({
   // Verificar si es asignación automática
   const isAutoAssignment = campaignData?.asignacionAutomatica === true;
 
-  // Helper para formatear marca con zona
-  const formatBrandWithZone = (brand: ExtendedBrandInfo): string => {
+  // Agrupar marcas por zona
+  const brandsByZone = brands.reduce((acc, brand) => {
     const zona = brand.zona || 'N/A';
-    return `${brand.marca} - ${zona}`;
-  };
+    if (!acc[zona]) {
+      acc[zona] = [];
+    }
+    acc[zona].push(brand);
+    return acc;
+  }, {} as Record<string, ExtendedBrandInfo[]>);
 
   // Si hay una sola marca
   if (brands.length === 1) {
     const brand = brands[0];
+    const zona = brand.zona || 'N/A';
     return (
       <div className={`${className}`}>
-        <Badge variant={variant} className="font-semibold block text-center">
-          {formatBrandWithZone(brand)}
+        <div className="text-xs">
+          <span className="font-semibold text-slate-700">{zona}:</span>{' '}
+          <span className="text-slate-600">{brand.marca}</span>
           {!showOnlyNames && !isAutoAssignment && (
-            <span className="text-xs ml-1">({brand.porcentaje}%)</span>
+            <span className="text-slate-500 ml-1">({brand.porcentaje}%)</span>
           )}
-        </Badge>
+        </div>
       </div>
     );
   }
 
-  // Múltiples marcas
-  if (isAutoAssignment) {
-    // Modo automático: mostrar todas las marcas con zonas + "AUTO"
-    return (
-      <div className={`space-y-1 ${className}`}>
-        {brands.map((brand, index) => (
-          <Badge
-            key={index}
-            variant={variant}
-            className="font-semibold block text-center"
-          >
-            {formatBrandWithZone(brand)}
-          </Badge>
-        ))}
-        <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 block text-center">
+  // Múltiples marcas agrupadas por zona
+  return (
+    <div className={`space-y-1 ${className}`}>
+      {Object.entries(brandsByZone).map(([zona, zonaBrands]) => (
+        <div key={zona} className="text-xs leading-relaxed">
+          <span className="font-semibold text-slate-700">{zona}:</span>{' '}
+          <span className="text-slate-600">
+            {zonaBrands.map((brand, index) => (
+              <span key={index}>
+                {brand.marca}
+                {!showOnlyNames && !isAutoAssignment && (
+                  <span className="text-slate-500"> ({brand.porcentaje}%)</span>
+                )}
+                {index < zonaBrands.length - 1 && ', '}
+              </span>
+            ))}
+          </span>
+        </div>
+      ))}
+      {isAutoAssignment && (
+        <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700 border-green-200 px-1.5 py-0.5">
           AUTO
         </Badge>
-      </div>
-    );
-  } else {
-    // Modo manual: mostrar marcas con zonas y porcentajes
-    return (
-      <div className={`space-y-1 ${className}`}>
-        {brands.map((brand, index) => (
-          <Badge
-            key={index}
-            variant={variant}
-            className="font-semibold block text-center"
-          >
-            {formatBrandWithZone(brand)}
-            {!showOnlyNames && (
-              <span className="text-xs ml-1">({brand.porcentaje}%)</span>
-            )}
-          </Badge>
-        ))}
-      </div>
-    );
-  }
+      )}
+    </div>
+  );
 }
 
 /**

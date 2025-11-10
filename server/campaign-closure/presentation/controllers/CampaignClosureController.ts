@@ -79,6 +79,14 @@ export class CampaignClosureController {
         console.log(`📡 [${requestId}] PASO 7 - Emitiendo eventos WebSocket (${result.campaignsClosed} campañas cerradas)`);
 
         try {
+          // Invalidar caché de campañas pendientes
+          console.log(`🗑️ [${requestId}] Invalidando caché de campañas pendientes`);
+          // Importar y resetear el caché directamente
+          const routesModule = await import('../../../routes');
+          if (routesModule.invalidateCampanasCache) {
+            routesModule.invalidateCampanasCache();
+          }
+
           // Emitir evento de refresco del dashboard a todos los clientes conectados
           console.log(`📢 [${requestId}] Broadcasting dashboard refresh`);
           realtimeSync.broadcastDashboardRefresh();

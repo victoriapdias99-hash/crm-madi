@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { GoogleSheetsGateway } from '../../infrastructure/gateways/GoogleSheetsGateway';
-import { migrateSmartFast } from '../../sync-smart-fast/migrate-smart-fast';
+import { migrateSmartFast } from '../../../sync-smart-fast/migrate-smart-fast';
 
 /**
  * Controlador para sincronización de Google Sheets usando Smart-Fast

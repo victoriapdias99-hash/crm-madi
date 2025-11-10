@@ -106,6 +106,7 @@ export function useCampaignClosureProgress(
               setTimeout(() => {
                 queryClient.invalidateQueries({ queryKey: ['/api/campanas-comerciales'] });
                 queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
+                queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
                 queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
               }, 1000);
 

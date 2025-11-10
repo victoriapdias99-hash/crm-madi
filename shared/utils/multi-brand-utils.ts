@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { sql, eq } from 'drizzle-orm';
 
 /**
  * Utilidades para manejo de campañas con múltiples marcas
@@ -15,7 +15,7 @@ export interface BrandInfo {
  * @param automaticMode - Si true, incluye TODAS las marcas (ignora porcentajes 0). Si false, solo marcas con porcentaje > 0
  */
 export function extractBrandsFromCampaign(campana: any, automaticMode: boolean = false): BrandInfo[] {
-  console.log(`🔧 [extractBrandsFromCampaign] Campaña ${campana.id} - automaticMode: ${automaticMode}`);
+  // console.log(`🔧 [extractBrandsFromCampaign] Campaña ${campana.id} - automaticMode: ${automaticMode}`);
 
   const brands: BrandInfo[] = [];
 
@@ -23,7 +23,7 @@ export function extractBrandsFromCampaign(campana: any, automaticMode: boolean =
   if (campana.marca) {
     const porcentaje = campana.porcentaje || 100;
     const incluir = automaticMode || porcentaje > 0;
-    console.log(`  🏷️ Marca 1: ${campana.marca} - Porcentaje: ${porcentaje} - Incluir: ${incluir} (automaticMode: ${automaticMode}, porcentaje > 0: ${porcentaje > 0})`);
+    // console.log(`  🏷️ Marca 1: ${campana.marca} - Porcentaje: ${porcentaje} - Incluir: ${incluir} (automaticMode: ${automaticMode}, porcentaje > 0: ${porcentaje > 0})`);
 
     if (incluir) {
       brands.push({
@@ -39,9 +39,9 @@ export function extractBrandsFromCampaign(campana: any, automaticMode: boolean =
     const porcentaje = campana[`porcentaje${i}`] || 0;
     const incluir = marca && (automaticMode || porcentaje > 0);
 
-    if (marca) {
-      console.log(`  🏷️ Marca ${i}: ${marca} - Porcentaje: ${porcentaje} - Incluir: ${incluir} (automaticMode: ${automaticMode}, porcentaje > 0: ${porcentaje > 0})`);
-    }
+    // if (marca) {
+    //   console.log(`  🏷️ Marca ${i}: ${marca} - Porcentaje: ${porcentaje} - Incluir: ${incluir} (automaticMode: ${automaticMode}, porcentaje > 0: ${porcentaje > 0})`);
+    // }
 
     if (incluir) {
       brands.push({
@@ -52,7 +52,7 @@ export function extractBrandsFromCampaign(campana: any, automaticMode: boolean =
   }
 
   const filteredBrands = brands.filter(brand => brand.marca);
-  console.log(`🔧 [extractBrandsFromCampaign] Resultado final:`, filteredBrands);
+  // console.log(`🔧 [extractBrandsFromCampaign] Resultado final:`, filteredBrands);
 
   return filteredBrands;
 }
@@ -143,4 +143,152 @@ export function getMultiBrandDebugInfo(campana: any): string {
   }
 
   return info;
+}
+
+/**
+ * Mapeo de zonas de campaña a localización en datos sincronizados
+ */
+const MAPEO_ZONAS: Record<string, string> = {
+  'NACIONAL': 'Pais',
+  'AMBA': 'Amba',
+  'Córdoba': 'Cordoba',
+  'Santa Fe': 'Santa Fe',
+  'Mendoza': 'Mendoza'
+};
+
+/**
+ * Mapea zona de campaña a localización
+ */
+export function mapZonaToLocalizacion(zona: string): string {
+  return MAPEO_ZONAS[zona] || zona || 'Pais';
+}
+
+/**
+ * ============================================================================
+ * FUNCIÓN CENTRALIZADA DE FILTRADO DE LEADS
+ * ============================================================================
+ *
+ * Esta función es el ÚNICO punto de filtrado para TODAS las operaciones con leads:
+ *
+ * 1. Conteo de duplicados (routes.ts - dashboard de campañas pendientes)
+ * 2. Conteo de leads disponibles (PostgresLeadRepository.countUniqueLeadsForClient)
+ * 3. Obtención de leads para asignar (PostgresLeadRepository.getLeadsForAssignment)
+ * 4. Conteo de leads asignados con filtros genéricos (PostgresLeadRepository.countAssignedLeadsForCampaign)
+ *
+ * ============================================================================
+ * CONDICIONES QUE APLICA:
+ * ============================================================================
+ *
+ * ✅ 1. MULTI-MARCA (OR con ILIKE):
+ *    - Extrae todas las marcas configuradas (marca, marca2, marca3, marca4, marca5)
+ *    - Crea: (lower(campaign) LIKE '%peugeot%' OR lower(campaign) LIKE '%fiat%' ...)
+ *    - Respeta porcentajes si asignacionAutomatica=false
+ *    - Ignora porcentajes si asignacionAutomatica=true (pool unificado)
+ *
+ * ✅ 2. CLIENTE (igualdad exacta):
+ *    - cliente = {normalizedClientName}
+ *    - Normalizado a snake_case (ej: "red_finance")
+ *    - Sin marcas en el nombre (se extraen antes de normalizar)
+ *
+ * ✅ 3. LOCALIZACIÓN (mapeo de zona):
+ *    - localizacion = {mappedZone}
+ *    - Mapeo: NACIONAL→Pais, AMBA→Amba, Córdoba→Cordoba, etc.
+ *
+ * ✅ 4. DISPONIBILIDAD (incluye asignados a esta campaña):
+ *    - (campaign_id IS NULL OR campaign_id = {campaign.id})
+ *    - Permite reasignación si se reabre una campaña
+ *    - Cuenta leads disponibles + ya asignados a esta campaña específica
+ *
+ * ❌ 5. SIN FILTRO DE FECHAS:
+ *    - NO usa fechaCampana ni fechaFin
+ *    - Asignación cronológica pura: ORDER BY fecha_creacion ASC
+ *    - Se toman los N leads más antiguos disponibles
+ *    - Las fechas son informativas, NO restrictivas
+ *
+ * ❌ 6. SIN FILTRO DE SOURCE:
+ *    - NO filtra por source = 'google_sheets'
+ *    - Todos los leads en op_leads_rep vienen de Google Sheets actualmente
+ *    - Filtrar por source sería redundante
+ *
+ * ============================================================================
+ * GARANTÍAS DE CONSISTENCIA:
+ * ============================================================================
+ *
+ * - MISMO filtrado en conteo vs asignación
+ * - MISMO filtrado en duplicados vs disponibles
+ * - MISMO filtrado en dashboard vs cierre de campañas
+ * - NO hay discrepancias entre "lo que se ve" y "lo que se asigna"
+ *
+ * @param campaign - Objeto campaña completo con marcas, zona, fechas, etc.
+ * @param normalizedClientName - Nombre del cliente normalizado (ej: "red_finance")
+ * @param campaignField - Campo de campaign en la tabla (ej: opLeadsRep.campaign)
+ * @param clienteField - Campo de cliente en la tabla (ej: opLeadsRep.cliente)
+ * @param localizacionField - Campo de localización en la tabla (ej: opLeadsRep.localizacion)
+ * @param campaignIdField - Campo de campaignId en la tabla (ej: opLeadsRep.campaignId)
+ * @param fechaCreacionField - Campo de fecha creación (NO USADO para filtrar, solo para ORDER BY)
+ * @returns Array de condiciones SQL para usar con and()
+ */
+export function buildCampaignLeadFilters(params: {
+  campaign: any;
+  normalizedClientName: string;
+  campaignField: any;
+  clienteField: any;
+  localizacionField: any;
+  campaignIdField: any;
+  fechaCreacionField: any;
+}): any[] {
+  const {
+    campaign,
+    normalizedClientName,
+    campaignField,
+    clienteField,
+    localizacionField,
+    campaignIdField,
+    fechaCreacionField
+  } = params;
+
+  // Obtener localización filtrada
+  const localizacionFiltro = mapZonaToLocalizacion(campaign.zona);
+
+  // Extraer marcas y crear condición multi-marca
+  const brands = extractBrandsFromCampaign(campaign, campaign.asignacionAutomatica);
+
+  // Validar que haya marcas configuradas
+  if (brands.length === 0) {
+    throw new Error(`No hay marcas configuradas para la campaña ${campaign.id || campaign.numeroCampana}`);
+  }
+
+  const multiBrandCondition = createMultiBrandCondition(brands, campaignField);
+
+  // Construir condiciones base
+  const conditions: any[] = [
+    multiBrandCondition,
+    eq(clienteField, normalizedClientName),
+    eq(localizacionField, localizacionFiltro),
+    // ✅ Incluye asignados a esta campaña + disponibles
+    sql`(${campaignIdField} IS NULL OR ${campaignIdField} = ${campaign.id})`
+  ];
+
+  // ❌ FECHAS REMOVIDAS: Ya no se filtran leads por fechaCampana o fechaFin
+  // La asignación se hace por orden cronológico (fecha_creacion ASC)
+  // simplemente tomando los N leads más antiguos disponibles
+
+  return conditions;
+}
+
+/**
+ * @deprecated Usar buildCampaignLeadFilters() en su lugar
+ * Mantenido por compatibilidad temporal
+ */
+export function buildPendingCampaignConditions(params: {
+  campaign: any;
+  normalizedClientName: string;
+  campaignField: any;
+  clienteField: any;
+  localizacionField: any;
+  sourceField?: any;  // Ahora opcional para compatibilidad
+  campaignIdField: any;
+  fechaCreacionField: any;
+}): any[] {
+  return buildCampaignLeadFilters(params);
 }

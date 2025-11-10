@@ -4,14 +4,29 @@
 export interface CampaignClosure {
   id: number;
   clientName: string;
-  brandName: string;
+  brandName: string; // Marca principal (retrocompatibilidad)
+  marca?: string; // Alias de brandName para compatibilidad con buildCampaignLeadFilters
   campaignNumber: number;
   startDate: Date;
+  fechaCampana?: string | null; // Fecha de inicio de campaña (para filtrado SQL)
   targetLeads: number; // cantidad_datos_solicitados
   currentLeads: number; // leads ya asignados
   zone: string;
+  zona?: string; // Alias de zone para compatibilidad con buildCampaignLeadFilters
   status: 'En proceso' | 'Finalizada';
-  fechaFin?: Date;
+  fechaFin?: Date | string | null;
+
+  // Campos multi-marca
+  marca2?: string | null;
+  marca3?: string | null;
+  marca4?: string | null;
+  marca5?: string | null;
+  porcentaje?: number | null;
+  porcentaje2?: number | null;
+  porcentaje3?: number | null;
+  porcentaje4?: number | null;
+  porcentaje5?: number | null;
+  asignacionAutomatica?: boolean | null;
 }
 
 /**

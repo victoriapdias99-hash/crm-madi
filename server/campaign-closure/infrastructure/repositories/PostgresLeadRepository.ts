@@ -3,7 +3,7 @@ import { AvailableLead } from '../../domain/entities/CampaignClosure';
 import { ILeadRepository } from '../../domain/interfaces/ILeadRepository';
 import { opLeadsRep, opLead } from '@shared/schema';
 import { normalizeClientName } from '../../../../shared/utils/client-normalization';
-import { createMultiBrandCondition } from '../../../../shared/utils/multi-brand-utils';
+import { buildCampaignLeadFilters, createMultiBrandCondition, extractBrandsFromCampaign } from '../../../../shared/utils/multi-brand-utils';
 
 /**
  * Implementación PostgreSQL del repositorio de leads
@@ -106,32 +106,79 @@ export class PostgresLeadRepository implements ILeadRepository {
 
   /**
    * Cuenta leads únicos disponibles para un cliente específico (usando op_leads_rep)
+   * IMPORTANTE: Usa la misma lógica que getLeadsForAssignment para consistencia
    */
-  async countUniqueLeadsForClient(clientName: string, brandName: string, zone: string): Promise<number> {
+  async countUniqueLeadsForClient(clientName: string, brandName: string, zone: string, campaign?: any): Promise<number> {
     await this.ensureDbInitialized();
-    
-    try {
 
-      
+    try {
       const normalizedClient = normalizeClientName(clientName);
-      const normalizedBrand = brandName?.toLowerCase() || '';
       const normalizedZone = this.normalizeZoneName(zone);
 
-      const result = await this.db
-        .select({ count: sql<number>`count(*)::int` })
+      // ✅ USAR función centralizada si tenemos campaign object
+      let conditions: any[];
+      if (campaign) {
+        conditions = buildCampaignLeadFilters({
+          campaign,
+          normalizedClientName: normalizedClient,
+          campaignField: opLeadsRep.campaign,
+          clienteField: opLeadsRep.cliente,
+          localizacionField: opLeadsRep.localizacion,
+          campaignIdField: opLeadsRep.campaignId,
+          fechaCreacionField: opLeadsRep.fechaCreacion
+        });
+      } else {
+        // Fallback para compatibilidad (legacy)
+        conditions = [
+          isNull(opLeadsRep.campaignId),
+          eq(opLeadsRep.cliente, normalizedClient),
+          eq(opLeadsRep.localizacion, normalizedZone),
+          ilike(opLeadsRep.marca, `%${brandName?.toLowerCase() || ''}%`)
+        ];
+      }
+
+      // Primero obtener leads únicos candidatos
+      const uniqueLeads = await this.db
+        .select({
+          id: opLeadsRep.id,
+          duplicateIds: opLeadsRep.duplicateIds
+        })
+        .from(opLeadsRep)
+        .where(and(...conditions));
+
+      if (uniqueLeads.length === 0) {
+        console.log(`📊 Leads disponibles: 0 para ${clientName} (${brandName}, ${zone})`);
+        return 0;
+      }
+
+      // Verificar duplicados asignados (misma lógica que getLeadsForAssignment)
+      const allDuplicateIds = uniqueLeads.flatMap(lead => lead.duplicateIds || [lead.id]);
+
+      const assignedLeads = await this.db
+        .select({ id: opLead.id })
         .from(opLead)
         .where(
           and(
-            ilike(opLead.marca, `%${normalizedBrand}%`),
-            ilike(opLead.cliente, `%${normalizedClient}%`),
-            ilike(opLead.localizacion, `%${normalizedZone}%`),
-            isNull(opLead.campaignId) // Solo leads NO asignados
+            inArray(opLead.id, allDuplicateIds),
+            sql`${opLead.campaignId} IS NOT NULL`
           )
         );
 
-      const count = result[0]?.count || 0;
-      console.log(`📊 Leads disponibles (no asignados): ${count} para ${clientName} (${brandName}, ${zone})`);
-      
+      const assignedSet = new Set(assignedLeads.map(l => l.id));
+
+      // Contar solo leads únicos sin duplicados asignados
+      let count = 0;
+      for (const uniqueLead of uniqueLeads) {
+        const duplicateIds = uniqueLead.duplicateIds || [uniqueLead.id];
+        const hasAssignedDuplicate = duplicateIds.some(id => assignedSet.has(id));
+
+        if (!hasAssignedDuplicate) {
+          count++;
+        }
+      }
+
+      console.log(`📊 Leads únicos disponibles: ${count} para ${clientName} (${brandName}, ${zone})`);
+
       return count;
     } catch (error: any) {
       console.error(`Error counting leads for ${clientName}:`, error);
@@ -221,19 +268,86 @@ export class PostgresLeadRepository implements ILeadRepository {
 
   /**
    * Cuenta leads YA asignados a una campaña específica
+   *
+   * @param campaignId - ID de la campaña
+   * @param useGenericFilters - Si true, usa filtros genéricos (cliente/marca/zona). Si false, usa campaign_id (legacy)
+   * @returns Número de leads asignados
    */
-  async countAssignedLeadsForCampaign(campaignId: number): Promise<number> {
+  async countAssignedLeadsForCampaign(campaignId: number, useGenericFilters: boolean = false): Promise<number> {
     await this.ensureDbInitialized();
-    
+
     try {
+      // Verificar feature flag desde variable de entorno
+      const featureFlagEnabled = process.env.USE_GENERIC_CAMPAIGN_FILTERS === 'true';
+      const shouldUseGenericFilters = useGenericFilters && featureFlagEnabled;
+
+      if (!shouldUseGenericFilters) {
+        // MÉTODO LEGACY: Contar por campaign_id
+        const result = await this.db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(opLead)
+          .where(eq(opLead.campaignId, campaignId));
+
+        const count = result[0]?.count || 0;
+        console.log(`📊 [LEGACY] Leads ya asignados a campaña ${campaignId}: ${count}`);
+
+        return count;
+      }
+
+      // MÉTODO NUEVO: Contar usando filtros genéricos (cliente/marca/zona/fechas)
+      console.log(`📊 [GENERIC FILTERS] Contando leads para campaña ${campaignId} usando filtros genéricos`);
+
+      // Obtener datos de la campaña
+      const campaignData = await this.getCampaignDataForFiltering(campaignId);
+      if (!campaignData) {
+        console.error(`❌ No se encontró campaña ${campaignId}`);
+        return 0;
+      }
+
+      // Normalizar datos
+      const normalizedClient = normalizeClientName(campaignData.clientName);
+      const normalizedZone = this.normalizeZoneName(campaignData.zone);
+
+      // Extraer marcas usando función centralizada
+      const { extractBrandsFromCampaign } = await import('../../../../shared/utils/multi-brand-utils');
+      const brands = extractBrandsFromCampaign(campaignData, campaignData.asignacionAutomatica);
+
+      if (brands.length === 0) {
+        console.error(`❌ No hay marcas configuradas para campaña ${campaignId}`);
+        return 0;
+      }
+
+      // Crear condición multi-marca
+      const multiBrandCondition = createMultiBrandCondition(brands, opLead.campaign);
+
+      // Construir condiciones de filtrado
+      const conditions: any[] = [
+        multiBrandCondition,
+        eq(opLead.cliente, normalizedClient),
+        eq(opLead.localizacion, normalizedZone),
+        // CRÍTICO: Solo contar leads asignados a ESTA campaña
+        // El método se llama "countAssignedLeads", por lo que debe contar SOLO asignados
+        // Los filtros genéricos (marca/cliente/zona) sirven para VALIDAR que
+        // los leads asignados SÍ cumplen con los criterios esperados de la campaña
+        eq(opLead.campaignId, campaignId)
+      ];
+
+      // ❌ FECHAS REMOVIDAS: Ya no se validan fechaCampana o fechaFin
+      // La asignación se hace por orden cronológico, simplemente tomando los N leads más antiguos
+
+      // Ejecutar query con filtros genéricos
+      const { and } = await import('drizzle-orm');
       const result = await this.db
         .select({ count: sql<number>`count(*)::int` })
         .from(opLead)
-        .where(eq(opLead.campaignId, campaignId));
+        .where(and(...conditions));
 
       const count = result[0]?.count || 0;
-      console.log(`📊 Leads ya asignados a campaña ${campaignId}: ${count}`);
-      
+      console.log(`📊 [GENERIC FILTERS] Leads que coinciden con filtros genéricos para campaña ${campaignId}: ${count}`);
+      console.log(`   Cliente: ${normalizedClient}`);
+      console.log(`   Marcas: ${brands.map(b => b.marca).join(', ')}`);
+      console.log(`   Zona: ${normalizedZone}`);
+
       return count;
     } catch (error: any) {
       console.error(`Error counting assigned leads for campaign ${campaignId}:`, error);
@@ -302,30 +416,45 @@ export class PostgresLeadRepository implements ILeadRepository {
     clientName: string,
     brandName: string,
     zone: string,
-    limit: number
+    limit: number,
+    campaign?: any
   ): Promise<AvailableLead[]> {
     await this.ensureDbInitialized();
 
     try {
       const normalizedClient = normalizeClientName(clientName);
-      const normalizedBrand = brandName?.toLowerCase() || '';
       const normalizedZone = this.normalizeZoneName(zone);
 
       console.log(`🚀 [OPTIMIZADO V2] Obteniendo máximo ${limit} leads ÚNICOS para asignación`);
       const startTime = Date.now();
 
+      // ✅ USAR función centralizada si tenemos campaign object
+      let conditions: any[];
+      if (campaign) {
+        conditions = buildCampaignLeadFilters({
+          campaign,
+          normalizedClientName: normalizedClient,
+          campaignField: opLeadsRep.campaign,
+          clienteField: opLeadsRep.cliente,
+          localizacionField: opLeadsRep.localizacion,
+          campaignIdField: opLeadsRep.campaignId,
+          fechaCreacionField: opLeadsRep.fechaCreacion
+        });
+      } else {
+        // Fallback para compatibilidad (legacy)
+        conditions = [
+          isNull(opLeadsRep.campaignId),
+          eq(opLeadsRep.cliente, normalizedClient),
+          eq(opLeadsRep.localizacion, normalizedZone),
+          ilike(opLeadsRep.marca, `%${brandName?.toLowerCase() || ''}%`)
+        ];
+      }
+
       // PASO 1: Obtener leads únicos candidatos
       const uniqueLeads = await this.db
         .select()
         .from(opLeadsRep)
-        .where(
-          and(
-            isNull(opLeadsRep.campaignId), // CRÍTICO: Solo leads no asignados
-            ilike(opLeadsRep.marca, `%${normalizedBrand}%`),
-            ilike(opLeadsRep.cliente, `%${normalizedClient}%`),
-            ilike(opLeadsRep.localizacion, `%${normalizedZone}%`)
-          )
-        )
+        .where(and(...conditions))
         .orderBy(asc(opLeadsRep.fechaCreacion))
         .limit(limit * 3); // Traer más para compensar por leads ya asignados
 
@@ -720,16 +849,15 @@ export class PostgresLeadRepository implements ILeadRepository {
    * 5. Asigna todos los duplicados en op_lead
    */
   async assignLeadsAtomically(
-    clientName: string, 
-    brandName: string, 
-    zone: string, 
-    campaignId: number, 
+    clientName: string,
+    brandName: string,
+    zone: string,
+    campaignId: number,
     targetCount: number
   ): Promise<{
     assigned: number;
     finalLeadDate?: Date;
     leads: AvailableLead[];
-    continuityVerified: boolean;
     exactCountVerified: boolean;
   }> {
     await this.ensureDbInitialized();
@@ -871,12 +999,9 @@ export class PostgresLeadRepository implements ILeadRepository {
           throw new Error(`Error de conteo: esperados ${allDuplicateIds.length}, encontrados ${actualAssigned}`);
         }
 
-        // PASO 7: Verificar continuidad y preparar resultado
-        const continuityCheck = this.verifyDateContinuity(selectedUniqueLeads);
-        console.log(`📅 Verificación de continuidad: ${continuityCheck ? '✅ CONTINUO' : '⚠️ CON GAPS'}`);
-
-        const finalLeadDate = selectedUniqueLeads.length > 0 
-          ? selectedUniqueLeads[selectedUniqueLeads.length - 1].fechaCreacion 
+        // PASO 7: Preparar resultado
+        const finalLeadDate = selectedUniqueLeads.length > 0
+          ? selectedUniqueLeads[selectedUniqueLeads.length - 1].fechaCreacion
           : undefined;
 
         console.log(`🎉 TRANSACCIÓN EXITOSA: ${selectedUniqueLeads.length} leads únicos → ${allDuplicateIds.length} duplicados asignados`);
@@ -886,7 +1011,6 @@ export class PostgresLeadRepository implements ILeadRepository {
           assigned: allDuplicateIds.length, // Retorna el total de duplicados asignados
           finalLeadDate,
           leads: selectedUniqueLeads, // Retorna los leads únicos para referencia
-          continuityVerified: continuityCheck,
           exactCountVerified: exactCountOk
         };
       });
@@ -901,26 +1025,50 @@ export class PostgresLeadRepository implements ILeadRepository {
   }
 
   /**
-   * Verifica que las fechas de leads sean continuas (sin gaps grandes)
+   * Obtiene datos de campaña necesarios para filtrado genérico
+   * Usado por countAssignedLeadsForCampaign cuando useGenericFilters = true
    */
-  private verifyDateContinuity(leads: any[]): boolean {
-    if (leads.length <= 1) return true;
+  private async getCampaignDataForFiltering(campaignId: number): Promise<any | null> {
+    try {
+      const { db } = await import('../../../db');
+      const { campanasComerciales, clientes } = await import('../../../../shared/schema');
+      const { eq } = await import('drizzle-orm');
 
-    const sortedLeads = leads.sort((a, b) => a.fechaCreacion.getTime() - b.fechaCreacion.getTime());
-    
-    for (let i = 1; i < sortedLeads.length; i++) {
-      const current = new Date(sortedLeads[i].fechaCreacion).getTime();
-      const previous = new Date(sortedLeads[i-1].fechaCreacion).getTime();
-      
-      // Gap de más de 7 días se considera discontinuo
-      const gapDays = (current - previous) / (1000 * 60 * 60 * 24);
-      if (gapDays > 7) {
-        console.log(`⚠️ Gap detectado: ${gapDays.toFixed(1)} días entre ${sortedLeads[i-1].fechaCreacion} y ${sortedLeads[i].fechaCreacion}`);
-        return false;
+      const campaigns = await db
+        .select()
+        .from(campanasComerciales)
+        .leftJoin(clientes, eq(campanasComerciales.clienteId, clientes.id))
+        .where(eq(campanasComerciales.id, campaignId))
+        .limit(1);
+
+      if (campaigns.length === 0) {
+        return null;
       }
+
+      const campaign = campaigns[0];
+
+      return {
+        id: campaign.campanas_comerciales.id,
+        clientName: campaign.clientes?.nombreComercial || '',
+        marca: campaign.campanas_comerciales.marca,
+        marca2: campaign.campanas_comerciales.marca2,
+        marca3: campaign.campanas_comerciales.marca3,
+        marca4: campaign.campanas_comerciales.marca4,
+        marca5: campaign.campanas_comerciales.marca5,
+        porcentaje: campaign.campanas_comerciales.porcentaje,
+        porcentaje2: campaign.campanas_comerciales.porcentaje2,
+        porcentaje3: campaign.campanas_comerciales.porcentaje3,
+        porcentaje4: campaign.campanas_comerciales.porcentaje4,
+        porcentaje5: campaign.campanas_comerciales.porcentaje5,
+        zone: campaign.campanas_comerciales.zona,
+        fechaCampana: campaign.campanas_comerciales.fechaCampana,
+        fechaFin: campaign.campanas_comerciales.fechaFin,
+        asignacionAutomatica: campaign.campanas_comerciales.asignacionAutomatica
+      };
+    } catch (error: any) {
+      console.error(`Error getting campaign data for filtering ${campaignId}:`, error);
+      return null;
     }
-    
-    return true;
   }
 
 }

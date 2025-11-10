@@ -8,7 +8,8 @@ import { registerMetaAdsRoutes } from "./meta-ads-routes";
 import { MetaAdsService } from "./meta-ads-service";
 import { UpdateEnviadosService } from "./update-enviados-service";
 import { normalizeClientName } from "../shared/utils/client-normalization";
-import { extractBrandsFromCampaign, createMultiBrandCondition, getMultiBrandDebugInfo } from "../shared/utils/multi-brand-utils";
+import { extractBrandsFromCampaign, createMultiBrandCondition, getMultiBrandDebugInfo, buildCampaignLeadFilters } from "../shared/utils/multi-brand-utils";
+import { contarLeadsYDuplicadosUnificado } from "../shared/utils/campaign-counting-utils";
 import { centralizedDataService } from "./centralized-data-service";
 import {
   insertLeadSchema,
@@ -30,6 +31,18 @@ import { registerWebhookRoutes } from './webhook';
 
 // LEGACY CODE REMOVED: ClientMatchingSystem migrado al nuevo sistema refactorizado
 // Ver: server/sync/domain/services/ClientMatcher.ts
+
+// Caché en memoria para campañas pendientes (a nivel de módulo)
+let campanasCache: any = null;
+let cacheTimestamp = 0;
+const CACHE_TTL = 5000; // 5 segundos de caché
+
+// Función para invalidar el caché (exportada para uso desde otros módulos)
+export function invalidateCampanasCache() {
+  campanasCache = null;
+  cacheTimestamp = 0;
+  console.log('🗑️ Caché de campañas pendientes invalidado');
+}
 
 // Función helper para usar el nuevo ClientMatcher
 function getClientMatcher() {
@@ -117,6 +130,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           case 'register_dashboard_listener':
             // Registrar cliente para recibir actualizaciones del dashboard
             console.log('🔔 Cliente registrado para actualizaciones del dashboard');
+
+            // ✅ FIX: Agregar cliente al sistema de realtimeSync para recibir broadcasts
+            realtimeSync.addClient(ws);
+            console.log('✅ Cliente agregado a realtimeSync para broadcasts');
+
             ws.send(JSON.stringify({
               type: 'registration_confirmed',
               message: 'Registrado para recibir actualizaciones del dashboard'
@@ -156,6 +174,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     ws.on('close', () => {
       dashboardConnections.delete(ws);
+
+      // ✅ FIX: También remover del sistema realtimeSync
+      realtimeSync.removeClient(ws);
+
       console.log('🔗 Conexión WebSocket cerrada. Total conectados:', dashboardConnections.size);
     });
   });
@@ -306,241 +328,171 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   /**
-   * SISTEMA DE FILTRADO INTELIGENTE DE LEADS POR CAMPAÑA
-   * 
-   * Esta función implementa la lógica central para contar leads que pertenecen 
-   * específicamente a una campaña determinada. Resuelve el problema crítico de
-   * precisión en el conteo de leads por cliente.
-   * 
-   * PROBLEMA RESUELTO:
-   * - Antes: Campañas VW mostraban 132 leads (todos los VW) en lugar de 77 (solo Borussia)
-   * - Antes: Toyota mostraba 0 leads debido a nombres comerciales inconsistentes
-   * - Ahora: Filtrado preciso por nombre comercial del cliente específico
-   * 
-   * LÓGICA DE FILTRADO:
-   * 1. Filtro por MARCA: campaign_name contiene la marca de la campaña (ej: "toyota")
-   * 2. Filtro por CLIENTE: Usa nombreComercial del cliente (ej: "Mariano - Pichetti")
-   * 3. Manejo de VACÍOS: Si cliente está vacío/null, incluye todos los leads de esa marca
-   * 4. Filtro TEMPORAL: Solo leads desde fecha_campana hasta fecha_fin (si existe)
-   * 5. Filtro por FUENTE: Solo datos de 'google_sheets'
-   * 
-   * CASOS DE USO:
-   * - TOYOTA 1: Busca "toyota" + "Mariano - Pichetti" OR cliente vacío = 101 leads
-   * - JEEP 1: Busca "jeep" + "Jea Automotores" = 32 leads
-   * - VW 1: Busca "vw" + "Borussia" = 77 leads (no los 132 de todos los VW)
-   * 
-   * ARQUITECTURA:
-   * - Usando SQL con LIKE case-insensitive para búsqueda flexible
-   * - Filtros AND/OR combinados para máxima precisión y cobertura
-   * - Compatible con datos inconsistentes de Google Sheets
+   * ============================================================================
+   * FUNCIONES DE CONTEO DE LEADS - REFACTORIZADAS
+   * ============================================================================
+   *
+   * IMPORTANTE: Estas funciones ahora son wrappers de la lógica centralizada
+   * en shared/utils/campaign-counting-utils.ts
+   *
+   * VENTAJAS:
+   * - Consistencia entre pendientes y finalizadas
+   * - Misma fuente de datos (op_leads_rep)
+   * - Lógica de duplicados unificada
+   * - Más fácil de mantener y testear
+   * ============================================================================
+   */
+
+  /**
+   * Cuenta duplicados de una campaña
+   * DEPRECADO: Usar contarLeadsYDuplicadosUnificado directamente
    */
   async function contarDuplicadosPorCampana(campana: any, clienteData: any, db: any, opLeadsRepTable: any, sql: any, todasLasCampanas: any[]) {
-    
-    // 🎯 LÓGICA DIFERENCIADA: Campañas finalizadas vs En proceso (para duplicados)
-    if (campana.fechaFin) {
-      // ✅ CAMPAÑA FINALIZADA: Calcular duplicados de leads asignados
-      
-      try {
-        const { opLead } = await import('../shared/schema');
-        const { eq, inArray } = await import('drizzle-orm');
-        
-        // 1. Obtener los IDs de leads asignados a esta campaña
-        const leadsAsignados = await db.select({ 
-          id: opLead.id,
-          metaLeadId: opLead.metaLeadId,
-          telefono: opLead.telefono,
-          email: opLead.email
-        })
-        .from(opLead)
-        .where(eq(opLead.campaignId, campana.id));
-        
-        
-        if (leadsAsignados.length === 0) {
-          return [{ totalDuplicados: 0 }];
-        }
-        
-        // 2. Extraer meta_lead_ids para buscar en op_leads_rep
-        const metaLeadIds = leadsAsignados
-          .map((lead: any) => lead.metaLeadId)
-          .filter((id: any) => id !== null);
-        
-        
-        if (metaLeadIds.length === 0) {
-          return [{ totalDuplicados: 0 }];
-        }
-        
-        // 3. ✅ Consulta CORREGIDA: Buscar leads únicos por meta_lead_id
-        // Buscar en op_leads_rep usando los meta_lead_ids de los leads asignados
-        const leadsUnicos = await db.select({
-          duplicateIds: opLeadsRepTable.duplicateIds
-        })
-        .from(opLeadsRepTable)
-        .where(inArray(opLeadsRepTable.metaLeadId, metaLeadIds));
-        
-        
-        // Contar total de duplicados: suma de longitudes de arrays duplicate_ids
-        let totalDuplicados = 0;
-        for (const lead of leadsUnicos) {
-          const arrayLength = lead.duplicateIds ? lead.duplicateIds.length : 0;
-          totalDuplicados += arrayLength;
-        }
-        
-        
-        return [{ totalDuplicados }];
-        
-      } catch (error) {
-        console.error(`❌ Error calculando duplicados para campaña finalizada ${campana.id}:`, error);
-        return [{ totalDuplicados: 0 }];
-      }
+    try {
+      const { opLead } = await import('../shared/schema');
+      const { count } = await import('drizzle-orm');
+
+      const resultado = await contarLeadsYDuplicadosUnificado(
+        campana,
+        clienteData,
+        db,
+        opLeadsRepTable,
+        opLead,
+        count,
+        todasLasCampanas
+      );
+
+      return [{ totalDuplicados: resultado.duplicados }];
+    } catch (error) {
+      console.error(`❌ Error en contarDuplicadosPorCampana:`, error);
+      return [{ totalDuplicados: 0 }];
     }
-    
-    // 📊 CAMPAÑA EN PROCESO: Usar filtros genéricos para duplicados
-    // NORMALIZAR nombre comercial usando la función centralizada
-    const nombreComercialRaw = clienteData?.nombreComercial || '';
-    const nombreComercial = normalizeClientName(nombreComercialRaw);
-    
-    // MAPEO CORRECTO: Zona de campaña → Localización en datos sincronizados
-    const mapeoZonas: Record<string, string> = {
-      'NACIONAL': 'Pais',
-      'AMBA': 'Amba',
-      'Córdoba': 'Cordoba',
-      'Santa Fe': 'Santa Fe',
-      'Mendoza': 'Mendoza'
-    };
-    const localizacionFiltro = mapeoZonas[campana.zona as keyof typeof mapeoZonas] || campana.zona || 'Pais';
-    
-    // NUEVA LÓGICA: Calcular fecha_fin automáticamente si no existe
-    // DESHABILITADO: No calcular fecha fin automática para duplicados
-    let fechaFinCalculada = campana.fechaFin;
-
-    // Comentado para que NO limite duplicados por fecha fin automática
-    /*
-    if (!fechaFinCalculada) {
-      // Buscar la siguiente campaña del mismo cliente para calcular fecha límite
-      const campanasDelCliente = todasLasCampanas
-        .filter(c => c.clienteId === campana.clienteId)
-        .sort((a, b) => new Date(a.fechaCampana).getTime() - new Date(b.fechaCampana).getTime());
-
-      const indiceCampanaActual = campanasDelCliente.findIndex(c => c.id === campana.id);
-      if (indiceCampanaActual !== -1 && indiceCampanaActual < campanasDelCliente.length - 1) {
-        // Hay una campaña siguiente, usar día anterior como límite
-        const siguienteCampana = campanasDelCliente[indiceCampanaActual + 1];
-        const fechaSiguiente = new Date(siguienteCampana.fechaCampana);
-        fechaSiguiente.setDate(fechaSiguiente.getDate() - 1); // Día anterior
-        fechaFinCalculada = fechaSiguiente.toISOString().split('T')[0];
-      }
-    }
-    */
-    
-    // 🎯 NUEVA LÓGICA: Soporte para múltiples marcas en duplicados
-    const brands = extractBrandsFromCampaign(campana, campana.asignacionAutomatica);
-    console.log(`🏷️ MÚLTIPLES MARCAS (DUPLICADOS) - ${getMultiBrandDebugInfo(campana)}`);
-
-    // Crear condición para múltiples marcas (OR entre todas las marcas configuradas)
-    const multiBrandCondition = createMultiBrandCondition(brands, opLeadsRepTable.campaign);
-
-    const result = await db
-      .select({ totalDuplicados: sql<number>`SUM(${opLeadsRepTable.cantidadDuplicados})` })
-      .from(opLeadsRepTable)
-      .where(sql`${multiBrandCondition}
-            AND lower(${opLeadsRepTable.cliente}) LIKE ${`%${nombreComercial.toLowerCase()}%`}
-            AND ${opLeadsRepTable.localizacion} = ${localizacionFiltro}
-            AND ${opLeadsRepTable.source} = 'google_sheets'
-            AND (${opLeadsRepTable.campaignId} IS NULL OR ${opLeadsRepTable.campaignId} = ${campana.id})
-            AND date(${opLeadsRepTable.fechaCreacion}) >= ${campana.fechaCampana}
-            ${fechaFinCalculada ? sql`AND date(${opLeadsRepTable.fechaCreacion}) <= ${fechaFinCalculada}` : sql``}`);
-
-    console.log(`📊 DUPLICADOS QUERY - Campaña ${campana.numeroCampana} (${campana.nombreComercial}):`, {
-      fechaInicio: campana.fechaCampana,
-      fechaFin: fechaFinCalculada || 'SIN LÍMITE',
-      resultado: result[0]?.totalDuplicados || 0
-    });
-
-    return result;
   }
 
+  /**
+   * Cuenta leads únicos de una campaña
+   * DEPRECADO: Usar contarLeadsYDuplicadosUnificado directamente
+   */
   async function contarLeadsPorCampana(campana: any, clienteData: any, db: any, opLeadsRepTable: any, sql: any, count: any, todasLasCampanas: any[]) {
-    
-    // 🎯 LÓGICA DIFERENCIADA: Finalizadas usan campaign_id, en proceso usan filtros
-    if (campana.fechaFin) {
-      // ✅ CAMPAÑA FINALIZADA: Contar directamente por campaign_id en op_leads_rep
-      
-      try {
-        const { eq } = await import('drizzle-orm');
-        
-        const result = await db.select({ count: count() })
-          .from(opLeadsRepTable)
-          .where(eq(opLeadsRepTable.campaignId, campana.id));
-        
-        const leadsAsignados = result[0]?.count || 0;
-        
-        return [{ count: leadsAsignados }];
-        
-      } catch (error) {
-        console.error(`❌ Error contando leads en op_leads_rep para campaña ${campana.id}:`, error);
-        return [{ count: 0 }];
-      }
-    }
-    
-    // 📊 CAMPAÑA EN PROCESO: Usar filtros genéricos
-    // NORMALIZAR nombre comercial usando la función centralizada
-    const nombreComercialRaw = clienteData?.nombreComercial || '';
-    const nombreComercial = normalizeClientName(nombreComercialRaw);
-    
-    // MAPEO CORRECTO: Zona de campaña → Localización en datos sincronizados
-    const mapeoZonas: Record<string, string> = {
-      'NACIONAL': 'Pais',
-      'AMBA': 'Amba',
-      'Córdoba': 'Cordoba',
-      'Santa Fe': 'Santa Fe',
-      'Mendoza': 'Mendoza'
-    };
-    const localizacionFiltro = mapeoZonas[campana.zona as keyof typeof mapeoZonas] || campana.zona || 'Pais';
-    
-    // ✅ USAR SOLO fecha_fin REAL de la base de datos - SIN cálculo automático
-    let fechaFinCalculada = campana.fechaFin; // Solo usar si está explícitamente definida en BD
-    
-    
     try {
-      // Usar operadores Drizzle individuales para evitar problemas de parámetros
-      const { ilike, eq, gte, lte, and } = await import('drizzle-orm');
-      
-      
-      // 🎯 NUEVA LÓGICA: Soporte para múltiples marcas
-      const brands = extractBrandsFromCampaign(campana, campana.asignacionAutomatica);
-      console.log(`🏷️ MÚLTIPLES MARCAS - ${getMultiBrandDebugInfo(campana)}`);
+      const { opLead } = await import('../shared/schema');
 
-      // Crear condición para múltiples marcas (OR entre todas las marcas configuradas)
-      const multiBrandCondition = createMultiBrandCondition(brands, opLeadsRepTable.campaign);
+      const resultado = await contarLeadsYDuplicadosUnificado(
+        campana,
+        clienteData,
+        db,
+        opLeadsRepTable,
+        opLead,
+        count,
+        todasLasCampanas
+      );
 
-      let conditions = [
-        multiBrandCondition, // ✅ NUEVA LÓGICA: Incluye todas las marcas configuradas
-        eq(opLeadsRepTable.cliente, nombreComercial), // ✅ CORRECCIÓN: Comparación exacta en lugar de ILIKE con wildcards
-        eq(opLeadsRepTable.localizacion, localizacionFiltro),
-        eq(opLeadsRepTable.source, 'google_sheets'),
-        sql`(${opLeadsRepTable.campaignId} IS NULL OR ${opLeadsRepTable.campaignId} = ${campana.id})`, // Contar leads disponibles o asignados a esta campaña
-        gte(sql`date(${opLeadsRepTable.fechaCreacion})`, campana.fechaCampana) // ✅ FILTRO DE FECHA REHABILITADO
-      ];
-
-      if (fechaFinCalculada) {
-        conditions.push(lte(sql`date(${opLeadsRepTable.fechaCreacion})`, fechaFinCalculada)); // ✅ FILTRO DE FECHA FIN REHABILITADO
-      }
-      
-      const result = await db
-        .select({ count: count() })
-        .from(opLeadsRepTable)
-        .where(and(...conditions));
-      
-      
-      return result;
-      
+      return [{ count: resultado.enviados }];
     } catch (error) {
-      console.error(`❌ QUERY ERROR: ${campana.marca} ${campana.numeroCampana}:`, error);
+      console.error(`❌ Error en contarLeadsPorCampana:`, error);
       return [{ count: 0 }];
     }
   }
 
   // Función para verificar si existe una campaña anterior abierta con mismo cliente, marca y zona
+  /**
+   * Función centralizada para procesar una campaña y retornar un record completo
+   * Evita duplicación de código entre diferentes endpoints
+   */
+  async function processCampaignRecord(
+    campana: any,
+    clienteData: any,
+    db: any,
+    opLeadsRep: any,
+    sql: any,
+    count: any,
+    todasLasCampanas: any[],
+    cplsMap: Map<string, number>,
+    options: { isPending?: boolean } = {}
+  ) {
+    const { isPending = false } = options;
+
+    // Contar leads
+    const leadsCount = await contarLeadsPorCampana(campana, clienteData, db, opLeadsRep, sql, count, todasLasCampanas);
+    const enviadosDB = leadsCount[0]?.count || 0;
+
+    // Contar duplicados
+    const duplicadosResult = await contarDuplicadosPorCampana(campana, clienteData, db, opLeadsRep, sql, todasLasCampanas);
+    let totalDuplicados = duplicadosResult?.[0]?.totalDuplicados || 0;
+
+    // Verificar campaña anterior abierta
+    const tieneCampanaAnterior = await tieneCampanaAnteriorAbierta(campana, todasLasCampanas);
+
+    // Preparar datos básicos
+    let enviadosFinales = enviadosDB;
+    const clienteIdentificador = `${campana.marca.toUpperCase()} ${campana.numeroCampana}`;
+    const clienteNombreReal = clienteData?.nombreCliente || `${campana.marca.toUpperCase()} ${campana.numeroCampana}`;
+
+    // Calcular métricas
+    const cantidadSolicitados = campana.cantidadDatosSolicitados;
+    const percentageResult = calculateDatosEnviadosPercentage(enviadosFinales, cantidadSolicitados);
+    const porcentajeDatosEnviados = percentageResult.percentage;
+    const faltantesAEnviar = calculateFaltantesAEnviar(enviadosFinales, cantidadSolicitados);
+
+    // Obtener CPL
+    const uniqueKey = `${clienteIdentificador}-${campana.numeroCampana}`;
+    const storedCpl = cplsMap.get(uniqueKey) || 0;
+
+    // Aplicar guión si hay campaña anterior abierta
+    let enviadosDisplay: string | number = enviadosFinales;
+    let duplicadosDisplay: string | number = totalDuplicados;
+
+    if (tieneCampanaAnterior) {
+      enviadosDisplay = "-";
+      duplicadosDisplay = "-";
+    }
+
+    // Calcular fecha fin - para pendientes siempre es null
+    const fechaFinExacta = isPending ? null : campana.fechaFin;
+
+    // Calcular días transcurridos y entregados por día
+    const fechaInicio = campana.fechaCampana ? new Date(campana.fechaCampana) : new Date();
+    const fechaReferencia = isPending
+      ? new Date() // Para pendientes siempre es hoy
+      : (fechaFinExacta && fechaFinExacta !== null ? new Date(fechaFinExacta) : new Date());
+    const diasTranscurridos = Math.max(1, Math.ceil((fechaReferencia.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24)));
+    const entregadosPorDia = tieneCampanaAnterior ? "-" : enviadosFinales / diasTranscurridos;
+
+    // Calcular inversiones
+    const inversionRealizada = tieneCampanaAnterior ? "-" : (enviadosFinales * (storedCpl || 0));
+    const inversionPendiente = tieneCampanaAnterior ? "-" : (faltantesAEnviar * (storedCpl || 0));
+
+    // Calcular estado
+    const estado = isPending ? 'En proceso' : (fechaFinExacta ? 'Finalizada' : 'En proceso');
+
+    return {
+      campaignId: campana.id,
+      cliente: clienteIdentificador,
+      clienteNombre: clienteNombreReal,
+      zona: campana.zona,
+      enviados: enviadosDisplay,
+      cantidadDatosSolicitados: cantidadSolicitados,
+      porcentajeDatosEnviados,
+      faltantesAEnviar,
+      numeroCampana: campana.numeroCampana,
+      cpl: storedCpl || 0,
+      marca: campana.marca,
+      fechaCampana: campana.fechaCampana,
+      fechaFin: fechaFinExacta,
+      fechaFinReal: fechaFinExacta,
+      facturacionBruta: campana.facturacionBruta,
+      pedidosPorDia: campana.pedidosPorDia ?? 0,
+      pedidosTotal: campana.cantidadDatosSolicitados,
+      faltantes: tieneCampanaAnterior ? "-" : Math.max(0, campana.cantidadDatosSolicitados - enviadosFinales),
+      entregadosPorDia,
+      inversionRealizada,
+      inversionPendiente,
+      estado,
+      estadoCampana: estado,
+      duplicados: duplicadosDisplay
+    };
+  }
+
   async function tieneCampanaAnteriorAbierta(campanaActual: any, todasLasCampanas: any[]): Promise<boolean> {
     try {
       // Adaptarse a estructuras con id o campanaId
@@ -868,89 +820,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (const campana of campanas) {
         try {
-          // 🚀 OPTIMIZACIÓN 3: Usar Map en lugar de query
+          // 🚀 OPTIMIZACIÓN: Usar Map en lugar de query
           const clienteData = clientesMap.get(campana.clienteId);
 
-          // Usar función auxiliar para contar leads con filtro inteligente
-          const leadsCount = await contarLeadsPorCampana(campana, clienteData, db, opLeadsRep, sql, count, campanas);
-
-          const enviadosDB = leadsCount[0]?.count || 0;
-
-          // Contar duplicados con los mismos filtros que la campaña
-          const duplicadosResult = await contarDuplicadosPorCampana(campana, clienteData, db, opLeadsRep, sql, campanas);
-          let totalDuplicados = duplicadosResult?.[0]?.totalDuplicados || 0;
-
-          // Verificar si existe una campaña anterior abierta con mismo cliente, marca y zona
-          const tieneCampanaAnterior = await tieneCampanaAnteriorAbierta(campana, campanas);
-
-          // Aplicar correcciones específicas (mantener la lógica actual)
-          let enviadosFinales = enviadosDB;
-          const clienteIdentificador = `${campana.marca.toUpperCase()} ${campana.numeroCampana}`;
-          const clienteNombreReal = clienteData?.nombreCliente || `${campana.marca.toUpperCase()} ${campana.numeroCampana}`;
-
-          // Aplicar mismas correcciones que el sistema actual
-          // RENAULT_FIX_DISABLED: Corrección temporal deshabilitada
-          /*
-          if (clienteIdentificador.toLowerCase().includes('renault')) {
-            enviadosFinales = 45;
-          } else
-          */
-
-          // Calcular métricas como el sistema actual
-          const cantidadSolicitados = campana.cantidadDatosSolicitados;
-          const percentageResult = calculateDatosEnviadosPercentage(enviadosFinales, cantidadSolicitados);
-          const porcentajeDatosEnviados = percentageResult.percentage;
-          const faltantesAEnviar = calculateFaltantesAEnviar(enviadosFinales, cantidadSolicitados);
-
-          // 🚀 OPTIMIZACIÓN 5: Obtener CPL desde Map (sin query)
-          const uniqueKey = `${clienteIdentificador}-${campana.numeroCampana}`;
-          const storedCpl = cplsMap.get(uniqueKey) || 0;
-
-          // Aplicar guión si hay campaña anterior abierta
-          let enviadosDisplay: string | number = enviadosFinales;
-          let duplicadosDisplay: string | number = totalDuplicados;
-
-          if (tieneCampanaAnterior) {
-            enviadosDisplay = "-"; // Mostrar guión en lugar del número
-            duplicadosDisplay = "-"; // Mostrar guión en lugar del número
-          }
-
-          // Usar fecha fin de la campaña sin cálculo automático
-          // Las fechas fin solo se deben calcular cuando realmente se completa la campaña
-          let fechaFinExacta = campana.fechaFin;
-
-          const record = {
-            campaignId: campana.id, // ID directo de la campaña comercial para reapertura
-            cliente: clienteIdentificador, // Identificador técnico (JEEP 1, VW 1, etc.)
-            clienteNombre: clienteNombreReal, // Nombre real del cliente desde la base de datos
-            zona: campana.zona,
-            enviados: enviadosDisplay,
-            cantidadDatosSolicitados: cantidadSolicitados,
-            porcentajeDatosEnviados,
-            faltantesAEnviar,
-            numeroCampana: campana.numeroCampana,
-            cpl: storedCpl || 0,
-            marca: campana.marca,
-            fechaCampana: campana.fechaCampana,
-            fechaFin: fechaFinExacta, // Usar fecha con timestamp exacto
-            fechaFinReal: fechaFinExacta, // Campo que usa el frontend para filtros
-            facturacionBruta: campana.facturacionBruta,
-            pedidosPorDia: campana.pedidosPorDia ?? 0, // Campo "Día" desde tabla campañas
-            pedidosTotal: campana.cantidadDatosSolicitados, // Campo "Pedidos Total" (Datos Solicitados)
-            faltantes: tieneCampanaAnterior ? "-" : Math.max(0, campana.cantidadDatosSolicitados - enviadosFinales), // Faltantes = Pedidos Total - Enviados
-            entregadosPorDia: (() => {
-              // Calcular días transcurridos desde fecha de campaña hasta hoy o fecha fin
-              const fechaInicio = campana.fechaCampana ? new Date(campana.fechaCampana) : new Date();
-              const fechaReferencia = fechaFinExacta && fechaFinExacta !== null ? new Date(fechaFinExacta) : new Date();
-              const diasTranscurridos = Math.max(1, Math.ceil((fechaReferencia.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24)));
-              return tieneCampanaAnterior ? "-" : enviadosFinales / diasTranscurridos;
-            })(), // Entregados por día = enviados / días transcurridos
-            // Campos calculados adicionales
-            inversionRealizada: tieneCampanaAnterior ? "-" : (enviadosFinales * (storedCpl || 0)),
-            inversionPendiente: tieneCampanaAnterior ? "-" : (faltantesAEnviar * (storedCpl || 0)),
-            estado: fechaFinExacta ? 'Finalizada' : 'En proceso', // Estado basado en fecha_fin
-            duplicados: duplicadosDisplay
-          };
+          // Usar función centralizada para procesar campaña
+          const record = await processCampaignRecord(
+            campana,
+            clienteData,
+            db,
+            opLeadsRep,
+            sql,
+            count,
+            campanas,
+            cplsMap,
+            { isPending: false } // No es campaña pendiente, puede estar finalizada o en proceso
+          );
 
           processedData.push(record);
 
@@ -967,6 +851,182 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error obteniendo datos desde PostgreSQL:', error);
       res.status(500).json({ error: 'Failed to fetch data from PostgreSQL' });
+    }
+  });
+
+  // Endpoint exclusivo para Campañas Pendientes (sin fechaFin)
+  app.get('/api/dashboard/campanas-pendientes', async (req, res) => {
+    try {
+      const startTime = Date.now();
+      const requestId = `PEND-${Date.now()}`;
+
+      // Verificar caché
+      const now = Date.now();
+      if (campanasCache && (now - cacheTimestamp) < CACHE_TTL) {
+        const cacheAge = now - cacheTimestamp;
+        console.log(`💾 [${requestId}] Usando caché (${cacheAge}ms antiguo) - ${campanasCache.length} campañas`);
+        return res.json(campanasCache);
+      }
+
+      console.log(`📋 [${requestId}] Cargando campañas pendientes (caché expirado o vacío)...`);
+
+      const { db } = await import('./db');
+      const { opLeadsRep, campanasComerciales } = await import('../shared/schema');
+      const { count, sql, desc } = await import('drizzle-orm');
+
+      // Consultar campañas directamente desde la BD para evitar caché stale del storage
+      const campanas = await db.select().from(campanasComerciales);
+      const clientes = await storage.getAllClientes();
+
+      // Filtrar solo campañas SIN fecha fin (pendientes)
+      const campanasPendientes = campanas.filter(c => !c.fechaFin);
+      console.log(`📊 [${requestId}] ${campanasPendientes.length} campañas pendientes de ${campanas.length} totales`);
+
+      // Crear Map de clientes
+      const clientesMap = new Map(clientes.map(c => [c.id, c]));
+
+      // Batch query para CPLs
+      const { dashboardManualValues } = await import('../shared/schema');
+      const allCplsData = await db.select().from(dashboardManualValues);
+
+      // Crear Map de CPLs
+      const cplsMap = new Map<string, number>();
+      for (const campana of campanasPendientes) {
+        const clienteData = clientesMap.get(campana.clienteId);
+        if (clienteData) {
+          const clienteIdentificador = `${campana.marca.toUpperCase()} ${campana.numeroCampana}`;
+          const uniqueKey = `${clienteIdentificador}-${campana.numeroCampana}`;
+          const hash = (storage as any).hashString ? (storage as any).hashString(uniqueKey) : 0;
+
+          const cplEntry = allCplsData.find(c => c.clienteIndex === hash);
+          if (cplEntry?.cpl) {
+            cplsMap.set(uniqueKey, parseFloat(cplEntry.cpl));
+          }
+        }
+      }
+
+      // PROCESAMIENTO EN PARALELO con Promise.all
+      const processedDataPromises = campanasPendientes.map(async (campana) => {
+        try {
+          const clienteData = clientesMap.get(campana.clienteId);
+
+          // Usar función centralizada para procesar campaña
+          const record = await processCampaignRecord(
+            campana,
+            clienteData,
+            db,
+            opLeadsRep,
+            sql,
+            count,
+            campanas,
+            cplsMap,
+            { isPending: true } // Indicar que es campaña pendiente
+          );
+
+          return record;
+
+        } catch (campaignError) {
+          console.error(`❌ Error campaña ${campana.numeroCampana}:`, campaignError.message);
+          return null;
+        }
+      });
+
+      const processedData = (await Promise.all(processedDataPromises)).filter(Boolean);
+
+      const totalTime = Date.now() - startTime;
+      console.log(`✅ [${requestId}] Completado en ${totalTime}ms - ${processedData.length} campañas`);
+
+      // Guardar en caché
+      campanasCache = processedData;
+      cacheTimestamp = Date.now();
+
+      res.json(processedData);
+
+    } catch (error) {
+      console.error(`❌ [CAMPAÑAS PENDIENTES] Error crítico:`, error);
+      res.status(500).json({ error: 'Failed to fetch pending campaigns' });
+    }
+  });
+
+  // Endpoint exclusivo para Campañas Finalizadas (con fechaFin)
+  app.get('/api/dashboard/campanas-finalizadas', async (req, res) => {
+    try {
+      const startTime = Date.now();
+      const requestId = `FIN-${Date.now()}`;
+
+      console.log(`📋 [${requestId}] Cargando campañas finalizadas...`);
+
+      const { db } = await import('./db');
+      const { opLeadsRep, campanasComerciales } = await import('../shared/schema');
+      const { count, sql } = await import('drizzle-orm');
+
+      // Consultar campañas directamente desde la BD
+      const campanas = await db.select().from(campanasComerciales);
+      const clientes = await storage.getAllClientes();
+
+      // Filtrar solo campañas CON fecha fin (finalizadas)
+      const campanasFinalizadas = campanas.filter(c => c.fechaFin);
+      console.log(`📊 [${requestId}] ${campanasFinalizadas.length} campañas finalizadas de ${campanas.length} totales`);
+
+      // Crear Map de clientes
+      const clientesMap = new Map(clientes.map(c => [c.id, c]));
+
+      // Batch query para CPLs
+      const { dashboardManualValues } = await import('../shared/schema');
+      const allCplsData = await db.select().from(dashboardManualValues);
+
+      // Crear Map de CPLs
+      const cplsMap = new Map<string, number>();
+      for (const campana of campanasFinalizadas) {
+        const clienteData = clientesMap.get(campana.clienteId);
+        if (clienteData) {
+          const clienteIdentificador = `${campana.marca.toUpperCase()} ${campana.numeroCampana}`;
+          const uniqueKey = `${clienteIdentificador}-${campana.numeroCampana}`;
+          const hash = (storage as any).hashString ? (storage as any).hashString(uniqueKey) : 0;
+
+          const cplEntry = allCplsData.find(c => c.clienteIndex === hash);
+          if (cplEntry?.cpl) {
+            cplsMap.set(uniqueKey, parseFloat(cplEntry.cpl));
+          }
+        }
+      }
+
+      // PROCESAMIENTO EN PARALELO con Promise.all
+      const processedDataPromises = campanasFinalizadas.map(async (campana) => {
+        try {
+          const clienteData = clientesMap.get(campana.clienteId);
+
+          // Usar función centralizada para procesar campaña
+          const record = await processCampaignRecord(
+            campana,
+            clienteData,
+            db,
+            opLeadsRep,
+            sql,
+            count,
+            campanas,
+            cplsMap,
+            { isPending: false } // No es campaña pendiente, es finalizada
+          );
+
+          return record;
+
+        } catch (campaignError) {
+          console.error(`❌ Error campaña ${campana.numeroCampana}:`, campaignError.message);
+          return null;
+        }
+      });
+
+      const processedData = (await Promise.all(processedDataPromises)).filter(Boolean);
+
+      const totalTime = Date.now() - startTime;
+      console.log(`✅ [${requestId}] Completado en ${totalTime}ms - ${processedData.length} campañas`);
+
+      res.json(processedData);
+
+    } catch (error) {
+      console.error(`❌ [CAMPAÑAS FINALIZADAS] Error crítico:`, error);
+      res.status(500).json({ error: 'Failed to fetch finalized campaigns' });
     }
   });
 
@@ -991,7 +1051,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Transformar a formato compatible con el dashboard
       const duplicadosMap: Record<string, number> = {};
-      
+
       duplicadosData.forEach(item => {
         // Crear clave usando el formato del dashboard: MARCA numeroCampana (ej: "TOYOTA 1")
         const clienteIdentificador = `${item.marca.toUpperCase()} 1`; // Asumir campaña 1 por defecto
@@ -3042,156 +3102,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Endpoint para exportar leads de una campaña específica usando filtrado inteligente
-  app.get('/api/export/campana-leads/:campaignName', async (req, res) => {
-    try {
-      const { campaignName } = req.params;
-      console.log(`📥 Exportando leads para campaña: ${campaignName}`);
-      
-      // Obtener leads desde PostgreSQL usando el mismo filtro que el dashboard
-      const { db } = await import('./db');
-      const { leads } = await import('../shared/schema');
-      const { sql } = await import('drizzle-orm');
-      
-      // Buscar campaña comercial que corresponda al nombre
-      const campanas = await storage.getAllCampanasComerciales();
-      const campana = campanas.find(c => `${c.marca.toUpperCase()} ${c.numeroCampana}` === campaignName);
-      
-      if (!campana) {
-        return res.status(404).json({ error: `Campaña ${campaignName} no encontrada` });
-      }
-      
-      // Obtener datos del cliente para filtro por nombre comercial
-      const clienteData = await storage.getCliente(campana.clienteId);
-      const nombreComercial = clienteData?.nombreComercial || '';
-      
-      console.log(`🔍 DEBUG Export: Campaña=${campaignName}, clienteId=${campana.clienteId}, nombreComercial='${nombreComercial}'`);
-      
-      // Usar el mismo filtrado inteligente que el dashboard
-      const campaignLeads = await db
-        .select({
-          id: leads.id,
-          firstName: leads.firstName,
-          lastName: leads.lastName,
-          email: leads.email,
-          phone: leads.phone,
-          city: leads.city,
-          campaignName: leads.campaignName,
-          origen: leads.origen,
-          localizacion: leads.localizacion,
-          cliente: leads.cliente,
-          leadDate: leads.leadDate,
-          status: leads.status,
-          cost: leads.cost
-        })
-        .from(leads)
-        .where(
-          sql`lower(${leads.campaignName}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
-              AND (
-                lower(${leads.cliente}) LIKE ${`%${nombreComercial.toLowerCase()}%`}
-                OR ${leads.cliente} IS NULL 
-                OR ${leads.cliente} = ''
-              )
-              AND ${leads.source} = 'google_sheets'
-              AND date(${leads.leadDate}) >= ${campana.fechaCampana}
-              ${campana.fechaFin ? sql`AND date(${leads.leadDate}) <= ${campana.fechaFin}` : sql``}`
-        )
-        .orderBy(leads.leadDate);
-      
-      console.log(`✅ Encontrados ${campaignLeads.length} leads para ${campaignName} (${nombreComercial})`);
-      
-      res.json({
-        campaignName,
-        marca: campana.marca,
-        numeroCampana: campana.numeroCampana,
-        nombreComercial,
-        totalLeads: campaignLeads.length,
-        leads: campaignLeads,
-        exportDate: new Date().toISOString()
-      });
-      
-    } catch (error) {
-      console.error('Error exporting campaign leads:', error);
-      res.status(500).json({ error: 'Failed to export campaign leads' });
-    }
-  });
-
-  // Endpoint para exportar todas las campañas finalizadas en un solo CSV
-  app.get('/api/export/campanas-finalizadas', async (req, res) => {
-    try {
-      console.log('📊 Exportando todas las campañas finalizadas...');
-      
-      // Obtener campañas comerciales finalizadas
-      const campanasFinalizadas = await storage.getAllCampanasComerciales();
-      const { db } = await import('./db');
-      const { leads } = await import('../shared/schema');
-      const { sql } = await import('drizzle-orm');
-      
-      const exportData = [];
-      
-      for (const campana of campanasFinalizadas) {
-        // Contar leads para determinar si está finalizada
-        const leadsCount = await db
-          .select({ count: sql`count(*)` })
-          .from(leads)
-          .where(
-            sql`lower(${leads.campaignName}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
-                AND ${leads.source} = 'google_sheets'
-                AND date(${leads.leadDate}) >= ${campana.fechaCampana}
-                AND date(${leads.leadDate}) <= ${campana.fechaFin || new Date()}`
-          );
-
-        const totalLeads = Number(leadsCount[0]?.count || 0);
-        const porcentajeCompleto = campana.cantidadDatosSolicitados > 0 
-          ? (totalLeads / campana.cantidadDatosSolicitados) * 100 
-          : 0;
-        
-        // Solo incluir campañas finalizadas (100% completadas)
-        if (porcentajeCompleto >= 100) {
-          // Obtener leads detallados para esta campaña
-          const campaignLeads = await db
-            .select()
-            .from(leads)
-            .where(
-              sql`lower(${leads.campaignName}) LIKE ${`%${campana.marca.toLowerCase()}%`} 
-                  AND ${leads.source} = 'google_sheets'
-                  AND date(${leads.leadDate}) >= ${campana.fechaCampana}
-                  AND date(${leads.leadDate}) <= ${campana.fechaFin || new Date()}`
-            )
-            .orderBy(leads.leadDate);
-          
-          exportData.push({
-            campaignId: campana.id,
-            campaignName: `${campana.marca.toUpperCase()} ${campana.numeroCampana}`,
-            marca: campana.marca,
-            zona: campana.zona,
-            fechaInicio: campana.fechaCampana,
-            fechaFin: campana.fechaFin,
-            cantidadSolicitada: campana.cantidadDatosSolicitados,
-            enviados: totalLeads,
-            porcentajeCompleto,
-            leads: campaignLeads
-          });
-        }
-      }
-      
-      console.log(`✅ Exportando ${exportData.length} campañas finalizadas con ${exportData.reduce((acc, c) => acc + c.leads.length, 0)} leads totales`);
-      
-      res.json({
-        totalCampanasFinalizadas: exportData.length,
-        totalLeads: exportData.reduce((acc, c) => acc + c.leads.length, 0),
-        campanas: exportData,
-        exportDate: new Date().toISOString()
-      });
-      
-    } catch (error) {
-      console.error('Error exporting finished campaigns:', error);
-      res.status(500).json({ error: 'Failed to export finished campaigns' });
-    }
-  });
-
-
-
   // Función para calcular fecha de fin automáticamente
   async function calculateFechaFin(fechaInicio: string, cantidadSolicitada: number, marca: string): Promise<string> {
     try {
@@ -3834,16 +3744,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
   try {
     console.log('🔄 Registrando rutas del sistema de cierre de campañas...');
     const { createCampaignClosureRoutes, campaignClosureLoggingMiddleware } = await import('./campaign-closure/presentation/routes/campaign-closure-routes');
-    
+
     // Aplicar middleware específico de campaign closure
     app.use('/api/campaign-closure', campaignClosureLoggingMiddleware);
-    
+
     // Registrar todas las rutas de campaign closure (/api/campaign-closure/*)
     app.use('/api/campaign-closure', createCampaignClosureRoutes());
-    
+
     console.log('✅ Rutas del sistema de cierre de campañas registradas: /api/campaign-closure/*');
   } catch (error) {
     console.error('❌ Error registrando rutas del sistema refactorizado:', error);
+  }
+
+  // Importar y registrar rutas del sistema de reset de campañas
+  try {
+    console.log('🔄 Registrando rutas del sistema de reset de campañas...');
+    const { createCampaignResetRoutes } = await import('./campaign-reset/presentation/routes/campaign-reset-routes');
+
+    // Registrar todas las rutas de campaign reset (/api/campaign-reset/*)
+    app.use('/api/campaign-reset', createCampaignResetRoutes());
+
+    console.log('✅ Rutas del sistema de reset de campañas registradas: /api/campaign-reset/*');
+  } catch (error) {
+    console.error('❌ Error registrando rutas del sistema de reset:', error);
+  }
+
+  // Importar y registrar rutas del sistema de campañas pendientes
+  try {
+    console.log('🔄 Registrando rutas del sistema de campañas pendientes...');
+    const { createPendingCampaignRoutes, pendingCampaignLoggingMiddleware } = await import('./pending-campaigns/presentation/routes/pending-campaign-routes');
+
+    // Aplicar middleware específico de pending campaigns
+    app.use('/api/pending-campaigns', pendingCampaignLoggingMiddleware);
+
+    // Registrar todas las rutas de pending campaigns (/api/pending-campaigns/*)
+    app.use('/api/pending-campaigns', createPendingCampaignRoutes());
+
+    console.log('✅ Rutas del sistema de campañas pendientes registradas: /api/pending-campaigns/*');
+  } catch (error) {
+    console.error('❌ Error registrando rutas del sistema de campañas pendientes:', error);
+  }
+
+  // Importar y registrar rutas del sistema de campañas finalizadas
+  try {
+    console.log('🔄 Registrando rutas del sistema de campañas finalizadas...');
+    const { createFinishedCampaignRoutes, finishedCampaignLoggingMiddleware } = await import('./finished-campaigns/presentation/routes/finished-campaign-routes');
+
+    // Aplicar middleware específico de finished campaigns
+    app.use('/api/finished-campaigns', finishedCampaignLoggingMiddleware);
+
+    // Registrar todas las rutas de finished campaigns (/api/finished-campaigns/*)
+    app.use('/api/finished-campaigns', createFinishedCampaignRoutes());
+
+    console.log('✅ Rutas del sistema de campañas finalizadas registradas: /api/finished-campaigns/*');
+  } catch (error) {
+    console.error('❌ Error registrando rutas del sistema de campañas finalizadas:', error);
   }
 
   // Registrar ruta optimizada con vista materializada
@@ -3863,6 +3818,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     registerWebhookRoutes(app);
   } catch (error) {
     console.error('❌ Error registrando rutas de webhooks:', error);
+  }
+
+  // Registrar rutas del sistema de leads
+  try {
+    const { leadsRoutes } = await import('./leads/presentation/routes/leads-routes');
+    app.use('/api/leads', leadsRoutes);
+    console.log('✅ Rutas del sistema de leads registradas: /api/leads/*');
+  } catch (error) {
+    console.error('❌ Error registrando rutas de leads:', error);
   }
 
   return httpServer;

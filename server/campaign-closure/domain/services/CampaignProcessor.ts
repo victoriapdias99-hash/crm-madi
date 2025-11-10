@@ -214,9 +214,9 @@ export class CampaignProcessor {
     console.log(`📡 Usando campaignKey: ${actualCampaignKey}`);
 
     const result = await this.processSingleCampaign(campaignToProcess, actualCampaignKey, !!specificCampaignNumber);
-    
-    if (result.success) {
-      campaignsClosed.push(result.campaignDetail!);
+
+    if (result.success && result.campaignDetail) {
+      campaignsClosed.push(result.campaignDetail);
       totalLeadsAssigned += result.leadsAssigned;
     }
 
@@ -258,19 +258,33 @@ export class CampaignProcessor {
         this.progressManager.emitProgress(campaignKey, 40, 'Analizando leads actuales...');
       }
 
-      // Contar leads YA asignados a esta campaña
+      // ============================================================================
+      // PASO 1: Contar leads YA asignados a esta campaña
+      // ============================================================================
+      // Query: SELECT count(*) FROM op_lead WHERE campaign_id = {campaign.id}
+      // Cuenta SOLO los leads que ya tienen campaign_id asignado a esta campaña
       const step1Start = Date.now();
       console.log(`📊 [${campaignTrackingId}] PASO 1 - Contando leads ya asignados...`);
-      const currentAssignedLeads = await this.leadRepository.countAssignedLeadsForCampaign(campaign.id);
+      const currentAssignedLeads = await this.leadRepository.countAssignedLeadsForCampaign(campaign.id, true);
       console.log(`✅ [${campaignTrackingId}] PASO 1 completado en ${Date.now() - step1Start}ms - ${currentAssignedLeads} leads asignados`);
 
-      // Contar leads únicos disponibles para este cliente (no asignados)
+      // ============================================================================
+      // PASO 2: Contar leads disponibles para asignar
+      // ============================================================================
+      // Usa buildCampaignLeadFilters() para aplicar las condiciones:
+      // 1. Multi-marca: (lower(campaign) LIKE '%marca1%' OR ...)
+      // 2. Cliente: cliente = {normalizedClient} (exacto)
+      // 3. Localización: localizacion = {mappedZone} (NACIONAL→Pais, etc.)
+      // 4. Disponibilidad: (campaign_id IS NULL OR campaign_id = {campaign.id})
+      // 5. ❌ SIN filtro de fechas - Asignación cronológica pura
+      // 6. ❌ SIN filtro de source - Todos los leads vienen de Google Sheets
       const step2Start = Date.now();
       console.log(`🔍 [${campaignTrackingId}] PASO 2 - Contando leads disponibles...`);
       const availableLeadsCount = await this.leadRepository.countUniqueLeadsForClient(
         campaign.clientName,
         campaign.brandName,
-        campaign.zone
+        campaign.zone,
+        campaign // ✅ Pasar objeto campaña completo para soporte multi-marca
       );
       console.log(`✅ [${campaignTrackingId}] PASO 2 completado en ${Date.now() - step2Start}ms - ${availableLeadsCount} leads disponibles`);
 
@@ -366,20 +380,27 @@ export class CampaignProcessor {
         this.progressManager.emitProgress(campaignKey, 60, 'Preparando asignación de leads...');
       }
 
-      // Calcular cuántos leads necesitamos para completar la meta
+      // ============================================================================
+      // PASO 3: Calcular y obtener leads para asignar
+      // ============================================================================
       const leadsNeeded = campaign.targetLeads - currentAssignedLeads;
       const leadsToAssign = Math.min(availableLeadsCount, leadsNeeded);
-      
+
       console.log(`🎯 Leads necesarios: ${leadsNeeded}, disponibles: ${availableLeadsCount}, asignaremos: ${leadsToAssign}`);
 
-      // OPTIMIZACIÓN 1: Obtener SOLO los leads necesarios con límite
+      // OBTENER leads aplicando las MISMAS condiciones de filtrado:
+      // - Usa buildCampaignLeadFilters() para consistencia total
+      // - ORDER BY fecha_creacion ASC (más antiguos primero)
+      // - LIMIT {leadsToAssign * 3} para compensar duplicados ya asignados
+      // - Verifica disponibilidad de duplicados con UNA sola query optimizada
       const step3Start = Date.now();
       console.log(`🎯 [${campaignTrackingId}] PASO 3 - Obteniendo máximo ${leadsToAssign} leads optimizados...`);
       const leadsForAssignment = await this.leadRepository.getLeadsForAssignment(
         campaign.clientName,
         campaign.brandName,
         campaign.zone,
-        leadsToAssign // Solo traer los necesarios
+        leadsToAssign, // Solo traer los necesarios
+        campaign // ✅ Pasar objeto campaña completo para soporte multi-marca
       );
       console.log(`✅ [${campaignTrackingId}] PASO 3 completado en ${Date.now() - step3Start}ms - ${leadsForAssignment.length} leads obtenidos`);
 
@@ -387,7 +408,16 @@ export class CampaignProcessor {
         this.progressManager.emitProgress(campaignKey, 70, `Asignando ${leadsForAssignment.length} leads...`);
       }
 
-      // OPTIMIZACIÓN 2: Asignar leads en lotes con progreso
+      // ============================================================================
+      // PASO 4: Asignar leads en lotes a la base de datos
+      // ============================================================================
+      // IMPORTANTE: Asigna TODOS los duplicate_ids de cada lead único
+      // Ejemplo: Si un lead único tiene duplicate_ids=[1,2,3], asigna los 3 a la campaña
+      // Proceso:
+      // 1. Extrae todos los duplicate_ids de los leads seleccionados
+      // 2. Los agrupa en lotes de 100 para evitar queries muy grandes
+      // 3. Ejecuta UPDATE op_lead SET campaign_id = X WHERE id IN (lote)
+      // 4. Reporta progreso vía WebSocket
       const step5Start = Date.now();
       console.log(`💾 [${campaignTrackingId}] PASO 4 - Iniciando asignación en lotes de ${leadsForAssignment.length} leads...`);
 
@@ -439,11 +469,34 @@ export class CampaignProcessor {
       
       console.log(`✅ Asignados ${assignedCount} leads a campaña ${campaign.id}`);
 
-      // Verificar si se alcanzó la meta (leads actuales + recién asignados)
+      // ============================================================================
+      // PASO 5: Decidir si cerrar la campaña
+      // ============================================================================
+      // La campaña se cierra SI:
+      // 1. Meta alcanzada: totalLeads >= campaign.targetLeads
+      // 2. Cierre manual: forceClose=true (usuario cerró manualmente) Y assignedCount > 0
+      //
+      // forceClose se activa cuando:
+      // - specificCampaignNumber está presente en la request
+      // - Usuario hizo clic en "Cerrar" en el dashboard y confirmó
+      //
+      // Esto permite cerrar campañas con 98/100 leads si el usuario lo decide
       const totalLeads = currentAssignedLeads + assignedCount;
-      if (totalLeads >= campaign.targetLeads) {
+      const metaAlcanzada = totalLeads >= campaign.targetLeads;
+      const deberCerrar = metaAlcanzada || (forceClose && assignedCount > 0);
+
+      if (deberCerrar) {
+        const razonCierre = metaAlcanzada
+          ? `Meta alcanzada (${totalLeads}/${campaign.targetLeads})`
+          : `Cierre manual (${totalLeads}/${campaign.targetLeads})`;
+
+        console.log(`🔒 [${campaignTrackingId}] Cerrando campaña: ${razonCierre}`);
+
         if (campaignKey) {
-          this.progressManager.emitProgress(campaignKey, 90, 'Meta alcanzada, cerrando campaña...');
+          const message = metaAlcanzada
+            ? 'Meta alcanzada, cerrando campaña...'
+            : `Cerrando campaña manualmente (${totalLeads}/${campaign.targetLeads})...`;
+          this.progressManager.emitProgress(campaignKey, 90, message);
         }
 
         const step6Start = Date.now();
@@ -463,7 +516,10 @@ export class CampaignProcessor {
           console.log(`🎯 [${campaignTrackingId}] Campaña ${campaign.id} cerrada exitosamente. Fecha final: ${finalLeadDate.toISOString()}`);
 
           if (campaignKey) {
-            this.progressManager.emitProgress(campaignKey, 100, `Campaña cerrada: ${assignedCount} leads asignados`);
+            const message = metaAlcanzada
+              ? `Campaña cerrada: ${totalLeads} leads asignados`
+              : `Campaña cerrada manualmente: ${totalLeads}/${campaign.targetLeads} leads`;
+            this.progressManager.emitProgress(campaignKey, 100, message);
           }
 
           const campaignDetail: ClosedCampaignDetail = {

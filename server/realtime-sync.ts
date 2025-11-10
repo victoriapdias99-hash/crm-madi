@@ -69,13 +69,18 @@ export class RealtimeSync {
     console.log(`🔄 [${wsTrackingId}] Broadcasting ${action} campaign ${campaignId} - Final: ${this.clients.size} clientes activos`);
   }
 
+  // Invalidar caché de campañas pendientes
+  invalidateCampanasCache() {
+    // Esta función será llamada desde routes.ts
+    // El caché será invalidado estableciendo el timestamp a 0
+  }
+
   // Forzar actualización inmediata de datos diarios
   broadcastDashboardRefresh() {
     const wsTrackingId = `WS-DASH-${Date.now()}`;
     const startTime = Date.now();
 
-    console.log(`⚡ [${wsTrackingId}] INICIO - Broadcasting dashboard refresh`);
-    console.log(`👥 [${wsTrackingId}] Clientes conectados: ${this.clients.size}`);
+    console.log(`⚡ [${wsTrackingId}] Broadcasting dashboard refresh`);
 
     const message = {
       type: 'dashboard_refresh',

@@ -1,0 +1,2431 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - region "Notifications (F8)":
+    - list
+  - generic [ref=e4]:
+    - generic [ref=e6]:
+      - link "Inicio" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - button "Inicio" [ref=e8] [cursor=pointer]:
+          - img
+          - text: Inicio
+      - button "Atrás" [ref=e9] [cursor=pointer]:
+        - img
+        - text: Atrás
+      - link "Datos Diarios" [ref=e10] [cursor=pointer]:
+        - /url: /
+        - button "Datos Diarios" [ref=e11] [cursor=pointer]:
+          - img
+          - text: Datos Diarios
+      - link "Clientes" [ref=e12] [cursor=pointer]:
+        - /url: /clientes
+        - button "Clientes" [ref=e13] [cursor=pointer]:
+          - img
+          - text: Clientes
+      - link "Campañas" [ref=e14] [cursor=pointer]:
+        - /url: /campanas
+        - button "Campañas" [ref=e15] [cursor=pointer]:
+          - img
+          - text: Campañas
+      - link "Meta Ads" [ref=e16] [cursor=pointer]:
+        - /url: /meta-ads
+        - button "Meta Ads" [ref=e17] [cursor=pointer]:
+          - img
+          - text: Meta Ads
+      - link "Finanzas" [ref=e18] [cursor=pointer]:
+        - /url: /finanzas
+        - button "Finanzas" [ref=e19] [cursor=pointer]:
+          - img
+          - text: Finanzas
+      - link "Reportes" [ref=e20] [cursor=pointer]:
+        - /url: /reportes
+        - button "Reportes" [ref=e21] [cursor=pointer]:
+          - img
+          - text: Reportes
+      - link "CPL Directo" [ref=e22] [cursor=pointer]:
+        - /url: /cpl-directo
+        - button "CPL Directo" [ref=e23] [cursor=pointer]:
+          - img
+          - text: CPL Directo
+      - link "CPL Analysis" [ref=e24] [cursor=pointer]:
+        - /url: /cpl-analysis
+        - button "CPL Analysis" [ref=e25] [cursor=pointer]:
+          - img
+          - text: CPL Analysis
+    - generic [ref=e26]:
+      - generic [ref=e27]:
+        - heading "Dashboard - Datos Diarios" [level=1] [ref=e28]
+        - paragraph [ref=e29]: 🚀 Gestión de campañas Meta Ads con datos reales de Google Sheets
+        - generic [ref=e30]:
+          - generic [ref=e33]: Datos actualizándose cada 30 segundos
+          - generic [ref=e36]: WebSocket conectado • Refresh automático activo
+      - generic [ref=e38]:
+        - button "Sincronizar Pestañas" [ref=e39] [cursor=pointer]:
+          - img
+          - text: Sincronizar Pestañas
+        - button "Actualizar Todo" [ref=e40] [cursor=pointer]:
+          - img
+          - text: Actualizar Todo
+    - generic [ref=e41]:
+      - generic [ref=e43]:
+        - generic [ref=e44]:
+          - generic [ref=e45]: 🚀
+          - generic [ref=e46]: Campañas en Proceso
+          - generic [ref=e47]: 45 en progreso
+          - button "📅 Más reciente primero ↓" [ref=e48] [cursor=pointer]
+          - button "🔍 Datos Duplicados" [ref=e49] [cursor=pointer]
+        - generic [ref=e50]:
+          - generic [ref=e51]:
+            - img [ref=e52]
+            - generic [ref=e54]: "Filtros:"
+          - combobox [ref=e55] [cursor=pointer]:
+            - generic: Todas las zonas
+            - img [ref=e56] [cursor=pointer]
+          - combobox [ref=e58] [cursor=pointer]:
+            - generic: Todas las marcas
+            - img [ref=e59] [cursor=pointer]
+          - combobox [ref=e61] [cursor=pointer]:
+            - generic: Todos los clientes
+            - img [ref=e62] [cursor=pointer]
+          - textbox [ref=e64]
+          - textbox [ref=e65]
+      - table [ref=e68]:
+        - rowgroup [ref=e69]:
+          - row "Acciones Cliente Marca Fecha de Inicio Pedidos Total Enviados Duplicados Entregados/día Pedidos/día % Desvío % Datos Enviados Faltantes CPA Meta Ads CPL Guardado Inversión Realizada Inversión Pendiente Exportar CSV" [ref=e70]:
+            - cell "Acciones" [ref=e71]
+            - cell "Cliente" [ref=e72]
+            - cell "Marca" [ref=e73]
+            - cell "Fecha de Inicio" [ref=e74]
+            - cell "Pedidos Total" [ref=e75]
+            - cell "Enviados" [ref=e76]
+            - cell "Duplicados" [ref=e77]
+            - cell "Entregados/día" [ref=e78]
+            - cell "Pedidos/día" [ref=e79]
+            - cell "% Desvío" [ref=e80]
+            - cell "% Datos Enviados" [ref=e81]
+            - cell "Faltantes" [ref=e82]
+            - cell "CPA Meta Ads" [ref=e83]
+            - cell "CPL Guardado" [ref=e84]
+            - cell "Inversión Realizada" [ref=e85]
+            - cell "Inversión Pendiente" [ref=e86]
+            - cell "Exportar CSV" [ref=e87]
+        - rowgroup [ref=e88]:
+          - 'row "SOFIA POUSARILLY #2 Fiat - NACIONAL(100%) 2025-09-23 100 - - - 5.00 De campaña 0.00% 107.0% ✓ - Calculando... Sin CPL ARS $0 ARS $0" [ref=e89]':
+            - cell [ref=e90]:
+              - button [ref=e93] [cursor=pointer]:
+                - img
+            - 'cell "SOFIA POUSARILLY #2" [ref=e94]':
+              - generic [ref=e95]:
+                - generic [ref=e96]: SOFIA POUSARILLY
+                - generic [ref=e97]: "#2"
+            - cell "Fiat - NACIONAL(100%)" [ref=e98]:
+              - generic [ref=e100]:
+                - text: Fiat - NACIONAL
+                - generic [ref=e101]: (100%)
+            - cell "2025-09-23" [ref=e102]:
+              - generic [ref=e105]: 2025-09-23
+            - cell "100" [ref=e106]:
+              - generic [ref=e108]: "100"
+            - cell "-" [ref=e109]:
+              - generic [ref=e111]: "-"
+            - cell "-" [ref=e112]:
+              - generic [ref=e114]: "-"
+            - cell "-" [ref=e115]:
+              - generic [ref=e116]: "-"
+            - cell "5.00 De campaña" [ref=e117]:
+              - generic [ref=e118]:
+                - generic [ref=e119]: "5.00"
+                - generic [ref=e120]: De campaña
+            - cell "0.00%" [ref=e121]:
+              - generic [ref=e122]: 0.00%
+            - cell "107.0% ✓" [ref=e123]:
+              - generic [ref=e127]:
+                - text: 107.0%
+                - generic [ref=e128]: ✓
+            - cell "-" [ref=e129]:
+              - generic [ref=e131]: "-"
+            - cell "Calculando..." [ref=e132]:
+              - generic [ref=e133]: Calculando...
+            - cell "Sin CPL" [ref=e134]:
+              - generic [ref=e135]: Sin CPL
+            - cell "ARS $0" [ref=e136]:
+              - generic [ref=e138]: ARS $0
+            - cell "ARS $0" [ref=e139]:
+              - generic [ref=e141]: ARS $0
+            - cell [ref=e142]:
+              - button [ref=e143] [cursor=pointer]:
+                - img
+          - 'row "Borussia #4 Fiat - NACIONAL VW - NACIONAL Chevrolet - NACIONAL Peugeot - NACIONAL AUTO 2025-09-22 500 447 453 29.80 100.00 De campaña 1.12% 89.0% 53 Calculando... Sin CPL ARS $0 ARS $0" [ref=e144]':
+            - cell [ref=e145]:
+              - button [ref=e148] [cursor=pointer]:
+                - img
+            - 'cell "Borussia #4" [ref=e149]':
+              - generic [ref=e150]:
+                - generic [ref=e151]: Borussia
+                - generic [ref=e152]: "#4"
+            - cell "Fiat - NACIONAL VW - NACIONAL Chevrolet - NACIONAL Peugeot - NACIONAL AUTO" [ref=e153]:
+              - generic [ref=e154]:
+                - generic [ref=e155]: Fiat - NACIONAL
+                - generic [ref=e156]: VW - NACIONAL
+                - generic [ref=e157]: Chevrolet - NACIONAL
+                - generic [ref=e158]: Peugeot - NACIONAL
+                - generic [ref=e159]: AUTO
+            - cell "2025-09-22" [ref=e160]:
+              - generic [ref=e163]: 2025-09-22
+            - cell "500" [ref=e164]:
+              - generic [ref=e166]: "500"
+            - cell "447" [ref=e167]:
+              - generic [ref=e169]: "447"
+            - cell "453" [ref=e170]:
+              - generic [ref=e172]: "453"
+            - cell "29.80" [ref=e173]:
+              - generic [ref=e174]: "29.80"
+            - cell "100.00 De campaña" [ref=e175]:
+              - generic [ref=e176]:
+                - generic [ref=e177]: "100.00"
+                - generic [ref=e178]: De campaña
+            - cell "1.12%" [ref=e179]:
+              - generic [ref=e180]: 1.12%
+            - cell "89.0%" [ref=e181]:
+              - generic [ref=e185]: 89.0%
+            - cell "53" [ref=e186]:
+              - generic [ref=e188]: "53"
+            - cell "Calculando..." [ref=e189]:
+              - generic [ref=e190]: Calculando...
+            - cell "Sin CPL" [ref=e191]:
+              - generic [ref=e192]: Sin CPL
+            - cell "ARS $0" [ref=e193]:
+              - generic [ref=e195]: ARS $0
+            - cell "ARS $0" [ref=e196]:
+              - generic [ref=e198]: ARS $0
+            - cell [ref=e199]:
+              - button [ref=e200] [cursor=pointer]:
+                - img
+          - 'row "DRAGO BERETTA #1 Peugeot - AMBA(100%) 2025-09-19 100 104 104 5.78 10.00 De campaña 0.96% 104.0% ✓ 0 Calculando... ARS $1.000 ARS $106.080 ARS $0" [ref=e201]':
+            - cell [ref=e202]:
+              - button [ref=e205] [cursor=pointer]:
+                - img
+            - 'cell "DRAGO BERETTA #1" [ref=e206]':
+              - generic [ref=e207]:
+                - generic [ref=e208]: DRAGO BERETTA
+                - generic [ref=e209]: "#1"
+            - cell "Peugeot - AMBA(100%)" [ref=e210]:
+              - generic [ref=e212]:
+                - text: Peugeot - AMBA
+                - generic [ref=e213]: (100%)
+            - cell "2025-09-19" [ref=e214]:
+              - generic [ref=e217]: 2025-09-19
+            - cell "100" [ref=e218]:
+              - generic [ref=e220]: "100"
+            - cell "104" [ref=e221]:
+              - generic [ref=e223]: "104"
+            - cell "104" [ref=e224]:
+              - generic [ref=e226]: "104"
+            - cell "5.78" [ref=e227]:
+              - generic [ref=e228]: "5.78"
+            - cell "10.00 De campaña" [ref=e229]:
+              - generic [ref=e230]:
+                - generic [ref=e231]: "10.00"
+                - generic [ref=e232]: De campaña
+            - cell "0.96%" [ref=e233]:
+              - generic [ref=e234]: 0.96%
+            - cell "104.0% ✓" [ref=e235]:
+              - generic [ref=e239]:
+                - text: 104.0%
+                - generic [ref=e240]: ✓
+            - cell "0" [ref=e241]:
+              - generic [ref=e243]: "0"
+            - cell "Calculando..." [ref=e244]:
+              - generic [ref=e245]: Calculando...
+            - cell "ARS $1.000" [ref=e246]:
+              - generic [ref=e247]: ARS $1.000
+            - cell "ARS $106.080" [ref=e248]:
+              - generic [ref=e250]: ARS $106.080
+            - cell "ARS $0" [ref=e251]:
+              - generic [ref=e253]: ARS $0
+            - cell [ref=e254]:
+              - button [ref=e255] [cursor=pointer]:
+                - img
+          - 'row "Red Finance #2 Peugeot - Mendoza Fiat - Mendoza AUTO 2025-09-15 100 - - - 10.00 De campaña 0.00% 104.0% ✓ - Calculando... ARS $1.000 ARS $0 ARS $0" [ref=e256]':
+            - cell [ref=e257]:
+              - button [ref=e260] [cursor=pointer]:
+                - img
+            - 'cell "Red Finance #2" [ref=e261]':
+              - generic [ref=e262]:
+                - generic [ref=e263]: Red Finance
+                - generic [ref=e264]: "#2"
+            - cell "Peugeot - Mendoza Fiat - Mendoza AUTO" [ref=e265]:
+              - generic [ref=e266]:
+                - generic [ref=e267]: Peugeot - Mendoza
+                - generic [ref=e268]: Fiat - Mendoza
+                - generic [ref=e269]: AUTO
+            - cell "2025-09-15" [ref=e270]:
+              - generic [ref=e273]: 2025-09-15
+            - cell "100" [ref=e274]:
+              - generic [ref=e276]: "100"
+            - cell "-" [ref=e277]:
+              - generic [ref=e279]: "-"
+            - cell "-" [ref=e280]:
+              - generic [ref=e282]: "-"
+            - cell "-" [ref=e283]:
+              - generic [ref=e284]: "-"
+            - cell "10.00 De campaña" [ref=e285]:
+              - generic [ref=e286]:
+                - generic [ref=e287]: "10.00"
+                - generic [ref=e288]: De campaña
+            - cell "0.00%" [ref=e289]:
+              - generic [ref=e290]: 0.00%
+            - cell "104.0% ✓" [ref=e291]:
+              - generic [ref=e295]:
+                - text: 104.0%
+                - generic [ref=e296]: ✓
+            - cell "-" [ref=e297]:
+              - generic [ref=e299]: "-"
+            - cell "Calculando..." [ref=e300]:
+              - generic [ref=e301]: Calculando...
+            - cell "ARS $1.000" [ref=e302]:
+              - generic [ref=e303]: ARS $1.000
+            - cell "ARS $0" [ref=e304]:
+              - generic [ref=e306]: ARS $0
+            - cell "ARS $0" [ref=e307]:
+              - generic [ref=e309]: ARS $0
+            - cell [ref=e310]:
+              - button [ref=e311] [cursor=pointer]:
+                - img
+          - 'row "Jorge Giorgi #1 Renault - Córdoba(100%) 2025-09-15 50 57 58 2.59 5.00 De campaña 0.88% 114.0% ✓ 0 Calculando... Sin CPL ARS $0 ARS $0" [ref=e312]':
+            - cell [ref=e313]:
+              - button [ref=e316] [cursor=pointer]:
+                - img
+            - 'cell "Jorge Giorgi #1" [ref=e317]':
+              - generic [ref=e318]:
+                - generic [ref=e319]: Jorge Giorgi
+                - generic [ref=e320]: "#1"
+            - cell "Renault - Córdoba(100%)" [ref=e321]:
+              - generic [ref=e323]:
+                - text: Renault - Córdoba
+                - generic [ref=e324]: (100%)
+            - cell "2025-09-15" [ref=e325]:
+              - generic [ref=e328]: 2025-09-15
+            - cell "50" [ref=e329]:
+              - generic [ref=e331]: "50"
+            - cell "57" [ref=e332]:
+              - generic [ref=e334]: "57"
+            - cell "58" [ref=e335]:
+              - generic [ref=e337]: "58"
+            - cell "2.59" [ref=e338]:
+              - generic [ref=e339]: "2.59"
+            - cell "5.00 De campaña" [ref=e340]:
+              - generic [ref=e341]:
+                - generic [ref=e342]: "5.00"
+                - generic [ref=e343]: De campaña
+            - cell "0.88%" [ref=e344]:
+              - generic [ref=e345]: 0.88%
+            - cell "114.0% ✓" [ref=e346]:
+              - generic [ref=e350]:
+                - text: 114.0%
+                - generic [ref=e351]: ✓
+            - cell "0" [ref=e352]:
+              - generic [ref=e354]: "0"
+            - cell "Calculando..." [ref=e355]:
+              - generic [ref=e356]: Calculando...
+            - cell "Sin CPL" [ref=e357]:
+              - generic [ref=e358]: Sin CPL
+            - cell "ARS $0" [ref=e359]:
+              - generic [ref=e361]: ARS $0
+            - cell "ARS $0" [ref=e362]:
+              - generic [ref=e364]: ARS $0
+            - cell [ref=e365]:
+              - button [ref=e366] [cursor=pointer]:
+                - img
+          - 'row "AUTOFRANCE #1 Fiat - NACIONAL(100%) 2025-09-11 100 101 105 3.88 10.00 De campaña 0.99% 101.0% ✓ 0 Calculando... Sin CPL ARS $0 ARS $0" [ref=e367]':
+            - cell [ref=e368]:
+              - button [ref=e371] [cursor=pointer]:
+                - img
+            - 'cell "AUTOFRANCE #1" [ref=e372]':
+              - generic [ref=e373]:
+                - generic [ref=e374]: AUTOFRANCE
+                - generic [ref=e375]: "#1"
+            - cell "Fiat - NACIONAL(100%)" [ref=e376]:
+              - generic [ref=e378]:
+                - text: Fiat - NACIONAL
+                - generic [ref=e379]: (100%)
+            - cell "2025-09-11" [ref=e380]:
+              - generic [ref=e383]: 2025-09-11
+            - cell "100" [ref=e384]:
+              - generic [ref=e386]: "100"
+            - cell "101" [ref=e387]:
+              - generic [ref=e389]: "101"
+            - cell "105" [ref=e390]:
+              - generic [ref=e392]: "105"
+            - cell "3.88" [ref=e393]:
+              - generic [ref=e394]: "3.88"
+            - cell "10.00 De campaña" [ref=e395]:
+              - generic [ref=e396]:
+                - generic [ref=e397]: "10.00"
+                - generic [ref=e398]: De campaña
+            - cell "0.99%" [ref=e399]:
+              - generic [ref=e400]: 0.99%
+            - cell "101.0% ✓" [ref=e401]:
+              - generic [ref=e405]:
+                - text: 101.0%
+                - generic [ref=e406]: ✓
+            - cell "0" [ref=e407]:
+              - generic [ref=e409]: "0"
+            - cell "Calculando..." [ref=e410]:
+              - generic [ref=e411]: Calculando...
+            - cell "Sin CPL" [ref=e412]:
+              - generic [ref=e413]: Sin CPL
+            - cell "ARS $0" [ref=e414]:
+              - generic [ref=e416]: ARS $0
+            - cell "ARS $0" [ref=e417]:
+              - generic [ref=e419]: ARS $0
+            - cell [ref=e420]:
+              - button [ref=e421] [cursor=pointer]:
+                - img
+          - 'row "AUTOFRANCE #2 Peugeot - NACIONAL(100%) 2025-09-11 100 84 85 3.23 10.00 De campaña 1.19% 84.0% 16 Calculando... ARS $1.000 ARS $85.680 ARS $16.320" [ref=e422]':
+            - cell [ref=e423]:
+              - button [ref=e426] [cursor=pointer]:
+                - img
+            - 'cell "AUTOFRANCE #2" [ref=e427]':
+              - generic [ref=e428]:
+                - generic [ref=e429]: AUTOFRANCE
+                - generic [ref=e430]: "#2"
+            - cell "Peugeot - NACIONAL(100%)" [ref=e431]:
+              - generic [ref=e433]:
+                - text: Peugeot - NACIONAL
+                - generic [ref=e434]: (100%)
+            - cell "2025-09-11" [ref=e435]:
+              - generic [ref=e438]: 2025-09-11
+            - cell "100" [ref=e439]:
+              - generic [ref=e441]: "100"
+            - cell "84" [ref=e442]:
+              - generic [ref=e444]: "84"
+            - cell "85" [ref=e445]:
+              - generic [ref=e447]: "85"
+            - cell "3.23" [ref=e448]:
+              - generic [ref=e449]: "3.23"
+            - cell "10.00 De campaña" [ref=e450]:
+              - generic [ref=e451]:
+                - generic [ref=e452]: "10.00"
+                - generic [ref=e453]: De campaña
+            - cell "1.19%" [ref=e454]:
+              - generic [ref=e455]: 1.19%
+            - cell "84.0%" [ref=e456]:
+              - generic [ref=e460]: 84.0%
+            - cell "16" [ref=e461]:
+              - generic [ref=e463]: "16"
+            - cell "Calculando..." [ref=e464]:
+              - generic [ref=e465]: Calculando...
+            - cell "ARS $1.000" [ref=e466]:
+              - generic [ref=e467]: ARS $1.000
+            - cell "ARS $85.680" [ref=e468]:
+              - generic [ref=e470]: ARS $85.680
+            - cell "ARS $16.320" [ref=e471]:
+              - generic [ref=e473]: ARS $16.320
+            - cell [ref=e474]:
+              - button [ref=e475] [cursor=pointer]:
+                - img
+          - 'row "Borussia #3 VW - NACIONAL(100%) 2025-09-08 300 - - - 50.00 De campaña 0.00% 156.0% ✓ - Calculando... Sin CPL ARS $0 ARS $0" [ref=e476]':
+            - cell [ref=e477]:
+              - button [ref=e480] [cursor=pointer]:
+                - img
+            - 'cell "Borussia #3" [ref=e481]':
+              - generic [ref=e482]:
+                - generic [ref=e483]: Borussia
+                - generic [ref=e484]: "#3"
+            - cell "VW - NACIONAL(100%)" [ref=e485]:
+              - generic [ref=e487]:
+                - text: VW - NACIONAL
+                - generic [ref=e488]: (100%)
+            - cell "2025-09-08" [ref=e489]:
+              - generic [ref=e492]: 2025-09-08
+            - cell "300" [ref=e493]:
+              - generic [ref=e495]: "300"
+            - cell "-" [ref=e496]:
+              - generic [ref=e498]: "-"
+            - cell "-" [ref=e499]:
+              - generic [ref=e501]: "-"
+            - cell "-" [ref=e502]:
+              - generic [ref=e503]: "-"
+            - cell "50.00 De campaña" [ref=e504]:
+              - generic [ref=e505]:
+                - generic [ref=e506]: "50.00"
+                - generic [ref=e507]: De campaña
+            - cell "0.00%" [ref=e508]:
+              - generic [ref=e509]: 0.00%
+            - cell "156.0% ✓" [ref=e510]:
+              - generic [ref=e514]:
+                - text: 156.0%
+                - generic [ref=e515]: ✓
+            - cell "-" [ref=e516]:
+              - generic [ref=e518]: "-"
+            - cell "Calculando..." [ref=e519]:
+              - generic [ref=e520]: Calculando...
+            - cell "Sin CPL" [ref=e521]:
+              - generic [ref=e522]: Sin CPL
+            - cell "ARS $0" [ref=e523]:
+              - generic [ref=e525]: ARS $0
+            - cell "ARS $0" [ref=e526]:
+              - generic [ref=e528]: ARS $0
+            - cell [ref=e529]:
+              - button [ref=e530] [cursor=pointer]:
+                - img
+          - 'row "Sportcars #1 Jeep - AMBA(100%) 2025-09-06 200 41 41 1.32 10.00 De campaña 4.88% 21.0% 159 Calculando... ARS $4.500 ARS $188.190 ARS $729.810" [ref=e531]':
+            - cell [ref=e532]:
+              - button [ref=e535] [cursor=pointer]:
+                - img
+            - 'cell "Sportcars #1" [ref=e536]':
+              - generic [ref=e537]:
+                - generic [ref=e538]: Sportcars
+                - generic [ref=e539]: "#1"
+            - cell "Jeep - AMBA(100%)" [ref=e540]:
+              - generic [ref=e542]:
+                - text: Jeep - AMBA
+                - generic [ref=e543]: (100%)
+            - cell "2025-09-06" [ref=e544]:
+              - generic [ref=e547]: 2025-09-06
+            - cell "200" [ref=e548]:
+              - generic [ref=e550]: "200"
+            - cell "41" [ref=e551]:
+              - generic [ref=e553]: "41"
+            - cell "41" [ref=e554]:
+              - generic [ref=e556]: "41"
+            - cell "1.32" [ref=e557]:
+              - generic [ref=e558]: "1.32"
+            - cell "10.00 De campaña" [ref=e559]:
+              - generic [ref=e560]:
+                - generic [ref=e561]: "10.00"
+                - generic [ref=e562]: De campaña
+            - cell "4.88%" [ref=e563]:
+              - generic [ref=e564]: 4.88%
+            - cell "21.0%" [ref=e565]:
+              - generic [ref=e569]: 21.0%
+            - cell "159" [ref=e570]:
+              - generic [ref=e572]: "159"
+            - cell "Calculando..." [ref=e573]:
+              - generic [ref=e574]: Calculando...
+            - cell "ARS $4.500" [ref=e575]:
+              - generic [ref=e576]: ARS $4.500
+            - cell "ARS $188.190" [ref=e577]:
+              - generic [ref=e579]: ARS $188.190
+            - cell "ARS $729.810" [ref=e580]:
+              - generic [ref=e582]: ARS $729.810
+            - cell [ref=e583]:
+              - button [ref=e584] [cursor=pointer]:
+                - img
+          - 'row "GRUPO MAIPU #2 Chevrolet - Córdoba(100%) 2025-09-02 300 - - - 15.00 De campaña 0.00% 111.0% ✓ - Calculando... Sin CPL ARS $0 ARS $0" [ref=e585]':
+            - cell [ref=e586]:
+              - button [ref=e589] [cursor=pointer]:
+                - img
+            - 'cell "GRUPO MAIPU #2" [ref=e590]':
+              - generic [ref=e591]:
+                - generic [ref=e592]: GRUPO MAIPU
+                - generic [ref=e593]: "#2"
+            - cell "Chevrolet - Córdoba(100%)" [ref=e594]:
+              - generic [ref=e596]:
+                - text: Chevrolet - Córdoba
+                - generic [ref=e597]: (100%)
+            - cell "2025-09-02" [ref=e598]:
+              - generic [ref=e601]: 2025-09-02
+            - cell "300" [ref=e602]:
+              - generic [ref=e604]: "300"
+            - cell "-" [ref=e605]:
+              - generic [ref=e607]: "-"
+            - cell "-" [ref=e608]:
+              - generic [ref=e610]: "-"
+            - cell "-" [ref=e611]:
+              - generic [ref=e612]: "-"
+            - cell "15.00 De campaña" [ref=e613]:
+              - generic [ref=e614]:
+                - generic [ref=e615]: "15.00"
+                - generic [ref=e616]: De campaña
+            - cell "0.00%" [ref=e617]:
+              - generic [ref=e618]: 0.00%
+            - cell "111.0% ✓" [ref=e619]:
+              - generic [ref=e623]:
+                - text: 111.0%
+                - generic [ref=e624]: ✓
+            - cell "-" [ref=e625]:
+              - generic [ref=e627]: "-"
+            - cell "Calculando..." [ref=e628]:
+              - generic [ref=e629]: Calculando...
+            - cell "Sin CPL" [ref=e630]:
+              - generic [ref=e631]: Sin CPL
+            - cell "ARS $0" [ref=e632]:
+              - generic [ref=e634]: ARS $0
+            - cell "ARS $0" [ref=e635]:
+              - generic [ref=e637]: ARS $0
+            - cell [ref=e638]:
+              - button [ref=e639] [cursor=pointer]:
+                - img
+          - 'row "Nicolas Gold #3 Chevrolet - NACIONAL(100%) 2025-09-02 250 - - - 10.00 De campaña 0.00% 94.0% - Calculando... Sin CPL ARS $0 ARS $0" [ref=e640]':
+            - cell [ref=e641]:
+              - button [ref=e644] [cursor=pointer]:
+                - img
+            - 'cell "Nicolas Gold #3" [ref=e645]':
+              - generic [ref=e646]:
+                - generic [ref=e647]: Nicolas Gold
+                - generic [ref=e648]: "#3"
+            - cell "Chevrolet - NACIONAL(100%)" [ref=e649]:
+              - generic [ref=e651]:
+                - text: Chevrolet - NACIONAL
+                - generic [ref=e652]: (100%)
+            - cell "2025-09-02" [ref=e653]:
+              - generic [ref=e656]: 2025-09-02
+            - cell "250" [ref=e657]:
+              - generic [ref=e659]: "250"
+            - cell "-" [ref=e660]:
+              - generic [ref=e662]: "-"
+            - cell "-" [ref=e663]:
+              - generic [ref=e665]: "-"
+            - cell "-" [ref=e666]:
+              - generic [ref=e667]: "-"
+            - cell "10.00 De campaña" [ref=e668]:
+              - generic [ref=e669]:
+                - generic [ref=e670]: "10.00"
+                - generic [ref=e671]: De campaña
+            - cell "0.00%" [ref=e672]:
+              - generic [ref=e673]: 0.00%
+            - cell "94.0%" [ref=e674]:
+              - generic [ref=e678]: 94.0%
+            - cell "-" [ref=e679]:
+              - generic [ref=e681]: "-"
+            - cell "Calculando..." [ref=e682]:
+              - generic [ref=e683]: Calculando...
+            - cell "Sin CPL" [ref=e684]:
+              - generic [ref=e685]: Sin CPL
+            - cell "ARS $0" [ref=e686]:
+              - generic [ref=e688]: ARS $0
+            - cell "ARS $0" [ref=e689]:
+              - generic [ref=e691]: ARS $0
+            - cell [ref=e692]:
+              - button [ref=e693] [cursor=pointer]:
+                - img
+          - 'row "Autos del Sol #4 Fiat - AMBA(100%) 2025-09-01 500 - - - 25.00 De campaña 0.00% 93.0% - Calculando... Sin CPL ARS $0 ARS $0" [ref=e694]':
+            - cell [ref=e695]:
+              - button [ref=e698] [cursor=pointer]:
+                - img
+            - 'cell "Autos del Sol #4" [ref=e699]':
+              - generic [ref=e700]:
+                - generic [ref=e701]: Autos del Sol
+                - generic [ref=e702]: "#4"
+            - cell "Fiat - AMBA(100%)" [ref=e703]:
+              - generic [ref=e705]:
+                - text: Fiat - AMBA
+                - generic [ref=e706]: (100%)
+            - cell "2025-09-01" [ref=e707]:
+              - generic [ref=e710]: 2025-09-01
+            - cell "500" [ref=e711]:
+              - generic [ref=e713]: "500"
+            - cell "-" [ref=e714]:
+              - generic [ref=e716]: "-"
+            - cell "-" [ref=e717]:
+              - generic [ref=e719]: "-"
+            - cell "-" [ref=e720]:
+              - generic [ref=e721]: "-"
+            - cell "25.00 De campaña" [ref=e722]:
+              - generic [ref=e723]:
+                - generic [ref=e724]: "25.00"
+                - generic [ref=e725]: De campaña
+            - cell "0.00%" [ref=e726]:
+              - generic [ref=e727]: 0.00%
+            - cell "93.0%" [ref=e728]:
+              - generic [ref=e732]: 93.0%
+            - cell "-" [ref=e733]:
+              - generic [ref=e735]: "-"
+            - cell "Calculando..." [ref=e736]:
+              - generic [ref=e737]: Calculando...
+            - cell "Sin CPL" [ref=e738]:
+              - generic [ref=e739]: Sin CPL
+            - cell "ARS $0" [ref=e740]:
+              - generic [ref=e742]: ARS $0
+            - cell "ARS $0" [ref=e743]:
+              - generic [ref=e745]: ARS $0
+            - cell [ref=e746]:
+              - button [ref=e747] [cursor=pointer]:
+                - img
+          - 'row "GRUPO SVA #4 Peugeot - AMBA(100%) 2025-09-01 500 - - - 50.00 De campaña 0.00% 195.0% ✓ - Calculando... ARS $1.000 ARS $0 ARS $0" [ref=e748]':
+            - cell [ref=e749]:
+              - button [ref=e752] [cursor=pointer]:
+                - img
+            - 'cell "GRUPO SVA #4" [ref=e753]':
+              - generic [ref=e754]:
+                - generic [ref=e755]: GRUPO SVA
+                - generic [ref=e756]: "#4"
+            - cell "Peugeot - AMBA(100%)" [ref=e757]:
+              - generic [ref=e759]:
+                - text: Peugeot - AMBA
+                - generic [ref=e760]: (100%)
+            - cell "2025-09-01" [ref=e761]:
+              - generic [ref=e764]: 2025-09-01
+            - cell "500" [ref=e765]:
+              - generic [ref=e767]: "500"
+            - cell "-" [ref=e768]:
+              - generic [ref=e770]: "-"
+            - cell "-" [ref=e771]:
+              - generic [ref=e773]: "-"
+            - cell "-" [ref=e774]:
+              - generic [ref=e775]: "-"
+            - cell "50.00 De campaña" [ref=e776]:
+              - generic [ref=e777]:
+                - generic [ref=e778]: "50.00"
+                - generic [ref=e779]: De campaña
+            - cell "0.00%" [ref=e780]:
+              - generic [ref=e781]: 0.00%
+            - cell "195.0% ✓" [ref=e782]:
+              - generic [ref=e786]:
+                - text: 195.0%
+                - generic [ref=e787]: ✓
+            - cell "-" [ref=e788]:
+              - generic [ref=e790]: "-"
+            - cell "Calculando..." [ref=e791]:
+              - generic [ref=e792]: Calculando...
+            - cell "ARS $1.000" [ref=e793]:
+              - generic [ref=e794]: ARS $1.000
+            - cell "ARS $0" [ref=e795]:
+              - generic [ref=e797]: ARS $0
+            - cell "ARS $0" [ref=e798]:
+              - generic [ref=e800]: ARS $0
+            - cell [ref=e801]:
+              - button [ref=e802] [cursor=pointer]:
+                - img
+          - 'row "Vesubio #1 Peugeot - Córdoba(100%) 2025-09-01 100 149 151 4.14 5.00 De campaña 0.67% 149.0% ✓ 0 Calculando... ARS $1.000 ARS $151.980 ARS $0" [ref=e803]':
+            - cell [ref=e804]:
+              - button [ref=e807] [cursor=pointer]:
+                - img
+            - 'cell "Vesubio #1" [ref=e808]':
+              - generic [ref=e809]:
+                - generic [ref=e810]: Vesubio
+                - generic [ref=e811]: "#1"
+            - cell "Peugeot - Córdoba(100%)" [ref=e812]:
+              - generic [ref=e814]:
+                - text: Peugeot - Córdoba
+                - generic [ref=e815]: (100%)
+            - cell "2025-09-01" [ref=e816]:
+              - generic [ref=e819]: 2025-09-01
+            - cell "100" [ref=e820]:
+              - generic [ref=e822]: "100"
+            - cell "149" [ref=e823]:
+              - generic [ref=e825]: "149"
+            - cell "151" [ref=e826]:
+              - generic [ref=e828]: "151"
+            - cell "4.14" [ref=e829]:
+              - generic [ref=e830]: "4.14"
+            - cell "5.00 De campaña" [ref=e831]:
+              - generic [ref=e832]:
+                - generic [ref=e833]: "5.00"
+                - generic [ref=e834]: De campaña
+            - cell "0.67%" [ref=e835]:
+              - generic [ref=e836]: 0.67%
+            - cell "149.0% ✓" [ref=e837]:
+              - generic [ref=e841]:
+                - text: 149.0%
+                - generic [ref=e842]: ✓
+            - cell "0" [ref=e843]:
+              - generic [ref=e845]: "0"
+            - cell "Calculando..." [ref=e846]:
+              - generic [ref=e847]: Calculando...
+            - cell "ARS $1.000" [ref=e848]:
+              - generic [ref=e849]: ARS $1.000
+            - cell "ARS $151.980" [ref=e850]:
+              - generic [ref=e852]: ARS $151.980
+            - cell "ARS $0" [ref=e853]:
+              - generic [ref=e855]: ARS $0
+            - cell [ref=e856]:
+              - button [ref=e857] [cursor=pointer]:
+                - img
+          - 'row "GRUPO SVA #2 Citroen - AMBA(100%) 2025-09-01 100 - - - 50.00 De campaña 0.00% 162.0% ✓ - Calculando... Sin CPL ARS $0 ARS $0" [ref=e858]':
+            - cell [ref=e859]:
+              - button [ref=e862] [cursor=pointer]:
+                - img
+            - 'cell "GRUPO SVA #2" [ref=e863]':
+              - generic [ref=e864]:
+                - generic [ref=e865]: GRUPO SVA
+                - generic [ref=e866]: "#2"
+            - cell "Citroen - AMBA(100%)" [ref=e867]:
+              - generic [ref=e869]:
+                - text: Citroen - AMBA
+                - generic [ref=e870]: (100%)
+            - cell "2025-09-01" [ref=e871]:
+              - generic [ref=e874]: 2025-09-01
+            - cell "100" [ref=e875]:
+              - generic [ref=e877]: "100"
+            - cell "-" [ref=e878]:
+              - generic [ref=e880]: "-"
+            - cell "-" [ref=e881]:
+              - generic [ref=e883]: "-"
+            - cell "-" [ref=e884]:
+              - generic [ref=e885]: "-"
+            - cell "50.00 De campaña" [ref=e886]:
+              - generic [ref=e887]:
+                - generic [ref=e888]: "50.00"
+                - generic [ref=e889]: De campaña
+            - cell "0.00%" [ref=e890]:
+              - generic [ref=e891]: 0.00%
+            - cell "162.0% ✓" [ref=e892]:
+              - generic [ref=e896]:
+                - text: 162.0%
+                - generic [ref=e897]: ✓
+            - cell "-" [ref=e898]:
+              - generic [ref=e900]: "-"
+            - cell "Calculando..." [ref=e901]:
+              - generic [ref=e902]: Calculando...
+            - cell "Sin CPL" [ref=e903]:
+              - generic [ref=e904]: Sin CPL
+            - cell "ARS $0" [ref=e905]:
+              - generic [ref=e907]: ARS $0
+            - cell "ARS $0" [ref=e908]:
+              - generic [ref=e910]: ARS $0
+            - cell [ref=e911]:
+              - button [ref=e912] [cursor=pointer]:
+                - img
+          - 'row "Red Finance #1 Peugeot - Mendoza Fiat - Mendoza AUTO 2025-08-26 100 212 214 5.05 10.00 De campaña 0.47% 212.0% ✓ 0 Calculando... ARS $1.000 ARS $216.240 ARS $0" [ref=e913]':
+            - cell [ref=e914]:
+              - button [ref=e917] [cursor=pointer]:
+                - img
+            - 'cell "Red Finance #1" [ref=e918]':
+              - generic [ref=e919]:
+                - generic [ref=e920]: Red Finance
+                - generic [ref=e921]: "#1"
+            - cell "Peugeot - Mendoza Fiat - Mendoza AUTO" [ref=e922]:
+              - generic [ref=e923]:
+                - generic [ref=e924]: Peugeot - Mendoza
+                - generic [ref=e925]: Fiat - Mendoza
+                - generic [ref=e926]: AUTO
+            - cell "2025-08-26" [ref=e927]:
+              - generic [ref=e930]: 2025-08-26
+            - cell "100" [ref=e931]:
+              - generic [ref=e933]: "100"
+            - cell "212" [ref=e934]:
+              - generic [ref=e936]: "212"
+            - cell "214" [ref=e937]:
+              - generic [ref=e939]: "214"
+            - cell "5.05" [ref=e940]:
+              - generic [ref=e941]: "5.05"
+            - cell "10.00 De campaña" [ref=e942]:
+              - generic [ref=e943]:
+                - generic [ref=e944]: "10.00"
+                - generic [ref=e945]: De campaña
+            - cell "0.47%" [ref=e946]:
+              - generic [ref=e947]: 0.47%
+            - cell "212.0% ✓" [ref=e948]:
+              - generic [ref=e952]:
+                - text: 212.0%
+                - generic [ref=e953]: ✓
+            - cell "0" [ref=e954]:
+              - generic [ref=e956]: "0"
+            - cell "Calculando..." [ref=e957]:
+              - generic [ref=e958]: Calculando...
+            - cell "ARS $1.000" [ref=e959]:
+              - generic [ref=e960]: ARS $1.000
+            - cell "ARS $216.240" [ref=e961]:
+              - generic [ref=e963]: ARS $216.240
+            - cell "ARS $0" [ref=e964]:
+              - generic [ref=e966]: ARS $0
+            - cell [ref=e967]:
+              - button [ref=e968] [cursor=pointer]:
+                - img
+          - 'row "Borussia #2 VW - NACIONAL(100%) 2025-08-25 450 - - - 50.00 De campaña 0.00% 192.0% ✓ - Calculando... Sin CPL ARS $0 ARS $0" [ref=e969]':
+            - cell [ref=e970]:
+              - button [ref=e973] [cursor=pointer]:
+                - img
+            - 'cell "Borussia #2" [ref=e974]':
+              - generic [ref=e975]:
+                - generic [ref=e976]: Borussia
+                - generic [ref=e977]: "#2"
+            - cell "VW - NACIONAL(100%)" [ref=e978]:
+              - generic [ref=e980]:
+                - text: VW - NACIONAL
+                - generic [ref=e981]: (100%)
+            - cell "2025-08-25" [ref=e982]:
+              - generic [ref=e985]: 2025-08-25
+            - cell "450" [ref=e986]:
+              - generic [ref=e988]: "450"
+            - cell "-" [ref=e989]:
+              - generic [ref=e991]: "-"
+            - cell "-" [ref=e992]:
+              - generic [ref=e994]: "-"
+            - cell "-" [ref=e995]:
+              - generic [ref=e996]: "-"
+            - cell "50.00 De campaña" [ref=e997]:
+              - generic [ref=e998]:
+                - generic [ref=e999]: "50.00"
+                - generic [ref=e1000]: De campaña
+            - cell "0.00%" [ref=e1001]:
+              - generic [ref=e1002]: 0.00%
+            - cell "192.0% ✓" [ref=e1003]:
+              - generic [ref=e1007]:
+                - text: 192.0%
+                - generic [ref=e1008]: ✓
+            - cell "-" [ref=e1009]:
+              - generic [ref=e1011]: "-"
+            - cell "Calculando..." [ref=e1012]:
+              - generic [ref=e1013]: Calculando...
+            - cell "Sin CPL" [ref=e1014]:
+              - generic [ref=e1015]: Sin CPL
+            - cell "ARS $0" [ref=e1016]:
+              - generic [ref=e1018]: ARS $0
+            - cell "ARS $0" [ref=e1019]:
+              - generic [ref=e1021]: ARS $0
+            - cell [ref=e1022]:
+              - button [ref=e1023] [cursor=pointer]:
+                - img
+          - 'row "CDN #3 VW - NACIONAL(100%) 2025-08-25 200 - - - 10.00 De campaña 0.00% 125.0% ✓ - Calculando... Sin CPL ARS $0 ARS $0" [ref=e1024]':
+            - cell [ref=e1025]:
+              - button [ref=e1028] [cursor=pointer]:
+                - img
+            - 'cell "CDN #3" [ref=e1029]':
+              - generic [ref=e1030]:
+                - generic [ref=e1031]: CDN
+                - generic [ref=e1032]: "#3"
+            - cell "VW - NACIONAL(100%)" [ref=e1033]:
+              - generic [ref=e1035]:
+                - text: VW - NACIONAL
+                - generic [ref=e1036]: (100%)
+            - cell "2025-08-25" [ref=e1037]:
+              - generic [ref=e1040]: 2025-08-25
+            - cell "200" [ref=e1041]:
+              - generic [ref=e1043]: "200"
+            - cell "-" [ref=e1044]:
+              - generic [ref=e1046]: "-"
+            - cell "-" [ref=e1047]:
+              - generic [ref=e1049]: "-"
+            - cell "-" [ref=e1050]:
+              - generic [ref=e1051]: "-"
+            - cell "10.00 De campaña" [ref=e1052]:
+              - generic [ref=e1053]:
+                - generic [ref=e1054]: "10.00"
+                - generic [ref=e1055]: De campaña
+            - cell "0.00%" [ref=e1056]:
+              - generic [ref=e1057]: 0.00%
+            - cell "125.0% ✓" [ref=e1058]:
+              - generic [ref=e1062]:
+                - text: 125.0%
+                - generic [ref=e1063]: ✓
+            - cell "-" [ref=e1064]:
+              - generic [ref=e1066]: "-"
+            - cell "Calculando..." [ref=e1067]:
+              - generic [ref=e1068]: Calculando...
+            - cell "Sin CPL" [ref=e1069]:
+              - generic [ref=e1070]: Sin CPL
+            - cell "ARS $0" [ref=e1071]:
+              - generic [ref=e1073]: ARS $0
+            - cell "ARS $0" [ref=e1074]:
+              - generic [ref=e1076]: ARS $0
+            - cell [ref=e1077]:
+              - button [ref=e1078] [cursor=pointer]:
+                - img
+          - 'row "SOFIA POUSARILLY #1 Fiat - NACIONAL(100%) 2025-08-20 100 229 232 4.77 10.00 De campaña 0.44% 229.0% ✓ 0 Calculando... Sin CPL ARS $0 ARS $0" [ref=e1079]':
+            - cell [ref=e1080]:
+              - button [ref=e1083] [cursor=pointer]:
+                - img
+            - 'cell "SOFIA POUSARILLY #1" [ref=e1084]':
+              - generic [ref=e1085]:
+                - generic [ref=e1086]: SOFIA POUSARILLY
+                - generic [ref=e1087]: "#1"
+            - cell "Fiat - NACIONAL(100%)" [ref=e1088]:
+              - generic [ref=e1090]:
+                - text: Fiat - NACIONAL
+                - generic [ref=e1091]: (100%)
+            - cell "2025-08-20" [ref=e1092]:
+              - generic [ref=e1095]: 2025-08-20
+            - cell "100" [ref=e1096]:
+              - generic [ref=e1098]: "100"
+            - cell "229" [ref=e1099]:
+              - generic [ref=e1101]: "229"
+            - cell "232" [ref=e1102]:
+              - generic [ref=e1104]: "232"
+            - cell "4.77" [ref=e1105]:
+              - generic [ref=e1106]: "4.77"
+            - cell "10.00 De campaña" [ref=e1107]:
+              - generic [ref=e1108]:
+                - generic [ref=e1109]: "10.00"
+                - generic [ref=e1110]: De campaña
+            - cell "0.44%" [ref=e1111]:
+              - generic [ref=e1112]: 0.44%
+            - cell "229.0% ✓" [ref=e1113]:
+              - generic [ref=e1117]:
+                - text: 229.0%
+                - generic [ref=e1118]: ✓
+            - cell "0" [ref=e1119]:
+              - generic [ref=e1121]: "0"
+            - cell "Calculando..." [ref=e1122]:
+              - generic [ref=e1123]: Calculando...
+            - cell "Sin CPL" [ref=e1124]:
+              - generic [ref=e1125]: Sin CPL
+            - cell "ARS $0" [ref=e1126]:
+              - generic [ref=e1128]: ARS $0
+            - cell "ARS $0" [ref=e1129]:
+              - generic [ref=e1131]: ARS $0
+            - cell [ref=e1132]:
+              - button [ref=e1133] [cursor=pointer]:
+                - img
+          - 'row "GRUPO SVA #3 Peugeot - AMBA(100%) 2025-08-20 1000 1100 1109 22.92 50.00 De campaña 0.91% 110.0% ✓ 0 Calculando... ARS $1.000 ARS $1.122.000 ARS $0" [ref=e1134]':
+            - cell [ref=e1135]:
+              - button [ref=e1138] [cursor=pointer]:
+                - img
+            - 'cell "GRUPO SVA #3" [ref=e1139]':
+              - generic [ref=e1140]:
+                - generic [ref=e1141]: GRUPO SVA
+                - generic [ref=e1142]: "#3"
+            - cell "Peugeot - AMBA(100%)" [ref=e1143]:
+              - generic [ref=e1145]:
+                - text: Peugeot - AMBA
+                - generic [ref=e1146]: (100%)
+            - cell "2025-08-20" [ref=e1147]:
+              - generic [ref=e1150]: 2025-08-20
+            - cell "1000" [ref=e1151]:
+              - generic [ref=e1153]: "1000"
+            - cell "1100" [ref=e1154]:
+              - generic [ref=e1156]: "1100"
+            - cell "1109" [ref=e1157]:
+              - generic [ref=e1159]: "1109"
+            - cell "22.92" [ref=e1160]:
+              - generic [ref=e1161]: "22.92"
+            - cell "50.00 De campaña" [ref=e1162]:
+              - generic [ref=e1163]:
+                - generic [ref=e1164]: "50.00"
+                - generic [ref=e1165]: De campaña
+            - cell "0.91%" [ref=e1166]:
+              - generic [ref=e1167]: 0.91%
+            - cell "110.0% ✓" [ref=e1168]:
+              - generic [ref=e1172]:
+                - text: 110.0%
+                - generic [ref=e1173]: ✓
+            - cell "0" [ref=e1174]:
+              - generic [ref=e1176]: "0"
+            - cell "Calculando..." [ref=e1177]:
+              - generic [ref=e1178]: Calculando...
+            - cell "ARS $1.000" [ref=e1179]:
+              - generic [ref=e1180]: ARS $1.000
+            - cell "ARS $1.122.000" [ref=e1181]:
+              - generic [ref=e1183]: ARS $1.122.000
+            - cell "ARS $0" [ref=e1184]:
+              - generic [ref=e1186]: ARS $0
+            - cell [ref=e1187]:
+              - button [ref=e1188] [cursor=pointer]:
+                - img
+          - 'row "Giorgi automotores #1 Ford - Santa Fe(100%) 2025-08-16 100 41 42 0.79 0.00 De campaña 2.44% 41.0% 59 Calculando... Sin CPL ARS $0 ARS $0" [ref=e1189]':
+            - cell [ref=e1190]:
+              - button [ref=e1193] [cursor=pointer]:
+                - img
+            - 'cell "Giorgi automotores #1" [ref=e1194]':
+              - generic [ref=e1195]:
+                - generic [ref=e1196]: Giorgi automotores
+                - generic [ref=e1197]: "#1"
+            - cell "Ford - Santa Fe(100%)" [ref=e1198]:
+              - generic [ref=e1200]:
+                - text: Ford - Santa Fe
+                - generic [ref=e1201]: (100%)
+            - cell "2025-08-16" [ref=e1202]:
+              - generic [ref=e1205]: 2025-08-16
+            - cell "100" [ref=e1206]:
+              - generic [ref=e1208]: "100"
+            - cell "41" [ref=e1209]:
+              - generic [ref=e1211]: "41"
+            - cell "42" [ref=e1212]:
+              - generic [ref=e1214]: "42"
+            - cell "0.79" [ref=e1215]:
+              - generic [ref=e1216]: "0.79"
+            - cell "0.00 De campaña" [ref=e1217]:
+              - generic [ref=e1218]:
+                - generic [ref=e1219]: "0.00"
+                - generic [ref=e1220]: De campaña
+            - cell "2.44%" [ref=e1221]:
+              - generic [ref=e1222]: 2.44%
+            - cell "41.0%" [ref=e1223]:
+              - generic [ref=e1227]: 41.0%
+            - cell "59" [ref=e1228]:
+              - generic [ref=e1230]: "59"
+            - cell "Calculando..." [ref=e1231]:
+              - generic [ref=e1232]: Calculando...
+            - cell "Sin CPL" [ref=e1233]:
+              - generic [ref=e1234]: Sin CPL
+            - cell "ARS $0" [ref=e1235]:
+              - generic [ref=e1237]: ARS $0
+            - cell "ARS $0" [ref=e1238]:
+              - generic [ref=e1240]: ARS $0
+            - cell [ref=e1241]:
+              - button [ref=e1242] [cursor=pointer]:
+                - img
+          - 'row "Javier Cagiao #2 Renault - AMBA(100%) 2025-08-16 50 - - - 5.00 De campaña 0.00% 116.0% ✓ - Calculando... Sin CPL ARS $0 ARS $0" [ref=e1243]':
+            - cell [ref=e1244]:
+              - button [ref=e1247] [cursor=pointer]:
+                - img
+            - 'cell "Javier Cagiao #2" [ref=e1248]':
+              - generic [ref=e1249]:
+                - generic [ref=e1250]: Javier Cagiao
+                - generic [ref=e1251]: "#2"
+            - cell "Renault - AMBA(100%)" [ref=e1252]:
+              - generic [ref=e1254]:
+                - text: Renault - AMBA
+                - generic [ref=e1255]: (100%)
+            - cell "2025-08-16" [ref=e1256]:
+              - generic [ref=e1259]: 2025-08-16
+            - cell "50" [ref=e1260]:
+              - generic [ref=e1262]: "50"
+            - cell "-" [ref=e1263]:
+              - generic [ref=e1265]: "-"
+            - cell "-" [ref=e1266]:
+              - generic [ref=e1268]: "-"
+            - cell "-" [ref=e1269]:
+              - generic [ref=e1270]: "-"
+            - cell "5.00 De campaña" [ref=e1271]:
+              - generic [ref=e1272]:
+                - generic [ref=e1273]: "5.00"
+                - generic [ref=e1274]: De campaña
+            - cell "0.00%" [ref=e1275]:
+              - generic [ref=e1276]: 0.00%
+            - cell "116.0% ✓" [ref=e1277]:
+              - generic [ref=e1281]:
+                - text: 116.0%
+                - generic [ref=e1282]: ✓
+            - cell "-" [ref=e1283]:
+              - generic [ref=e1285]: "-"
+            - cell "Calculando..." [ref=e1286]:
+              - generic [ref=e1287]: Calculando...
+            - cell "Sin CPL" [ref=e1288]:
+              - generic [ref=e1289]: Sin CPL
+            - cell "ARS $0" [ref=e1290]:
+              - generic [ref=e1292]: ARS $0
+            - cell "ARS $0" [ref=e1293]:
+              - generic [ref=e1295]: ARS $0
+            - cell [ref=e1296]:
+              - button [ref=e1297] [cursor=pointer]:
+                - img
+          - 'row "Borussia #1 VW - NACIONAL(100%) 2025-08-15 300 1162 1174 21.92 50.00 De campaña 0.26% 387.0% ✓ 0 Calculando... ARS $2.500 ARS $2.963.100 ARS $0" [ref=e1298]':
+            - cell [ref=e1299]:
+              - button [ref=e1302] [cursor=pointer]:
+                - img
+            - 'cell "Borussia #1" [ref=e1303]':
+              - generic [ref=e1304]:
+                - generic [ref=e1305]: Borussia
+                - generic [ref=e1306]: "#1"
+            - cell "VW - NACIONAL(100%)" [ref=e1307]:
+              - generic [ref=e1309]:
+                - text: VW - NACIONAL
+                - generic [ref=e1310]: (100%)
+            - cell "2025-08-15" [ref=e1311]:
+              - generic [ref=e1314]: 2025-08-15
+            - cell "300" [ref=e1315]:
+              - generic [ref=e1317]: "300"
+            - cell "1162" [ref=e1318]:
+              - generic [ref=e1320]: "1162"
+            - cell "1174" [ref=e1321]:
+              - generic [ref=e1323]: "1174"
+            - cell "21.92" [ref=e1324]:
+              - generic [ref=e1325]: "21.92"
+            - cell "50.00 De campaña" [ref=e1326]:
+              - generic [ref=e1327]:
+                - generic [ref=e1328]: "50.00"
+                - generic [ref=e1329]: De campaña
+            - cell "0.26%" [ref=e1330]:
+              - generic [ref=e1331]: 0.26%
+            - cell "387.0% ✓" [ref=e1332]:
+              - generic [ref=e1336]:
+                - text: 387.0%
+                - generic [ref=e1337]: ✓
+            - cell "0" [ref=e1338]:
+              - generic [ref=e1340]: "0"
+            - cell "Calculando..." [ref=e1341]:
+              - generic [ref=e1342]: Calculando...
+            - cell "ARS $2.500" [ref=e1343]:
+              - generic [ref=e1344]: ARS $2.500
+            - cell "ARS $2.963.100" [ref=e1345]:
+              - generic [ref=e1347]: ARS $2.963.100
+            - cell "ARS $0" [ref=e1348]:
+              - generic [ref=e1350]: ARS $0
+            - cell [ref=e1351]:
+              - button [ref=e1352] [cursor=pointer]:
+                - img
+          - 'row "GRUPO MAIPU #1 Chevrolet - Córdoba(100%) 2025-08-15 150 419 425 7.91 10.00 De campaña 0.36% 279.0% ✓ 0 Calculando... Sin CPL ARS $0 ARS $0" [ref=e1353]':
+            - cell [ref=e1354]:
+              - button [ref=e1357] [cursor=pointer]:
+                - img
+            - 'cell "GRUPO MAIPU #1" [ref=e1358]':
+              - generic [ref=e1359]:
+                - generic [ref=e1360]: GRUPO MAIPU
+                - generic [ref=e1361]: "#1"
+            - cell "Chevrolet - Córdoba(100%)" [ref=e1362]:
+              - generic [ref=e1364]:
+                - text: Chevrolet - Córdoba
+                - generic [ref=e1365]: (100%)
+            - cell "2025-08-15" [ref=e1366]:
+              - generic [ref=e1369]: 2025-08-15
+            - cell "150" [ref=e1370]:
+              - generic [ref=e1372]: "150"
+            - cell "419" [ref=e1373]:
+              - generic [ref=e1375]: "419"
+            - cell "425" [ref=e1376]:
+              - generic [ref=e1378]: "425"
+            - cell "7.91" [ref=e1379]:
+              - generic [ref=e1380]: "7.91"
+            - cell "10.00 De campaña" [ref=e1381]:
+              - generic [ref=e1382]:
+                - generic [ref=e1383]: "10.00"
+                - generic [ref=e1384]: De campaña
+            - cell "0.36%" [ref=e1385]:
+              - generic [ref=e1386]: 0.36%
+            - cell "279.0% ✓" [ref=e1387]:
+              - generic [ref=e1391]:
+                - text: 279.0%
+                - generic [ref=e1392]: ✓
+            - cell "0" [ref=e1393]:
+              - generic [ref=e1395]: "0"
+            - cell "Calculando..." [ref=e1396]:
+              - generic [ref=e1397]: Calculando...
+            - cell "Sin CPL" [ref=e1398]:
+              - generic [ref=e1399]: Sin CPL
+            - cell "ARS $0" [ref=e1400]:
+              - generic [ref=e1402]: ARS $0
+            - cell "ARS $0" [ref=e1403]:
+              - generic [ref=e1405]: ARS $0
+            - cell [ref=e1406]:
+              - button [ref=e1407] [cursor=pointer]:
+                - img
+          - 'row "Jea Automotores #1 Jeep - Córdoba(100%) 2025-08-12 100 98 99 1.75 5.00 De campaña 1.02% 98.0% 2 Calculando... ARS $4.500 ARS $449.820 ARS $9.180" [ref=e1408]':
+            - cell [ref=e1409]:
+              - button [ref=e1412] [cursor=pointer]:
+                - img
+            - 'cell "Jea Automotores #1" [ref=e1413]':
+              - generic [ref=e1414]:
+                - generic [ref=e1415]: Jea Automotores
+                - generic [ref=e1416]: "#1"
+            - cell "Jeep - Córdoba(100%)" [ref=e1417]:
+              - generic [ref=e1419]:
+                - text: Jeep - Córdoba
+                - generic [ref=e1420]: (100%)
+            - cell "2025-08-12" [ref=e1421]:
+              - generic [ref=e1424]: 2025-08-12
+            - cell "100" [ref=e1425]:
+              - generic [ref=e1427]: "100"
+            - cell "98" [ref=e1428]:
+              - generic [ref=e1430]: "98"
+            - cell "99" [ref=e1431]:
+              - generic [ref=e1433]: "99"
+            - cell "1.75" [ref=e1434]:
+              - generic [ref=e1435]: "1.75"
+            - cell "5.00 De campaña" [ref=e1436]:
+              - generic [ref=e1437]:
+                - generic [ref=e1438]: "5.00"
+                - generic [ref=e1439]: De campaña
+            - cell "1.02%" [ref=e1440]:
+              - generic [ref=e1441]: 1.02%
+            - cell "98.0%" [ref=e1442]:
+              - generic [ref=e1446]: 98.0%
+            - cell "2" [ref=e1447]:
+              - generic [ref=e1449]: "2"
+            - cell "Calculando..." [ref=e1450]:
+              - generic [ref=e1451]: Calculando...
+            - cell "ARS $4.500" [ref=e1452]:
+              - generic [ref=e1453]: ARS $4.500
+            - cell "ARS $449.820" [ref=e1454]:
+              - generic [ref=e1456]: ARS $449.820
+            - cell "ARS $9.180" [ref=e1457]:
+              - generic [ref=e1459]: ARS $9.180
+            - cell [ref=e1460]:
+              - button [ref=e1461] [cursor=pointer]:
+                - img
+          - 'row "jorge Mungo #1 Peugeot - AMBA(100%) 2025-08-11 100 96 100 1.68 10.00 De campaña 1.04% 96.0% 4 Calculando... ARS $1.000 ARS $97.920 ARS $4.080" [ref=e1462]':
+            - cell [ref=e1463]:
+              - button [ref=e1466] [cursor=pointer]:
+                - img
+            - 'cell "jorge Mungo #1" [ref=e1467]':
+              - generic [ref=e1468]:
+                - generic [ref=e1469]: jorge Mungo
+                - generic [ref=e1470]: "#1"
+            - cell "Peugeot - AMBA(100%)" [ref=e1471]:
+              - generic [ref=e1473]:
+                - text: Peugeot - AMBA
+                - generic [ref=e1474]: (100%)
+            - cell "2025-08-11" [ref=e1475]:
+              - generic [ref=e1478]: 2025-08-11
+            - cell "100" [ref=e1479]:
+              - generic [ref=e1481]: "100"
+            - cell "96" [ref=e1482]:
+              - generic [ref=e1484]: "96"
+            - cell "100" [ref=e1485]:
+              - generic [ref=e1487]: "100"
+            - cell "1.68" [ref=e1488]:
+              - generic [ref=e1489]: "1.68"
+            - cell "10.00 De campaña" [ref=e1490]:
+              - generic [ref=e1491]:
+                - generic [ref=e1492]: "10.00"
+                - generic [ref=e1493]: De campaña
+            - cell "1.04%" [ref=e1494]:
+              - generic [ref=e1495]: 1.04%
+            - cell "96.0%" [ref=e1496]:
+              - generic [ref=e1500]: 96.0%
+            - cell "4" [ref=e1501]:
+              - generic [ref=e1503]: "4"
+            - cell "Calculando..." [ref=e1504]:
+              - generic [ref=e1505]: Calculando...
+            - cell "ARS $1.000" [ref=e1506]:
+              - generic [ref=e1507]: ARS $1.000
+            - cell "ARS $97.920" [ref=e1508]:
+              - generic [ref=e1510]: ARS $97.920
+            - cell "ARS $4.080" [ref=e1511]:
+              - generic [ref=e1513]: ARS $4.080
+            - cell [ref=e1514]:
+              - button [ref=e1515] [cursor=pointer]:
+                - img
+          - 'row "CDN #2 VW - NACIONAL(100%) 2025-08-10 100 - - - 10.00 De campaña 0.00% 366.0% ✓ - Calculando... Sin CPL ARS $0 ARS $0" [ref=e1516]':
+            - cell [ref=e1517]:
+              - button [ref=e1520] [cursor=pointer]:
+                - img
+            - 'cell "CDN #2" [ref=e1521]':
+              - generic [ref=e1522]:
+                - generic [ref=e1523]: CDN
+                - generic [ref=e1524]: "#2"
+            - cell "VW - NACIONAL(100%)" [ref=e1525]:
+              - generic [ref=e1527]:
+                - text: VW - NACIONAL
+                - generic [ref=e1528]: (100%)
+            - cell "2025-08-10" [ref=e1529]:
+              - generic [ref=e1532]: 2025-08-10
+            - cell "100" [ref=e1533]:
+              - generic [ref=e1535]: "100"
+            - cell "-" [ref=e1536]:
+              - generic [ref=e1538]: "-"
+            - cell "-" [ref=e1539]:
+              - generic [ref=e1541]: "-"
+            - cell "-" [ref=e1542]:
+              - generic [ref=e1543]: "-"
+            - cell "10.00 De campaña" [ref=e1544]:
+              - generic [ref=e1545]:
+                - generic [ref=e1546]: "10.00"
+                - generic [ref=e1547]: De campaña
+            - cell "0.00%" [ref=e1548]:
+              - generic [ref=e1549]: 0.00%
+            - cell "366.0% ✓" [ref=e1550]:
+              - generic [ref=e1554]:
+                - text: 366.0%
+                - generic [ref=e1555]: ✓
+            - cell "-" [ref=e1556]:
+              - generic [ref=e1558]: "-"
+            - cell "Calculando..." [ref=e1559]:
+              - generic [ref=e1560]: Calculando...
+            - cell "Sin CPL" [ref=e1561]:
+              - generic [ref=e1562]: Sin CPL
+            - cell "ARS $0" [ref=e1563]:
+              - generic [ref=e1565]: ARS $0
+            - cell "ARS $0" [ref=e1566]:
+              - generic [ref=e1568]: ARS $0
+            - cell [ref=e1569]:
+              - button [ref=e1570] [cursor=pointer]:
+                - img
+          - 'row "Avec #2 Citroen - AMBA(100%) 2025-08-10 100 - - - 10.00 De campaña 0.00% 96.0% - Calculando... Sin CPL ARS $0 ARS $0" [ref=e1571]':
+            - cell [ref=e1572]:
+              - button [ref=e1575] [cursor=pointer]:
+                - img
+            - 'cell "Avec #2" [ref=e1576]':
+              - generic [ref=e1577]:
+                - generic [ref=e1578]: Avec
+                - generic [ref=e1579]: "#2"
+            - cell "Citroen - AMBA(100%)" [ref=e1580]:
+              - generic [ref=e1582]:
+                - text: Citroen - AMBA
+                - generic [ref=e1583]: (100%)
+            - cell "2025-08-10" [ref=e1584]:
+              - generic [ref=e1587]: 2025-08-10
+            - cell "100" [ref=e1588]:
+              - generic [ref=e1590]: "100"
+            - cell "-" [ref=e1591]:
+              - generic [ref=e1593]: "-"
+            - cell "-" [ref=e1594]:
+              - generic [ref=e1596]: "-"
+            - cell "-" [ref=e1597]:
+              - generic [ref=e1598]: "-"
+            - cell "10.00 De campaña" [ref=e1599]:
+              - generic [ref=e1600]:
+                - generic [ref=e1601]: "10.00"
+                - generic [ref=e1602]: De campaña
+            - cell "0.00%" [ref=e1603]:
+              - generic [ref=e1604]: 0.00%
+            - cell "96.0%" [ref=e1605]:
+              - generic [ref=e1609]: 96.0%
+            - cell "-" [ref=e1610]:
+              - generic [ref=e1612]: "-"
+            - cell "Calculando..." [ref=e1613]:
+              - generic [ref=e1614]: Calculando...
+            - cell "Sin CPL" [ref=e1615]:
+              - generic [ref=e1616]: Sin CPL
+            - cell "ARS $0" [ref=e1617]:
+              - generic [ref=e1619]: ARS $0
+            - cell "ARS $0" [ref=e1620]:
+              - generic [ref=e1622]: ARS $0
+            - cell [ref=e1623]:
+              - button [ref=e1624] [cursor=pointer]:
+                - img
+          - 'row "Avec #2 Peugeot - Córdoba(100%) 2025-08-10 100 - - - 10.00 De campaña 0.00% 78.0% - Calculando... ARS $1.000 ARS $0 ARS $102.000" [ref=e1625]':
+            - cell [ref=e1626]:
+              - button [ref=e1629] [cursor=pointer]:
+                - img
+            - 'cell "Avec #2" [ref=e1630]':
+              - generic [ref=e1631]:
+                - generic [ref=e1632]: Avec
+                - generic [ref=e1633]: "#2"
+            - cell "Peugeot - Córdoba(100%)" [ref=e1634]:
+              - generic [ref=e1636]:
+                - text: Peugeot - Córdoba
+                - generic [ref=e1637]: (100%)
+            - cell "2025-08-10" [ref=e1638]:
+              - generic [ref=e1641]: 2025-08-10
+            - cell "100" [ref=e1642]:
+              - generic [ref=e1644]: "100"
+            - cell "-" [ref=e1645]:
+              - generic [ref=e1647]: "-"
+            - cell "-" [ref=e1648]:
+              - generic [ref=e1650]: "-"
+            - cell "-" [ref=e1651]:
+              - generic [ref=e1652]: "-"
+            - cell "10.00 De campaña" [ref=e1653]:
+              - generic [ref=e1654]:
+                - generic [ref=e1655]: "10.00"
+                - generic [ref=e1656]: De campaña
+            - cell "0.00%" [ref=e1657]:
+              - generic [ref=e1658]: 0.00%
+            - cell "78.0%" [ref=e1659]:
+              - generic [ref=e1663]: 78.0%
+            - cell "-" [ref=e1664]:
+              - generic [ref=e1666]: "-"
+            - cell "Calculando..." [ref=e1667]:
+              - generic [ref=e1668]: Calculando...
+            - cell "ARS $1.000" [ref=e1669]:
+              - generic [ref=e1670]: ARS $1.000
+            - cell "ARS $0" [ref=e1671]:
+              - generic [ref=e1673]: ARS $0
+            - cell "ARS $102.000" [ref=e1674]:
+              - generic [ref=e1676]: ARS $102.000
+            - cell [ref=e1677]:
+              - button [ref=e1678] [cursor=pointer]:
+                - img
+          - 'row "GRUPO SVA #1 Citroen - AMBA(100%) 2025-08-09 200 302 308 5.12 50.00 De campaña 0.66% 151.0% ✓ 0 Calculando... ARS $3.000 ARS $924.120 ARS $0" [ref=e1679]':
+            - cell [ref=e1680]:
+              - button [ref=e1683] [cursor=pointer]:
+                - img
+            - 'cell "GRUPO SVA #1" [ref=e1684]':
+              - generic [ref=e1685]:
+                - generic [ref=e1686]: GRUPO SVA
+                - generic [ref=e1687]: "#1"
+            - cell "Citroen - AMBA(100%)" [ref=e1688]:
+              - generic [ref=e1690]:
+                - text: Citroen - AMBA
+                - generic [ref=e1691]: (100%)
+            - cell "2025-08-09" [ref=e1692]:
+              - generic [ref=e1695]: 2025-08-09
+            - cell "200" [ref=e1696]:
+              - generic [ref=e1698]: "200"
+            - cell "302" [ref=e1699]:
+              - generic [ref=e1701]: "302"
+            - cell "308" [ref=e1702]:
+              - generic [ref=e1704]: "308"
+            - cell "5.12" [ref=e1705]:
+              - generic [ref=e1706]: "5.12"
+            - cell "50.00 De campaña" [ref=e1707]:
+              - generic [ref=e1708]:
+                - generic [ref=e1709]: "50.00"
+                - generic [ref=e1710]: De campaña
+            - cell "0.66%" [ref=e1711]:
+              - generic [ref=e1712]: 0.66%
+            - cell "151.0% ✓" [ref=e1713]:
+              - generic [ref=e1717]:
+                - text: 151.0%
+                - generic [ref=e1718]: ✓
+            - cell "0" [ref=e1719]:
+              - generic [ref=e1721]: "0"
+            - cell "Calculando..." [ref=e1722]:
+              - generic [ref=e1723]: Calculando...
+            - cell "ARS $3.000" [ref=e1724]:
+              - generic [ref=e1725]: ARS $3.000
+            - cell "ARS $924.120" [ref=e1726]:
+              - generic [ref=e1728]: ARS $924.120
+            - cell "ARS $0" [ref=e1729]:
+              - generic [ref=e1731]: ARS $0
+            - cell [ref=e1732]:
+              - button [ref=e1733] [cursor=pointer]:
+                - img
+          - 'row "Autos del Sol #3 Fiat - AMBA(100%) 2025-08-07 500 - - - 25.00 De campaña 0.00% 198.0% ✓ - Calculando... Sin CPL ARS $0 ARS $0" [ref=e1734]':
+            - cell [ref=e1735]:
+              - button [ref=e1738] [cursor=pointer]:
+                - img
+            - 'cell "Autos del Sol #3" [ref=e1739]':
+              - generic [ref=e1740]:
+                - generic [ref=e1741]: Autos del Sol
+                - generic [ref=e1742]: "#3"
+            - cell "Fiat - AMBA(100%)" [ref=e1743]:
+              - generic [ref=e1745]:
+                - text: Fiat - AMBA
+                - generic [ref=e1746]: (100%)
+            - cell "2025-08-07" [ref=e1747]:
+              - generic [ref=e1750]: 2025-08-07
+            - cell "500" [ref=e1751]:
+              - generic [ref=e1753]: "500"
+            - cell "-" [ref=e1754]:
+              - generic [ref=e1756]: "-"
+            - cell "-" [ref=e1757]:
+              - generic [ref=e1759]: "-"
+            - cell "-" [ref=e1760]:
+              - generic [ref=e1761]: "-"
+            - cell "25.00 De campaña" [ref=e1762]:
+              - generic [ref=e1763]:
+                - generic [ref=e1764]: "25.00"
+                - generic [ref=e1765]: De campaña
+            - cell "0.00%" [ref=e1766]:
+              - generic [ref=e1767]: 0.00%
+            - cell "198.0% ✓" [ref=e1768]:
+              - generic [ref=e1772]:
+                - text: 198.0%
+                - generic [ref=e1773]: ✓
+            - cell "-" [ref=e1774]:
+              - generic [ref=e1776]: "-"
+            - cell "Calculando..." [ref=e1777]:
+              - generic [ref=e1778]: Calculando...
+            - cell "Sin CPL" [ref=e1779]:
+              - generic [ref=e1780]: Sin CPL
+            - cell "ARS $0" [ref=e1781]:
+              - generic [ref=e1783]: ARS $0
+            - cell "ARS $0" [ref=e1784]:
+              - generic [ref=e1786]: ARS $0
+            - cell [ref=e1787]:
+              - button [ref=e1788] [cursor=pointer]:
+                - img
+          - 'row "Nicolas Gold #2 Chevrolet - NACIONAL(100%) 2025-08-07 100 375 382 6.15 10.00 De campaña 0.27% 375.0% ✓ 0 Calculando... Sin CPL ARS $0 ARS $0" [ref=e1789]':
+            - cell [ref=e1790]:
+              - button [ref=e1793] [cursor=pointer]:
+                - img
+            - 'cell "Nicolas Gold #2" [ref=e1794]':
+              - generic [ref=e1795]:
+                - generic [ref=e1796]: Nicolas Gold
+                - generic [ref=e1797]: "#2"
+            - cell "Chevrolet - NACIONAL(100%)" [ref=e1798]:
+              - generic [ref=e1800]:
+                - text: Chevrolet - NACIONAL
+                - generic [ref=e1801]: (100%)
+            - cell "2025-08-07" [ref=e1802]:
+              - generic [ref=e1805]: 2025-08-07
+            - cell "100" [ref=e1806]:
+              - generic [ref=e1808]: "100"
+            - cell "375" [ref=e1809]:
+              - generic [ref=e1811]: "375"
+            - cell "382" [ref=e1812]:
+              - generic [ref=e1814]: "382"
+            - cell "6.15" [ref=e1815]:
+              - generic [ref=e1816]: "6.15"
+            - cell "10.00 De campaña" [ref=e1817]:
+              - generic [ref=e1818]:
+                - generic [ref=e1819]: "10.00"
+                - generic [ref=e1820]: De campaña
+            - cell "0.27%" [ref=e1821]:
+              - generic [ref=e1822]: 0.27%
+            - cell "375.0% ✓" [ref=e1823]:
+              - generic [ref=e1827]:
+                - text: 375.0%
+                - generic [ref=e1828]: ✓
+            - cell "0" [ref=e1829]:
+              - generic [ref=e1831]: "0"
+            - cell "Calculando..." [ref=e1832]:
+              - generic [ref=e1833]: Calculando...
+            - cell "Sin CPL" [ref=e1834]:
+              - generic [ref=e1835]: Sin CPL
+            - cell "ARS $0" [ref=e1836]:
+              - generic [ref=e1838]: ARS $0
+            - cell "ARS $0" [ref=e1839]:
+              - generic [ref=e1841]: ARS $0
+            - cell [ref=e1842]:
+              - button [ref=e1843] [cursor=pointer]:
+                - img
+          - 'row "Nicolas Gold #1 Chevrolet - AMBA(100%) 2025-08-07 100 73 75 1.20 10.00 De campaña 1.37% 73.0% 27 Calculando... Sin CPL ARS $0 ARS $0" [ref=e1844]':
+            - cell [ref=e1845]:
+              - button [ref=e1848] [cursor=pointer]:
+                - img
+            - 'cell "Nicolas Gold #1" [ref=e1849]':
+              - generic [ref=e1850]:
+                - generic [ref=e1851]: Nicolas Gold
+                - generic [ref=e1852]: "#1"
+            - cell "Chevrolet - AMBA(100%)" [ref=e1853]:
+              - generic [ref=e1855]:
+                - text: Chevrolet - AMBA
+                - generic [ref=e1856]: (100%)
+            - cell "2025-08-07" [ref=e1857]:
+              - generic [ref=e1860]: 2025-08-07
+            - cell "100" [ref=e1861]:
+              - generic [ref=e1863]: "100"
+            - cell "73" [ref=e1864]:
+              - generic [ref=e1866]: "73"
+            - cell "75" [ref=e1867]:
+              - generic [ref=e1869]: "75"
+            - cell "1.20" [ref=e1870]:
+              - generic [ref=e1871]: "1.20"
+            - cell "10.00 De campaña" [ref=e1872]:
+              - generic [ref=e1873]:
+                - generic [ref=e1874]: "10.00"
+                - generic [ref=e1875]: De campaña
+            - cell "1.37%" [ref=e1876]:
+              - generic [ref=e1877]: 1.37%
+            - cell "73.0%" [ref=e1878]:
+              - generic [ref=e1882]: 73.0%
+            - cell "27" [ref=e1883]:
+              - generic [ref=e1885]: "27"
+            - cell "Calculando..." [ref=e1886]:
+              - generic [ref=e1887]: Calculando...
+            - cell "Sin CPL" [ref=e1888]:
+              - generic [ref=e1889]: Sin CPL
+            - cell "ARS $0" [ref=e1890]:
+              - generic [ref=e1892]: ARS $0
+            - cell "ARS $0" [ref=e1893]:
+              - generic [ref=e1895]: ARS $0
+            - cell [ref=e1896]:
+              - button [ref=e1897] [cursor=pointer]:
+                - img
+          - 'row "CDN #1 VW - NACIONAL(100%) 2025-08-04 100 451 455 7.05 10.00 De campaña 0.22% 451.0% ✓ 0 Calculando... ARS $2.500 ARS $1.150.050 ARS $0" [ref=e1898]':
+            - cell [ref=e1899]:
+              - button [ref=e1902] [cursor=pointer]:
+                - img
+            - 'cell "CDN #1" [ref=e1903]':
+              - generic [ref=e1904]:
+                - generic [ref=e1905]: CDN
+                - generic [ref=e1906]: "#1"
+            - cell "VW - NACIONAL(100%)" [ref=e1907]:
+              - generic [ref=e1909]:
+                - text: VW - NACIONAL
+                - generic [ref=e1910]: (100%)
+            - cell "2025-08-04" [ref=e1911]:
+              - generic [ref=e1914]: 2025-08-04
+            - cell "100" [ref=e1915]:
+              - generic [ref=e1917]: "100"
+            - cell "451" [ref=e1918]:
+              - generic [ref=e1920]: "451"
+            - cell "455" [ref=e1921]:
+              - generic [ref=e1923]: "455"
+            - cell "7.05" [ref=e1924]:
+              - generic [ref=e1925]: "7.05"
+            - cell "10.00 De campaña" [ref=e1926]:
+              - generic [ref=e1927]:
+                - generic [ref=e1928]: "10.00"
+                - generic [ref=e1929]: De campaña
+            - cell "0.22%" [ref=e1930]:
+              - generic [ref=e1931]: 0.22%
+            - cell "451.0% ✓" [ref=e1932]:
+              - generic [ref=e1936]:
+                - text: 451.0%
+                - generic [ref=e1937]: ✓
+            - cell "0" [ref=e1938]:
+              - generic [ref=e1940]: "0"
+            - cell "Calculando..." [ref=e1941]:
+              - generic [ref=e1942]: Calculando...
+            - cell "ARS $2.500" [ref=e1943]:
+              - generic [ref=e1944]: ARS $2.500
+            - cell "ARS $1.150.050" [ref=e1945]:
+              - generic [ref=e1947]: ARS $1.150.050
+            - cell "ARS $0" [ref=e1948]:
+              - generic [ref=e1950]: ARS $0
+            - cell [ref=e1951]:
+              - button [ref=e1952] [cursor=pointer]:
+                - img
+          - 'row "ALBENS #8 Peugeot - NACIONAL(100%) 2025-07-27 200 - - - 20.00 De campaña 0.00% 226.0% ✓ - Calculando... ARS $1.000 ARS $0 ARS $0" [ref=e1953]':
+            - cell [ref=e1954]:
+              - button [ref=e1957] [cursor=pointer]:
+                - img
+            - 'cell "ALBENS #8" [ref=e1958]':
+              - generic [ref=e1959]:
+                - generic [ref=e1960]: ALBENS
+                - generic [ref=e1961]: "#8"
+            - cell "Peugeot - NACIONAL(100%)" [ref=e1962]:
+              - generic [ref=e1964]:
+                - text: Peugeot - NACIONAL
+                - generic [ref=e1965]: (100%)
+            - cell "2025-07-27" [ref=e1966]:
+              - generic [ref=e1969]: 2025-07-27
+            - cell "200" [ref=e1970]:
+              - generic [ref=e1972]: "200"
+            - cell "-" [ref=e1973]:
+              - generic [ref=e1975]: "-"
+            - cell "-" [ref=e1976]:
+              - generic [ref=e1978]: "-"
+            - cell "-" [ref=e1979]:
+              - generic [ref=e1980]: "-"
+            - cell "20.00 De campaña" [ref=e1981]:
+              - generic [ref=e1982]:
+                - generic [ref=e1983]: "20.00"
+                - generic [ref=e1984]: De campaña
+            - cell "0.00%" [ref=e1985]:
+              - generic [ref=e1986]: 0.00%
+            - cell "226.0% ✓" [ref=e1987]:
+              - generic [ref=e1991]:
+                - text: 226.0%
+                - generic [ref=e1992]: ✓
+            - cell "-" [ref=e1993]:
+              - generic [ref=e1995]: "-"
+            - cell "Calculando..." [ref=e1996]:
+              - generic [ref=e1997]: Calculando...
+            - cell "ARS $1.000" [ref=e1998]:
+              - generic [ref=e1999]: ARS $1.000
+            - cell "ARS $0" [ref=e2000]:
+              - generic [ref=e2002]: ARS $0
+            - cell "ARS $0" [ref=e2003]:
+              - generic [ref=e2005]: ARS $0
+            - cell [ref=e2006]:
+              - button [ref=e2007] [cursor=pointer]:
+                - img
+          - 'row "ALBENS #7 Peugeot - NACIONAL(100%) 2025-07-21 200 - - - 20.00 De campaña 0.00% 248.0% ✓ - Calculando... ARS $1.000 ARS $0 ARS $0" [ref=e2008]':
+            - cell [ref=e2009]:
+              - button [ref=e2012] [cursor=pointer]:
+                - img
+            - 'cell "ALBENS #7" [ref=e2013]':
+              - generic [ref=e2014]:
+                - generic [ref=e2015]: ALBENS
+                - generic [ref=e2016]: "#7"
+            - cell "Peugeot - NACIONAL(100%)" [ref=e2017]:
+              - generic [ref=e2019]:
+                - text: Peugeot - NACIONAL
+                - generic [ref=e2020]: (100%)
+            - cell "2025-07-21" [ref=e2021]:
+              - generic [ref=e2024]: 2025-07-21
+            - cell "200" [ref=e2025]:
+              - generic [ref=e2027]: "200"
+            - cell "-" [ref=e2028]:
+              - generic [ref=e2030]: "-"
+            - cell "-" [ref=e2031]:
+              - generic [ref=e2033]: "-"
+            - cell "-" [ref=e2034]:
+              - generic [ref=e2035]: "-"
+            - cell "20.00 De campaña" [ref=e2036]:
+              - generic [ref=e2037]:
+                - generic [ref=e2038]: "20.00"
+                - generic [ref=e2039]: De campaña
+            - cell "0.00%" [ref=e2040]:
+              - generic [ref=e2041]: 0.00%
+            - cell "248.0% ✓" [ref=e2042]:
+              - generic [ref=e2046]:
+                - text: 248.0%
+                - generic [ref=e2047]: ✓
+            - cell "-" [ref=e2048]:
+              - generic [ref=e2050]: "-"
+            - cell "Calculando..." [ref=e2051]:
+              - generic [ref=e2052]: Calculando...
+            - cell "ARS $1.000" [ref=e2053]:
+              - generic [ref=e2054]: ARS $1.000
+            - cell "ARS $0" [ref=e2055]:
+              - generic [ref=e2057]: ARS $0
+            - cell "ARS $0" [ref=e2058]:
+              - generic [ref=e2060]: ARS $0
+            - cell [ref=e2061]:
+              - button [ref=e2062] [cursor=pointer]:
+                - img
+          - 'row "Avec #1 Peugeot - Córdoba(100%) 2025-07-17 100 234 260 2.85 10.00 De campaña 0.43% 234.0% ✓ 0 Calculando... ARS $1.000 ARS $238.680 ARS $0" [ref=e2063]':
+            - cell [ref=e2064]:
+              - button [ref=e2067] [cursor=pointer]:
+                - img
+            - 'cell "Avec #1" [ref=e2068]':
+              - generic [ref=e2069]:
+                - generic [ref=e2070]: Avec
+                - generic [ref=e2071]: "#1"
+            - cell "Peugeot - Córdoba(100%)" [ref=e2072]:
+              - generic [ref=e2074]:
+                - text: Peugeot - Córdoba
+                - generic [ref=e2075]: (100%)
+            - cell "2025-07-17" [ref=e2076]:
+              - generic [ref=e2079]: 2025-07-17
+            - cell "100" [ref=e2080]:
+              - generic [ref=e2082]: "100"
+            - cell "234" [ref=e2083]:
+              - generic [ref=e2085]: "234"
+            - cell "260" [ref=e2086]:
+              - generic [ref=e2088]: "260"
+            - cell "2.85" [ref=e2089]:
+              - generic [ref=e2090]: "2.85"
+            - cell "10.00 De campaña" [ref=e2091]:
+              - generic [ref=e2092]:
+                - generic [ref=e2093]: "10.00"
+                - generic [ref=e2094]: De campaña
+            - cell "0.43%" [ref=e2095]:
+              - generic [ref=e2096]: 0.43%
+            - cell "234.0% ✓" [ref=e2097]:
+              - generic [ref=e2101]:
+                - text: 234.0%
+                - generic [ref=e2102]: ✓
+            - cell "0" [ref=e2103]:
+              - generic [ref=e2105]: "0"
+            - cell "Calculando..." [ref=e2106]:
+              - generic [ref=e2107]: Calculando...
+            - cell "ARS $1.000" [ref=e2108]:
+              - generic [ref=e2109]: ARS $1.000
+            - cell "ARS $238.680" [ref=e2110]:
+              - generic [ref=e2112]: ARS $238.680
+            - cell "ARS $0" [ref=e2113]:
+              - generic [ref=e2115]: ARS $0
+            - cell [ref=e2116]:
+              - button [ref=e2117] [cursor=pointer]:
+                - img
+          - 'row "Avec #1 Citroen - AMBA(100%) 2025-07-17 100 196 214 2.39 10.00 De campaña 0.51% 196.0% ✓ 0 Calculando... ARS $3.000 ARS $599.760 ARS $0" [ref=e2118]':
+            - cell [ref=e2119]:
+              - button [ref=e2122] [cursor=pointer]:
+                - img
+            - 'cell "Avec #1" [ref=e2123]':
+              - generic [ref=e2124]:
+                - generic [ref=e2125]: Avec
+                - generic [ref=e2126]: "#1"
+            - cell "Citroen - AMBA(100%)" [ref=e2127]:
+              - generic [ref=e2129]:
+                - text: Citroen - AMBA
+                - generic [ref=e2130]: (100%)
+            - cell "2025-07-17" [ref=e2131]:
+              - generic [ref=e2134]: 2025-07-17
+            - cell "100" [ref=e2135]:
+              - generic [ref=e2137]: "100"
+            - cell "196" [ref=e2138]:
+              - generic [ref=e2140]: "196"
+            - cell "214" [ref=e2141]:
+              - generic [ref=e2143]: "214"
+            - cell "2.39" [ref=e2144]:
+              - generic [ref=e2145]: "2.39"
+            - cell "10.00 De campaña" [ref=e2146]:
+              - generic [ref=e2147]:
+                - generic [ref=e2148]: "10.00"
+                - generic [ref=e2149]: De campaña
+            - cell "0.51%" [ref=e2150]:
+              - generic [ref=e2151]: 0.51%
+            - cell "196.0% ✓" [ref=e2152]:
+              - generic [ref=e2156]:
+                - text: 196.0%
+                - generic [ref=e2157]: ✓
+            - cell "0" [ref=e2158]:
+              - generic [ref=e2160]: "0"
+            - cell "Calculando..." [ref=e2161]:
+              - generic [ref=e2162]: Calculando...
+            - cell "ARS $3.000" [ref=e2163]:
+              - generic [ref=e2164]: ARS $3.000
+            - cell "ARS $599.760" [ref=e2165]:
+              - generic [ref=e2167]: ARS $599.760
+            - cell "ARS $0" [ref=e2168]:
+              - generic [ref=e2170]: ARS $0
+            - cell [ref=e2171]:
+              - button [ref=e2172] [cursor=pointer]:
+                - img
+          - 'row "ALBENS #6 Peugeot - NACIONAL(100%) 2025-07-17 200 641 650 7.82 20.00 De campaña 0.31% 321.0% ✓ 0 Calculando... ARS $1.000 ARS $653.820 ARS $0" [ref=e2173]':
+            - cell [ref=e2174]:
+              - button [ref=e2177] [cursor=pointer]:
+                - img
+            - 'cell "ALBENS #6" [ref=e2178]':
+              - generic [ref=e2179]:
+                - generic [ref=e2180]: ALBENS
+                - generic [ref=e2181]: "#6"
+            - cell "Peugeot - NACIONAL(100%)" [ref=e2182]:
+              - generic [ref=e2184]:
+                - text: Peugeot - NACIONAL
+                - generic [ref=e2185]: (100%)
+            - cell "2025-07-17" [ref=e2186]:
+              - generic [ref=e2189]: 2025-07-17
+            - cell "200" [ref=e2190]:
+              - generic [ref=e2192]: "200"
+            - cell "641" [ref=e2193]:
+              - generic [ref=e2195]: "641"
+            - cell "650" [ref=e2196]:
+              - generic [ref=e2198]: "650"
+            - cell "7.82" [ref=e2199]:
+              - generic [ref=e2200]: "7.82"
+            - cell "20.00 De campaña" [ref=e2201]:
+              - generic [ref=e2202]:
+                - generic [ref=e2203]: "20.00"
+                - generic [ref=e2204]: De campaña
+            - cell "0.31%" [ref=e2205]:
+              - generic [ref=e2206]: 0.31%
+            - cell "321.0% ✓" [ref=e2207]:
+              - generic [ref=e2211]:
+                - text: 321.0%
+                - generic [ref=e2212]: ✓
+            - cell "0" [ref=e2213]:
+              - generic [ref=e2215]: "0"
+            - cell "Calculando..." [ref=e2216]:
+              - generic [ref=e2217]: Calculando...
+            - cell "ARS $1.000" [ref=e2218]:
+              - generic [ref=e2219]: ARS $1.000
+            - cell "ARS $653.820" [ref=e2220]:
+              - generic [ref=e2222]: ARS $653.820
+            - cell "ARS $0" [ref=e2223]:
+              - generic [ref=e2225]: ARS $0
+            - cell [ref=e2226]:
+              - button [ref=e2227] [cursor=pointer]:
+                - img
+          - 'row "Javier Cagiao #1 Renault - AMBA(100%) 2025-07-14 100 180 183 2.12 10.00 De campaña 0.56% 180.0% ✓ 0 Calculando... Sin CPL ARS $0 ARS $0" [ref=e2228]':
+            - cell [ref=e2229]:
+              - button [ref=e2232] [cursor=pointer]:
+                - img
+            - 'cell "Javier Cagiao #1" [ref=e2233]':
+              - generic [ref=e2234]:
+                - generic [ref=e2235]: Javier Cagiao
+                - generic [ref=e2236]: "#1"
+            - cell "Renault - AMBA(100%)" [ref=e2237]:
+              - generic [ref=e2239]:
+                - text: Renault - AMBA
+                - generic [ref=e2240]: (100%)
+            - cell "2025-07-14" [ref=e2241]:
+              - generic [ref=e2244]: 2025-07-14
+            - cell "100" [ref=e2245]:
+              - generic [ref=e2247]: "100"
+            - cell "180" [ref=e2248]:
+              - generic [ref=e2250]: "180"
+            - cell "183" [ref=e2251]:
+              - generic [ref=e2253]: "183"
+            - cell "2.12" [ref=e2254]:
+              - generic [ref=e2255]: "2.12"
+            - cell "10.00 De campaña" [ref=e2256]:
+              - generic [ref=e2257]:
+                - generic [ref=e2258]: "10.00"
+                - generic [ref=e2259]: De campaña
+            - cell "0.56%" [ref=e2260]:
+              - generic [ref=e2261]: 0.56%
+            - cell "180.0% ✓" [ref=e2262]:
+              - generic [ref=e2266]:
+                - text: 180.0%
+                - generic [ref=e2267]: ✓
+            - cell "0" [ref=e2268]:
+              - generic [ref=e2270]: "0"
+            - cell "Calculando..." [ref=e2271]:
+              - generic [ref=e2272]: Calculando...
+            - cell "Sin CPL" [ref=e2273]:
+              - generic [ref=e2274]: Sin CPL
+            - cell "ARS $0" [ref=e2275]:
+              - generic [ref=e2277]: ARS $0
+            - cell "ARS $0" [ref=e2278]:
+              - generic [ref=e2280]: ARS $0
+            - cell [ref=e2281]:
+              - button [ref=e2282] [cursor=pointer]:
+                - img
+          - 'row "Chevrolet Italy #1 Chevrolet - AMBA(100%) 2025-07-14 100 108 109 1.27 10.00 De campaña 0.93% 108.0% ✓ 0 Calculando... Sin CPL ARS $0 ARS $0" [ref=e2283]':
+            - cell [ref=e2284]:
+              - button [ref=e2287] [cursor=pointer]:
+                - img
+            - 'cell "Chevrolet Italy #1" [ref=e2288]':
+              - generic [ref=e2289]:
+                - generic [ref=e2290]: Chevrolet Italy
+                - generic [ref=e2291]: "#1"
+            - cell "Chevrolet - AMBA(100%)" [ref=e2292]:
+              - generic [ref=e2294]:
+                - text: Chevrolet - AMBA
+                - generic [ref=e2295]: (100%)
+            - cell "2025-07-14" [ref=e2296]:
+              - generic [ref=e2299]: 2025-07-14
+            - cell "100" [ref=e2300]:
+              - generic [ref=e2302]: "100"
+            - cell "108" [ref=e2303]:
+              - generic [ref=e2305]: "108"
+            - cell "109" [ref=e2306]:
+              - generic [ref=e2308]: "109"
+            - cell "1.27" [ref=e2309]:
+              - generic [ref=e2310]: "1.27"
+            - cell "10.00 De campaña" [ref=e2311]:
+              - generic [ref=e2312]:
+                - generic [ref=e2313]: "10.00"
+                - generic [ref=e2314]: De campaña
+            - cell "0.93%" [ref=e2315]:
+              - generic [ref=e2316]: 0.93%
+            - cell "108.0% ✓" [ref=e2317]:
+              - generic [ref=e2321]:
+                - text: 108.0%
+                - generic [ref=e2322]: ✓
+            - cell "0" [ref=e2323]:
+              - generic [ref=e2325]: "0"
+            - cell "Calculando..." [ref=e2326]:
+              - generic [ref=e2327]: Calculando...
+            - cell "Sin CPL" [ref=e2328]:
+              - generic [ref=e2329]: Sin CPL
+            - cell "ARS $0" [ref=e2330]:
+              - generic [ref=e2332]: ARS $0
+            - cell "ARS $0" [ref=e2333]:
+              - generic [ref=e2335]: ARS $0
+            - cell [ref=e2336]:
+              - button [ref=e2337] [cursor=pointer]:
+                - img
+          - 'row "NOVO GROUP #1 Fiat - NACIONAL(100%) 2025-07-14 100 105 106 1.24 10.00 De campaña 0.95% 105.0% ✓ 0 Calculando... Sin CPL ARS $0 ARS $0" [ref=e2338]':
+            - cell [ref=e2339]:
+              - button [ref=e2342] [cursor=pointer]:
+                - img
+            - 'cell "NOVO GROUP #1" [ref=e2343]':
+              - generic [ref=e2344]:
+                - generic [ref=e2345]: NOVO GROUP
+                - generic [ref=e2346]: "#1"
+            - cell "Fiat - NACIONAL(100%)" [ref=e2347]:
+              - generic [ref=e2349]:
+                - text: Fiat - NACIONAL
+                - generic [ref=e2350]: (100%)
+            - cell "2025-07-14" [ref=e2351]:
+              - generic [ref=e2354]: 2025-07-14
+            - cell "100" [ref=e2355]:
+              - generic [ref=e2357]: "100"
+            - cell "105" [ref=e2358]:
+              - generic [ref=e2360]: "105"
+            - cell "106" [ref=e2361]:
+              - generic [ref=e2363]: "106"
+            - cell "1.24" [ref=e2364]:
+              - generic [ref=e2365]: "1.24"
+            - cell "10.00 De campaña" [ref=e2366]:
+              - generic [ref=e2367]:
+                - generic [ref=e2368]: "10.00"
+                - generic [ref=e2369]: De campaña
+            - cell "0.95%" [ref=e2370]:
+              - generic [ref=e2371]: 0.95%
+            - cell "105.0% ✓" [ref=e2372]:
+              - generic [ref=e2376]:
+                - text: 105.0%
+                - generic [ref=e2377]: ✓
+            - cell "0" [ref=e2378]:
+              - generic [ref=e2380]: "0"
+            - cell "Calculando..." [ref=e2381]:
+              - generic [ref=e2382]: Calculando...
+            - cell "Sin CPL" [ref=e2383]:
+              - generic [ref=e2384]: Sin CPL
+            - cell "ARS $0" [ref=e2385]:
+              - generic [ref=e2387]: ARS $0
+            - cell "ARS $0" [ref=e2388]:
+              - generic [ref=e2390]: ARS $0
+            - cell [ref=e2391]:
+              - button [ref=e2392] [cursor=pointer]:
+                - img
+          - 'row "TOYOTA MARIANO PICHETTI #1 Toyota - AMBA(100%) 2025-07-05 100 101 102 1.07 10.00 De campaña 0.99% 101.0% ✓ 0 Calculando... ARS $3.500 ARS $360.570 ARS $0" [ref=e2393]':
+            - cell [ref=e2394]:
+              - button [ref=e2397] [cursor=pointer]:
+                - img
+            - 'cell "TOYOTA MARIANO PICHETTI #1" [ref=e2398]':
+              - generic [ref=e2399]:
+                - generic [ref=e2400]: TOYOTA MARIANO PICHETTI
+                - generic [ref=e2401]: "#1"
+            - cell "Toyota - AMBA(100%)" [ref=e2402]:
+              - generic [ref=e2404]:
+                - text: Toyota - AMBA
+                - generic [ref=e2405]: (100%)
+            - cell "2025-07-05" [ref=e2406]:
+              - generic [ref=e2409]: 2025-07-05
+            - cell "100" [ref=e2410]:
+              - generic [ref=e2412]: "100"
+            - cell "101" [ref=e2413]:
+              - generic [ref=e2415]: "101"
+            - cell "102" [ref=e2416]:
+              - generic [ref=e2418]: "102"
+            - cell "1.07" [ref=e2419]:
+              - generic [ref=e2420]: "1.07"
+            - cell "10.00 De campaña" [ref=e2421]:
+              - generic [ref=e2422]:
+                - generic [ref=e2423]: "10.00"
+                - generic [ref=e2424]: De campaña
+            - cell "0.99%" [ref=e2425]:
+              - generic [ref=e2426]: 0.99%
+            - cell "101.0% ✓" [ref=e2427]:
+              - generic [ref=e2431]:
+                - text: 101.0%
+                - generic [ref=e2432]: ✓
+            - cell "0" [ref=e2433]:
+              - generic [ref=e2435]: "0"
+            - cell "Calculando..." [ref=e2436]:
+              - generic [ref=e2437]: Calculando...
+            - cell "ARS $3.500" [ref=e2438]:
+              - generic [ref=e2439]: ARS $3.500
+            - cell "ARS $360.570" [ref=e2440]:
+              - generic [ref=e2442]: ARS $360.570
+            - cell "ARS $0" [ref=e2443]:
+              - generic [ref=e2445]: ARS $0
+            - cell [ref=e2446]:
+              - button [ref=e2447] [cursor=pointer]:
+                - img
+          - 'row "Autos del Sol #2 Fiat - AMBA(100%) 2025-07-02 500 - - - 15.00 De campaña 0.00% 302.0% ✓ - Calculando... Sin CPL ARS $0 ARS $0" [ref=e2448]':
+            - cell [ref=e2449]:
+              - button [ref=e2452] [cursor=pointer]:
+                - img
+            - 'cell "Autos del Sol #2" [ref=e2453]':
+              - generic [ref=e2454]:
+                - generic [ref=e2455]: Autos del Sol
+                - generic [ref=e2456]: "#2"
+            - cell "Fiat - AMBA(100%)" [ref=e2457]:
+              - generic [ref=e2459]:
+                - text: Fiat - AMBA
+                - generic [ref=e2460]: (100%)
+            - cell "2025-07-02" [ref=e2461]:
+              - generic [ref=e2464]: 2025-07-02
+            - cell "500" [ref=e2465]:
+              - generic [ref=e2467]: "500"
+            - cell "-" [ref=e2468]:
+              - generic [ref=e2470]: "-"
+            - cell "-" [ref=e2471]:
+              - generic [ref=e2473]: "-"
+            - cell "-" [ref=e2474]:
+              - generic [ref=e2475]: "-"
+            - cell "15.00 De campaña" [ref=e2476]:
+              - generic [ref=e2477]:
+                - generic [ref=e2478]: "15.00"
+                - generic [ref=e2479]: De campaña
+            - cell "0.00%" [ref=e2480]:
+              - generic [ref=e2481]: 0.00%
+            - cell "302.0% ✓" [ref=e2482]:
+              - generic [ref=e2486]:
+                - text: 302.0%
+                - generic [ref=e2487]: ✓
+            - cell "-" [ref=e2488]:
+              - generic [ref=e2490]: "-"
+            - cell "Calculando..." [ref=e2491]:
+              - generic [ref=e2492]: Calculando...
+            - cell "Sin CPL" [ref=e2493]:
+              - generic [ref=e2494]: Sin CPL
+            - cell "ARS $0" [ref=e2495]:
+              - generic [ref=e2497]: ARS $0
+            - cell "ARS $0" [ref=e2498]:
+              - generic [ref=e2500]: ARS $0
+            - cell [ref=e2501]:
+              - button [ref=e2502] [cursor=pointer]:
+                - img
+          - 'row "Autos del Sol #1 Fiat - AMBA(100%) 2025-06-13 500 1979 1998 17.06 15.00 De campaña 0.25% 396.0% ✓ 0 Calculando... Sin CPL ARS $0 ARS $0" [ref=e2503]':
+            - cell [ref=e2504]:
+              - button [ref=e2507] [cursor=pointer]:
+                - img
+            - 'cell "Autos del Sol #1" [ref=e2508]':
+              - generic [ref=e2509]:
+                - generic [ref=e2510]: Autos del Sol
+                - generic [ref=e2511]: "#1"
+            - cell "Fiat - AMBA(100%)" [ref=e2512]:
+              - generic [ref=e2514]:
+                - text: Fiat - AMBA
+                - generic [ref=e2515]: (100%)
+            - cell "2025-06-13" [ref=e2516]:
+              - generic [ref=e2519]: 2025-06-13
+            - cell "500" [ref=e2520]:
+              - generic [ref=e2522]: "500"
+            - cell "1979" [ref=e2523]:
+              - generic [ref=e2525]: "1979"
+            - cell "1998" [ref=e2526]:
+              - generic [ref=e2528]: "1998"
+            - cell "17.06" [ref=e2529]:
+              - generic [ref=e2530]: "17.06"
+            - cell "15.00 De campaña" [ref=e2531]:
+              - generic [ref=e2532]:
+                - generic [ref=e2533]: "15.00"
+                - generic [ref=e2534]: De campaña
+            - cell "0.25%" [ref=e2535]:
+              - generic [ref=e2536]: 0.25%
+            - cell "396.0% ✓" [ref=e2537]:
+              - generic [ref=e2541]:
+                - text: 396.0%
+                - generic [ref=e2542]: ✓
+            - cell "0" [ref=e2543]:
+              - generic [ref=e2545]: "0"
+            - cell "Calculando..." [ref=e2546]:
+              - generic [ref=e2547]: Calculando...
+            - cell "Sin CPL" [ref=e2548]:
+              - generic [ref=e2549]: Sin CPL
+            - cell "ARS $0" [ref=e2550]:
+              - generic [ref=e2552]: ARS $0
+            - cell "ARS $0" [ref=e2553]:
+              - generic [ref=e2555]: ARS $0
+            - cell [ref=e2556]:
+              - button [ref=e2557] [cursor=pointer]:
+                - img
+          - row "— TOTAL CAMPAÑAS EN PROCESO 4870 — ARS $9.308.010 ARS $861.390 — —" [ref=e2558]:
+            - cell "—" [ref=e2559]
+            - cell "TOTAL CAMPAÑAS EN PROCESO" [ref=e2560]
+            - cell "4870" [ref=e2561]:
+              - generic [ref=e2563]: "4870"
+            - cell "—" [ref=e2564]
+            - cell "ARS $9.308.010" [ref=e2565]:
+              - generic [ref=e2567]: ARS $9.308.010
+            - cell "ARS $861.390" [ref=e2568]:
+              - generic [ref=e2570]: ARS $861.390
+            - cell "—" [ref=e2571]
+            - cell "—" [ref=e2572]
+    - generic [ref=e2573]:
+      - generic [ref=e2575]:
+        - generic [ref=e2576]:
+          - generic [ref=e2577]: ✅
+          - generic [ref=e2578]: Campañas Finalizadas
+          - generic [ref=e2579]: 5 completadas
+        - generic [ref=e2580]:
+          - generic [ref=e2581]:
+            - img [ref=e2582]
+            - generic [ref=e2584]: "Filtros:"
+          - combobox [ref=e2585] [cursor=pointer]:
+            - generic: Todas las zonas
+            - img [ref=e2586] [cursor=pointer]
+          - combobox [ref=e2588] [cursor=pointer]:
+            - generic: Todas las marcas
+            - img [ref=e2589] [cursor=pointer]
+          - combobox [ref=e2591] [cursor=pointer]:
+            - generic: Todos los clientes
+            - img [ref=e2592] [cursor=pointer]
+          - textbox [ref=e2594]
+          - textbox [ref=e2595]
+          - combobox [ref=e2596] [cursor=pointer]:
+            - generic: Todos los meses
+            - img [ref=e2597] [cursor=pointer]
+      - generic [ref=e2600]:
+        - table [ref=e2601]:
+          - rowgroup [ref=e2602]:
+            - row "Acciones Cliente Marca Fecha de Inicio Pedidos Total Enviados Duplicados Entregados/día Pedidos/día % Desvío % Datos Enviados Faltantes CPA Meta Ads CPL Guardado Inversión Realizada Inversión Pendiente Exportar CSV" [ref=e2603]:
+              - cell "Acciones" [ref=e2604]
+              - cell "Cliente" [ref=e2605]
+              - cell "Marca" [ref=e2606]
+              - cell "Fecha de Inicio" [ref=e2607]
+              - cell "Pedidos Total" [ref=e2608]
+              - cell "Enviados" [ref=e2609]
+              - cell "Duplicados" [ref=e2610]
+              - cell "Entregados/día" [ref=e2611]
+              - cell "Pedidos/día" [ref=e2612]
+              - cell "% Desvío" [ref=e2613]
+              - cell "% Datos Enviados" [ref=e2614]
+              - cell "Faltantes" [ref=e2615]
+              - cell "CPA Meta Ads" [ref=e2616]
+              - cell "CPL Guardado" [ref=e2617]
+              - cell "Inversión Realizada" [ref=e2618]
+              - cell "Inversión Pendiente" [ref=e2619]
+              - cell "Exportar CSV" [ref=e2620]
+          - rowgroup [ref=e2621]:
+            - 'row "ALBENS #5 Peugeot - NACIONAL(100%) 2025-07-07 200 200 201 22.22 20.00 De campaña 1.00% 100.0% 0 Calculando... $1.000 Guardado ARS $204.000 ARS $0 Completada" [ref=e2622]':
+              - cell [ref=e2623]:
+                - button [ref=e2624] [cursor=pointer]:
+                  - img
+              - 'cell "ALBENS #5" [ref=e2625]':
+                - generic [ref=e2626]:
+                  - generic [ref=e2627]: ALBENS
+                  - generic [ref=e2628]: "#5"
+              - cell "Peugeot - NACIONAL(100%)" [ref=e2629]:
+                - generic [ref=e2631]:
+                  - text: Peugeot - NACIONAL
+                  - generic [ref=e2632]: (100%)
+              - cell "2025-07-07" [ref=e2633]:
+                - generic [ref=e2635]: 2025-07-07
+              - cell "200" [ref=e2636]:
+                - generic [ref=e2638]: "200"
+              - cell "200" [ref=e2639]
+              - cell "201" [ref=e2640]:
+                - generic [ref=e2642]: "201"
+              - cell "22.22" [ref=e2643]
+              - cell "20.00 De campaña" [ref=e2644]:
+                - generic [ref=e2645]:
+                  - generic [ref=e2646]: "20.00"
+                  - generic [ref=e2647]: De campaña
+              - cell "1.00%" [ref=e2648]:
+                - generic [ref=e2649]: 1.00%
+              - cell "100.0%" [ref=e2650]:
+                - generic [ref=e2654]: 100.0%
+              - cell "0" [ref=e2655]:
+                - generic [ref=e2657]: "0"
+              - cell "Calculando..." [ref=e2658]:
+                - generic [ref=e2659]: Calculando...
+              - cell "$1.000 Guardado" [ref=e2660]:
+                - generic [ref=e2661]:
+                  - generic [ref=e2662]: $1.000
+                  - generic [ref=e2663]: Guardado
+              - cell "ARS $204.000" [ref=e2664]:
+                - generic [ref=e2666]: ARS $204.000
+              - cell "ARS $0 Completada" [ref=e2667]:
+                - generic [ref=e2668]:
+                  - generic [ref=e2669]: ARS $0
+                  - generic [ref=e2670]: Completada
+              - cell [ref=e2671]:
+                - button [ref=e2672] [cursor=pointer]:
+                  - img
+            - 'row "— ALBENS #4 Peugeot - NACIONAL(100%) 2025-06-28 200 200 202 28.57 20.00 De campaña 1.00% 100.0% 0 Calculando... $1.000 Guardado ARS $204.000 ARS $0 Completada" [ref=e2673]':
+              - cell "—" [ref=e2674]:
+                - generic [ref=e2675]: —
+              - 'cell "ALBENS #4" [ref=e2676]':
+                - generic [ref=e2677]:
+                  - generic [ref=e2678]: ALBENS
+                  - generic [ref=e2679]: "#4"
+              - cell "Peugeot - NACIONAL(100%)" [ref=e2680]:
+                - generic [ref=e2682]:
+                  - text: Peugeot - NACIONAL
+                  - generic [ref=e2683]: (100%)
+              - cell "2025-06-28" [ref=e2684]:
+                - generic [ref=e2686]: 2025-06-28
+              - cell "200" [ref=e2687]:
+                - generic [ref=e2689]: "200"
+              - cell "200" [ref=e2690]
+              - cell "202" [ref=e2691]:
+                - generic [ref=e2693]: "202"
+              - cell "28.57" [ref=e2694]
+              - cell "20.00 De campaña" [ref=e2695]:
+                - generic [ref=e2696]:
+                  - generic [ref=e2697]: "20.00"
+                  - generic [ref=e2698]: De campaña
+              - cell "1.00%" [ref=e2699]:
+                - generic [ref=e2700]: 1.00%
+              - cell "100.0%" [ref=e2701]:
+                - generic [ref=e2705]: 100.0%
+              - cell "0" [ref=e2706]:
+                - generic [ref=e2708]: "0"
+              - cell "Calculando..." [ref=e2709]:
+                - generic [ref=e2710]: Calculando...
+              - cell "$1.000 Guardado" [ref=e2711]:
+                - generic [ref=e2712]:
+                  - generic [ref=e2713]: $1.000
+                  - generic [ref=e2714]: Guardado
+              - cell "ARS $204.000" [ref=e2715]:
+                - generic [ref=e2717]: ARS $204.000
+              - cell "ARS $0 Completada" [ref=e2718]:
+                - generic [ref=e2719]:
+                  - generic [ref=e2720]: ARS $0
+                  - generic [ref=e2721]: Completada
+              - cell [ref=e2722]:
+                - button [ref=e2723] [cursor=pointer]:
+                  - img
+            - 'row "— ALBENS #3 Peugeot - NACIONAL(100%) 2025-06-24 200 200 204 100.00 20.00 De campaña 1.00% 100.0% 0 Calculando... $1.000 Guardado ARS $204.000 ARS $0 Completada" [ref=e2724]':
+              - cell "—" [ref=e2725]:
+                - generic [ref=e2726]: —
+              - 'cell "ALBENS #3" [ref=e2727]':
+                - generic [ref=e2728]:
+                  - generic [ref=e2729]: ALBENS
+                  - generic [ref=e2730]: "#3"
+              - cell "Peugeot - NACIONAL(100%)" [ref=e2731]:
+                - generic [ref=e2733]:
+                  - text: Peugeot - NACIONAL
+                  - generic [ref=e2734]: (100%)
+              - cell "2025-06-24" [ref=e2735]:
+                - generic [ref=e2737]: 2025-06-24
+              - cell "200" [ref=e2738]:
+                - generic [ref=e2740]: "200"
+              - cell "200" [ref=e2741]
+              - cell "204" [ref=e2742]:
+                - generic [ref=e2744]: "204"
+              - cell "100.00" [ref=e2745]
+              - cell "20.00 De campaña" [ref=e2746]:
+                - generic [ref=e2747]:
+                  - generic [ref=e2748]: "20.00"
+                  - generic [ref=e2749]: De campaña
+              - cell "1.00%" [ref=e2750]:
+                - generic [ref=e2751]: 1.00%
+              - cell "100.0%" [ref=e2752]:
+                - generic [ref=e2756]: 100.0%
+              - cell "0" [ref=e2757]:
+                - generic [ref=e2759]: "0"
+              - cell "Calculando..." [ref=e2760]:
+                - generic [ref=e2761]: Calculando...
+              - cell "$1.000 Guardado" [ref=e2762]:
+                - generic [ref=e2763]:
+                  - generic [ref=e2764]: $1.000
+                  - generic [ref=e2765]: Guardado
+              - cell "ARS $204.000" [ref=e2766]:
+                - generic [ref=e2768]: ARS $204.000
+              - cell "ARS $0 Completada" [ref=e2769]:
+                - generic [ref=e2770]:
+                  - generic [ref=e2771]: ARS $0
+                  - generic [ref=e2772]: Completada
+              - cell [ref=e2773]:
+                - button [ref=e2774] [cursor=pointer]:
+                  - img
+            - 'row "— ALBENS #2 Peugeot - NACIONAL(100%) 2025-06-19 200 200 201 66.67 20.00 De campaña 1.00% 100.0% 0 Calculando... $1.000 Guardado ARS $204.000 ARS $0 Completada" [ref=e2775]':
+              - cell "—" [ref=e2776]:
+                - generic [ref=e2777]: —
+              - 'cell "ALBENS #2" [ref=e2778]':
+                - generic [ref=e2779]:
+                  - generic [ref=e2780]: ALBENS
+                  - generic [ref=e2781]: "#2"
+              - cell "Peugeot - NACIONAL(100%)" [ref=e2782]:
+                - generic [ref=e2784]:
+                  - text: Peugeot - NACIONAL
+                  - generic [ref=e2785]: (100%)
+              - cell "2025-06-19" [ref=e2786]:
+                - generic [ref=e2788]: 2025-06-19
+              - cell "200" [ref=e2789]:
+                - generic [ref=e2791]: "200"
+              - cell "200" [ref=e2792]
+              - cell "201" [ref=e2793]:
+                - generic [ref=e2795]: "201"
+              - cell "66.67" [ref=e2796]
+              - cell "20.00 De campaña" [ref=e2797]:
+                - generic [ref=e2798]:
+                  - generic [ref=e2799]: "20.00"
+                  - generic [ref=e2800]: De campaña
+              - cell "1.00%" [ref=e2801]:
+                - generic [ref=e2802]: 1.00%
+              - cell "100.0%" [ref=e2803]:
+                - generic [ref=e2807]: 100.0%
+              - cell "0" [ref=e2808]:
+                - generic [ref=e2810]: "0"
+              - cell "Calculando..." [ref=e2811]:
+                - generic [ref=e2812]: Calculando...
+              - cell "$1.000 Guardado" [ref=e2813]:
+                - generic [ref=e2814]:
+                  - generic [ref=e2815]: $1.000
+                  - generic [ref=e2816]: Guardado
+              - cell "ARS $204.000" [ref=e2817]:
+                - generic [ref=e2819]: ARS $204.000
+              - cell "ARS $0 Completada" [ref=e2820]:
+                - generic [ref=e2821]:
+                  - generic [ref=e2822]: ARS $0
+                  - generic [ref=e2823]: Completada
+              - cell [ref=e2824]:
+                - button [ref=e2825] [cursor=pointer]:
+                  - img
+            - 'row "— ALBENS #1 Peugeot - NACIONAL(100%) 2025-06-06 100 100 100 10.00 10.00 De campaña 1.00% 100.0% 0 Calculando... $1.000 Guardado ARS $102.000 ARS $0 Completada" [ref=e2826]':
+              - cell "—" [ref=e2827]:
+                - generic [ref=e2828]: —
+              - 'cell "ALBENS #1" [ref=e2829]':
+                - generic [ref=e2830]:
+                  - generic [ref=e2831]: ALBENS
+                  - generic [ref=e2832]: "#1"
+              - cell "Peugeot - NACIONAL(100%)" [ref=e2833]:
+                - generic [ref=e2835]:
+                  - text: Peugeot - NACIONAL
+                  - generic [ref=e2836]: (100%)
+              - cell "2025-06-06" [ref=e2837]:
+                - generic [ref=e2839]: 2025-06-06
+              - cell "100" [ref=e2840]:
+                - generic [ref=e2842]: "100"
+              - cell "100" [ref=e2843]
+              - cell "100" [ref=e2844]:
+                - generic [ref=e2846]: "100"
+              - cell "10.00" [ref=e2847]
+              - cell "10.00 De campaña" [ref=e2848]:
+                - generic [ref=e2849]:
+                  - generic [ref=e2850]: "10.00"
+                  - generic [ref=e2851]: De campaña
+              - cell "1.00%" [ref=e2852]:
+                - generic [ref=e2853]: 1.00%
+              - cell "100.0%" [ref=e2854]:
+                - generic [ref=e2858]: 100.0%
+              - cell "0" [ref=e2859]:
+                - generic [ref=e2861]: "0"
+              - cell "Calculando..." [ref=e2862]:
+                - generic [ref=e2863]: Calculando...
+              - cell "$1.000 Guardado" [ref=e2864]:
+                - generic [ref=e2865]:
+                  - generic [ref=e2866]: $1.000
+                  - generic [ref=e2867]: Guardado
+              - cell "ARS $102.000" [ref=e2868]:
+                - generic [ref=e2870]: ARS $102.000
+              - cell "ARS $0 Completada" [ref=e2871]:
+                - generic [ref=e2872]:
+                  - generic [ref=e2873]: ARS $0
+                  - generic [ref=e2874]: Completada
+              - cell [ref=e2875]:
+                - button [ref=e2876] [cursor=pointer]:
+                  - img
+            - row "— TOTAL CAMPAÑAS FINALIZADAS 0 — ARS $918.000 ARS $0 Todas Completadas —" [ref=e2877]:
+              - cell "—" [ref=e2878]
+              - cell "TOTAL CAMPAÑAS FINALIZADAS" [ref=e2879]
+              - cell "0" [ref=e2880]:
+                - generic [ref=e2882]: "0"
+              - cell "—" [ref=e2883]
+              - cell "ARS $918.000" [ref=e2884]:
+                - generic [ref=e2886]: ARS $918.000
+              - cell "ARS $0 Todas Completadas" [ref=e2887]:
+                - generic [ref=e2888]:
+                  - generic [ref=e2889]: ARS $0
+                  - generic [ref=e2890]: Todas Completadas
+              - cell "—" [ref=e2891]
+        - generic [ref=e2892]: Las campañas finalizadas se gestionan manualmente
+    - generic [ref=e2893]:
+      - generic [ref=e2895]:
+        - generic [ref=e2896]: 💰
+        - generic [ref=e2897]: TOTALES GENERALES
+        - generic [ref=e2898]: 50 campañas totales
+      - generic [ref=e2900]:
+        - generic [ref=e2902]:
+          - generic [ref=e2903]: INVERSIÓN REALIZADA TOTAL
+          - generic [ref=e2904]: ARS $10.226.010
+        - generic [ref=e2906]:
+          - generic [ref=e2907]: INVERSIÓN PENDIENTE TOTAL
+          - generic [ref=e2908]: ARS $861.390
+        - generic [ref=e2910]:
+          - generic [ref=e2911]: INVERSIÓN TOTAL
+          - generic [ref=e2912]: ARS $11.087.400
+```

@@ -69,7 +69,7 @@ export class PostgresCampaignRepository implements ICampaignRepository {
    */
   async getCampaignsByClient(clientName: string): Promise<CampaignClosure[]> {
     await this.ensureDbInitialized();
-    
+
     try {
       const campaigns = await this.db
         .select({
@@ -81,7 +81,18 @@ export class PostgresCampaignRepository implements ICampaignRepository {
           fechaCampana: campanasComerciales.fechaCampana,
           fechaFin: campanasComerciales.fechaFin,
           clienteId: campanasComerciales.clienteId,
-          nombreComercial: clientes.nombreComercial
+          nombreComercial: clientes.nombreComercial,
+          // Campos multi-marca
+          marca2: campanasComerciales.marca2,
+          marca3: campanasComerciales.marca3,
+          marca4: campanasComerciales.marca4,
+          marca5: campanasComerciales.marca5,
+          porcentaje: campanasComerciales.porcentaje,
+          porcentaje2: campanasComerciales.porcentaje2,
+          porcentaje3: campanasComerciales.porcentaje3,
+          porcentaje4: campanasComerciales.porcentaje4,
+          porcentaje5: campanasComerciales.porcentaje5,
+          asignacionAutomatica: campanasComerciales.asignacionAutomatica
         })
         .from(campanasComerciales)
         .leftJoin(clientes, eq(campanasComerciales.clienteId, clientes.id))
@@ -330,18 +341,32 @@ export class PostgresCampaignRepository implements ICampaignRepository {
    */
   private mapCampanaComercialToCampaignClosure(campaign: any): CampaignClosure {
     const campaignNumber = parseInt(campaign.numeroCampana) || 1;
-    
+
     return {
       id: campaign.id,
       clientName: campaign.nombreComercial || 'UNKNOWN CLIENT',
       brandName: campaign.marca || 'UNKNOWN',
+      marca: campaign.marca || 'UNKNOWN', // Alias para compatibilidad con buildCampaignLeadFilters
       campaignNumber,
       startDate: campaign.fechaCampana || new Date(),
+      fechaCampana: campaign.fechaCampana || null, // Campo requerido por buildCampaignLeadFilters
       targetLeads: campaign.cantidadDatosSolicitados || 0,
       currentLeads: 0, // Será calculado por el LeadRepository
       zone: campaign.zona || 'NACIONAL',
+      zona: campaign.zona || 'NACIONAL', // Alias para compatibilidad con buildCampaignLeadFilters
       status: campaign.fechaFin ? 'Finalizada' : 'En proceso',
-      fechaFin: campaign.fechaFin
+      fechaFin: campaign.fechaFin,
+      // Campos multi-marca
+      marca2: campaign.marca2 || null,
+      marca3: campaign.marca3 || null,
+      marca4: campaign.marca4 || null,
+      marca5: campaign.marca5 || null,
+      porcentaje: campaign.porcentaje || null,
+      porcentaje2: campaign.porcentaje2 || null,
+      porcentaje3: campaign.porcentaje3 || null,
+      porcentaje4: campaign.porcentaje4 || null,
+      porcentaje5: campaign.porcentaje5 || null,
+      asignacionAutomatica: campaign.asignacionAutomatica || null
     };
   }
 }
