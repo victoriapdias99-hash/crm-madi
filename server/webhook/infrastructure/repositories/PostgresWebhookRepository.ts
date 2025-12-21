@@ -1,14 +1,16 @@
-import { eq, sql } from 'drizzle-orm';
-import { db } from '../../../db';
-import { opLeadWebhook } from '@shared/schema';
-import { IWebhookRepository } from '../../domain/interfaces/IWebhookRepository';
-import { WebhookLead } from '../../domain/entities/WebhookLead';
+import { eq, sql } from "drizzle-orm";
+import { db } from "../../../db";
+import { opLeadWebhook } from "../../../../shared/schema";
+import { IWebhookRepository } from "../../domain/interfaces/IWebhookRepository";
+import { WebhookLead } from "../../domain/entities/WebhookLead";
 
 /**
  * Implementación del repositorio de webhooks usando PostgreSQL
  */
 export class PostgresWebhookRepository implements IWebhookRepository {
-  async create(lead: Omit<WebhookLead, 'id' | 'createdAt' | 'updatedAt'>): Promise<WebhookLead> {
+  async create(
+    lead: Omit<WebhookLead, "id" | "createdAt" | "updatedAt">,
+  ): Promise<WebhookLead> {
     const [newLead] = await db
       .insert(opLeadWebhook)
       .values({
@@ -17,7 +19,7 @@ export class PostgresWebhookRepository implements IWebhookRepository {
         auto: lead.auto || null,
         localidad: lead.localidad || null,
         comentarios: lead.comentarios || null,
-        source: lead.source
+        source: lead.source,
       })
       .returning();
 
@@ -30,7 +32,7 @@ export class PostgresWebhookRepository implements IWebhookRepository {
       newLead.comentarios,
       newLead.source,
       newLead.createdAt,
-      newLead.updatedAt
+      newLead.updatedAt,
     );
   }
 
@@ -52,7 +54,7 @@ export class PostgresWebhookRepository implements IWebhookRepository {
       lead.comentarios,
       lead.source,
       lead.createdAt,
-      lead.updatedAt
+      lead.updatedAt,
     );
   }
 
@@ -88,8 +90,8 @@ export class PostgresWebhookRepository implements IWebhookRepository {
           lead.comentarios,
           lead.source,
           lead.createdAt,
-          lead.updatedAt
-        )
+          lead.updatedAt,
+        ),
     );
   }
 

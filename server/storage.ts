@@ -1,18 +1,35 @@
 import {
-  users, campaigns, leads, dailyStats, leadNotes, clientes, campanasComerciales, dashboardManualValues,
-  syncControl, enviadosMetrics,
-  type User, type InsertUser,
-  type Campaign, type InsertCampaign,
-  type Lead, type InsertLead,
-  type DailyStats, type InsertDailyStats,
-  type LeadNote, type InsertLeadNote,
-  type Cliente, type InsertCliente,
-  type CampanaComercial, type InsertCampanaComercial,
-  type SyncControl, type InsertSyncControl,
-  type EnviadosMetrics, type InsertEnviadosMetrics,
-} from "@shared/schema";
+  users,
+  campaigns,
+  leads,
+  dailyStats,
+  leadNotes,
+  clientes,
+  campanasComerciales,
+  dashboardManualValues,
+  syncControl,
+  enviadosMetrics,
+  type User,
+  type InsertUser,
+  type Campaign,
+  type InsertCampaign,
+  type Lead,
+  type InsertLead,
+  type DailyStats,
+  type InsertDailyStats,
+  type LeadNote,
+  type InsertLeadNote,
+  type Cliente,
+  type InsertCliente,
+  type CampanaComercial,
+  type InsertCampanaComercial,
+  type SyncControl,
+  type InsertSyncControl,
+  type EnviadosMetrics,
+  type InsertEnviadosMetrics,
+} from "../shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -24,11 +41,18 @@ export interface IStorage {
   getCampaign(id: number): Promise<Campaign | undefined>;
   getAllCampaigns(): Promise<Campaign[]>;
   createCampaign(campaign: InsertCampaign): Promise<Campaign>;
-  updateCampaign(id: number, updates: Partial<Campaign>): Promise<Campaign | undefined>;
+  updateCampaign(
+    id: number,
+    updates: Partial<Campaign>,
+  ): Promise<Campaign | undefined>;
 
   // Lead operations
   getLead(id: number): Promise<Lead | undefined>;
-  getLeads(filters?: { status?: string; campaignId?: number; limit?: number }): Promise<Lead[]>;
+  getLeads(filters?: {
+    status?: string;
+    campaignId?: number;
+    limit?: number;
+  }): Promise<Lead[]>;
   createLead(lead: InsertLead): Promise<Lead>;
   updateLead(id: number, updates: Partial<Lead>): Promise<Lead | undefined>;
 
@@ -49,21 +73,41 @@ export interface IStorage {
   // CPL and manual values storage
   updateCpl(clienteIndex: number, cpl: number): Promise<void>;
   getCpl(clienteIndex: number): Promise<number>;
-  updateCplByClienteAndCampana(clienteNombre: string, numeroCampana: string, cpl: number): Promise<void>;
-  getCplByClienteAndCampana(clienteNombre: string, numeroCampana: string): Promise<number>;
+  updateCplByClienteAndCampana(
+    clienteNombre: string,
+    numeroCampana: string,
+    cpl: number,
+  ): Promise<void>;
+  getCplByClienteAndCampana(
+    clienteNombre: string,
+    numeroCampana: string,
+  ): Promise<number>;
   updateVentaPorCampana(clienteIndex: number, venta: number): Promise<void>;
   getVentaPorCampana(clienteIndex: number): Promise<number>;
-  updateVentaPorCampanaByClienteAndCampana(clienteNombre: string, numeroCampana: string, venta: number): Promise<void>;
-  getVentaPorCampanaByClienteAndCampana(clienteNombre: string, numeroCampana: string): Promise<number>;
+  updateVentaPorCampanaByClienteAndCampana(
+    clienteNombre: string,
+    numeroCampana: string,
+    venta: number,
+  ): Promise<void>;
+  getVentaPorCampanaByClienteAndCampana(
+    clienteNombre: string,
+    numeroCampana: string,
+  ): Promise<number>;
   updatePedidosPorDia(clienteIndex: number, pedidos: number): Promise<void>;
   getPedidosPorDia(clienteIndex: number): Promise<number>;
-  getPedidosPorDiaByClienteAndCampana(clienteNombre: string, numeroCampana: string): Promise<number>;
+  getPedidosPorDiaByClienteAndCampana(
+    clienteNombre: string,
+    numeroCampana: string,
+  ): Promise<number>;
 
   // Cliente operations
   getCliente(id: number): Promise<Cliente | undefined>;
   getAllClientes(): Promise<Cliente[]>;
   createCliente(cliente: InsertCliente): Promise<Cliente>;
-  updateCliente(id: number, updates: Partial<Cliente>): Promise<Cliente | undefined>;
+  updateCliente(
+    id: number,
+    updates: Partial<Cliente>,
+  ): Promise<Cliente | undefined>;
   deleteCliente(id: number): Promise<boolean>;
 
   // Campaña comercial operations
@@ -71,20 +115,27 @@ export interface IStorage {
   getAllCampanasComerciales(): Promise<CampanaComercial[]>;
   getCampanasPorCliente(clienteId: number): Promise<CampanaComercial[]>;
   getDashboardCampaigns(): Promise<any[]>;
-  createCampanaComercial(campana: InsertCampanaComercial): Promise<CampanaComercial>;
-  updateCampanaComercial(id: number, updates: Partial<CampanaComercial>): Promise<CampanaComercial | undefined>;
+  createCampanaComercial(
+    campana: InsertCampanaComercial,
+  ): Promise<CampanaComercial>;
+  updateCampanaComercial(
+    id: number,
+    updates: Partial<CampanaComercial>,
+  ): Promise<CampanaComercial | undefined>;
   deleteCampanaComercial(id: number): Promise<boolean>;
   recalcularNumerosCampana(clienteId: number): Promise<void>;
 
-  
   // Sync control operations
   getSyncStatus(): Promise<SyncControl | undefined>;
   updateSyncStatus(status: InsertSyncControl): Promise<SyncControl>;
-  
+
   // Enviados metrics operations
   getEnviadosMetrics(clienteNombre?: string): Promise<EnviadosMetrics[]>;
-  updateEnviadosMetrics(clienteNombre: string, numeroCampana: string, datosEnviados: number): Promise<void>;
-  
+  updateEnviadosMetrics(
+    clienteNombre: string,
+    numeroCampana: string,
+    datosEnviados: number,
+  ): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -95,7 +146,7 @@ export class MemStorage implements IStorage {
   private leadNotes: Map<number, LeadNote>;
   private clientes: Map<number, Cliente>;
   private campanasComerciales: Map<number, CampanaComercial>;
-  
+
   // Storage for manual values
   private cplValues: Map<number, number>;
   private cplValuesByClienteCampana: Map<string, number>;
@@ -103,7 +154,7 @@ export class MemStorage implements IStorage {
   private ventaValuesByClienteCampana: Map<string, number>;
   private pedidosPorDiaValues: Map<number, number>;
   private pedidosValuesByClienteCampana: Map<string, number>;
-  
+
   private currentUserId: number;
   private currentCampaignId: number;
   private currentLeadId: number;
@@ -120,7 +171,7 @@ export class MemStorage implements IStorage {
     this.leadNotes = new Map();
     this.clientes = new Map();
     this.campanasComerciales = new Map();
-    
+
     // Initialize manual values storage
     this.cplValues = new Map();
     this.cplValuesByClienteCampana = new Map();
@@ -128,7 +179,7 @@ export class MemStorage implements IStorage {
     this.ventaValuesByClienteCampana = new Map();
     this.pedidosPorDiaValues = new Map();
     this.pedidosValuesByClienteCampana = new Map();
-    
+
     this.currentUserId = 1;
     this.currentCampaignId = 1;
     this.currentLeadId = 1;
@@ -149,7 +200,7 @@ export class MemStorage implements IStorage {
       password: "admin123",
       email: "admin@dashboard.com",
       role: "admin",
-      createdAt: new Date()
+      createdAt: new Date(),
     };
     this.users.set(1, adminUser);
     this.currentUserId = 2;
@@ -163,7 +214,7 @@ export class MemStorage implements IStorage {
       budget: "5000.00",
       startDate: "2024-01-01",
       endDate: "2024-03-31",
-      createdAt: new Date()
+      createdAt: new Date(),
     };
     this.campaigns.set(1, campaign1);
 
@@ -175,7 +226,7 @@ export class MemStorage implements IStorage {
       budget: "3000.00",
       startDate: "2024-02-01",
       endDate: "2024-04-30",
-      createdAt: new Date()
+      createdAt: new Date(),
     };
     this.campaigns.set(2, campaign2);
     this.currentCampaignId = 3;
@@ -202,7 +253,7 @@ export class MemStorage implements IStorage {
         cost: "25.50",
         leadDate: new Date(),
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       },
       {
         id: 2,
@@ -224,11 +275,11 @@ export class MemStorage implements IStorage {
         cost: "18.75",
         leadDate: new Date(Date.now() - 86400000),
         createdAt: new Date(Date.now() - 86400000),
-        updatedAt: new Date()
-      }
+        updatedAt: new Date(),
+      },
     ];
 
-    leads.forEach(lead => this.leads.set(lead.id, lead));
+    leads.forEach((lead) => this.leads.set(lead.id, lead));
     this.currentLeadId = 3;
 
     // Estadísticas diarias de ejemplo
@@ -243,7 +294,7 @@ export class MemStorage implements IStorage {
         spend: "245.80",
         ctr: "0.0251",
         cpl: "20.48",
-        createdAt: new Date()
+        createdAt: new Date(),
       },
       {
         id: 2,
@@ -255,11 +306,11 @@ export class MemStorage implements IStorage {
         spend: "289.50",
         ctr: "0.0239",
         cpl: "19.30",
-        createdAt: new Date()
-      }
+        createdAt: new Date(),
+      },
     ];
 
-    stats.forEach(stat => this.dailyStats.set(stat.id, stat));
+    stats.forEach((stat) => this.dailyStats.set(stat.id, stat));
     this.currentDailyStatsId = 3;
 
     // Clientes de ejemplo con nuevos campos
@@ -267,7 +318,7 @@ export class MemStorage implements IStorage {
       {
         id: 1,
         nombreCliente: "NOVO GROUP - FIAT",
-        nombreComercial: "Novo Automotores", 
+        nombreComercial: "Novo Automotores",
         telefono: "+54 11 4444-5555",
         email: "contacto@novo.com",
         fechaAlta: new Date("2024-01-15"),
@@ -279,12 +330,12 @@ export class MemStorage implements IStorage {
         zonasExcluyentes: "Villa Carlos Paz, Córdoba Capital",
         exclusionesGeograficas: [
           { id: "1", name: "Villa Carlos Paz", type: "city" },
-          { id: "2", name: "Córdoba Capital", type: "city" }
+          { id: "2", name: "Córdoba Capital", type: "city" },
         ],
         integracion: "Pilot",
         tipoCliente: "AGENCIA",
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       },
       {
         id: 2,
@@ -300,12 +351,12 @@ export class MemStorage implements IStorage {
         provinciaBuenosAires: "San Isidro",
         zonasExcluyentes: "Radio 100km de Mendoza",
         exclusionesGeograficas: [
-          { id: "3", name: "Radio 100km de Mendoza", type: "radius" }
+          { id: "3", name: "Radio 100km de Mendoza", type: "radius" },
         ],
         integracion: "Tecnom",
         tipoCliente: "COMERCIALIZADORA",
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       },
       {
         id: 3,
@@ -324,11 +375,11 @@ export class MemStorage implements IStorage {
         integracion: "Asofix",
         tipoCliente: "GRUPO COMERCIAL",
         createdAt: new Date(),
-        updatedAt: new Date()
-      }
+        updatedAt: new Date(),
+      },
     ];
 
-    clientes.forEach(cliente => this.clientes.set(cliente.id, cliente));
+    clientes.forEach((cliente) => this.clientes.set(cliente.id, cliente));
     this.currentClienteId = 4;
   }
 
@@ -338,18 +389,20 @@ export class MemStorage implements IStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.username === username);
+    return Array.from(this.users.values()).find(
+      (user) => user.username === username,
+    );
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.currentUserId++;
-    const user: User = { 
+    const user: User = {
       id,
       username: insertUser.username,
       password: insertUser.password,
       email: insertUser.email || null,
       role: insertUser.role || "user",
-      createdAt: new Date()
+      createdAt: new Date(),
     };
     this.users.set(id, user);
     return user;
@@ -374,16 +427,19 @@ export class MemStorage implements IStorage {
       budget: insertCampaign.budget || null,
       startDate: insertCampaign.startDate || null,
       endDate: insertCampaign.endDate || null,
-      createdAt: new Date()
+      createdAt: new Date(),
     };
     this.campaigns.set(id, campaign);
     return campaign;
   }
 
-  async updateCampaign(id: number, updates: Partial<Campaign>): Promise<Campaign | undefined> {
+  async updateCampaign(
+    id: number,
+    updates: Partial<Campaign>,
+  ): Promise<Campaign | undefined> {
     const campaign = this.campaigns.get(id);
     if (!campaign) return undefined;
-    
+
     const updatedCampaign = { ...campaign, ...updates };
     this.campaigns.set(id, updatedCampaign);
     return updatedCampaign;
@@ -394,24 +450,30 @@ export class MemStorage implements IStorage {
     return this.leads.get(id);
   }
 
-  async getLeads(filters?: { status?: string; campaignId?: number; limit?: number }): Promise<Lead[]> {
+  async getLeads(filters?: {
+    status?: string;
+    campaignId?: number;
+    limit?: number;
+  }): Promise<Lead[]> {
     let leads = Array.from(this.leads.values());
-    
+
     if (filters?.status) {
-      leads = leads.filter(lead => lead.status === filters.status);
+      leads = leads.filter((lead) => lead.status === filters.status);
     }
-    
+
     if (filters?.campaignId) {
-      leads = leads.filter(lead => lead.campaignId === filters.campaignId);
+      leads = leads.filter((lead) => lead.campaignId === filters.campaignId);
     }
-    
+
     // Ordenar por fecha más reciente
-    leads.sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
-    
+    leads.sort(
+      (a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0),
+    );
+
     if (filters?.limit) {
       leads = leads.slice(0, filters.limit);
     }
-    
+
     return leads;
   }
 
@@ -437,37 +499,43 @@ export class MemStorage implements IStorage {
       cost: insertLead.cost || null,
       leadDate: insertLead.leadDate || null,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
     this.leads.set(id, lead);
     return lead;
   }
 
-  async updateLead(id: number, updates: Partial<Lead>): Promise<Lead | undefined> {
+  async updateLead(
+    id: number,
+    updates: Partial<Lead>,
+  ): Promise<Lead | undefined> {
     const lead = this.leads.get(id);
     if (!lead) return undefined;
-    
-    const updatedLead = { 
-      ...lead, 
+
+    const updatedLead = {
+      ...lead,
       ...updates,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
     this.leads.set(id, updatedLead);
     return updatedLead;
   }
 
   // Daily stats operations
-  async getDailyStats(date?: string, campaignId?: number): Promise<DailyStats[]> {
+  async getDailyStats(
+    date?: string,
+    campaignId?: number,
+  ): Promise<DailyStats[]> {
     let stats = Array.from(this.dailyStats.values());
-    
+
     if (date) {
-      stats = stats.filter(stat => stat.date === date);
+      stats = stats.filter((stat) => stat.date === date);
     }
-    
+
     if (campaignId) {
-      stats = stats.filter(stat => stat.campaignId === campaignId);
+      stats = stats.filter((stat) => stat.campaignId === campaignId);
     }
-    
+
     return stats.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
   }
 
@@ -483,7 +551,7 @@ export class MemStorage implements IStorage {
       spend: insertStats.spend || "0",
       ctr: insertStats.ctr || null,
       cpl: insertStats.cpl || null,
-      createdAt: new Date()
+      createdAt: new Date(),
     };
     this.dailyStats.set(id, stats);
     return stats;
@@ -492,8 +560,10 @@ export class MemStorage implements IStorage {
   // Lead notes operations
   async getLeadNotes(leadId: number): Promise<LeadNote[]> {
     return Array.from(this.leadNotes.values())
-      .filter(note => note.leadId === leadId)
-      .sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
+      .filter((note) => note.leadId === leadId)
+      .sort(
+        (a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0),
+      );
   }
 
   async createLeadNote(insertNote: InsertLeadNote): Promise<LeadNote> {
@@ -504,7 +574,7 @@ export class MemStorage implements IStorage {
       userId: insertNote.userId,
       note: insertNote.note,
       type: insertNote.type || "general",
-      createdAt: new Date()
+      createdAt: new Date(),
     };
     this.leadNotes.set(id, note);
     return note;
@@ -514,68 +584,71 @@ export class MemStorage implements IStorage {
   async getLeadsCount(timeframe?: string): Promise<number> {
     const leads = Array.from(this.leads.values());
     if (!timeframe) return leads.length;
-    
+
     const now = new Date();
     const cutoff = new Date();
-    
+
     switch (timeframe) {
-      case 'today':
+      case "today":
         cutoff.setHours(0, 0, 0, 0);
         break;
-      case 'week':
+      case "week":
         cutoff.setDate(now.getDate() - 7);
         break;
-      case 'month':
+      case "month":
         cutoff.setMonth(now.getMonth() - 1);
         break;
       default:
         return leads.length;
     }
-    
-    return leads.filter(lead => 
-      lead.createdAt && lead.createdAt >= cutoff
-    ).length;
+
+    return leads.filter((lead) => lead.createdAt && lead.createdAt >= cutoff)
+      .length;
   }
 
   async getTotalSpend(timeframe?: string): Promise<number> {
     const stats = Array.from(this.dailyStats.values());
-    
+
     if (!timeframe) {
-      return stats.reduce((total, stat) => total + parseFloat(stat.spend || "0"), 0);
+      return stats.reduce(
+        (total, stat) => total + parseFloat(stat.spend || "0"),
+        0,
+      );
     }
-    
+
     const now = new Date();
     const cutoff = new Date();
-    
+
     switch (timeframe) {
-      case 'today':
+      case "today":
         cutoff.setHours(0, 0, 0, 0);
         break;
-      case 'week':
+      case "week":
         cutoff.setDate(now.getDate() - 7);
         break;
-      case 'month':
+      case "month":
         cutoff.setMonth(now.getMonth() - 1);
         break;
     }
-    
+
     return stats
-      .filter(stat => stat.createdAt && stat.createdAt >= cutoff)
+      .filter((stat) => stat.createdAt && stat.createdAt >= cutoff)
       .reduce((total, stat) => total + parseFloat(stat.spend || "0"), 0);
   }
 
   async getConversionRate(timeframe?: string): Promise<number> {
     const leads = await this.getLeadsCount(timeframe);
-    const convertedLeads = Array.from(this.leads.values())
-      .filter(lead => lead.status === 'converted').length;
-    
+    const convertedLeads = Array.from(this.leads.values()).filter(
+      (lead) => lead.status === "converted",
+    ).length;
+
     return leads > 0 ? (convertedLeads / leads) * 100 : 0;
   }
 
   async getCostPerLead(timeframe?: string): Promise<number> {
     const totalSpend = await this.getTotalSpend(timeframe);
     const leadsCount = await this.getLeadsCount(timeframe);
-    
+
     return leadsCount > 0 ? totalSpend / leadsCount : 0;
   }
 
@@ -585,7 +658,9 @@ export class MemStorage implements IStorage {
   }
 
   async getAllClientes(): Promise<Cliente[]> {
-    return Array.from(this.clientes.values()).sort((a, b) => a.nombreCliente.localeCompare(b.nombreCliente));
+    return Array.from(this.clientes.values()).sort((a, b) =>
+      a.nombreCliente.localeCompare(b.nombreCliente),
+    );
   }
 
   async createCliente(insertCliente: InsertCliente): Promise<Cliente> {
@@ -607,20 +682,23 @@ export class MemStorage implements IStorage {
       integracion: insertCliente.integracion || null,
       tipoCliente: insertCliente.tipoCliente || null,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
     this.clientes.set(id, cliente);
     return cliente;
   }
 
-  async updateCliente(id: number, updates: Partial<Cliente>): Promise<Cliente | undefined> {
+  async updateCliente(
+    id: number,
+    updates: Partial<Cliente>,
+  ): Promise<Cliente | undefined> {
     const cliente = this.clientes.get(id);
     if (!cliente) return undefined;
-    
-    const updatedCliente = { 
-      ...cliente, 
+
+    const updatedCliente = {
+      ...cliente,
       ...updates,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
     this.clientes.set(id, updatedCliente);
     return updatedCliente;
@@ -640,70 +718,99 @@ export class MemStorage implements IStorage {
     return this.cplValues.get(clienteIndex) || 0;
   }
 
-  async updateCplByClienteAndCampana(clienteNombre: string, numeroCampana: string, cpl: number): Promise<void> {
+  async updateCplByClienteAndCampana(
+    clienteNombre: string,
+    numeroCampana: string,
+    cpl: number,
+  ): Promise<void> {
     // Crear una clave única basada en cliente y número de campaña
     const uniqueKey = `${clienteNombre}-${numeroCampana}`;
-    
+
     // Usar un mapa específico para claves de cliente-campaña
     if (!this.cplValuesByClienteCampana) {
       this.cplValuesByClienteCampana = new Map();
     }
-    
+
     this.cplValuesByClienteCampana.set(uniqueKey, cpl);
-    console.log(`CPL updated for client ${clienteNombre} campaign ${numeroCampana}: ${cpl}`);
+    console.log(
+      `CPL updated for client ${clienteNombre} campaign ${numeroCampana}: ${cpl}`,
+    );
   }
 
-  async getCplByClienteAndCampana(clienteNombre: string, numeroCampana: string): Promise<number> {
+  async getCplByClienteAndCampana(
+    clienteNombre: string,
+    numeroCampana: string,
+  ): Promise<number> {
     if (!this.cplValuesByClienteCampana) {
       this.cplValuesByClienteCampana = new Map();
     }
-    
+
     const uniqueKey = `${clienteNombre}-${numeroCampana}`;
     return this.cplValuesByClienteCampana.get(uniqueKey) || 0;
   }
 
-  async updateVentaPorCampanaByClienteAndCampana(clienteNombre: string, numeroCampana: string, venta: number): Promise<void> {
+  async updateVentaPorCampanaByClienteAndCampana(
+    clienteNombre: string,
+    numeroCampana: string,
+    venta: number,
+  ): Promise<void> {
     if (!this.ventaValuesByClienteCampana) {
       this.ventaValuesByClienteCampana = new Map();
     }
-    
+
     const uniqueKey = `${clienteNombre}-${numeroCampana}`;
     this.ventaValuesByClienteCampana.set(uniqueKey, venta);
-    console.log(`💰 Venta updated for client ${clienteNombre} campaign ${numeroCampana}: $${venta}`);
+    console.log(
+      `💰 Venta updated for client ${clienteNombre} campaign ${numeroCampana}: $${venta}`,
+    );
   }
 
-  async getVentaPorCampanaByClienteAndCampana(clienteNombre: string, numeroCampana: string): Promise<number> {
+  async getVentaPorCampanaByClienteAndCampana(
+    clienteNombre: string,
+    numeroCampana: string,
+  ): Promise<number> {
     if (!this.ventaValuesByClienteCampana) {
       this.ventaValuesByClienteCampana = new Map();
     }
-    
+
     const uniqueKey = `${clienteNombre}-${numeroCampana}`;
     return this.ventaValuesByClienteCampana.get(uniqueKey) || 0;
   }
 
-  async getPedidosPorDiaByClienteAndCampana(clienteNombre: string, numeroCampana: string): Promise<number> {
+  async getPedidosPorDiaByClienteAndCampana(
+    clienteNombre: string,
+    numeroCampana: string,
+  ): Promise<number> {
     if (!this.pedidosValuesByClienteCampana) {
       this.pedidosValuesByClienteCampana = new Map();
     }
-    
+
     const uniqueKey = `${clienteNombre}-${numeroCampana}`;
     return this.pedidosValuesByClienteCampana.get(uniqueKey) || 0;
   }
 
-
-
-  async updateVentaPorCampana(clienteIndex: number, venta: number): Promise<void> {
+  async updateVentaPorCampana(
+    clienteIndex: number,
+    venta: number,
+  ): Promise<void> {
     this.ventaPorCampanaValues.set(clienteIndex, venta);
-    console.log(`Venta por campaña updated for client ${clienteIndex}: ${venta}`);
+    console.log(
+      `Venta por campaña updated for client ${clienteIndex}: ${venta}`,
+    );
   }
 
   async getVentaPorCampana(clienteIndex: number): Promise<number> {
     return this.ventaPorCampanaValues.get(clienteIndex) || 0;
   }
 
-  async updatePedidosPorDia(clienteIndex: number, pedidos: number): Promise<void> {
+  async updatePedidosPorDia(
+    clienteIndex: number,
+    pedidos: number,
+  ): Promise<void> {
     this.pedidosPorDiaValues.set(clienteIndex, pedidos);
-    console.log(`Pedidos por día updated for client ${clienteIndex}: ${pedidos}`);
+    console.log(
+      `Pedidos por día updated for client ${clienteIndex}: ${pedidos}`,
+    );
   }
 
   async getPedidosPorDia(clienteIndex: number): Promise<number> {
@@ -716,18 +823,24 @@ export class MemStorage implements IStorage {
   }
 
   async getAllCampanasComerciales(): Promise<CampanaComercial[]> {
-    return Array.from(this.campanasComerciales.values()).sort((a, b) => 
-      (b.fechaCreacion?.getTime() || 0) - (a.fechaCreacion?.getTime() || 0)
+    return Array.from(this.campanasComerciales.values()).sort(
+      (a, b) =>
+        (b.fechaCreacion?.getTime() || 0) - (a.fechaCreacion?.getTime() || 0),
     );
   }
 
   async getCampanasPorCliente(clienteId: number): Promise<CampanaComercial[]> {
     return Array.from(this.campanasComerciales.values())
-      .filter(campana => campana.clienteId === clienteId)
-      .sort((a, b) => (b.fechaCreacion?.getTime() || 0) - (a.fechaCreacion?.getTime() || 0));
+      .filter((campana) => campana.clienteId === clienteId)
+      .sort(
+        (a, b) =>
+          (b.fechaCreacion?.getTime() || 0) - (a.fechaCreacion?.getTime() || 0),
+      );
   }
 
-  async createCampanaComercial(insertCampana: InsertCampanaComercial): Promise<CampanaComercial> {
+  async createCampanaComercial(
+    insertCampana: InsertCampanaComercial,
+  ): Promise<CampanaComercial> {
     const id = this.currentCampanaComercialId++;
     const campana: CampanaComercial = {
       id,
@@ -738,20 +851,23 @@ export class MemStorage implements IStorage {
       zona: insertCampana.zona,
       fechaCreacion: new Date(),
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
     this.campanasComerciales.set(id, campana);
     return campana;
   }
 
-  async updateCampanaComercial(id: number, updates: Partial<CampanaComercial>): Promise<CampanaComercial | undefined> {
+  async updateCampanaComercial(
+    id: number,
+    updates: Partial<CampanaComercial>,
+  ): Promise<CampanaComercial | undefined> {
     const campana = this.campanasComerciales.get(id);
     if (!campana) return undefined;
-    
-    const updatedCampana = { 
-      ...campana, 
+
+    const updatedCampana = {
+      ...campana,
       ...updates,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
     this.campanasComerciales.set(id, updatedCampana);
     return updatedCampana;
@@ -764,14 +880,20 @@ export class MemStorage implements IStorage {
   async recalcularNumerosCampana(clienteId: number): Promise<void> {
     // Obtener todas las campañas del cliente ordenadas por fecha de creación
     const campanas = Array.from(this.campanasComerciales.values())
-      .filter(campana => campana.clienteId === clienteId)
-      .sort((a, b) => (a.fechaCreacion?.getTime() || 0) - (b.fechaCreacion?.getTime() || 0));
+      .filter((campana) => campana.clienteId === clienteId)
+      .sort(
+        (a, b) =>
+          (a.fechaCreacion?.getTime() || 0) - (b.fechaCreacion?.getTime() || 0),
+      );
 
     // Recalcular números secuenciales (1, 2, 3...)
     for (let i = 0; i < campanas.length; i++) {
       const nuevoNumero = `${i + 1}`;
       if (campanas[i].numeroCampana !== nuevoNumero) {
-        const campanaActualizada = { ...campanas[i], numeroCampana: nuevoNumero };
+        const campanaActualizada = {
+          ...campanas[i],
+          numeroCampana: nuevoNumero,
+        };
         this.campanasComerciales.set(campanas[i].id, campanaActualizada);
       }
     }
@@ -792,21 +914,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, username));
     return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(insertUser)
-      .returning();
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
 
   // Campaign operations
   async getCampaign(id: number): Promise<Campaign | undefined> {
-    const [campaign] = await db.select().from(campaigns).where(eq(campaigns.id, id));
+    const [campaign] = await db
+      .select()
+      .from(campaigns)
+      .where(eq(campaigns.id, id));
     return campaign || undefined;
   }
 
@@ -822,7 +947,10 @@ export class DatabaseStorage implements IStorage {
     return newCampaign;
   }
 
-  async updateCampaign(id: number, updates: Partial<Campaign>): Promise<Campaign | undefined> {
+  async updateCampaign(
+    id: number,
+    updates: Partial<Campaign>,
+  ): Promise<Campaign | undefined> {
     const [updated] = await db
       .update(campaigns)
       .set(updates)
@@ -837,31 +965,36 @@ export class DatabaseStorage implements IStorage {
     return lead || undefined;
   }
 
-  async getLeads(filters?: { status?: string; campaignId?: number; limit?: number }): Promise<Lead[]> {
+  async getLeads(filters?: {
+    status?: string;
+    campaignId?: number;
+    limit?: number;
+  }): Promise<Lead[]> {
     let query = db.select().from(leads);
-    
+
     if (filters?.status) {
       query = query.where(eq(leads.status, filters.status)) as any;
     }
     if (filters?.campaignId) {
       query = query.where(eq(leads.campaignId, filters.campaignId)) as any;
     }
+    query = query.orderBy(desc(leads.createdAt)) as any;
     if (filters?.limit) {
       query = query.limit(filters.limit) as any;
     }
-    
+
     return await query;
   }
 
   async createLead(lead: InsertLead): Promise<Lead> {
-    const [newLead] = await db
-      .insert(leads)
-      .values(lead)
-      .returning();
+    const [newLead] = await db.insert(leads).values(lead).returning();
     return newLead;
   }
 
-  async updateLead(id: number, updates: Partial<Lead>): Promise<Lead | undefined> {
+  async updateLead(
+    id: number,
+    updates: Partial<Lead>,
+  ): Promise<Lead | undefined> {
     const [updated] = await db
       .update(leads)
       .set(updates)
@@ -871,37 +1004,37 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Daily stats operations
-  async getDailyStats(date?: string, campaignId?: number): Promise<DailyStats[]> {
+  async getDailyStats(
+    date?: string,
+    campaignId?: number,
+  ): Promise<DailyStats[]> {
     let query = db.select().from(dailyStats);
-    
+
     if (date) {
       query = query.where(eq(dailyStats.date, date)) as any;
     }
     if (campaignId) {
       query = query.where(eq(dailyStats.campaignId, campaignId)) as any;
     }
-    
+
     return await query;
   }
 
   async createDailyStats(stats: InsertDailyStats): Promise<DailyStats> {
-    const [newStats] = await db
-      .insert(dailyStats)
-      .values(stats)
-      .returning();
+    const [newStats] = await db.insert(dailyStats).values(stats).returning();
     return newStats;
   }
 
   // Lead notes operations
   async getLeadNotes(leadId: number): Promise<LeadNote[]> {
-    return await db.select().from(leadNotes).where(eq(leadNotes.leadId, leadId));
+    return await db
+      .select()
+      .from(leadNotes)
+      .where(eq(leadNotes.leadId, leadId));
   }
 
   async createLeadNote(note: InsertLeadNote): Promise<LeadNote> {
-    const [newNote] = await db
-      .insert(leadNotes)
-      .values(note)
-      .returning();
+    const [newNote] = await db.insert(leadNotes).values(note).returning();
     return newNote;
   }
 
@@ -913,12 +1046,18 @@ export class DatabaseStorage implements IStorage {
 
   async getTotalSpend(timeframe?: string): Promise<number> {
     const result = await db.select().from(dailyStats);
-    return result.reduce((total, stat) => total + parseFloat(stat.spend || "0"), 0);
+    return result.reduce(
+      (total, stat) => total + parseFloat(stat.spend || "0"),
+      0,
+    );
   }
 
   async getConversionRate(timeframe?: string): Promise<number> {
     const totalLeads = await this.getLeadsCount();
-    const convertedLeads = await db.select().from(leads).where(eq(leads.status, "converted"));
+    const convertedLeads = await db
+      .select()
+      .from(leads)
+      .where(eq(leads.status, "converted"));
     return totalLeads > 0 ? (convertedLeads.length / totalLeads) * 100 : 0;
   }
 
@@ -932,8 +1071,11 @@ export class DatabaseStorage implements IStorage {
   async updateCpl(clienteIndex: number, cpl: number): Promise<void> {
     try {
       // Primero verificar si existe un registro para este clienteIndex
-      const [existing] = await db.select().from(dashboardManualValues).where(eq(dashboardManualValues.clienteIndex, clienteIndex));
-      
+      const [existing] = await db
+        .select()
+        .from(dashboardManualValues)
+        .where(eq(dashboardManualValues.clienteIndex, clienteIndex));
+
       if (existing) {
         // Actualizar registro existente
         await db
@@ -942,107 +1084,129 @@ export class DatabaseStorage implements IStorage {
           .where(eq(dashboardManualValues.clienteIndex, clienteIndex));
       } else {
         // Crear nuevo registro
-        await db
-          .insert(dashboardManualValues)
-          .values({ 
-            clienteIndex, 
-            cpl: cpl.toString(),
-            ventaPorCampana: "0",
-            pedidosPorDia: 0
-          });
+        await db.insert(dashboardManualValues).values({
+          clienteIndex,
+          cpl: cpl.toString(),
+          ventaPorCampana: "0",
+          pedidosPorDia: 0,
+        });
       }
       console.log(`CPL updated in database for client ${clienteIndex}: ${cpl}`);
     } catch (error) {
-      console.error('Error updating CPL in database:', error);
+      console.error("Error updating CPL in database:", error);
       throw error;
     }
   }
 
   async getCpl(clienteIndex: number): Promise<number> {
     try {
-      const [record] = await db.select().from(dashboardManualValues).where(eq(dashboardManualValues.clienteIndex, clienteIndex));
+      const [record] = await db
+        .select()
+        .from(dashboardManualValues)
+        .where(eq(dashboardManualValues.clienteIndex, clienteIndex));
       return record ? parseFloat(record.cpl || "0") : 0;
     } catch (error) {
-      console.error('Error getting CPL from database:', error);
+      console.error("Error getting CPL from database:", error);
       return 0;
     }
   }
 
-  async updateVentaPorCampana(clienteIndex: number, venta: number): Promise<void> {
+  async updateVentaPorCampana(
+    clienteIndex: number,
+    venta: number,
+  ): Promise<void> {
     try {
-      const [existing] = await db.select().from(dashboardManualValues).where(eq(dashboardManualValues.clienteIndex, clienteIndex));
-      
+      const [existing] = await db
+        .select()
+        .from(dashboardManualValues)
+        .where(eq(dashboardManualValues.clienteIndex, clienteIndex));
+
       if (existing) {
         await db
           .update(dashboardManualValues)
           .set({ ventaPorCampana: venta.toString(), updatedAt: new Date() })
           .where(eq(dashboardManualValues.clienteIndex, clienteIndex));
       } else {
-        await db
-          .insert(dashboardManualValues)
-          .values({ 
-            clienteIndex, 
-            cpl: "0",
-            ventaPorCampana: venta.toString(),
-            pedidosPorDia: 0
-          });
+        await db.insert(dashboardManualValues).values({
+          clienteIndex,
+          cpl: "0",
+          ventaPorCampana: venta.toString(),
+          pedidosPorDia: 0,
+        });
       }
-      console.log(`Venta por campaña updated in database for client ${clienteIndex}: ${venta}`);
+      console.log(
+        `Venta por campaña updated in database for client ${clienteIndex}: ${venta}`,
+      );
     } catch (error) {
-      console.error('Error updating venta por campaña in database:', error);
+      console.error("Error updating venta por campaña in database:", error);
       throw error;
     }
   }
 
   async getVentaPorCampana(clienteIndex: number): Promise<number> {
     try {
-      const [record] = await db.select().from(dashboardManualValues).where(eq(dashboardManualValues.clienteIndex, clienteIndex));
+      const [record] = await db
+        .select()
+        .from(dashboardManualValues)
+        .where(eq(dashboardManualValues.clienteIndex, clienteIndex));
       return record ? parseFloat(record.ventaPorCampana || "0") : 0;
     } catch (error) {
-      console.error('Error getting venta por campaña from database:', error);
+      console.error("Error getting venta por campaña from database:", error);
       return 0;
     }
   }
 
-  async updatePedidosPorDia(clienteIndex: number, pedidos: number): Promise<void> {
+  async updatePedidosPorDia(
+    clienteIndex: number,
+    pedidos: number,
+  ): Promise<void> {
     try {
-      const [existing] = await db.select().from(dashboardManualValues).where(eq(dashboardManualValues.clienteIndex, clienteIndex));
-      
+      const [existing] = await db
+        .select()
+        .from(dashboardManualValues)
+        .where(eq(dashboardManualValues.clienteIndex, clienteIndex));
+
       if (existing) {
         await db
           .update(dashboardManualValues)
           .set({ pedidosPorDia: pedidos, updatedAt: new Date() })
           .where(eq(dashboardManualValues.clienteIndex, clienteIndex));
       } else {
-        await db
-          .insert(dashboardManualValues)
-          .values({ 
-            clienteIndex, 
-            cpl: "0",
-            ventaPorCampana: "0",
-            pedidosPorDia: pedidos
-          });
+        await db.insert(dashboardManualValues).values({
+          clienteIndex,
+          cpl: "0",
+          ventaPorCampana: "0",
+          pedidosPorDia: pedidos,
+        });
       }
-      console.log(`Pedidos por día updated in database for client ${clienteIndex}: ${pedidos}`);
+      console.log(
+        `Pedidos por día updated in database for client ${clienteIndex}: ${pedidos}`,
+      );
     } catch (error) {
-      console.error('Error updating pedidos por día in database:', error);
+      console.error("Error updating pedidos por día in database:", error);
       throw error;
     }
   }
 
   async getPedidosPorDia(clienteIndex: number): Promise<number> {
     try {
-      const [record] = await db.select().from(dashboardManualValues).where(eq(dashboardManualValues.clienteIndex, clienteIndex));
-      return record ? (record.pedidosPorDia || 0) : 0;
+      const [record] = await db
+        .select()
+        .from(dashboardManualValues)
+        .where(eq(dashboardManualValues.clienteIndex, clienteIndex));
+      return record ? record.pedidosPorDia || 0 : 0;
     } catch (error) {
-      console.error('Error getting pedidos por día from database:', error);
+      console.error("Error getting pedidos por día from database:", error);
       return 0;
     }
   }
 
   // Cliente operations
   async getCliente(id: number): Promise<Cliente | undefined> {
-    const [cliente] = await db.select().from(clientes).where(eq(clientes.id, id));
+    const [cliente] = await db
+      .select()
+      .from(clientes)
+      .where(eq(clientes.id, id));
     return cliente || undefined;
   }
 
@@ -1051,14 +1215,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCliente(cliente: InsertCliente): Promise<Cliente> {
-    const [newCliente] = await db
-      .insert(clientes)
-      .values(cliente)
-      .returning();
+    const [newCliente] = await db.insert(clientes).values(cliente).returning();
     return newCliente;
   }
 
-  async updateCliente(id: number, updates: Partial<Cliente>): Promise<Cliente | undefined> {
+  async updateCliente(
+    id: number,
+    updates: Partial<Cliente>,
+  ): Promise<Cliente | undefined> {
     const [updated] = await db
       .update(clientes)
       .set(updates)
@@ -1074,7 +1238,10 @@ export class DatabaseStorage implements IStorage {
 
   // Campaña comercial operations
   async getCampanaComercial(id: number): Promise<CampanaComercial | undefined> {
-    const [campana] = await db.select().from(campanasComerciales).where(eq(campanasComerciales.id, id));
+    const [campana] = await db
+      .select()
+      .from(campanasComerciales)
+      .where(eq(campanasComerciales.id, id));
     return campana || undefined;
   }
 
@@ -1083,10 +1250,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCampanasPorCliente(clienteId: number): Promise<CampanaComercial[]> {
-    return await db.select().from(campanasComerciales).where(eq(campanasComerciales.clienteId, clienteId));
+    return await db
+      .select()
+      .from(campanasComerciales)
+      .where(eq(campanasComerciales.clienteId, clienteId));
   }
 
-  async createCampanaComercial(campana: InsertCampanaComercial): Promise<CampanaComercial> {
+  async createCampanaComercial(
+    campana: InsertCampanaComercial,
+  ): Promise<CampanaComercial> {
     const [newCampana] = await db
       .insert(campanasComerciales)
       .values(campana)
@@ -1094,7 +1266,10 @@ export class DatabaseStorage implements IStorage {
     return newCampana;
   }
 
-  async updateCampanaComercial(id: number, updates: Partial<CampanaComercial>): Promise<CampanaComercial | undefined> {
+  async updateCampanaComercial(
+    id: number,
+    updates: Partial<CampanaComercial>,
+  ): Promise<CampanaComercial | undefined> {
     const [updated] = await db
       .update(campanasComerciales)
       .set(updates)
@@ -1104,13 +1279,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteCampanaComercial(id: number): Promise<boolean> {
-    const result = await db.delete(campanasComerciales).where(eq(campanasComerciales.id, id));
+    const result = await db
+      .delete(campanasComerciales)
+      .where(eq(campanasComerciales.id, id));
     return (result.rowCount || 0) > 0;
   }
 
   async recalcularNumerosCampana(clienteId: number): Promise<void> {
     // Obtener todas las campañas del cliente ordenadas por fecha de creación
-    const campanas = await db.select()
+    const campanas = await db
+      .select()
       .from(campanasComerciales)
       .where(eq(campanasComerciales.clienteId, clienteId))
       .orderBy(campanasComerciales.fechaCreacion);
@@ -1119,7 +1297,8 @@ export class DatabaseStorage implements IStorage {
     for (let i = 0; i < campanas.length; i++) {
       const nuevoNumero = `${i + 1}`;
       if (campanas[i].numeroCampana !== nuevoNumero) {
-        await db.update(campanasComerciales)
+        await db
+          .update(campanasComerciales)
           .set({ numeroCampana: nuevoNumero })
           .where(eq(campanasComerciales.id, campanas[i].id));
       }
@@ -1134,18 +1313,21 @@ export class DatabaseStorage implements IStorage {
   // CPL operations for DatabaseStorage
   async updateCpl(clienteIndex: number, cpl: number): Promise<void> {
     // Store in dashboard_manual_values table
-    await db.insert(dashboardManualValues).values({
-      clienteIndex,
-      cpl,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }).onConflictDoUpdate({
-      target: dashboardManualValues.clienteIndex,
-      set: {
+    await db
+      .insert(dashboardManualValues)
+      .values({
+        clienteIndex,
         cpl,
-        updatedAt: new Date()
-      }
-    });
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: dashboardManualValues.clienteIndex,
+        set: {
+          cpl,
+          updatedAt: new Date(),
+        },
+      });
     console.log(`CPL updated in database for client ${clienteIndex}: ${cpl}`);
   }
 
@@ -1157,55 +1339,72 @@ export class DatabaseStorage implements IStorage {
     return result?.cpl || 0;
   }
 
-  async updateCplByClienteAndCampana(clienteNombre: string, numeroCampana: string, cpl: number): Promise<void> {
+  async updateCplByClienteAndCampana(
+    clienteNombre: string,
+    numeroCampana: string,
+    cpl: number,
+  ): Promise<void> {
     // Create a unique key for this combination
     const uniqueKey = `${clienteNombre}-${numeroCampana}`;
-    
+
     // Store in dashboard_manual_values table using the unique key as identifier
-    await db.insert(dashboardManualValues).values({
-      clienteIndex: this.hashString(uniqueKey),
-      cpl,
-      clienteNombre,
-      numeroCampana,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }).onConflictDoUpdate({
-      target: dashboardManualValues.clienteIndex,
-      set: {
+    await db
+      .insert(dashboardManualValues)
+      .values({
+        clienteIndex: this.hashString(uniqueKey),
         cpl,
         clienteNombre,
         numeroCampana,
-        updatedAt: new Date()
-      }
-    });
-    
-    console.log(`CPL updated in database for client ${clienteNombre} campaign ${numeroCampana}: ${cpl}`);
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: dashboardManualValues.clienteIndex,
+        set: {
+          cpl,
+          clienteNombre,
+          numeroCampana,
+          updatedAt: new Date(),
+        },
+      });
+
+    console.log(
+      `CPL updated in database for client ${clienteNombre} campaign ${numeroCampana}: ${cpl}`,
+    );
   }
 
   private hashString(str: string): number {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash; // Convert to 32-bit integer
     }
     return Math.abs(hash);
   }
 
-  async updateVentaPorCampana(clienteIndex: number, venta: number): Promise<void> {
-    await db.insert(dashboardManualValues).values({
-      clienteIndex,
-      ventaPorCampana: venta,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }).onConflictDoUpdate({
-      target: dashboardManualValues.clienteIndex,
-      set: {
+  async updateVentaPorCampana(
+    clienteIndex: number,
+    venta: number,
+  ): Promise<void> {
+    await db
+      .insert(dashboardManualValues)
+      .values({
+        clienteIndex,
         ventaPorCampana: venta,
-        updatedAt: new Date()
-      }
-    });
-    console.log(`Venta por campaña updated in database for client ${clienteIndex}: ${venta}`);
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: dashboardManualValues.clienteIndex,
+        set: {
+          ventaPorCampana: venta,
+          updatedAt: new Date(),
+        },
+      });
+    console.log(
+      `Venta por campaña updated in database for client ${clienteIndex}: ${venta}`,
+    );
   }
 
   async getVentaPorCampana(clienteIndex: number): Promise<number> {
@@ -1216,20 +1415,28 @@ export class DatabaseStorage implements IStorage {
     return result?.ventaPorCampana || 0;
   }
 
-  async updatePedidosPorDia(clienteIndex: number, pedidos: number): Promise<void> {
-    await db.insert(dashboardManualValues).values({
-      clienteIndex,
-      pedidosPorDia: pedidos,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }).onConflictDoUpdate({
-      target: dashboardManualValues.clienteIndex,
-      set: {
+  async updatePedidosPorDia(
+    clienteIndex: number,
+    pedidos: number,
+  ): Promise<void> {
+    await db
+      .insert(dashboardManualValues)
+      .values({
+        clienteIndex,
         pedidosPorDia: pedidos,
-        updatedAt: new Date()
-      }
-    });
-    console.log(`Pedidos por día updated in database for client ${clienteIndex}: ${pedidos}`);
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: dashboardManualValues.clienteIndex,
+        set: {
+          pedidosPorDia: pedidos,
+          updatedAt: new Date(),
+        },
+      });
+    console.log(
+      `Pedidos por día updated in database for client ${clienteIndex}: ${pedidos}`,
+    );
   }
 
   async getPedidosPorDia(clienteIndex: number): Promise<number> {
@@ -1240,21 +1447,30 @@ export class DatabaseStorage implements IStorage {
     return result?.pedidosPorDia || 0;
   }
 
-  async getCplByClienteAndCampana(clienteNombre: string, numeroCampana: string): Promise<number> {
+  async getCplByClienteAndCampana(
+    clienteNombre: string,
+    numeroCampana: string,
+  ): Promise<number> {
     const uniqueKey = `${clienteNombre}-${numeroCampana}`;
     const [result] = await db
       .select({ cpl: dashboardManualValues.cpl })
       .from(dashboardManualValues)
-      .where(eq(dashboardManualValues.clienteIndex, this.hashString(uniqueKey)));
-    
+      .where(
+        eq(dashboardManualValues.clienteIndex, this.hashString(uniqueKey)),
+      );
+
     const cplValue = result?.cpl ? parseFloat(result.cpl) : 0;
     return cplValue;
   }
 
-  async updateVentaPorCampanaByClienteAndCampana(clienteNombre: string, numeroCampana: string, venta: number): Promise<void> {
+  async updateVentaPorCampanaByClienteAndCampana(
+    clienteNombre: string,
+    numeroCampana: string,
+    venta: number,
+  ): Promise<void> {
     const uniqueKey = `${clienteNombre}-${numeroCampana}`;
     const hashedKey = this.hashString(uniqueKey);
-    
+
     try {
       await db
         .insert(dashboardManualValues)
@@ -1262,38 +1478,50 @@ export class DatabaseStorage implements IStorage {
           clienteIndex: hashedKey,
           ventaPorCampana: venta,
           createdAt: new Date(),
-          updatedAt: new Date()
+          updatedAt: new Date(),
         })
         .onConflictDoUpdate({
           target: dashboardManualValues.clienteIndex,
-          set: { 
+          set: {
             ventaPorCampana: venta,
-            updatedAt: new Date()
-          }
+            updatedAt: new Date(),
+          },
         });
-      
-      console.log(`✅ Database: Venta saved for ${clienteNombre} #${numeroCampana}: $${venta} (hash: ${hashedKey})`);
+
+      console.log(
+        `✅ Database: Venta saved for ${clienteNombre} #${numeroCampana}: $${venta} (hash: ${hashedKey})`,
+      );
     } catch (error) {
       console.error(`❌ Database error saving venta:`, error);
       throw error;
     }
   }
 
-  async getVentaPorCampanaByClienteAndCampana(clienteNombre: string, numeroCampana: string): Promise<number> {
+  async getVentaPorCampanaByClienteAndCampana(
+    clienteNombre: string,
+    numeroCampana: string,
+  ): Promise<number> {
     const uniqueKey = `${clienteNombre}-${numeroCampana}`;
     const [result] = await db
       .select({ ventaPorCampana: dashboardManualValues.ventaPorCampana })
       .from(dashboardManualValues)
-      .where(eq(dashboardManualValues.clienteIndex, this.hashString(uniqueKey)));
+      .where(
+        eq(dashboardManualValues.clienteIndex, this.hashString(uniqueKey)),
+      );
     return result?.ventaPorCampana || 0;
   }
 
-  async getPedidosPorDiaByClienteAndCampana(clienteNombre: string, numeroCampana: string): Promise<number> {
+  async getPedidosPorDiaByClienteAndCampana(
+    clienteNombre: string,
+    numeroCampana: string,
+  ): Promise<number> {
     const uniqueKey = `${clienteNombre}-${numeroCampana}`;
     const [result] = await db
       .select({ pedidosPorDia: dashboardManualValues.pedidosPorDia })
       .from(dashboardManualValues)
-      .where(eq(dashboardManualValues.clienteIndex, this.hashString(uniqueKey)));
+      .where(
+        eq(dashboardManualValues.clienteIndex, this.hashString(uniqueKey)),
+      );
     return result?.pedidosPorDia || 0;
   }
 
@@ -1323,44 +1551,56 @@ export class DatabaseStorage implements IStorage {
   async getDatosDiariosConMatching(): Promise<any[]> {
     // Obtener datos de Google Sheets
     const datosDiarios = await this.getDashboardCampaigns();
-    
+
     // Obtener todas las campañas para matching
     const campanasMatching = await this.getCampanasConMatching();
-    
+
     // Agregar información de matching a cada registro
-    const datosConMatching = datosDiarios.map(dato => {
+    const datosConMatching = datosDiarios.map((dato) => {
       // Buscar campaña que coincida por marca, cliente y fechas
-      const campanaMatched = campanasMatching.find(campana => {
+      const campanaMatched = campanasMatching.find((campana) => {
         // Normalizar nombres para comparación
-        const clienteNormalizado = dato.cliente.toLowerCase().replace(/\s+/g, '').replace('-', '');
-        const campanaClienteNormalizado = campana.nombreCliente.toLowerCase().replace(/\s+/g, '').replace('-', '');
-        
+        const clienteNormalizado = dato.cliente
+          .toLowerCase()
+          .replace(/\s+/g, "")
+          .replace("-", "");
+        const campanaClienteNormalizado = campana.nombreCliente
+          .toLowerCase()
+          .replace(/\s+/g, "")
+          .replace("-", "");
+
         // Verificar si coincide marca y cliente
-        const marcaCoincide = campana.marca.toLowerCase() === dato.cliente.split(' - ')[1]?.toLowerCase();
-        const clienteCoincide = clienteNormalizado.includes(campanaClienteNormalizado) || 
-                               campanaClienteNormalizado.includes(clienteNormalizado);
-        
+        const marcaCoincide =
+          campana.marca.toLowerCase() ===
+          dato.cliente.split(" - ")[1]?.toLowerCase();
+        const clienteCoincide =
+          clienteNormalizado.includes(campanaClienteNormalizado) ||
+          campanaClienteNormalizado.includes(clienteNormalizado);
+
         return marcaCoincide && clienteCoincide;
       });
 
       return {
         ...dato,
         campanaMatched: campanaMatched || null,
-        hasMatch: !!campanaMatched
+        hasMatch: !!campanaMatched,
       };
     });
 
     return datosConMatching;
   }
 
-  
   // Sync control operations
   async getSyncStatus(): Promise<SyncControl | undefined> {
     try {
-      const [result] = await db.select().from(syncControl).orderBy(desc(syncControl.createdAt)).limit(1);
+      const [result] = await db
+        .select()
+        .from(syncControl)
+        .orderBy(desc(syncControl.createdAt))
+        .limit(1);
       return result;
     } catch (error) {
-      console.error('❌ Error obteniendo estado de sincronización:', error);
+      console.error("❌ Error obteniendo estado de sincronización:", error);
       return undefined;
     }
   }
@@ -1369,41 +1609,53 @@ export class DatabaseStorage implements IStorage {
     const [result] = await db.insert(syncControl).values(status).returning();
     return result;
   }
-  
+
   // Enviados metrics operations
-  async getEnviadosMetrics(clienteNombre: string, numeroCampana: string): Promise<EnviadosMetrics | undefined> {
-    const [metrics] = await db.select().from(enviadosMetrics)
+  async getEnviadosMetrics(
+    clienteNombre: string,
+    numeroCampana: string,
+  ): Promise<EnviadosMetrics | undefined> {
+    const [metrics] = await db
+      .select()
+      .from(enviadosMetrics)
       .where(
-        eq(enviadosMetrics.clienteNombre, clienteNombre) && 
-        eq(enviadosMetrics.numeroCampana, numeroCampana)
+        eq(enviadosMetrics.clienteNombre, clienteNombre) &&
+          eq(enviadosMetrics.numeroCampana, numeroCampana),
       );
     return metrics || undefined;
   }
 
-  async updateEnviadosMetrics(data: Partial<InsertEnviadosMetrics>): Promise<EnviadosMetrics> {
+  async updateEnviadosMetrics(
+    data: Partial<InsertEnviadosMetrics>,
+  ): Promise<EnviadosMetrics> {
     if (!data.clienteNombre || !data.numeroCampana) {
-      throw new Error('clienteNombre and numeroCampana are required');
+      throw new Error("clienteNombre and numeroCampana are required");
     }
 
     // Try to update existing record first
-    const existing = await this.getEnviadosMetrics(data.clienteNombre, data.numeroCampana);
-    
+    const existing = await this.getEnviadosMetrics(
+      data.clienteNombre,
+      data.numeroCampana,
+    );
+
     if (existing) {
-      const [updated] = await db.update(enviadosMetrics)
+      const [updated] = await db
+        .update(enviadosMetrics)
         .set({
           ...data,
           lastCalculatedAt: new Date(),
-          updatedAt: new Date()
+          updatedAt: new Date(),
         })
         .where(
-          eq(enviadosMetrics.clienteNombre, data.clienteNombre) && 
-          eq(enviadosMetrics.numeroCampana, data.numeroCampana)
+          eq(enviadosMetrics.clienteNombre, data.clienteNombre) &&
+            eq(enviadosMetrics.numeroCampana, data.numeroCampana),
         )
         .returning();
       return updated;
     } else {
       // Create new record
-      const [created] = await db.insert(enviadosMetrics)
+      const [created] = await db
+        .insert(enviadosMetrics)
         .values({
           clienteNombre: data.clienteNombre,
           numeroCampana: data.numeroCampana,
@@ -1418,13 +1670,12 @@ export class DatabaseStorage implements IStorage {
           cpa: data.cpa || 0,
           fechaInicio: new Date(),
           fechaFin: new Date(),
-          fechaActualizacion: new Date()
+          fechaActualizacion: new Date(),
         })
         .returning();
       return created;
     }
   }
-
 }
 
 // Switch to database storage for persistent data

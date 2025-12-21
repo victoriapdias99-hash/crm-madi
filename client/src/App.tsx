@@ -16,6 +16,7 @@ import LeadDetails from "@/pages/lead-details";
 import ClientesManagement from "@/pages/clientes-management";
 import ClientesOpLeads from "@/pages/clientes-op-leads";
 import CampanasManagement from "@/pages/campanas-management";
+import LeadsPage from "@/pages/leads";
 import MetaAdsDashboard from "@/pages/meta-ads-dashboard";
 import MetaAdsConfig from "@/pages/meta-ads-config";
 import FinanzasDashboard from "@/pages/finanzas-dashboard-meta-ads";
@@ -30,8 +31,14 @@ function Router() {
     <Switch>
       <Route path="/" component={CampanasPendientes} />
       <Route path="/datos-diarios" component={DatosDiariosDashboard} />
-      <Route path="/datos-diarios-dashboard" component={DatosDiariosDashboard} />
-      <Route path="/datos-diarios-centralized" component={DatosDiariosCentralized} />
+      <Route
+        path="/datos-diarios-dashboard"
+        component={DatosDiariosDashboard}
+      />
+      <Route
+        path="/datos-diarios-centralized"
+        component={DatosDiariosCentralized}
+      />
       <Route path="/simple" component={DashboardSimple} />
       <Route path="/campanas-pendientes" component={CampanasPendientes} />
       <Route path="/campanas-finalizadas" component={CampanasFinalizadas} />
@@ -45,13 +52,17 @@ function Router() {
       <Route path="/meta-ads-config" component={MetaAdsConfig} />
       <Route path="/finanzas" component={FinanzasDashboard} />
       <Route path="/finanzas-simple" component={FinanzasDashboard} />
-      <Route path="/finanzas-dashboard-meta-ads" component={FinanzasDashboard} />
+      <Route
+        path="/finanzas-dashboard-meta-ads"
+        component={FinanzasDashboard}
+      />
       <Route path="/reportes" component={ReportesDashboard} />
       <Route path="/reportes-graficos" component={ReportesGraficos} />
       <Route path="/cpl-simple" component={CPLSimple} />
       <Route path="/cpl-directo" component={CPLDirecto} />
       <Route path="/cpl-analysis" component={CplAnalysis} />
       <Route path="/login" component={Login} />
+      <Route path="/leads" component={LeadsPage} />
       <Route path="/leads/:id" component={LeadDetails} />
       <Route component={NotFound} />
     </Switch>

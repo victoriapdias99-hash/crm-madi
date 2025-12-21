@@ -1,7 +1,24 @@
 import { Link, useLocation } from "wouter";
+import { Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { BarChart3, Building2, Calendar, Settings, TrendingUp, Calculator, Target, Home, ArrowLeft, Link2, PieChart, Zap, BarChart, Clock, CheckCircle } from "lucide-react";
+import {
+  BarChart3,
+  Building2,
+  Calendar,
+  Settings,
+  TrendingUp,
+  Calculator,
+  Target,
+  Home,
+  ArrowLeft,
+  Link2,
+  PieChart,
+  Zap,
+  BarChart,
+  Clock,
+  CheckCircle,
+} from "lucide-react";
 
 export function Navigation() {
   const [location] = useLocation();
@@ -15,62 +32,68 @@ export function Navigation() {
       href: "/",
       label: "Datos Diarios",
       icon: BarChart3,
-      active: location === "/"
+      active: location === "/",
     },
     {
       href: "/campanas-pendientes",
       label: "Campañas Pendientes",
       icon: Clock,
-      active: location === "/campanas-pendientes"
+      active: location === "/campanas-pendientes",
     },
     {
       href: "/campanas-finalizadas",
       label: "Campañas Finalizadas",
       icon: CheckCircle,
-      active: location === "/campanas-finalizadas"
+      active: location === "/campanas-finalizadas",
+    },
+    {
+      href: "/leads",
+      label: "Leads",
+      icon: Users,
+      active: location === "/leads",
     },
 
     {
       href: "/clientes",
       label: "Clientes",
       icon: Building2,
-      active: location === "/clientes"
+      active: location === "/clientes",
     },
     {
       href: "/campanas",
       label: "Campañas",
       icon: Target,
-      active: location === "/campanas"
+      active: location === "/campanas",
     },
     {
       href: "/meta-ads",
       label: "Meta Ads",
       icon: TrendingUp,
-      active: location === "/meta-ads"
+      active: location === "/meta-ads",
     },
     {
       href: "/finanzas",
       label: "Finanzas",
       icon: Calculator,
-      active: location === "/finanzas"
+      active: location === "/finanzas",
     },
     {
       href: "/reportes",
       label: "Reportes",
       icon: PieChart,
-      active: location === "/reportes"
+      active: location === "/reportes",
     },
     {
       href: "/cpl-directo",
       label: "CPL Directo",
       icon: Calculator,
-      active: location === "/cpl-directo"
+      active: location === "/cpl-directo",
     },
     {
       href: "/cpl-analysis",
       label: "CPL Analysis",
       icon: BarChart,
-      active: location === "/cpl-analysis"
+      active: location === "/cpl-analysis",
     },
   ];
 
@@ -79,7 +102,7 @@ export function Navigation() {
       <div className="flex flex-wrap gap-2">
         {/* Botones de navegación especiales */}
         <Link href="/">
-          <Button 
+          <Button
             variant={location === "/" ? "default" : "outline"}
             size="sm"
             className="flex items-center gap-2"
@@ -89,7 +112,7 @@ export function Navigation() {
           </Button>
         </Link>
         {location !== "/" && (
-          <Button 
+          <Button
             variant="outline"
             size="sm"
             onClick={goBack}
@@ -99,13 +122,13 @@ export function Navigation() {
             Atrás
           </Button>
         )}
-        
+
         {/* Resto de items de navegación */}
         {navItems.map((item) => {
           const Icon = item.icon;
           return (
             <Link key={item.href} href={item.href}>
-              <Button 
+              <Button
                 variant={item.active ? "default" : "outline"}
                 size="sm"
                 className="flex items-center gap-2"

@@ -8,16 +8,25 @@
  * - Preserva metaLeadId en actualizaciones
  */
 
-import 'dotenv/config';
-import { db } from '../db';
-import { opLead } from '@shared/schema';
-import { google } from 'googleapis';
-import { sql, and, eq, like } from 'drizzle-orm';
-import { generateStableMetaLeadId, parseSheetDate, getBaseMetaLeadId } from './utils/generate-stable-id';
-import { normalizeClientName } from '../../shared/utils/client-normalization';
+import "dotenv/config";
+import { db } from "../db";
+import { opLead } from "../../shared/schema";
+import { google } from "googleapis";
+import { sql, and, eq, like } from "drizzle-orm";
+import {
+  generateStableMetaLeadId,
+  parseSheetDate,
+  getBaseMetaLeadId,
+} from "./utils/generate-stable-id";
+import { normalizeClientName } from "../../shared/utils/client-normalization";
 
 const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
-const EXCLUDED_SHEETS = ['Datos Diarios', 'Control Campañas', 'datos diarios', 'control campañas'];
+const EXCLUDED_SHEETS = [
+  "Datos Diarios",
+  "Control Campañas",
+  "datos diarios",
+  "control campañas",
+];
 
 interface MigrationStats {
   totalProcessed: number;
@@ -48,15 +57,15 @@ interface LeadData {
   campaign: string;
   googleSheetsRowNumber: number;
   fechaCreacion: Date;
-  source: 'google_sheets';
+  source: "google_sheets";
 }
 
 export async function migrateSmartFast(): Promise<MigrationStats> {
-  console.log('🚀 SMART-FAST Migration System');
-  console.log('📋 ID Estable: teléfono + fecha + marca\n');
+  console.log("🚀 SMART-FAST Migration System");
+  console.log("📋 ID Estable: teléfono + fecha + marca\n");
 
   if (!SPREADSHEET_ID) {
-    throw new Error('GOOGLE_SHEETS_SPREADSHEET_ID no configurado en .env');
+    throw new Error("GOOGLE_SHEETS_SPREADSHEET_ID no configurado en .env");
   }
 
   const stats: MigrationStats = {
@@ -65,40 +74,41 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
     updated: 0,
     skipped: 0,
     errors: 0,
-    details: []
+    details: [],
   };
 
   // 1. Configurar Google Sheets API
   const apiKey = process.env.GOOGLE_SHEETS_API_KEY;
 
   if (!apiKey) {
-    throw new Error('GOOGLE_SHEETS_API_KEY no configurado en .env');
+    throw new Error("GOOGLE_SHEETS_API_KEY no configurado en .env");
   }
 
   // 🔍 Verificar conexión (sin mostrar credenciales completas)
-  console.log('🔑 Conexión a Google Sheets: ✅');
+  console.log("🔑 Conexión a Google Sheets: ✅");
   console.log(`📋 Spreadsheet: ${SPREADSHEET_ID.substring(0, 12)}...***\n`);
 
   const sheets = google.sheets({
-    version: 'v4',
-    auth: apiKey
+    version: "v4",
+    auth: apiKey,
   });
 
   // 2. Obtener lista de pestañas
   const spreadsheet = await sheets.spreadsheets.get({
-    spreadsheetId: SPREADSHEET_ID
+    spreadsheetId: SPREADSHEET_ID,
   });
 
   const sheetNames = (spreadsheet.data.sheets
-    ?.map(s => s.properties?.title)
-    .filter((name): name is string =>
-      !!name &&
-      !EXCLUDED_SHEETS.some(excluded =>
-        name.toLowerCase().includes(excluded.toLowerCase())
-      )
+    ?.map((s) => s.properties?.title)
+    .filter(
+      (name): name is string =>
+        !!name &&
+        !EXCLUDED_SHEETS.some((excluded) =>
+          name.toLowerCase().includes(excluded.toLowerCase()),
+        ),
     ) || []) as string[];
 
-  console.log(`📋 Marcas encontradas: ${sheetNames.join(', ')}\n`);
+  console.log(`📋 Marcas encontradas: ${sheetNames.join(", ")}\n`);
 
   // 3. Procesar cada marca
   for (const sheetName of sheetNames) {
@@ -112,7 +122,7 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
       // Obtener datos de la pestaña (desde fila 2 para skip header)
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${sheetName}!A2:I`
+        range: `${sheetName}!A2:I`,
       });
 
       const rows = response.data.values || [];
@@ -139,7 +149,7 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
 
         // Validar que tenga al menos teléfono
         const telefono = row[2]?.toString().trim();
-        if (!telefono || telefono === '') {
+        if (!telefono || telefono === "") {
           stats.skipped++;
           continue;
         }
@@ -150,7 +160,7 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
 
         // Construir datos del lead
         const leadData: LeadData = {
-          nombre: row[1]?.toString().trim() || 'S/D',
+          nombre: row[1]?.toString().trim() || "S/D",
           telefono,
           email: null, // Email no existe en Google Sheets
           ciudad: row[3]?.toString().trim() || null,
@@ -163,11 +173,16 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
           campaign: sheetName,
           googleSheetsRowNumber: rowNumber,
           fechaCreacion,
-          source: 'google_sheets'
+          source: "google_sheets",
         };
 
         // Generar ID base (sin índice de duplicado)
-        const baseId = generateStableMetaLeadId(telefono, fechaCreacion, marca, 0);
+        const baseId = generateStableMetaLeadId(
+          telefono,
+          fechaCreacion,
+          marca,
+          0,
+        );
 
         // Verificar si ya existe en el batch actual
         const currentCount = duplicateTracker.get(baseId) || 0;
@@ -178,7 +193,7 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
           telefono,
           fechaCreacion,
           marca,
-          currentCount
+          currentCount,
         );
 
         const now = new Date();
@@ -186,7 +201,7 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
           metaLeadId: finalMetaLeadId,
           leadData,
           createdAt: now,
-          updatedAt: now
+          updatedAt: now,
         });
       }
 
@@ -201,11 +216,11 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
 
         try {
           // Preparar valores para upsert batch
-          const batchValues = batch.map(item => ({
+          const batchValues = batch.map((item) => ({
             metaLeadId: item.metaLeadId,
             ...item.leadData,
             createdAt: item.createdAt,
-            updatedAt: item.updatedAt
+            updatedAt: item.updatedAt,
           }));
 
           // UPSERT batch usando ON CONFLICT DO UPDATE
@@ -228,8 +243,8 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
                 campaign: sql`EXCLUDED.campaign`,
                 googleSheetsRowNumber: sql`EXCLUDED.google_sheets_row_number`,
                 fechaCreacion: sql`EXCLUDED.fecha_creacion`,
-                updatedAt: sql`EXCLUDED.updated_at`
-              }
+                updatedAt: sql`EXCLUDED.updated_at`,
+              },
             });
 
           // Asumimos que son inserts (primera ejecución) o updates (re-ejecución)
@@ -241,10 +256,14 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
           // Mostrar progreso cada batch
           const progress = Math.min(i + BATCH_SIZE, batchData.length);
           const percentage = ((progress / batchData.length) * 100).toFixed(1);
-          console.log(`   ⏳ Progreso: ${progress}/${batchData.length} (${percentage}%)`);
-
+          console.log(
+            `   ⏳ Progreso: ${progress}/${batchData.length} (${percentage}%)`,
+          );
         } catch (error: any) {
-          console.error(`   ❌ Error en batch ${totalBatchesProcessed + 1}:`, error.message);
+          console.error(
+            `   ❌ Error en batch ${totalBatchesProcessed + 1}:`,
+            error.message,
+          );
           stats.errors += batch.length;
         }
       }
@@ -254,14 +273,15 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
         processed: rows.length,
         inserted: marcaInserted,
         updated: marcaUpdated,
-        rowMoved: marcaRowMoved
+        rowMoved: marcaRowMoved,
       });
 
-      console.log(`   ✅ Insertados: ${marcaInserted} | Actualizados: ${marcaUpdated} | Movidos: ${marcaRowMoved}\n`);
+      console.log(
+        `   ✅ Insertados: ${marcaInserted} | Actualizados: ${marcaUpdated} | Movidos: ${marcaRowMoved}\n`,
+      );
 
       // Rate limiting: 1 segundo entre marcas
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     } catch (error: any) {
       console.error(`   ❌ Error procesando ${sheetName}:`, error.message);
       stats.errors++;
@@ -276,34 +296,34 @@ async function main() {
   try {
     const stats = await migrateSmartFast();
 
-    console.log('\n' + '='.repeat(70));
-    console.log('🎉 MIGRACIÓN SMART-FAST COMPLETADA');
-    console.log('='.repeat(70));
+    console.log("\n" + "=".repeat(70));
+    console.log("🎉 MIGRACIÓN SMART-FAST COMPLETADA");
+    console.log("=".repeat(70));
     console.log(`📊 Total procesado:     ${stats.totalProcessed}`);
     console.log(`✅ Nuevos insertados:   ${stats.inserted}`);
     console.log(`🔄 Actualizados:        ${stats.updated}`);
     console.log(`⏭️  Omitidos (sin tel): ${stats.skipped}`);
     console.log(`❌ Errores:             ${stats.errors}`);
-    console.log('='.repeat(70));
+    console.log("=".repeat(70));
 
     if (stats.details.length > 0) {
-      console.log('\n📋 DETALLE POR MARCA:');
-      console.log('-'.repeat(70));
-      stats.details.forEach(detail => {
-        const moved = detail.rowMoved > 0 ? ` (${detail.rowMoved} movidos)` : '';
+      console.log("\n📋 DETALLE POR MARCA:");
+      console.log("-".repeat(70));
+      stats.details.forEach((detail) => {
+        const moved =
+          detail.rowMoved > 0 ? ` (${detail.rowMoved} movidos)` : "";
         console.log(
           `   ${detail.marca.padEnd(20)} → ` +
-          `${detail.inserted} nuevos, ${detail.updated} actualizados${moved}`
+            `${detail.inserted} nuevos, ${detail.updated} actualizados${moved}`,
         );
       });
-      console.log('-'.repeat(70));
+      console.log("-".repeat(70));
     }
 
-    console.log('\n✅ Migración exitosa - IDs estables preservados\n');
+    console.log("\n✅ Migración exitosa - IDs estables preservados\n");
     process.exit(0);
-
   } catch (error: any) {
-    console.error('\n❌ ERROR FATAL:', error.message);
+    console.error("\n❌ ERROR FATAL:", error.message);
     console.error(error.stack);
     process.exit(1);
   }

@@ -1,8 +1,15 @@
-import { eq, and } from 'drizzle-orm';
-import { opLeadsRep, campanasComerciales, clientes } from '@shared/schema';
-import type { SentLeadsByCampaignResponse, SentLeadDTO } from '../../application/use-cases/GetSentLeadsByCampaignUseCase';
-import { normalizeClientName } from '../../../../shared/utils/client-normalization';
-import { buildCampaignLeadFilters } from '../../../../shared/utils/multi-brand-utils';
+import { eq, and } from "drizzle-orm";
+import {
+  opLeadsRep,
+  campanasComerciales,
+  clientes,
+} from "../../../../shared/schema";
+import type {
+  SentLeadsByCampaignResponse,
+  SentLeadDTO,
+} from "../../application/use-cases/GetSentLeadsByCampaignUseCase";
+import { normalizeClientName } from "../../../../shared/utils/client-normalization";
+import { buildCampaignLeadFilters } from "../../../../shared/utils/multi-brand-utils";
 
 /**
  * Repositorio para consultas de leads enviados (solo lectura)
@@ -35,11 +42,14 @@ export class PostgresLeadsQueryRepository {
 
   private async initializeDb() {
     try {
-      const { db } = await import('../../../db');
+      const { db } = await import("../../../db");
       this.db = db;
     } catch (error) {
-      console.error('Error initializing database for leads query repository:', error);
-      throw new Error('Failed to initialize leads query repository');
+      console.error(
+        "Error initializing database for leads query repository:",
+        error,
+      );
+      throw new Error("Failed to initialize leads query repository");
     }
   }
 
@@ -68,7 +78,9 @@ export class PostgresLeadsQueryRepository {
    * @param campaignId - ID de la campaña a consultar
    * @returns Respuesta con metadata de campaña y listado de leads
    */
-  async getSentLeadsByCampaign(campaignId: number): Promise<SentLeadsByCampaignResponse> {
+  async getSentLeadsByCampaign(
+    campaignId: number,
+  ): Promise<SentLeadsByCampaignResponse> {
     await this.ensureDbInitialized();
 
     // 1. Obtener información de la campaña
@@ -105,7 +117,7 @@ export class PostgresLeadsQueryRepository {
         marca5: null,
         zona: null,
         totalSent: 0,
-        leads: []
+        leads: [],
       };
     }
 
@@ -164,7 +176,7 @@ export class PostgresLeadsQueryRepository {
           marca5: campaign.marca5,
           zona: campaign.zona,
           totalSent: 0,
-          leads: []
+          leads: [],
         };
       }
 
@@ -186,7 +198,7 @@ export class PostgresLeadsQueryRepository {
         clienteField: opLeadsRep.cliente,
         localizacionField: opLeadsRep.localizacion,
         campaignIdField: opLeadsRep.campaignId,
-        fechaCreacionField: opLeadsRep.fechaCreacion
+        fechaCreacionField: opLeadsRep.fechaCreacion,
       });
 
       sentLeads = await this.db
@@ -227,7 +239,7 @@ export class PostgresLeadsQueryRepository {
       marca5: campaign.marca5,
       zona: campaign.zona,
       totalSent: leadsDTO.length, // Total de leads en el listado
-      leads: leadsDTO
+      leads: leadsDTO,
     };
   }
 }
