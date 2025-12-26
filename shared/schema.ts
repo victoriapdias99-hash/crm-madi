@@ -1,4 +1,14 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb, numeric, date } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  serial,
+  integer,
+  boolean,
+  timestamp,
+  jsonb,
+  numeric,
+  date,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -29,34 +39,34 @@ export const leads = pgTable("leads", {
   id: serial("id").primaryKey(),
   metaLeadId: text("meta_lead_id").unique(),
   campaignId: integer("campaign_id").references(() => campaigns.id),
-  
+
   // Información del lead
   firstName: text("first_name"),
   lastName: text("last_name"),
   email: text("email"),
   phone: text("phone"),
-  
+
   // Datos adicionales del formulario
   age: integer("age"),
   city: text("city"),
   interest: text("interest"),
   budget: text("budget"),
-  
+
   // Nuevas columnas desde Google Sheets (columnas G, H, I)
   origen: text("origen"),
-  localizacion: text("localizacion"), 
+  localizacion: text("localizacion"),
   cliente: text("cliente"),
-  
+
   // Metadatos de Meta
   adName: text("ad_name"),
   adsetName: text("adset_name"),
   campaignName: text("campaign_name"),
-  
+
   // Seguimiento
   status: text("status").notNull().default("new"), // new, contacted, qualified, converted, rejected
   source: text("source").notNull().default("meta_ads"),
   cost: numeric("cost", { precision: 8, scale: 2 }),
-  
+
   // Fechas
   leadDate: timestamp("lead_date"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -67,28 +77,28 @@ export const leads = pgTable("leads", {
 export const opLead = pgTable("op_lead", {
   id: serial("id").primaryKey(),
   metaLeadId: text("meta_lead_id").unique().notNull(), // ID único garantizado
-  
+
   // Información básica del lead
-  nombre: text("nombre").notNull(), // Con fallback 'S/N' 
+  nombre: text("nombre").notNull(), // Con fallback 'S/N'
   telefono: text("telefono").notNull(), // Siempre normalizado
   email: text("email"), // Opcional, siempre aceptado
   ciudad: text("ciudad"), // También llamada "Localidad"
   modelo: text("modelo"), // Modelo del auto
   comentarioHorario: text("comentario_horario"), // Horario de contacto / Comentarios
-  
+
   // Datos específicos de Google Sheets (columnas G, H, I)
   origen: text("origen"), // WhatsApp, Instagram, etc.
   localizacion: text("localizacion"), // Ubicación geográfica
   cliente: text("cliente"), // Cliente específico
-  
+
   // Metadatos de campaña
   marca: text("marca").notNull(), // Fiat, Toyota, VW, etc.
   campaign: text("campaign").notNull(), // Nombre de campaña original
   campaignId: integer("campaign_id"), // ID de campaña asignada (para cierre de campañas)
-  
+
   // Control de sincronización con Google Sheets
   googleSheetsRowNumber: integer("google_sheets_row_number"), // Número de fila exacto en Google Sheets
-  
+
   // Sistema
   source: text("source").notNull().default("google_sheets"),
   fechaCreacion: timestamp("fecha_creacion").notNull(), // Fecha original del lead
@@ -111,7 +121,7 @@ export const opLeadsRep = pgTable("op_leads_rep", {
   cliente: text("cliente"),
   marca: text("marca").notNull(),
   campaign: text("campaign").notNull(),
-  campaignId: integer("campaign_id"),  // ✅ NUEVO CAMPO AGREGADO
+  campaignId: integer("campaign_id"), // ✅ NUEVO CAMPO AGREGADO
   googleSheetsRowNumber: integer("google_sheets_row_number"),
   source: text("source").notNull().default("google_sheets"),
   fechaCreacion: timestamp("fecha_creacion").notNull(),
@@ -126,25 +136,29 @@ export const dailyStats = pgTable("daily_stats", {
   id: serial("id").primaryKey(),
   date: date("date").notNull(),
   campaignId: integer("campaign_id").references(() => campaigns.id),
-  
+
   // Métricas
   impressions: integer("impressions").notNull().default(0),
   clicks: integer("clicks").notNull().default(0),
   leads: integer("leads").notNull().default(0),
   spend: numeric("spend", { precision: 10, scale: 2 }).notNull().default("0"),
-  
+
   // Calculadas
   ctr: numeric("ctr", { precision: 5, scale: 4 }), // Click Through Rate
   cpl: numeric("cpl", { precision: 8, scale: 2 }), // Cost Per Lead
-  
+
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Notas y seguimiento de leads
 export const leadNotes = pgTable("lead_notes", {
   id: serial("id").primaryKey(),
-  leadId: integer("lead_id").notNull().references(() => leads.id),
-  userId: integer("user_id").notNull().references(() => users.id),
+  leadId: integer("lead_id")
+    .notNull()
+    .references(() => leads.id),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
   note: text("note").notNull(),
   type: text("type").notNull().default("general"), // general, call, email, meeting
   createdAt: timestamp("created_at").defaultNow(),
@@ -162,26 +176,61 @@ export const dashboardCampaigns = pgTable("dashboard_campaigns", {
   pedidosTotal: integer("pedidos_total").default(0), // Total de pedidos
   numeroCampana: integer("numero_campana").default(1), // Número de campaña por cliente
   porcentajeDesvio: numeric("porcentaje_desvio", { precision: 5, scale: 2 }), // % desvío
-  porcentajeDatosEnviados: numeric("porcentaje_datos_enviados", { precision: 5, scale: 2 }), // % datos enviados (relacionado con campañas)
+  porcentajeDatosEnviados: numeric("porcentaje_datos_enviados", {
+    precision: 5,
+    scale: 2,
+  }), // % datos enviados (relacionado con campañas)
   datosPedidos: integer("datos_pedidos").default(0), // Cantidad total pedida
-  ventaPorCampana: numeric("venta_por_campana", { precision: 12, scale: 2 }).default("0"), // Venta por campaña (input manual)
+  ventaPorCampana: numeric("venta_por_campana", {
+    precision: 12,
+    scale: 2,
+  }).default("0"), // Venta por campaña (input manual)
   faltantesAEnviar: integer("faltantes_a_enviar").default(0), // Pedidos - Enviados
   cpl: numeric("cpl", { precision: 10, scale: 2 }), // Coste por lead en pesos argentinos
-  inversionRealizada: numeric("inversion_realizada", { precision: 12, scale: 2 }), // En pesos
-  inversionPendiente: numeric("inversion_pendiente", { precision: 12, scale: 2 }), // En pesos
+  inversionRealizada: numeric("inversion_realizada", {
+    precision: 12,
+    scale: 2,
+  }), // En pesos
+  inversionPendiente: numeric("inversion_pendiente", {
+    precision: 12,
+    scale: 2,
+  }), // En pesos
   inversionTotal: numeric("inversion_total", { precision: 12, scale: 2 }), // En pesos
-  inversionTotalPendiente: numeric("inversion_total_pendiente", { precision: 12, scale: 2 }), // En pesos
+  inversionTotalPendiente: numeric("inversion_total_pendiente", {
+    precision: 12,
+    scale: 2,
+  }), // En pesos
   // Datos diarios (día 1 al 31)
-  dia1: integer("dia_1").default(0), dia2: integer("dia_2").default(0), dia3: integer("dia_3").default(0),
-  dia4: integer("dia_4").default(0), dia5: integer("dia_5").default(0), dia6: integer("dia_6").default(0),
-  dia7: integer("dia_7").default(0), dia8: integer("dia_8").default(0), dia9: integer("dia_9").default(0),
-  dia10: integer("dia_10").default(0), dia11: integer("dia_11").default(0), dia12: integer("dia_12").default(0),
-  dia13: integer("dia_13").default(0), dia14: integer("dia_14").default(0), dia15: integer("dia_15").default(0),
-  dia16: integer("dia_16").default(0), dia17: integer("dia_17").default(0), dia18: integer("dia_18").default(0),
-  dia19: integer("dia_19").default(0), dia20: integer("dia_20").default(0), dia21: integer("dia_21").default(0),
-  dia22: integer("dia_22").default(0), dia23: integer("dia_23").default(0), dia24: integer("dia_24").default(0),
-  dia25: integer("dia_25").default(0), dia26: integer("dia_26").default(0), dia27: integer("dia_27").default(0),
-  dia28: integer("dia_28").default(0), dia29: integer("dia_29").default(0), dia30: integer("dia_30").default(0),
+  dia1: integer("dia_1").default(0),
+  dia2: integer("dia_2").default(0),
+  dia3: integer("dia_3").default(0),
+  dia4: integer("dia_4").default(0),
+  dia5: integer("dia_5").default(0),
+  dia6: integer("dia_6").default(0),
+  dia7: integer("dia_7").default(0),
+  dia8: integer("dia_8").default(0),
+  dia9: integer("dia_9").default(0),
+  dia10: integer("dia_10").default(0),
+  dia11: integer("dia_11").default(0),
+  dia12: integer("dia_12").default(0),
+  dia13: integer("dia_13").default(0),
+  dia14: integer("dia_14").default(0),
+  dia15: integer("dia_15").default(0),
+  dia16: integer("dia_16").default(0),
+  dia17: integer("dia_17").default(0),
+  dia18: integer("dia_18").default(0),
+  dia19: integer("dia_19").default(0),
+  dia20: integer("dia_20").default(0),
+  dia21: integer("dia_21").default(0),
+  dia22: integer("dia_22").default(0),
+  dia23: integer("dia_23").default(0),
+  dia24: integer("dia_24").default(0),
+  dia25: integer("dia_25").default(0),
+  dia26: integer("dia_26").default(0),
+  dia27: integer("dia_27").default(0),
+  dia28: integer("dia_28").default(0),
+  dia29: integer("dia_29").default(0),
+  dia30: integer("dia_30").default(0),
   dia31: integer("dia_31").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -212,7 +261,9 @@ export const clientes = pgTable("clientes", {
 // Gestión de campañas comerciales
 export const campanasComerciales = pgTable("campanas_comerciales", {
   id: serial("id").primaryKey(),
-  clienteId: integer("cliente_id").references(() => clientes.id).notNull(),
+  clienteId: integer("cliente_id")
+    .references(() => clientes.id)
+    .notNull(),
   numeroCampana: text("numero_campana").notNull(),
   cantidadDatosSolicitados: integer("cantidad_datos_solicitados").notNull(),
   marca: text("marca").notNull(), // Primera marca (obligatoria)
@@ -230,12 +281,17 @@ export const campanasComerciales = pgTable("campanas_comerciales", {
   marca5: text("marca5"), // Quinta marca (opcional)
   zona5: text("zona5"), // Quinta zona (opcional)
   porcentaje5: integer("porcentaje5"), // Porcentaje de leads para marca 5
-  asignacionAutomatica: boolean("asignacion_automatica").notNull().default(false), // Si está activada, distribución aleatoria
+  asignacionAutomatica: boolean("asignacion_automatica")
+    .notNull()
+    .default(false), // Si está activada, distribución aleatoria
   localizado: text("localizado"), // Campo para targeting específico o localización
   fechaCampana: date("fecha_campana"), // Campo fecha cuando se da de alta la campaña
   fechaFin: date("fecha_fin"), // Fecha de finalización para rangos de matching
   pedidosPorDia: integer("pedidos_por_dia").default(0), // Pedidos por día editables
-  facturacionBruta: numeric("facturacion_bruta", { precision: 12, scale: 2 }).default("0"), // Facturación bruta por campaña
+  facturacionBruta: numeric("facturacion_bruta", {
+    precision: 12,
+    scale: 2,
+  }).default("0"), // Facturación bruta por campaña
   fechaCreacion: timestamp("fecha_creacion").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -246,12 +302,14 @@ export const dashboardManualValues = pgTable("dashboard_manual_values", {
   id: serial("id").primaryKey(),
   clienteIndex: integer("cliente_index").notNull().unique(),
   cpl: numeric("cpl", { precision: 10, scale: 2 }).default("0"),
-  ventaPorCampana: numeric("venta_por_campana", { precision: 12, scale: 2 }).default("0"),
+  ventaPorCampana: numeric("venta_por_campana", {
+    precision: 12,
+    scale: 2,
+  }).default("0"),
   pedidosPorDia: integer("pedidos_por_dia").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
-
 
 // Tabla para control de sincronización
 export const syncControl = pgTable("sync_control", {
@@ -285,12 +343,12 @@ export const opLeadWebhook = pgTable("op_lead_webhook", {
   telefono: text("telefono").notNull(),
   auto: text("auto"), // Modelo o tipo de auto
   localidad: text("localidad"),
+  cliente: text("cliente"), // Columna para identificar al cliente final
   comentarios: text("comentarios"),
   source: text("source").notNull().default("webhook"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
-
 
 // Zod schemas
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -346,7 +404,7 @@ export const insertOpLeadSchema = createInsertSchema(opLead).pick({
   campaign: true,
   googleSheetsRowNumber: true,
   fechaCreacion: true,
-  source: true
+  source: true,
 });
 
 export type InsertOpLead = z.infer<typeof insertOpLeadSchema>;
@@ -370,7 +428,6 @@ export const insertLeadNoteSchema = createInsertSchema(leadNotes).pick({
   type: true,
 });
 
-
 export const insertSyncControlSchema = createInsertSchema(syncControl).pick({
   tableName: true,
   lastSyncAt: true,
@@ -379,7 +436,9 @@ export const insertSyncControlSchema = createInsertSchema(syncControl).pick({
   errorMessage: true,
 });
 
-export const insertEnviadosMetricsSchema = createInsertSchema(enviadosMetrics).pick({
+export const insertEnviadosMetricsSchema = createInsertSchema(
+  enviadosMetrics,
+).pick({
   clienteNombre: true,
   numeroCampana: true,
   datosEnviados: true,
@@ -388,15 +447,17 @@ export const insertEnviadosMetricsSchema = createInsertSchema(enviadosMetrics).p
   lastCalculatedAt: true,
 });
 
-export const insertOpLeadWebhookSchema = createInsertSchema(opLeadWebhook).pick({
-  nombre: true,
-  telefono: true,
-  auto: true,
-  localidad: true,
-  comentarios: true,
-  source: true,
-});
-
+export const insertOpLeadWebhookSchema = createInsertSchema(opLeadWebhook).pick(
+  {
+    nombre: true,
+    telefono: true,
+    auto: true,
+    localidad: true,
+    cliente: true, // Se permite que este campo entre en la validación
+    comentarios: true,
+    source: true,
+  },
+);
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -414,7 +475,9 @@ export type InsertDailyStats = z.infer<typeof insertDailyStatsSchema>;
 export type LeadNote = typeof leadNotes.$inferSelect;
 export type InsertLeadNote = z.infer<typeof insertLeadNoteSchema>;
 
-export const insertDashboardCampaignSchema = createInsertSchema(dashboardCampaigns).pick({
+export const insertDashboardCampaignSchema = createInsertSchema(
+  dashboardCampaigns,
+).pick({
   cliente: true,
   campana: true,
   zona: true,
@@ -433,7 +496,9 @@ export const insertDashboardCampaignSchema = createInsertSchema(dashboardCampaig
 });
 
 export type DashboardCampaign = typeof dashboardCampaigns.$inferSelect;
-export type InsertDashboardCampaign = z.infer<typeof insertDashboardCampaignSchema>;
+export type InsertDashboardCampaign = z.infer<
+  typeof insertDashboardCampaignSchema
+>;
 
 export const insertClienteSchema = createInsertSchema(clientes).pick({
   nombreCliente: true,
@@ -455,63 +520,74 @@ export const insertClienteSchema = createInsertSchema(clientes).pick({
 export type Cliente = typeof clientes.$inferSelect;
 export type InsertCliente = z.infer<typeof insertClienteSchema>;
 
-export const insertCampanaComercialSchema = createInsertSchema(campanasComerciales).pick({
-  clienteId: true,
-  numeroCampana: true,
-  cantidadDatosSolicitados: true,
-  marca: true,
-  zona: true,
-  porcentaje: true,
-  marca2: true,
-  zona2: true,
-  porcentaje2: true,
-  marca3: true,
-  zona3: true,
-  porcentaje3: true,
-  marca4: true,
-  zona4: true,
-  porcentaje4: true,
-  marca5: true,
-  zona5: true,
-  porcentaje5: true,
-  asignacionAutomatica: true,
-  localizado: true,
-  fechaCampana: true,
-  fechaFin: true,
-  pedidosPorDia: true,
-  facturacionBruta: true,
-}).extend({
-  facturacionBruta: z.union([z.string(), z.number()]).transform(val => String(val)),
-});
-
-// Schema para crear campañas sin campos calculados automáticamente
-export const createCampanaComercialSchema = createInsertSchema(campanasComerciales)
-  .omit({ 
-    id: true, 
-    numeroCampana: true, 
-    fechaFin: true, 
-    fechaCreacion: true, 
-    createdAt: true, 
-    updatedAt: true 
+export const insertCampanaComercialSchema = createInsertSchema(
+  campanasComerciales,
+)
+  .pick({
+    clienteId: true,
+    numeroCampana: true,
+    cantidadDatosSolicitados: true,
+    marca: true,
+    zona: true,
+    porcentaje: true,
+    marca2: true,
+    zona2: true,
+    porcentaje2: true,
+    marca3: true,
+    zona3: true,
+    porcentaje3: true,
+    marca4: true,
+    zona4: true,
+    porcentaje4: true,
+    marca5: true,
+    zona5: true,
+    porcentaje5: true,
+    asignacionAutomatica: true,
+    localizado: true,
+    fechaCampana: true,
+    fechaFin: true,
+    pedidosPorDia: true,
+    facturacionBruta: true,
   })
   .extend({
-    facturacionBruta: z.union([z.string(), z.number()]).transform(val => String(val)),
+    facturacionBruta: z
+      .union([z.string(), z.number()])
+      .transform((val) => String(val)),
+  });
+
+// Schema para crear campañas sin campos calculados automáticamente
+export const createCampanaComercialSchema = createInsertSchema(
+  campanasComerciales,
+)
+  .omit({
+    id: true,
+    numeroCampana: true,
+    fechaFin: true,
+    fechaCreacion: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .extend({
+    facturacionBruta: z
+      .union([z.string(), z.number()])
+      .transform((val) => String(val)),
   });
 
 export type CampanaComercial = typeof campanasComerciales.$inferSelect;
-export type InsertCampanaComercial = z.infer<typeof insertCampanaComercialSchema>;
+export type InsertCampanaComercial = z.infer<
+  typeof insertCampanaComercialSchema
+>;
 
 // Enums
 export const LEAD_STATUS = {
-  NEW: 'new',
-  CONTACTED: 'contacted',
-  QUALIFIED: 'qualified',
-  CONVERTED: 'converted',
-  REJECTED: 'rejected'
+  NEW: "new",
+  CONTACTED: "contacted",
+  QUALIFIED: "qualified",
+  CONVERTED: "converted",
+  REJECTED: "rejected",
 } as const;
 
-export type LeadStatus = typeof LEAD_STATUS[keyof typeof LEAD_STATUS];
-
+export type LeadStatus = (typeof LEAD_STATUS)[keyof typeof LEAD_STATUS];
 
 export type SyncControl = typeof syncControl.$inferSelect;
 export type InsertSyncControl = z.infer<typeof insertSyncControlSchema>;
@@ -522,126 +598,254 @@ export type InsertEnviadosMetrics = z.infer<typeof insertEnviadosMetricsSchema>;
 export type OpLeadWebhook = typeof opLeadWebhook.$inferSelect;
 export type InsertOpLeadWebhook = z.infer<typeof insertOpLeadWebhookSchema>;
 
-
 export const CAMPAIGN_STATUS = {
-  ACTIVE: 'active',
-  PAUSED: 'paused',
-  ENDED: 'ended'
+  ACTIVE: "active",
+  PAUSED: "paused",
+  ENDED: "ended",
 } as const;
 
-export type CampaignStatus = typeof CAMPAIGN_STATUS[keyof typeof CAMPAIGN_STATUS];
+export type CampaignStatus =
+  (typeof CAMPAIGN_STATUS)[keyof typeof CAMPAIGN_STATUS];
 
 export const NOTE_TYPES = {
-  GENERAL: 'general',
-  CALL: 'call',
-  EMAIL: 'email',
-  MEETING: 'meeting'
+  GENERAL: "general",
+  CALL: "call",
+  EMAIL: "email",
+  MEETING: "meeting",
 } as const;
 
-export type NoteType = typeof NOTE_TYPES[keyof typeof NOTE_TYPES];
+export type NoteType = (typeof NOTE_TYPES)[keyof typeof NOTE_TYPES];
 
 // Nuevas constantes para clientes
 export const MARCAS_DISPONIBLES = [
-  'Fiat', 'Peugeot', 'Toyota', 'Chevrolet', 'Renault', 'Citroen', 
-  'VW', 'Mercedes', 'Ford', 'Jeep', 'China', 'Otra'
+  "Fiat",
+  "Peugeot",
+  "Toyota",
+  "Chevrolet",
+  "Renault",
+  "Citroen",
+  "VW",
+  "Mercedes",
+  "Ford",
+  "Jeep",
+  "China",
+  "Otra",
 ] as const;
 
 export const PROVINCIAS_BUENOS_AIRES = [
-  'Adolfo Alsina', 'Alberti', 'Almirante Brown', 'Arrecifes', 'Avellaneda',
-  'Ayacucho', 'Azul', 'Bahía Blanca', 'Balcarce', 'Baradero', 'Benito Juárez',
-  'Berazategui', 'Berisso', 'Bolívar', 'Bragado', 'Brandsen', 'Campana',
-  'Cañuelas', 'Capilla del Señor', 'Capitán Sarmiento', 'Carapachay', 'Carhué',
-  'Carlos Casares', 'Carlos Tejedor', 'Carmen de Areco', 'Carmen de Patagones',
-  'Castelli', 'Chacabuco', 'Chascomús', 'Chivilcoy', 'Colón', 'Coronel Dorrego',
-  'Coronel Pringles', 'Coronel Rosales', 'Coronel Suárez', 'Daireaux', 'Dolores',
-  'Ensenada', 'Escobar', 'Esteban Echeverría', 'Exaltación de la Cruz', 'Ezeiza',
-  'Florencio Varela', 'Florentino Ameghino', 'General Alvarado', 'General Alvear',
-  'General Arenales', 'General Belgrano', 'General Guido', 'General Lamadrid',
-  'General Las Heras', 'General Lavalle', 'General Madariaga', 'General Paz',
-  'General Pinto', 'General Pueyrredón', 'General Rodríguez', 'General San Martín',
-  'General Viamonte', 'General Villegas', 'Guaminí', 'Hipólito Yrigoyen',
-  'Hurlingham', 'Ituzaingó', 'José C. Paz', 'Junín', 'La Costa', 'La Matanza',
-  'La Plata', 'Lanús', 'Las Flores', 'Laprida', 'Leandro N. Alem', 'Lincoln',
-  'Lobería', 'Lobos', 'Lomas de Zamora', 'Luján', 'Magdalena', 'Maipú',
-  'Malvinas Argentinas', 'Mar Chiquita', 'Marcos Paz', 'Mercedes', 'Merlo',
-  'Monte', 'Monte Hermoso', 'Moreno', 'Morón', 'Navarro', 'Necochea',
-  'Nueve de Julio', 'Olavarría', 'Patagones', 'Pehuajó', 'Pellegrini',
-  'Pergamino', 'Pila', 'Pilar', 'Pinamar', 'Presidente Perón', 'Puán',
-  'Punta Indio', 'Quilmes', 'Ramallo', 'Rauch', 'Rivadavia', 'Rojas',
-  'Roque Pérez', 'Saavedra', 'Saladillo', 'Salliqueló', 'Salto', 'San Andrés de Giles',
-  'San Antonio de Areco', 'San Cayetano', 'San Fernando', 'San Isidro', 'San Miguel',
-  'San Nicolás', 'San Pedro', 'San Vicente', 'Suipacha', 'Tandil', 'Tapalqué',
-  'Tigre', 'Tordillo', 'Tornquist', 'Trenque Lauquen', 'Tres Arroyos', 'Tres de Febrero',
-  'Tres Lomas', 'Tupungato', 'Villarino', 'Villa Gesell', 'Zárate'
+  "Adolfo Alsina",
+  "Alberti",
+  "Almirante Brown",
+  "Arrecifes",
+  "Avellaneda",
+  "Ayacucho",
+  "Azul",
+  "Bahía Blanca",
+  "Balcarce",
+  "Baradero",
+  "Benito Juárez",
+  "Berazategui",
+  "Berisso",
+  "Bolívar",
+  "Bragado",
+  "Brandsen",
+  "Campana",
+  "Cañuelas",
+  "Capilla del Señor",
+  "Capitán Sarmiento",
+  "Carapachay",
+  "Carhué",
+  "Carlos Casares",
+  "Carlos Tejedor",
+  "Carmen de Areco",
+  "Carmen de Patagones",
+  "Castelli",
+  "Chacabuco",
+  "Chascomús",
+  "Chivilcoy",
+  "Colón",
+  "Coronel Dorrego",
+  "Coronel Pringles",
+  "Coronel Rosales",
+  "Coronel Suárez",
+  "Daireaux",
+  "Dolores",
+  "Ensenada",
+  "Escobar",
+  "Esteban Echeverría",
+  "Exaltación de la Cruz",
+  "Ezeiza",
+  "Florencio Varela",
+  "Florentino Ameghino",
+  "General Alvarado",
+  "General Alvear",
+  "General Arenales",
+  "General Belgrano",
+  "General Guido",
+  "General Lamadrid",
+  "General Las Heras",
+  "General Lavalle",
+  "General Madariaga",
+  "General Paz",
+  "General Pinto",
+  "General Pueyrredón",
+  "General Rodríguez",
+  "General San Martín",
+  "General Viamonte",
+  "General Villegas",
+  "Guaminí",
+  "Hipólito Yrigoyen",
+  "Hurlingham",
+  "Ituzaingó",
+  "José C. Paz",
+  "Junín",
+  "La Costa",
+  "La Matanza",
+  "La Plata",
+  "Lanús",
+  "Las Flores",
+  "Laprida",
+  "Leandro N. Alem",
+  "Lincoln",
+  "Lobería",
+  "Lobos",
+  "Lomas de Zamora",
+  "Luján",
+  "Magdalena",
+  "Maipú",
+  "Malvinas Argentinas",
+  "Mar Chiquita",
+  "Marcos Paz",
+  "Mercedes",
+  "Merlo",
+  "Monte",
+  "Monte Hermoso",
+  "Moreno",
+  "Morón",
+  "Navarro",
+  "Necochea",
+  "Nueve de Julio",
+  "Olavarría",
+  "Patagones",
+  "Pehuajó",
+  "Pellegrini",
+  "Pergamino",
+  "Pila",
+  "Pilar",
+  "Pinamar",
+  "Presidente Perón",
+  "Puán",
+  "Punta Indio",
+  "Quilmes",
+  "Ramallo",
+  "Rauch",
+  "Rivadavia",
+  "Rojas",
+  "Roque Pérez",
+  "Saavedra",
+  "Saladillo",
+  "Salliqueló",
+  "Salto",
+  "San Andrés de Giles",
+  "San Antonio de Areco",
+  "San Cayetano",
+  "San Fernando",
+  "San Isidro",
+  "San Miguel",
+  "San Nicolás",
+  "San Pedro",
+  "San Vicente",
+  "Suipacha",
+  "Tandil",
+  "Tapalqué",
+  "Tigre",
+  "Tordillo",
+  "Tornquist",
+  "Trenque Lauquen",
+  "Tres Arroyos",
+  "Tres de Febrero",
+  "Tres Lomas",
+  "Tupungato",
+  "Villarino",
+  "Villa Gesell",
+  "Zárate",
 ] as const;
 
 export const TIPOS_INTEGRACION = [
-  'Pilot', 'Tecnom', 'Asofix', 'Google Sheets', 'Otro'
+  "Pilot",
+  "Tecnom",
+  "Asofix",
+  "Google Sheets",
+  "Otro",
 ] as const;
 
 export const TIPOS_CLIENTE = [
-  'AGENCIA', 'GRUPO COMERCIAL', 'COMERCIALIZADORA', 'VENDEDOR'
+  "AGENCIA",
+  "GRUPO COMERCIAL",
+  "COMERCIALIZADORA",
+  "VENDEDOR",
 ] as const;
 
-export type MarcaDisponible = typeof MARCAS_DISPONIBLES[number];
-export type ProvinciaBuenosAires = typeof PROVINCIAS_BUENOS_AIRES[number];
-export type TipoIntegracion = typeof TIPOS_INTEGRACION[number];
-export type TipoCliente = typeof TIPOS_CLIENTE[number];
+export type MarcaDisponible = (typeof MARCAS_DISPONIBLES)[number];
+export type ProvinciaBuenosAires = (typeof PROVINCIAS_BUENOS_AIRES)[number];
+export type TipoIntegracion = (typeof TIPOS_INTEGRACION)[number];
+export type TipoCliente = (typeof TIPOS_CLIENTE)[number];
 
 // Clientes - Enums
 export const TIPO_FACTURACION = {
-  C: 'C',
-  A: 'A'
+  C: "C",
+  A: "A",
 } as const;
 
-export type TipoFacturacion = typeof TIPO_FACTURACION[keyof typeof TIPO_FACTURACION];
+export type TipoFacturacion =
+  (typeof TIPO_FACTURACION)[keyof typeof TIPO_FACTURACION];
 
 export const MARCAS = {
-  FIAT: 'FIAT',
-  PEUGEOT: 'PEUGEOT',
-  TOYOTA: 'TOYOTA',
-  CHEVROLET: 'CHEVROLET',
-  RENAULT: 'RENAULT',
-  CITROEN: 'CITROEN'
+  FIAT: "FIAT",
+  PEUGEOT: "PEUGEOT",
+  TOYOTA: "TOYOTA",
+  CHEVROLET: "CHEVROLET",
+  RENAULT: "RENAULT",
+  CITROEN: "CITROEN",
 } as const;
 
-export type Marca = typeof MARCAS[keyof typeof MARCAS];
+export type Marca = (typeof MARCAS)[keyof typeof MARCAS];
 
 export const ZONAS = {
-  AMBA: 'AMBA',
-  NACIONAL: 'NACIONAL',
-  LOCALIZADO: 'LOCALIZADO'
+  AMBA: "AMBA",
+  NACIONAL: "NACIONAL",
+  LOCALIZADO: "LOCALIZADO",
 } as const;
 
-export type Zona = typeof ZONAS[keyof typeof ZONAS];
+export type Zona = (typeof ZONAS)[keyof typeof ZONAS];
 
 // Provincias de Argentina completas para targeting geográfico
 export const PROVINCIAS_ARGENTINA = [
-  'AMBA',
-  'NACIONAL',
-  'Buenos Aires',
-  'Catamarca',
-  'Chaco',
-  'Chubut',
-  'Córdoba',
-  'Corrientes',
-  'Entre Ríos',
-  'Formosa',
-  'Jujuy',
-  'La Pampa',
-  'La Rioja',
-  'Mendoza',
-  'Misiones',
-  'Neuquén',
-  'Río Negro',
-  'Salta',
-  'San Juan',
-  'San Luis',
-  'Santa Cruz',
-  'Santa Fe',
-  'Santiago del Estero',
-  'Tierra del Fuego',
-  'Tucumán'
+  "AMBA",
+  "NACIONAL",
+  "Buenos Aires",
+  "Catamarca",
+  "Chaco",
+  "Chubut",
+  "Córdoba",
+  "Corrientes",
+  "Entre Ríos",
+  "Formosa",
+  "Jujuy",
+  "La Pampa",
+  "La Rioja",
+  "Mendoza",
+  "Misiones",
+  "Neuquén",
+  "Río Negro",
+  "Salta",
+  "San Juan",
+  "San Luis",
+  "Santa Cruz",
+  "Santa Fe",
+  "Santiago del Estero",
+  "Tierra del Fuego",
+  "Tucumán",
 ] as const;
 
 // Zonas como array para formularios (ahora incluye todas las provincias)

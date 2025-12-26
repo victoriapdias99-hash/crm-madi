@@ -1,15 +1,16 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * DTO para crear un lead desde webhook
  */
 export const CreateWebhookLeadDto = z.object({
-  nombre: z.string().min(1, 'El nombre es requerido'),
-  telefono: z.string().min(1, 'El teléfono es requerido'),
+  nombre: z.string().min(1, "El nombre es requerido"),
+  telefono: z.string().min(1, "El teléfono es requerido"),
   auto: z.string().optional().nullable(),
   localidad: z.string().optional().nullable(),
+  cliente: z.string().optional().nullable(), // NUEVO: Campo cliente permitido
   comentarios: z.string().optional().nullable(),
-  source: z.string().default('webhook')
+  source: z.string().default("webhook"),
 });
 
 export type CreateWebhookLeadDto = z.infer<typeof CreateWebhookLeadDto>;
@@ -23,6 +24,7 @@ export interface WebhookLeadResponseDto {
   telefono: string;
   auto?: string | null;
   localidad?: string | null;
+  cliente?: string | null; // NUEVO
   comentarios?: string | null;
   source: string;
   createdAt: Date;

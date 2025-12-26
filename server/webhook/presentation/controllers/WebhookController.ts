@@ -21,7 +21,8 @@ export class WebhookController {
   async createLead(req: Request, res: Response): Promise<void> {
     try {
       //console.log("📨 Webhook lead-webhook recibido:", req.body);
-      console.log("🔥 HOLA MUNDO - ESTOY EN EL ARCHIVO CORRECTO 🔥", req.body);
+      console.log("🔍 INSPECCIÓN DE JSON ENTRANTE:");
+      console.log(JSON.stringify(req.body, null, 2));
 
       // Validar DTO con Zod
       const validatedData = CreateWebhookLeadDto.parse(req.body);
@@ -41,6 +42,7 @@ export class WebhookController {
           telefono: newLead.telefono,
           auto: newLead.auto,
           localidad: newLead.localidad,
+          cliente: newLead.cliente, // Se muestra el cliente
           comentarios: newLead.comentarios,
           source: newLead.source,
           createdAt: newLead.createdAt,

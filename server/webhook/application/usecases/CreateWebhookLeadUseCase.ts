@@ -1,6 +1,6 @@
-import { IWebhookRepository } from '../../domain/interfaces/IWebhookRepository';
-import { WebhookLead } from '../../domain/entities/WebhookLead';
-import { CreateWebhookLeadDto } from '../dto/WebhookLeadDto';
+import { IWebhookRepository } from "../../domain/interfaces/IWebhookRepository";
+import { WebhookLead } from "../../domain/entities/WebhookLead";
+import { CreateWebhookLeadDto } from "../dto/WebhookLeadDto";
 
 /**
  * Caso de uso: Crear un lead desde webhook
@@ -19,14 +19,15 @@ export class CreateWebhookLeadUseCase {
       normalizedPhone,
       dto.auto?.trim() || null,
       dto.localidad?.trim() || null,
+      dto.cliente?.trim() || null, // Se agrega el campo cliente
       dto.comentarios?.trim() || null,
-      dto.source || 'webhook'
+      dto.source || "webhook",
     );
 
     // Validar entidad
     const validation = leadData.validate();
     if (!validation.valid) {
-      throw new Error(`Validación fallida: ${validation.errors.join(', ')}`);
+      throw new Error(`Validación fallida: ${validation.errors.join(", ")}`);
     }
 
     // Persistir en BD

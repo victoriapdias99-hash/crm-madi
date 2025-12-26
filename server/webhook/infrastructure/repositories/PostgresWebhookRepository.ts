@@ -18,6 +18,7 @@ export class PostgresWebhookRepository implements IWebhookRepository {
         telefono: lead.telefono,
         auto: lead.auto || null,
         localidad: lead.localidad || null,
+        cliente: lead.cliente || null, // Se guarda en base de datos
         comentarios: lead.comentarios || null,
         source: lead.source,
       })
@@ -29,6 +30,7 @@ export class PostgresWebhookRepository implements IWebhookRepository {
       newLead.telefono,
       newLead.auto,
       newLead.localidad,
+      newLead.cliente, // Se pasa al constructor
       newLead.comentarios,
       newLead.source,
       newLead.createdAt,
@@ -51,6 +53,7 @@ export class PostgresWebhookRepository implements IWebhookRepository {
       lead.telefono,
       lead.auto,
       lead.localidad,
+      lead.cliente, // mapeo de lectura
       lead.comentarios,
       lead.source,
       lead.createdAt,
@@ -87,6 +90,7 @@ export class PostgresWebhookRepository implements IWebhookRepository {
           lead.telefono,
           lead.auto,
           lead.localidad,
+          lead.cliente, // Mapeo en lista
           lead.comentarios,
           lead.source,
           lead.createdAt,
