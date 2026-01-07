@@ -1,41 +1,63 @@
-import { useState, useEffect } from "react";
-// Eliminamos useLeads temporalmente para conectar directo a tu nueva API
-// import { useLeads, useReassignLeads } from "@/hooks/useLeads";
+import { useState, useEffect, useMemo } from "react";
 import { ReassignLeadsDialog } from "@/components/leads/ReassignLeadsDialog";
 
-// 1. Definimos la forma exacta de los datos nuevos
+// --- CONSTANTES ---
+const ZONES = ["AMBA", "Córdoba", "Mendoza", "NACIONAL", "Santa Fe"];
+const BRANDS = [
+  "BAIC",
+  "Chevrolet",
+  "Citroen",
+  "Fiat",
+  "Ford",
+  "Jeep",
+  "Nissan",
+  "Peugeot",
+  "Renault",
+  "Toyota",
+  "Volkswagen",
+  "Otras Marcas",
+];
+const ITEMS_PER_PAGE = 100;
+
 interface WebhookLead {
   id: number;
   nombre: string;
   telefono: string;
   auto: string | null;
   localidad: string | null;
-  cliente: string | null; // NUEVO
+  cliente: string | null;
   comentarios: string | null;
   source: string;
   createdAt: string;
 }
 
 function LeadsPage() {
-  // 2. Estado local para los nuevos datos
   const [leads, setLeads] = useState<WebhookLead[]>([]);
+  const [clientsList, setClientsList] = useState<string[]>([]);
+
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Estados de filtros
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // 3. Función para cargar datos desde el nuevo endpoint
+  const [selectedZone, setSelectedZone] = useState("all");
+  const [selectedBrand, setSelectedBrand] = useState("all");
+  const [selectedClient, setSelectedClient] = useState("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Carga inicial
   const fetchLeads = async () => {
     setLoading(true);
     try {
-      // Conexión con el endpoint /api/webhook/leads.
       const response = await fetch("/api/webhook/leads");
-
       if (!response.ok) throw new Error("Error al cargar leads");
-
       const result = await response.json();
-      // La API devuelve { success: true, data: [...] }
       setLeads(result.data || []);
       setError(null);
     } catch (err: any) {
@@ -46,12 +68,196 @@ function LeadsPage() {
     }
   };
 
-  // Cargar al iniciar
+  const fetchClients = async () => {
+    try {
+      const response = await fetch("/api/clients");
+      if (response.ok) {
+        const data = await response.json();
+        setClientsList(data);
+      }
+    } catch (err) {
+      console.error("Error cargando clientes:", err);
+    }
+  };
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const response = await fetch("/api/sync/sheets", { method: "POST" });
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.message || "Error en sync");
+
+      alert(`✅ Sincronización exitosa!\n${data.message}`);
+      fetchLeads();
+      fetchClients();
+    } catch (err: any) {
+      console.error("Sync error:", err);
+      alert("❌ Error al sincronizar: " + err.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   useEffect(() => {
     fetchLeads();
+    fetchClients();
   }, []);
 
-  // Lógica de selección
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedZone, selectedBrand, selectedClient, startDate, endDate]);
+
+  // ORDENAMIENTO FORZADO EN FRONTEND (useMemo)
+  // Esto asegura que, sin importar cómo vengan del backend, se ordenen
+  // por fecha descendente (más nuevo arriba) antes de filtrar.
+  const sortedLeads = useMemo(() => {
+    // Creamos una copia [...] para ordenar sin mutar el estado original
+    return [...leads].sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+
+      // Protección contra fechas inválidas (las manda al final)
+      if (isNaN(dateA)) return 1;
+      if (isNaN(dateB)) return -1;
+
+      // Orden descendente: fecha más grande (B) menos fecha más chica (A)
+      return dateB - dateA;
+    });
+  }, [leads]); // Se ejecuta cada vez que la lista base 'leads' cambia
+
+  // --- LÓGICA DE FILTRADO (Ahora usa sortedLeads) ---
+  const filteredLeads = useMemo(() => {
+    const normalizeText = (text: string | null) => {
+      if (!text) return "";
+      return text
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[_-]/g, " ")
+        .trim();
+    };
+
+    const EXCLUDED_FROM_NACIONAL = ["amba", "cordoba", "mendoza", "santa fe"];
+    // Conversión de la lista de marcas constante a formato limpio para comparar
+    const MAIN_BRANDS_NORMALIZED = BRANDS.map((b) => normalizeText(b));
+
+    // Se usa 'sortedLeads' en lugar de 'leads'
+    return sortedLeads.filter((lead) => {
+      // FILTRO ZONA
+      if (selectedZone !== "all") {
+        // Se normalizan ambos lados: lo que viene del Lead y lo que se elige en el Select
+        const leadZoneClean = normalizeText(lead.localidad);
+        const selectedZoneClean = normalizeText(selectedZone);
+
+        if (selectedZone === "NACIONAL") {
+          // CASO ESPECIAL: Si es NACIONAL, se muestra todo lo que NO esté en la lista de excluidos
+          if (EXCLUDED_FROM_NACIONAL.includes(leadZoneClean)) return false;
+        } else {
+          // CASO NORMAL: Comparamos directamente (ej: "amba" == "amba")
+          if (leadZoneClean !== selectedZoneClean) return false;
+        }
+      }
+
+      // Filtro Marca
+      if (selectedBrand !== "all") {
+        const leadAutoClean = normalizeText(lead.auto);
+        const selectedBrandClean = normalizeText(selectedBrand);
+
+        // CASO ESPECIAL: "Otras Marcas"
+        if (selectedBrand === "Otras Marcas") {
+          // Creamos una lista de las marcas REALES (todas menos "Otras Marcas")
+          // para saber qué debemos excluir.
+          const realBrandsToCheck = BRANDS.filter(
+            (b) => b !== "Otras Marcas",
+          ).map((b) => normalizeText(b));
+
+          // Verificamos si el auto del lead coincide con alguna marca real
+          const isMainBrand = realBrandsToCheck.some((mainBrand) =>
+            leadAutoClean.includes(mainBrand),
+          );
+
+          // Si ES una marca conocida, la ocultamos (porque queremos ver "las otras")
+          if (isMainBrand) return false;
+        } else {
+          // CASO NORMAL
+          if (!leadAutoClean.includes(selectedBrandClean)) return false;
+        }
+      }
+
+      // Filtro Cliente
+      if (selectedClient !== "all") {
+        const leadClientClean = normalizeText(lead.cliente);
+        const selectedClientClean = normalizeText(selectedClient);
+
+        // CASO ESPECIAL: "Otros Clientes"
+        if (selectedClient === "Otros Clientes") {
+          // Verificar si el cliente del lead coincide con ALGUNO de la lista oficial (clientsList)
+          const isKnownClient = clientsList.some((clientName) => {
+            const knownClientClean = normalizeText(clientName);
+            // Si el nombre del lead contiene el nombre oficial
+            return leadClientClean.includes(knownClientClean);
+          });
+
+          // Si es conocido, lo ocultamos (porque queremos ver los "Otros")
+          if (isKnownClient) return false;
+        } else {
+          // Lógica normal (Búsqueda específica)
+          if (
+            !leadClientClean.includes(selectedClientClean) &&
+            leadClientClean !== selectedClientClean
+          ) {
+            return false;
+          }
+        }
+      }
+
+      // Filtro Rango de Fechas
+      if (startDate || endDate) {
+        const leadDate = new Date(lead.createdAt);
+        leadDate.setHours(0, 0, 0, 0);
+        if (startDate) {
+          const start = new Date(startDate);
+          start.setMinutes(start.getMinutes() + start.getTimezoneOffset());
+          if (leadDate < start) return false;
+        }
+        if (endDate) {
+          const end = new Date(endDate);
+          end.setMinutes(end.getMinutes() + end.getTimezoneOffset());
+          end.setHours(23, 59, 59, 999);
+          if (leadDate > end) return false;
+        }
+      }
+      return true;
+    });
+    // CAMBIO DEPENDENCIA: Dependemos de 'sortedLeads' ahora
+  }, [
+    sortedLeads,
+    selectedZone,
+    selectedBrand,
+    selectedClient,
+    startDate,
+    endDate,
+  ]);
+
+  const totalItems = filteredLeads.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedLeads = filteredLeads.slice(
+    startIndex,
+    startIndex + ITEMS_PER_PAGE,
+  );
+
+  // Funciones auxiliares
+  const resetFilters = () => {
+    setSelectedZone("all");
+    setSelectedBrand("all");
+    setSelectedClient("all");
+    setStartDate("");
+    setEndDate("");
+    setCurrentPage(1);
+  };
+
   const toggleSelect = (id: number) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
@@ -59,28 +265,64 @@ function LeadsPage() {
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.length === leads.length) {
+    if (
+      selectedIds.length === filteredLeads.length &&
+      filteredLeads.length > 0
+    ) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(leads.map((l) => l.id));
+      setSelectedIds(filteredLeads.map((l) => l.id));
     }
   };
 
-  // Mock para reasignar (ya que no se tiene el hook nuevo aún)
   const handleConfirmReassign = (payload: any) => {
     console.log("Reasignando:", payload);
     setDialogOpen(false);
     setSelectedIds([]);
-    alert("Funcionalidad de reasignar pendiente de conectar al nuevo backend");
+    alert("Funcionalidad de reasignar pendiente");
   };
 
-  const isAllSelected = leads.length > 0 && selectedIds.length === leads.length;
+  const isAllSelected =
+    filteredLeads.length > 0 && selectedIds.length === filteredLeads.length;
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) setCurrentPage((prev) => prev + 1);
+  };
+
+  const goToPrevPage = () => {
+    if (currentPage > 1) setCurrentPage((prev) => prev - 1);
+  };
 
   return (
     <div className="p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Leads</h1>
+      {/* Encabezado */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-semibold">Leads</h1>
+          {!loading && (
+            <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full border font-medium">
+              {totalItems} registros
+            </span>
+          )}
+        </div>
+
         <div className="flex gap-2">
+          {/* Botón Sync */}
+          <button
+            className="px-3 py-1 rounded border border-green-600 text-green-700 bg-green-50 hover:bg-green-100 disabled:opacity-50 flex items-center gap-2"
+            onClick={handleSync}
+            disabled={syncing || loading}
+          >
+            {syncing ? (
+              <>
+                <span className="animate-spin h-3 w-3 border-2 border-green-600 rounded-full border-t-transparent"></span>
+                Sincronizando...
+              </>
+            ) : (
+              "Sincronizar Sheets"
+            )}
+          </button>
+
           <button
             className="px-3 py-1 rounded border hover:bg-gray-100"
             onClick={fetchLeads}
@@ -99,13 +341,103 @@ function LeadsPage() {
         </div>
       </div>
 
+      {/* BARRA DE FILTROS */}
+      <div className="flex flex-row items-end gap-3 bg-white p-4 rounded border border-gray-200 shadow-sm overflow-x-auto pb-4">
+        <div className="flex flex-col gap-1 shrink-0">
+          <label className="text-xs font-semibold text-gray-500 uppercase">
+            Zona
+          </label>
+          <select
+            className="border border-gray-300 rounded px-3 py-2 text-sm min-w-[140px] focus:ring-2 focus:ring-blue-500 outline-none"
+            value={selectedZone}
+            onChange={(e) => setSelectedZone(e.target.value)}
+          >
+            <option value="all">Todas las zonas</option>
+            {ZONES.map((z) => (
+              <option key={z} value={z}>
+                {z}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1 shrink-0">
+          <label className="text-xs font-semibold text-gray-500 uppercase">
+            Marca
+          </label>
+          <select
+            className="border border-gray-300 rounded px-3 py-2 text-sm min-w-[140px] focus:ring-2 focus:ring-blue-500 outline-none"
+            value={selectedBrand}
+            onChange={(e) => setSelectedBrand(e.target.value)}
+          >
+            <option value="all">Todas las marcas</option>
+            {BRANDS.map((b) => (
+              <option key={b} value={b}>
+                {b}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1 shrink-0">
+          <label className="text-xs font-semibold text-gray-500 uppercase">
+            Cliente
+          </label>
+          <select
+            className="border border-gray-300 rounded px-3 py-2 text-sm min-w-[160px] focus:ring-2 focus:ring-blue-500 outline-none"
+            value={selectedClient}
+            onChange={(e) => setSelectedClient(e.target.value)}
+          >
+            <option value="all">Todos los clientes</option>
+            {clientsList.map((clientName) => (
+              <option key={clientName} value={clientName}>
+                {clientName}
+              </option>
+            ))}
+            {/* Opción Nueva para descartes */}
+            <option value="Otros Clientes">Otros Clientes</option>
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1 shrink-0">
+          <label className="text-xs font-semibold text-gray-500 uppercase">
+            Rango de Fecha
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              className="border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none w-[130px]"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+            <span className="text-gray-400">-</span>
+            <input
+              type="date"
+              className="border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none w-[130px]"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="flex pb-1 shrink-0">
+          <button
+            onClick={resetFilters}
+            className="text-gray-500 hover:text-blue-600 text-sm font-medium px-3 py-2 border border-transparent hover:bg-blue-50 rounded transition"
+          >
+            Limpiar Filtros
+          </button>
+        </div>
+      </div>
+
       {error && (
         <div className="p-3 bg-red-100 text-red-700 rounded border border-red-200">
-          ⚠️ Error cargando leads: {error}
+          ⚠️ Error: {error}
         </div>
       )}
 
-      <div className="border rounded overflow-x-auto bg-white shadow-sm">
+      {/* Tabla (Sin cambios) */}
+      <div className="border rounded overflow-x-auto bg-white shadow-sm mt-4">
         <table className="w-full table-fixed text-sm">
           <thead className="bg-gray-50 border-b">
             <tr>
@@ -116,7 +448,6 @@ function LeadsPage() {
                   onChange={toggleSelectAll}
                 />
               </th>
-              {/* 4. Columnas actualizadas a tus datos reales */}
               <th className="w-[150px] px-4 py-3 text-left font-medium text-gray-600">
                 Fecha
               </th>
@@ -135,7 +466,7 @@ function LeadsPage() {
               <th className="w-[150px] px-4 py-3 text-left font-medium text-gray-600">
                 Localidad
               </th>
-              <th className="w-[120px] px-4 py-3 text-left font-medium text-gray-600">
+              <th className="w-[250px] px-4 py-3 text-left font-medium text-gray-600">
                 Comentario
               </th>
               <th className="w-[120px] px-4 py-3 text-left font-medium text-gray-600">
@@ -144,7 +475,7 @@ function LeadsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {leads.map((lead) => (
+            {paginatedLeads.map((lead) => (
               <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3 text-center">
                   <input
@@ -168,7 +499,9 @@ function LeadsPage() {
                   {lead.localidad || "-"}
                 </td>
                 <td className="px-4 py-3 text-gray-600">
-                  {lead.comentarios || "-"}
+                  <div className="whitespace-normal break-words text-xs leading-snug max-h-[80px] overflow-y-auto">
+                    {lead.comentarios || "-"}
+                  </div>
                 </td>
                 <td className="px-4 py-3">
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -177,16 +510,46 @@ function LeadsPage() {
                 </td>
               </tr>
             ))}
-
-            {leads.length === 0 && !loading && (
+            {paginatedLeads.length === 0 && !loading && (
               <tr>
-                <td className="px-4 py-8 text-center text-gray-500" colSpan={7}>
-                  No hay leads registrados aún.
+                <td className="px-4 py-8 text-center text-gray-500" colSpan={9}>
+                  No se encontraron resultados.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+
+        {totalItems > 0 && (
+          <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t">
+            <div className="text-xs text-gray-500">
+              Mostrando <span className="font-medium">{startIndex + 1}</span> a{" "}
+              <span className="font-medium">
+                {Math.min(startIndex + ITEMS_PER_PAGE, totalItems)}
+              </span>{" "}
+              de <span className="font-medium">{totalItems}</span> resultados
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={goToPrevPage}
+                disabled={currentPage === 1}
+                className="px-3 py-1 text-sm border rounded bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Anterior
+              </button>
+              <span className="flex items-center px-2 text-sm font-medium text-gray-700">
+                Página {currentPage} de {totalPages}
+              </span>
+              <button
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1 text-sm border rounded bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <ReassignLeadsDialog

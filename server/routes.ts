@@ -16,6 +16,8 @@ import {
 } from "../shared/utils/multi-brand-utils";
 import { contarLeadsYDuplicadosUnificado } from "../shared/utils/campaign-counting-utils";
 import { centralizedDataService } from "./centralized-data-service";
+import { db } from "./db";
+import { asc } from "drizzle-orm";
 import {
   insertLeadSchema,
   insertCampaignSchema,
@@ -25,6 +27,7 @@ import {
   insertClienteSchema,
   insertCampanaComercialSchema,
   createCampanaComercialSchema,
+  clientes,
 } from "../shared/schema";
 import { ClosureFactory } from "./campaign-closure/infrastructure/factories/ClosureFactory";
 import {
@@ -37,6 +40,13 @@ import { registerOptimizedRoute } from "./optimized-route";
 import { registerSimpleOptimized } from "./simple-optimized";
 import { registerDebugMaterialized } from "./debug-materialized";
 import { registerWebhookRoutes } from "./webhook";
+import { exec } from "child_process";
+import { promisify } from "util";
+import { existsSync } from "fs";
+import { join } from "path";
+import { migrateSmartFast } from "./sync-smart-fast/migrate-smart-fast";
+
+const execAsync = promisify(exec);
 
 // LEGACY CODE REMOVED: ClientMatchingSystem migrado al nuevo sistema refactorizado
 // Ver: server/sync/domain/services/ClientMatcher.ts
@@ -321,6 +331,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ error: "Login failed" });
+    }
+  });
+
+  // ============================================================
+  // ✅ NUEVA RUTA DE SINCRONIZACIÓN DIRECTA (Sin exec/comandos)
+  // ============================================================
+  app.post("/api/sync/sheets", async (req, res) => {
+    try {
+      console.log("🚀 Iniciando sincronización directa (Database Sync)...");
+
+      // Ejecutamos la función importada directamente
+      // Esto guarda los datos del Sheet en tu tabla 'op_leads'
+      const stats = await migrateSmartFast();
+
+      console.log("✅ Sincronización completada con éxito");
+
+      res.json({
+        success: true,
+        message: "Datos sincronizados correctamente a la Base de Datos.",
+        details: `Procesados: ${stats.totalProcessed} | Nuevos: ${stats.inserted} | Actualizados: ${stats.updated}`,
+      });
+    } catch (error: any) {
+      console.error("❌ Error en sincronización:", error);
+
+      // Si el error es por la ruta de importación, avisamos
+      if (error.code === "MODULE_NOT_FOUND") {
+        return res.status(500).json({
+          success: false,
+          message:
+            "No se encuentra el módulo sync-smart-fast. Verifica que la carpeta exista en la raíz.",
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: `Error interno: ${error.message}`,
+      });
+    }
+  });
+
+  // Obtener lista de clientes para filtros (Dropdown)
+  app.get("/api/clients", async (req, res) => {
+    try {
+      console.log("🔄 Obteniendo lista de clientes para filtros...");
+
+      // Consultamos solo la columna nombre_cliente
+      // NOTA: En Drizzle 'nombreCliente' mapea a 'nombre_cliente' de la DB
+      const result = await db
+        .select({ nombre: clientes.nombreCliente })
+        .from(clientes)
+        .orderBy(asc(clientes.nombreCliente)); // Orden A-Z
+
+      // Convertimos [{nombre: "A"}, {nombre: "B"}] -> ["A", "B"]
+      const clientList = result.map((c) => c.nombre);
+
+      res.json(clientList);
+    } catch (error) {
+      console.error("❌ Error al obtener clientes:", error);
+      res.status(500).json({
+        message: "Error interno al cargar clientes",
+        error: String(error),
+      });
     }
   });
 
@@ -2867,9 +2939,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/clientes", async (req, res) => {
     try {
+      if (!req.session || !req.session.userId) {
+        return res.status(401).json({ 
+          error: "No autorizado. Debes iniciar sesión." 
+        });
+      }
       console.log("Creating cliente with data:", req.body);
+      console.log("User ID from session:", req.session.userId);
       const validatedData = insertClienteSchema.parse(req.body);
-      const cliente = await storage.createCliente(validatedData);
+      const clienteData ={validatedData, userId: req.session.userId}
+      //const cliente = await storage.createCliente(validatedData);
+      const cliente = await storage.createCliente(clienteData);
       console.log("Cliente created successfully:", cliente);
       res.status(201).json(cliente);
     } catch (error) {
@@ -3866,7 +3946,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log(
-        `✅ Fecha fin EXACTA calculada: ${fechaFinConHora} (${contador} leads procesados)`,
+        `p�� Fecha fin EXACTA calculada: ${fechaFinConHora} (${contador} leads procesados)`,
       );
       return fechaFinConHora;
     } catch (error) {
@@ -4719,6 +4799,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log("✅ Rutas del sistema de leads registradas: /api/leads/*");
   } catch (error) {
     console.error("❌ Error registrando rutas de leads:", error);
+  }
+
+  // Registrar rutas de autenticación
+  try {
+    const { authRoutes } = await import("./auth/auth-routes");
+    app.use("/api/auth", authRoutes);
+    console.log("✅ Rutas de autenticación registradas: /api/auth/*");
+    console.log("   POST /api/auth/register - Registrar nuevo usuario");
+    console.log("   POST /api/auth/login - Iniciar sesión");
+    console.log("   POST /api/auth/logout - Cerrar sesión");
+    console.log("   GET  /api/auth/me - Obtener usuario actual");
+    console.log("   GET  /api/auth/check - Verificar sesión activa");
+  } catch (error) {
+    console.error("❌ Error registrando rutas de autenticación:", error);
   }
 
   return httpServer;

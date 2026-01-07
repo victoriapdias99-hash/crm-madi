@@ -505,6 +505,7 @@ export const insertClienteSchema = createInsertSchema(clientes).pick({
   nombreComercial: true,
   telefono: true,
   email: true,
+  userId: true,
   cuitCliente: true,
   tipoFacturacion: true,
   marcasSolicitadas: true,

@@ -22,9 +22,9 @@ import { normalizeClientName } from "../../shared/utils/client-normalization";
 
 const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
 const EXCLUDED_SHEETS = [
-  "Datos Diarios",
+  //"Datos Diarios",
   "Control Campañas",
-  "datos diarios",
+  //"datos diarios",
   "control campañas",
 ];
 

@@ -6,9 +6,8 @@
  * Con duplicados: {MARCA}_{YYYYMMDD}_{TELEFONO_8DIGITOS}-{N}
  *
  * Ejemplos:
- *   Primer registro: "FIAT_20250718_54911234_5678"
- *   Duplicado 1:     "FIAT_20250718_54911234_5678-1"
- *   Duplicado 2:     "FIAT_20250718_54911234_5678-2"
+ * Primer registro: "FIAT_20250718_54911234_5678"
+ * Duplicado 1:     "FIAT_20250718_54911234_5678-1"
  *
  * @param telefono - Teléfono del lead (puede tener formato, se normaliza)
  * @param fechaCreacion - Fecha de creación del lead
@@ -20,25 +19,29 @@ export function generateStableMetaLeadId(
   telefono: string,
   fechaCreacion: Date,
   marca: string,
-  duplicateIndex: number = 0
+  duplicateIndex: number = 0,
 ): string {
   // Normalizar teléfono: solo dígitos
-  const normalizedPhone = telefono.replace(/[^\d]/g, '');
+  const normalizedPhone = telefono.replace(/[^\d]/g, "");
 
   if (normalizedPhone.length < 4) {
-    throw new Error(`Teléfono inválido para generar ID: "${telefono}"`);
+    // Si no hay suficiente teléfono, usamos un placeholder para no romper
+    // (Aunque idealmente estos se filtran antes)
+    return `INVALID_${marca}_${Date.now()}`;
   }
 
   // Formato fecha compacto: YYYYMMDD
   const year = fechaCreacion.getFullYear();
-  const month = String(fechaCreacion.getMonth() + 1).padStart(2, '0');
-  const day = String(fechaCreacion.getDate()).padStart(2, '0');
+  const month = String(fechaCreacion.getMonth() + 1).padStart(2, "0");
+  const day = String(fechaCreacion.getDate()).padStart(2, "0");
   const dateStr = `${year}${month}${day}`;
 
-  // Extraer primeros y últimos 4 dígitos del teléfono
+  // Extraer primeros y últimos 4 dígitos del teléfono para la huella
+  // Si es corto, usamos lo que tenga
   const phonePrefix = normalizedPhone.slice(0, 4);
   const phoneSuffix = normalizedPhone.slice(-4);
-  const phoneDigits = phonePrefix + phoneSuffix;
+  const phoneDigits =
+    normalizedPhone.length > 8 ? phonePrefix + phoneSuffix : normalizedPhone;
 
   // ID base estable
   const baseId = `${marca.toUpperCase()}_${dateStr}_${phoneDigits}`;
@@ -49,71 +52,66 @@ export function generateStableMetaLeadId(
 
 /**
  * Extrae el ID base de un metaLeadId (sin sufijo de duplicado)
- *
- * Ejemplo: "FIAT_20250718_54911234_5678-2" → "FIAT_20250718_54911234_5678"
  */
 export function getBaseMetaLeadId(metaLeadId: string): string {
-  return metaLeadId.split('-')[0];
+  return metaLeadId.split("-")[0];
 }
 
 /**
  * Parsea una fecha de Google Sheets a objeto Date
  * Soporta múltiples formatos y normaliza a medianoche UTC
+ * * MEJORADO: Ahora soporta fechas con hora (dd/mm/yyyy hh:mm:ss)
  */
 export function parseSheetDate(dateStr: string): Date {
-  if (!dateStr || dateStr.trim() === '') {
-    console.warn('⚠️ Fecha vacía, usando fecha actual');
+  if (!dateStr || typeof dateStr !== "string" || dateStr.trim() === "") {
+    // console.warn('⚠️ Fecha vacía o inválida, usando fecha actual');
     return new Date();
   }
 
   const cleanDate = dateStr.trim();
 
   try {
-    // 1. Formato ISO: 2025-01-04T14:30:00-03:00
-    let date = new Date(cleanDate);
-    if (!isNaN(date.getTime())) {
-      // Normalizar a medianoche UTC para comparaciones consistentes
-      date.setUTCHours(0, 0, 0, 0);
-      return date;
-    }
+    // 1. Intentar Regex Flexible para DD/MM/YYYY o DD-MM-YYYY
+    // Explicación:
+    // ^(\d{1,2})       -> Empieza con 1 o 2 dígitos (Día)
+    // [\/-]            -> Separador / o -
+    // (\d{1,2})        -> 1 o 2 dígitos (Mes)
+    // [\/-]            -> Separador
+    // (\d{2,4})        -> 2 o 4 dígitos (Año)
+    // (?:.*)?$         -> (Opcional) Cualquier cosa después (hora), ignorado
+    const flexibleMatch = cleanDate.match(
+      /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})(?:.*)?$/,
+    );
 
-    // 2. Formato dd/mm/yyyy o dd-mm-yyyy
-    const slashMatch = cleanDate.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
-    if (slashMatch) {
-      const [, day, month, year] = slashMatch;
-      date = new Date(Date.UTC(
-        parseInt(year),
-        parseInt(month) - 1,
-        parseInt(day)
-      ));
+    if (flexibleMatch) {
+      const [, day, month, yearStr] = flexibleMatch;
+      let year = parseInt(yearStr);
+
+      // Corrección de año de 2 dígitos (ej: "24" -> 2024)
+      if (year < 100) {
+        year += 2000;
+      }
+
+      // Crear fecha en UTC puro para evitar problemas de zona horaria
+      const date = new Date(Date.UTC(year, parseInt(month) - 1, parseInt(day)));
 
       if (!isNaN(date.getTime())) {
         return date;
       }
     }
 
-    // 3. Formato dd-mm-yy hh:mm
-    const shortMatch = cleanDate.match(/^(\d{2})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2})$/);
-    if (shortMatch) {
-      const [, day, month, year, hour, minute] = shortMatch;
-      const fullYear = parseInt(year) < 50 ? 2000 + parseInt(year) : 1900 + parseInt(year);
-      date = new Date(Date.UTC(
-        fullYear,
-        parseInt(month) - 1,
-        parseInt(day),
-        parseInt(hour),
-        parseInt(minute)
-      ));
-
-      if (!isNaN(date.getTime())) {
-        date.setUTCHours(0, 0, 0, 0); // Normalizar a medianoche
-        return date;
-      }
+    // 2. Intento directo ISO (YYYY-MM-DD...)
+    const isoDate = new Date(cleanDate);
+    if (!isNaN(isoDate.getTime())) {
+      // Normalizar a medianoche UTC
+      isoDate.setUTCHours(0, 0, 0, 0);
+      return isoDate;
     }
 
-    console.warn(`⚠️ No se pudo parsear fecha: "${cleanDate}", usando fecha actual`);
+    console.warn(
+      `⚠️ No se pudo parsear fecha: "${cleanDate}", usando fecha actual`,
+    );
     return new Date();
-
   } catch (error) {
     console.error(`❌ Error parseando fecha: "${cleanDate}":`, error);
     return new Date();
@@ -124,5 +122,6 @@ export function parseSheetDate(dateStr: string): Date {
  * Normaliza un teléfono removiendo caracteres no numéricos
  */
 export function normalizePhone(phone: string): string {
-  return phone.replace(/[^\d]/g, '');
+  if (!phone) return "";
+  return phone.replace(/[^\d]/g, "");
 }

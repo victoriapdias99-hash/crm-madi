@@ -8,7 +8,7 @@ export const CreateWebhookLeadDto = z.object({
   telefono: z.string().min(1, "El teléfono es requerido"),
   auto: z.string().optional().nullable(),
   localidad: z.string().optional().nullable(),
-  cliente: z.string().optional().nullable(), // NUEVO: Campo cliente permitido
+  cliente: z.string().optional(), // NUEVO: Campo cliente permitido
   comentarios: z.string().optional().nullable(),
   source: z.string().default("webhook"),
 });

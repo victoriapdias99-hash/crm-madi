@@ -1,5 +1,8 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
+import session from "express-session";
+import { pool } from "./db";
+import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
@@ -11,6 +14,29 @@ declare global {
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Configuración de sesiones con PostgreSQL
+const PgSession = connectPgSimple(session);
+
+app.use(
+  session({
+    store: new PgSession({
+      pool: pool as any, // Pool de conexiones de Neon
+      tableName: "user_sessions", // Nombre de la tabla de sesiones
+      createTableIfMissing: true, // Crear tabla automáticamente si no existe
+    }),
+    secret: process.env.SESSION_SECRET || "desarrollo-secreto-cambiar-en-produccion",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === "production", // HTTPS solo en producción
+      httpOnly: true,
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 días
+    },
+  })
+);
+
+console.log("✅ Sistema de sesiones configurado con PostgreSQL");
 
 app.use((req, res, next) => {
   const start = Date.now();

@@ -1,30 +1,41 @@
 import { Link, useLocation } from "wouter";
-import { Users } from "lucide-react";
+import { Users, LogOut, User, UserPlus, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useAuth } from "@/lib/auth-context";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   BarChart3,
   Building2,
-  Calendar,
-  Settings,
-  TrendingUp,
   Calculator,
   Target,
   Home,
   ArrowLeft,
-  Link2,
   PieChart,
-  Zap,
   BarChart,
   Clock,
   CheckCircle,
+  TrendingUp,
 } from "lucide-react";
 
 export function Navigation() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
+  const { user, logout, isAuthenticated } = useAuth();
 
   const goBack = () => {
     window.history.back();
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    setLocation("/");
   };
 
   const navItems = [
@@ -52,7 +63,6 @@ export function Navigation() {
       icon: Users,
       active: location === "/leads",
     },
-
     {
       href: "/clientes",
       label: "Clientes",
@@ -139,6 +149,69 @@ export function Navigation() {
             </Link>
           );
         })}
+
+        {/* Botón de Administrar Usuarios - Después de CPL Analysis */}
+        {isAuthenticated && user ? (
+          /* Usuario autenticado - Mostrar dropdown con información */
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <User className="w-4 h-4" />
+                {user.username}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <div className="px-2 py-1.5 text-sm">
+                <p className="text-muted-foreground">
+                  Usuario:{" "}
+                  <span className="font-medium text-foreground">
+                    {user.username}
+                  </span>
+                </p>
+                {user.email && (
+                  <p className="text-muted-foreground mt-1">
+                    Email:{" "}
+                    <span className="font-medium text-foreground">
+                      {user.email}
+                    </span>
+                  </p>
+                )}
+                <p className="text-muted-foreground mt-1">
+                  Rol:{" "}
+                  <span className="font-medium text-foreground capitalize">
+                    {user.role}
+                  </span>
+                </p>
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={handleLogout}
+                className="cursor-pointer text-destructive"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Cerrar Sesión
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          /* Usuario NO autenticado - Mostrar botón para ir a login/registro */
+          <Link href="/login">
+            <Button
+              variant="default"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Shield className="w-4 h-4" />
+              Administrar Usuarios
+            </Button>
+          </Link>
+        )}
       </div>
     </Card>
   );

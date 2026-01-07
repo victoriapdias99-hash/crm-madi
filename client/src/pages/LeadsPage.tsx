@@ -17,7 +17,7 @@ export function LeadsPage() {
 
   const toggleSelect = (id: number) => {
     setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
   };
 
@@ -33,8 +33,7 @@ export function LeadsPage() {
     doReassign(payload);
   };
 
-  const isAllSelected =
-    leads.length > 0 && selectedIds.length === leads.length;
+  const isAllSelected = leads.length > 0 && selectedIds.length === leads.length;
 
   return (
     <div className="p-4 space-y-4">
@@ -81,9 +80,9 @@ export function LeadsPage() {
               <th className="px-2 py-1 text-left">Fecha</th>
               <th className="px-2 py-1 text-left">Nombre</th>
               <th className="px-2 py-1 text-left">Teléfono</th>
+              <th className="px-2 py-1 text-left">Cliente</th>
               <th className="px-2 py-1 text-left">Localidad</th>
               <th className="px-2 py-1 text-left">Modelo</th>
-              <th className="px-2 py-1 text-left">Cliente</th>
               <th className="px-2 py-1 text-left">Localización</th>
             </tr>
           </thead>

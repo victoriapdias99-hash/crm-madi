@@ -16,33 +16,66 @@ export class WebhookController {
 
   /**
    * POST /api/webhook/lead-webhook
-   * Recibe un lead desde un webhook externo
+   * Recibe un lead desde un webhook externo (Make, Postman, etc.)
    */
   async createLead(req: Request, res: Response): Promise<void> {
     try {
-      //console.log("📨 Webhook lead-webhook recibido:", req.body);
-      console.log("🔍 INSPECCIÓN DE JSON ENTRANTE:");
-      console.log(JSON.stringify(req.body, null, 2));
+      console.log(
+        "🔍 INSPECCIÓN DE JSON ENTRANTE:",
+        JSON.stringify(req.body, null, 2),
+      );
 
-      // Validar DTO con Zod
-      const validatedData = CreateWebhookLeadDto.parse(req.body);
+      // =================================================================
+      // 1. NORMALIZACIÓN DE DATOS (El "Puente" para Make)
+      // =================================================================
+      const rawBody = req.body;
 
-      // Ejecutar caso de uso
+      // Aquí hacemos la "traducción" de campos para que no se pierdan
+      const normalizedBody = {
+        ...rawBody,
+
+        // Si Make manda 'cliente', 'client' o 'nombreCliente', lo guardamos en 'cliente'
+        cliente:
+          rawBody.cliente || rawBody.client || rawBody.nombreCliente || "S/D",
+
+        // Aseguramos que el teléfono sea string
+        telefono: rawBody.telefono
+          ? String(rawBody.telefono)
+          : rawBody.phone
+            ? String(rawBody.phone)
+            : undefined,
+
+        // Mapeo de modelo/auto
+        auto: rawBody.auto || rawBody.modelo || rawBody.adName || "Desconocido",
+      };
+
+      console.log(
+        "🛠️ Datos Normalizados:",
+        JSON.stringify(normalizedBody, null, 2),
+      );
+
+      // =================================================================
+      // 2. VALIDACIÓN CON ZOD
+      // =================================================================
+      // Ahora pasamos 'normalizedBody' en lugar de 'req.body'
+      const validatedData = CreateWebhookLeadDto.parse(normalizedBody);
+
+      // 3. Ejecutar caso de uso
       const newLead = await this.createLeadUseCase.execute(validatedData);
 
-      console.log("✅ Lead webhook guardado:", newLead.id);
+      console.log("✅ Lead webhook guardado con ID:", newLead.id);
 
       res.status(201).json({
         success: true,
-        leadId: newLead.id,
         message: "Lead guardado exitosamente",
+        leadId: newLead.id,
         data: {
           id: newLead.id,
           nombre: newLead.nombre,
           telefono: newLead.telefono,
           auto: newLead.auto,
           localidad: newLead.localidad,
-          cliente: newLead.cliente, // Se muestra el cliente
+          cliente: newLead.cliente, // ¡Ahora esto debería salir lleno!
           comentarios: newLead.comentarios,
           source: newLead.source,
           createdAt: newLead.createdAt,
@@ -52,20 +85,24 @@ export class WebhookController {
     } catch (error: any) {
       console.error("❌ Error en webhook lead-webhook:", error);
 
-      // Error de validación Zod
       if (error instanceof ZodError) {
+        // Log para ver qué campo exacto falló
+        console.error(
+          "🔍 Detalles de validación:",
+          JSON.stringify(error.errors, null, 2),
+        );
+
         res.status(400).json({
           success: false,
-          error: "Datos inválidos",
+          error: "Datos inválidos según el esquema DTO",
           details: error.errors,
         });
         return;
       }
 
-      // Otros errores
       res.status(500).json({
         success: false,
-        error: "Error al procesar webhook",
+        error: "Error interno procesando webhook",
         message: error.message,
       });
     }
