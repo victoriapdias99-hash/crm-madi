@@ -961,163 +961,123 @@ export default function CampanasManagement() {
         </div>
       </div>
 
-      {/* Lista de Campañas */}
-      <div className="grid gap-4">
-        {campanasFiltradas && campanasFiltradas.length > 0 ? campanasFiltradas.map((campana: CampanaComercial) => (
-          <Card key={campana.id} className="card-elevated hover-lift">
-            <CardHeader className="pb-3">
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="text-lg">{getClienteNombre(campana.clienteId)}</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1 font-mono">
-                    Campaña: {campana.numeroCampana}
-                  </p>
-                </div>
-                <div className="flex space-x-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => openDialog(campana)}
-                  >
-                    Editar
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => duplicateCampana(campana)}
-                    className="bg-blue-100 hover:bg-blue-200 text-blue-700"
-                  >
-                    <Copy className="w-4 h-4 mr-1" />
-                    Duplicar
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => handleDelete(campana.id)}
-                  >
-                    Eliminar
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="grid grid-cols-2 md:grid-cols-7 gap-4">
-                {/* Marca */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Target className="w-4 h-4 text-blue-500" />
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Marca</h4>
-                  </div>
-                  <Badge variant="secondary" className="status-success">
-                    {campana.marca}
-                  </Badge>
-                </div>
-
-                {/* Zona */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-green-500" />
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Zona</h4>
-                  </div>
-                  <Badge variant="outline" className="status-info">
-                    {campana.zona}
-                  </Badge>
-                </div>
-
-                {/* Cantidad de Datos */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Package className="w-4 h-4 text-orange-500" />
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Datos Solicitados</h4>
-                  </div>
-                  <p className="text-sm font-semibold">{campana.cantidadDatosSolicitados.toLocaleString()}</p>
-                </div>
-
-                {/* Pedidos por Día - EDITABLE */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-amber-500" />
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Pedidos/día</h4>
-                  </div>
-                  <EditablePedidosPorDia campana={campana} />
-                </div>
-
-                {/* Fecha de Inicio */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-teal-500" />
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Fecha Inicio</h4>
-                  </div>
-                  <p className="text-sm">
-                    {campana.fechaCampana ? formatDateForDisplay(campana.fechaCampana) : 'No especificada'}
-                  </p>
-                </div>
-
-                {/* Fecha de Fin */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-red-500" />
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Fecha Fin</h4>
-                  </div>
-                  <p className="text-sm">
-                    {campana.fechaFin ? formatDateForDisplay(campana.fechaFin) : 'No especificada'}
-                  </p>
-                </div>
-
-                {/* Fecha de Creación */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-purple-500" />
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Fecha Creación</h4>
-                  </div>
-                  <p className="text-sm">
-                    {campana.fechaCreacion ? new Date(campana.fechaCreacion).toLocaleDateString('es-AR') : 'No especificada'}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )) : (
-          <Card>
-            <CardContent className="p-8 text-center">
+      {/* Lista de Campañas - Formato Tabla */}
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
+          {campanasFiltradas && campanasFiltradas.length > 0 ? (
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Fecha Inicio</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Cliente</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Marca</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Zona</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Datos</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Pedidos/día</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Fecha Fin</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {campanasFiltradas.map((campana: CampanaComercial) => (
+                  <tr key={campana.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-4 py-3 text-sm text-slate-600">
+                      {campana.fechaCampana ? formatDateForDisplay(campana.fechaCampana) : 'N/A'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col">
+                        <span className="font-medium text-slate-900 text-sm">{getClienteNombre(campana.clienteId)}</span>
+                        <span className="text-xs text-slate-500">Campaña #{campana.numeroCampana}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                        {campana.marca}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variant="outline" className="border-green-300 text-green-700">
+                        {campana.zona}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-center text-sm font-semibold text-slate-900">
+                      {campana.cantidadDatosSolicitados.toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <EditablePedidosPorDia campana={campana} />
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-600">
+                      {campana.fechaFin ? formatDateForDisplay(campana.fechaFin) : 'N/A'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openDialog(campana)}
+                          className="h-8 w-8 p-0 hover:bg-blue-100"
+                        >
+                          <Edit2 className="w-4 h-4 text-blue-600" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => duplicateCampana(campana)}
+                          className="h-8 w-8 p-0 hover:bg-green-100"
+                        >
+                          <Copy className="w-4 h-4 text-green-600" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDelete(campana.id)}
+                          className="h-8 w-8 p-0 hover:bg-red-100"
+                        >
+                          <X className="w-4 h-4 text-red-600" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="p-8 text-center">
               <Filter className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
               <h3 className="text-lg font-medium mb-2">
                 {Array.isArray(campanas) && campanas.length === 0 
                   ? "No hay campañas registradas" 
-                  : "No hay campañas para el cliente seleccionado"
+                  : "No hay campañas para los filtros seleccionados"
                 }
               </h3>
               <p className="text-muted-foreground mb-4">
                 {Array.isArray(campanas) && campanas.length === 0 
                   ? "Comienza creando tu primera campaña comercial."
-                  : clienteFiltro !== 'todos' 
-                    ? "Prueba seleccionando otro cliente o crea una nueva campaña."
-                    : "Comienza creando tu primera campaña comercial."
+                  : "Prueba ajustando los filtros o crea una nueva campaña."
                 }
               </p>
-              {Array.isArray(campanas) && campanas.length === 0 ? (
-                <Button onClick={() => openDialog()} className="btn-gradient">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Crear Primera Campaña
-                </Button>
-              ) : (
-                <div className="flex gap-2 justify-center">
+              <div className="flex gap-2 justify-center">
+                {(clienteFiltro !== 'todos' || fechaFiltro || mesFiltro !== 'todos') && (
                   <Button 
                     variant="outline" 
-                    onClick={() => setClienteFiltro('todos')}
+                    onClick={() => {
+                      setClienteFiltro('todos');
+                      setFechaFiltro('');
+                      setMesFiltro('todos');
+                    }}
                   >
-                    Ver Todas las Campañas
+                    Limpiar Filtros
                   </Button>
-                  <Button onClick={() => openDialog()} className="btn-gradient">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Nueva Campaña
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-      </div>
+                )}
+                <Button onClick={() => openDialog()} className="btn-gradient">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nueva Campaña
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
     </div>
   );
 }
