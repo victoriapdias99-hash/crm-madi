@@ -23,5 +23,10 @@ export function registerWebhookRoutes(app: Express): void {
 
   app.get("/api/webhook/leads", (req, res) => controller.getLeads(req, res));
 
+  // Nuevas rutas CRM
+  app.get("/api/webhook/leads-crm", (req, res) => controller.getLeadsCRM(req, res));
+  app.patch("/api/webhook/leads/:id/crm", (req, res) => controller.updateLeadCRM(req, res));
+  app.get("/api/webhook/leads-kanban", (req, res) => controller.getKanbanData(req, res));
+
   console.log("✅ Rutas del sistema de webhooks registradas correctamente.");
 }

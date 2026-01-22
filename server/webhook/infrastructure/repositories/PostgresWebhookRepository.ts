@@ -232,4 +232,75 @@ export class PostgresWebhookRepository implements IWebhookRepository {
       data.updatedAt || data.updated_at,
     );
   }
+
+  // ===========================================================================
+  // ✅ UPDATE: Actualizar campos CRM de un lead
+  // ===========================================================================
+  async updateLeadCRM(id: number, data: {
+    estadoLead?: string;
+    subEstado?: string;
+    ultimoContacto?: Date | null;
+    proximoSeguimiento?: Date | null;
+    prioridad?: string;
+    observaciones?: string;
+    vendedorAsignado?: string;
+  }): Promise<any> {
+    console.log(`🔄 Actualizando lead CRM ID: ${id}`, data);
+
+    const [updated] = await db
+      .update(opLeadWebhook)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(opLeadWebhook.id, id))
+      .returning();
+
+    return updated;
+  }
+
+  // ===========================================================================
+  // ✅ GET ALL WITH CRM: Obtener leads con campos CRM
+  // ===========================================================================
+  async getAllWithCRM(): Promise<any[]> {
+    const results = await db
+      .select()
+      .from(opLeadWebhook)
+      .orderBy(desc(opLeadWebhook.createdAt));
+    
+    return results;
+  }
+
+  // ===========================================================================
+  // ✅ GET BY ESTADO: Obtener leads por estado (para Kanban)
+  // ===========================================================================
+  async getByEstado(estado: string): Promise<any[]> {
+    const results = await db
+      .select()
+      .from(opLeadWebhook)
+      .where(eq(opLeadWebhook.estadoLead, estado))
+      .orderBy(desc(opLeadWebhook.createdAt));
+    
+    return results;
+  }
+
+  // ===========================================================================
+  // ✅ GET KANBAN DATA: Obtener datos agrupados para dashboard Kanban
+  // ===========================================================================
+  async getKanbanData(): Promise<any> {
+    const allLeads = await db
+      .select()
+      .from(opLeadWebhook)
+      .orderBy(desc(opLeadWebhook.createdAt));
+
+    const grouped = {
+      nuevo: allLeads.filter(l => l.estadoLead === 'nuevo' || !l.estadoLead),
+      en_seguimiento: allLeads.filter(l => l.estadoLead === 'en_seguimiento'),
+      proximo_venta: allLeads.filter(l => l.estadoLead === 'proximo_venta'),
+      vendido: allLeads.filter(l => l.estadoLead === 'vendido'),
+      no_interesado: allLeads.filter(l => l.estadoLead === 'no_interesado'),
+    };
+
+    return grouped;
+  }
 }

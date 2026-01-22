@@ -144,4 +144,72 @@ export class WebhookController {
       });
     }
   }
+
+  /**
+   * GET /api/webhook/leads-crm
+   * Obtiene todos los leads con campos CRM
+   */
+  async getLeadsCRM(req: Request, res: Response): Promise<void> {
+    try {
+      const leads = await this.repository.getAllWithCRM();
+      res.status(200).json({
+        success: true,
+        count: leads.length,
+        data: leads,
+      });
+    } catch (error: any) {
+      console.error("❌ Error al leer leads CRM:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * PATCH /api/webhook/leads/:id/crm
+   * Actualiza campos CRM de un lead
+   */
+  async updateLeadCRM(req: Request, res: Response): Promise<void> {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        res.status(400).json({ success: false, error: "ID inválido" });
+        return;
+      }
+
+      const { estadoLead, subEstado, ultimoContacto, proximoSeguimiento, prioridad, observaciones, vendedorAsignado } = req.body;
+
+      const updated = await this.repository.updateLeadCRM(id, {
+        estadoLead,
+        subEstado,
+        ultimoContacto: ultimoContacto ? new Date(ultimoContacto) : null,
+        proximoSeguimiento: proximoSeguimiento ? new Date(proximoSeguimiento) : null,
+        prioridad,
+        observaciones,
+        vendedorAsignado,
+      });
+
+      if (!updated) {
+        res.status(404).json({ success: false, error: "Lead no encontrado" });
+        return;
+      }
+
+      res.status(200).json({ success: true, data: updated });
+    } catch (error: any) {
+      console.error("❌ Error al actualizar lead CRM:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * GET /api/webhook/leads-kanban
+   * Obtiene leads agrupados por estado para vista Kanban
+   */
+  async getKanbanData(req: Request, res: Response): Promise<void> {
+    try {
+      const data = await this.repository.getKanbanData();
+      res.status(200).json({ success: true, data });
+    } catch (error: any) {
+      console.error("❌ Error al obtener datos Kanban:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
 }
