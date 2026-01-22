@@ -459,7 +459,7 @@ export default function CampanasManagement() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos los clientes</SelectItem>
-                {clientes.map(cliente => (
+                {[...clientes].sort((a, b) => a.nombreCliente.localeCompare(b.nombreCliente)).map(cliente => (
                   <SelectItem key={cliente.id} value={cliente.id.toString()}>
                     {cliente.nombreCliente}
                   </SelectItem>
@@ -496,7 +496,7 @@ export default function CampanasManagement() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {clientes.map((cliente) => (
+                          {[...clientes].sort((a, b) => a.nombreCliente.localeCompare(b.nombreCliente)).map((cliente) => (
                             <SelectItem key={cliente.id} value={cliente.id.toString()}>
                               {cliente.nombreCliente}
                             </SelectItem>
