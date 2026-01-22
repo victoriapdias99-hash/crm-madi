@@ -87,11 +87,11 @@ function LeadsPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Carga inicial
+  // Carga inicial - usando endpoint CRM que incluye todos los campos
   const fetchLeads = async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/webhook/leads");
+      const response = await fetch("/api/webhook/leads-crm");
       if (!response.ok) throw new Error("Error al cargar leads");
       const result = await response.json();
       setLeads(result.data || []);
