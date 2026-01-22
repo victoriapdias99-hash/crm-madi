@@ -333,7 +333,7 @@ function LeadsPage() {
   };
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="min-h-screen p-4 space-y-4" style={{ backgroundColor: '#5b9bd5' }}>
       {/* Encabezado */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
