@@ -121,6 +121,8 @@ export default function CampanasManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCampana, setEditingCampana] = useState<CampanaComercial | null>(null);
   const [clienteFiltro, setClienteFiltro] = useState<string>('todos');
+  const [fechaFiltro, setFechaFiltro] = useState<string>('');
+  const [mesFiltro, setMesFiltro] = useState<string>('todos');
   const [marcasCount, setMarcasCount] = useState(1); // Número de pares marca/zona visibles
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -411,18 +413,46 @@ export default function CampanasManagement() {
     return cliente ? cliente.nombreCliente : `Cliente #${clienteId}`;
   };
 
-  // Filtrar campañas por cliente
+  // Filtrar y ordenar campañas
   const campanasFiltradas = useMemo(() => {
     if (!Array.isArray(campanas)) return [];
     
-    if (clienteFiltro === 'todos') {
-      return campanas;
+    let resultado = [...campanas];
+    
+    // Filtrar por cliente
+    if (clienteFiltro !== 'todos') {
+      resultado = resultado.filter((campana: CampanaComercial) => 
+        campana.clienteId.toString() === clienteFiltro
+      );
     }
     
-    return campanas.filter((campana: CampanaComercial) => 
-      campana.clienteId.toString() === clienteFiltro
-    );
-  }, [campanas, clienteFiltro]);
+    // Filtrar por fecha específica
+    if (fechaFiltro) {
+      resultado = resultado.filter((campana: CampanaComercial) => {
+        if (!campana.fechaCampana) return false;
+        const fechaCampana = campana.fechaCampana.split('T')[0];
+        return fechaCampana === fechaFiltro;
+      });
+    }
+    
+    // Filtrar por mes
+    if (mesFiltro !== 'todos') {
+      resultado = resultado.filter((campana: CampanaComercial) => {
+        if (!campana.fechaCampana) return false;
+        const fecha = new Date(campana.fechaCampana);
+        return (fecha.getMonth() + 1).toString() === mesFiltro;
+      });
+    }
+    
+    // Ordenar por fecha de inicio (más recientes primero)
+    resultado.sort((a: CampanaComercial, b: CampanaComercial) => {
+      const fechaA = a.fechaCampana ? new Date(a.fechaCampana).getTime() : 0;
+      const fechaB = b.fechaCampana ? new Date(b.fechaCampana).getTime() : 0;
+      return fechaB - fechaA;
+    });
+    
+    return resultado;
+  }, [campanas, clienteFiltro, fechaFiltro, mesFiltro]);
 
   if (isLoading) {
     return (
@@ -464,6 +494,47 @@ export default function CampanasManagement() {
                     {cliente.nombreCliente}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            <span className="text-sm font-medium">Fecha:</span>
+            <input
+              type="date"
+              value={fechaFiltro}
+              onChange={(e) => setFechaFiltro(e.target.value)}
+              className="border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+            {fechaFiltro && (
+              <button 
+                onClick={() => setFechaFiltro('')}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Mes:</span>
+            <Select value={mesFiltro} onValueChange={setMesFiltro}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="1">Enero</SelectItem>
+                <SelectItem value="2">Febrero</SelectItem>
+                <SelectItem value="3">Marzo</SelectItem>
+                <SelectItem value="4">Abril</SelectItem>
+                <SelectItem value="5">Mayo</SelectItem>
+                <SelectItem value="6">Junio</SelectItem>
+                <SelectItem value="7">Julio</SelectItem>
+                <SelectItem value="8">Agosto</SelectItem>
+                <SelectItem value="9">Septiembre</SelectItem>
+                <SelectItem value="10">Octubre</SelectItem>
+                <SelectItem value="11">Noviembre</SelectItem>
+                <SelectItem value="12">Diciembre</SelectItem>
               </SelectContent>
             </Select>
           </div>
