@@ -49,6 +49,11 @@ function LeadsPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
+  const [searchNombre, setSearchNombre] = useState("");
+  const [searchApellido, setSearchApellido] = useState("");
+  const [searchTelefono, setSearchTelefono] = useState("");
+  const [searchLocalidad, setSearchLocalidad] = useState("");
+
   const [currentPage, setCurrentPage] = useState(1);
 
   // Carga inicial
@@ -106,7 +111,7 @@ function LeadsPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedZone, selectedBrand, selectedClient, startDate, endDate]);
+  }, [selectedZone, selectedBrand, selectedClient, startDate, endDate, searchNombre, searchApellido, searchTelefono, searchLocalidad]);
 
   // ORDENAMIENTO FORZADO EN FRONTEND (useMemo)
   // Esto asegura que, sin importar cómo vengan del backend, se ordenen
@@ -228,9 +233,34 @@ function LeadsPage() {
           if (leadDate > end) return false;
         }
       }
+
+      // Filtros de búsqueda por texto
+      const leadNombre = normalizeText(lead.nombre);
+      
+      if (searchNombre) {
+        const searchTerm = normalizeText(searchNombre);
+        if (!leadNombre.includes(searchTerm)) return false;
+      }
+      
+      if (searchApellido) {
+        const searchTerm = normalizeText(searchApellido);
+        if (!leadNombre.includes(searchTerm)) return false;
+      }
+      
+      if (searchTelefono) {
+        const leadTel = (lead.telefono || "").replace(/\D/g, "");
+        const searchTel = searchTelefono.replace(/\D/g, "");
+        if (!leadTel.includes(searchTel)) return false;
+      }
+      
+      if (searchLocalidad) {
+        const leadLoc = normalizeText(lead.localidad);
+        const searchTerm = normalizeText(searchLocalidad);
+        if (!leadLoc.includes(searchTerm)) return false;
+      }
+
       return true;
     });
-    // CAMBIO DEPENDENCIA: Dependemos de 'sortedLeads' ahora
   }, [
     sortedLeads,
     selectedZone,
@@ -238,6 +268,10 @@ function LeadsPage() {
     selectedClient,
     startDate,
     endDate,
+    searchNombre,
+    searchApellido,
+    searchTelefono,
+    searchLocalidad,
   ]);
 
   const totalItems = filteredLeads.length;
@@ -255,6 +289,10 @@ function LeadsPage() {
     setSelectedClient("all");
     setStartDate("");
     setEndDate("");
+    setSearchNombre("");
+    setSearchApellido("");
+    setSearchTelefono("");
+    setSearchLocalidad("");
     setCurrentPage(1);
   };
 
@@ -418,6 +456,60 @@ function LeadsPage() {
               onChange={(e) => setEndDate(e.target.value)}
             />
           </div>
+        </div>
+
+        <div className="h-8 w-px bg-gray-300 mx-2 shrink-0"></div>
+
+        <div className="flex flex-col gap-1 shrink-0">
+          <label className="text-xs font-semibold text-gray-500 uppercase">
+            Nombre
+          </label>
+          <input
+            type="text"
+            placeholder="Buscar nombre..."
+            className="border border-gray-300 rounded px-3 py-2 text-sm min-w-[140px] focus:ring-2 focus:ring-blue-500 outline-none"
+            value={searchNombre}
+            onChange={(e) => setSearchNombre(e.target.value)}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1 shrink-0">
+          <label className="text-xs font-semibold text-gray-500 uppercase">
+            Apellido
+          </label>
+          <input
+            type="text"
+            placeholder="Buscar apellido..."
+            className="border border-gray-300 rounded px-3 py-2 text-sm min-w-[140px] focus:ring-2 focus:ring-blue-500 outline-none"
+            value={searchApellido}
+            onChange={(e) => setSearchApellido(e.target.value)}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1 shrink-0">
+          <label className="text-xs font-semibold text-gray-500 uppercase">
+            Teléfono
+          </label>
+          <input
+            type="text"
+            placeholder="Buscar teléfono..."
+            className="border border-gray-300 rounded px-3 py-2 text-sm min-w-[140px] focus:ring-2 focus:ring-blue-500 outline-none"
+            value={searchTelefono}
+            onChange={(e) => setSearchTelefono(e.target.value)}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1 shrink-0">
+          <label className="text-xs font-semibold text-gray-500 uppercase">
+            Localidad
+          </label>
+          <input
+            type="text"
+            placeholder="Buscar localidad..."
+            className="border border-gray-300 rounded px-3 py-2 text-sm min-w-[140px] focus:ring-2 focus:ring-blue-500 outline-none"
+            value={searchLocalidad}
+            onChange={(e) => setSearchLocalidad(e.target.value)}
+          />
         </div>
 
         <div className="flex pb-1 shrink-0">
