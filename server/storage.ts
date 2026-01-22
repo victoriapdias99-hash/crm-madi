@@ -103,6 +103,7 @@ export interface IStorage {
   // Cliente operations
   getCliente(id: number): Promise<Cliente | undefined>;
   getAllClientes(): Promise<Cliente[]>;
+  getClientesByUserId(userId: number): Promise<Cliente[]>;
   createCliente(cliente: InsertCliente): Promise<Cliente>;
   updateCliente(
     id: number,
@@ -663,6 +664,12 @@ export class MemStorage implements IStorage {
     );
   }
 
+  async getClientesByUserId(userId: number): Promise<Cliente[]> {
+    return Array.from(this.clientes.values())
+      .filter((cliente) => cliente.userId === userId)
+      .sort((a, b) => a.nombreCliente.localeCompare(b.nombreCliente));
+  }
+
   async createCliente(insertCliente: InsertCliente): Promise<Cliente> {
     const id = this.currentClienteId++;
     const cliente: Cliente = {
@@ -671,6 +678,7 @@ export class MemStorage implements IStorage {
       nombreComercial: insertCliente.nombreComercial,
       telefono: insertCliente.telefono || null,
       email: insertCliente.email || null,
+      userId: insertCliente.userId || null,
       fechaAlta: new Date(),
       cuitCliente: insertCliente.cuitCliente || null,
       tipoFacturacion: insertCliente.tipoFacturacion,
@@ -681,6 +689,7 @@ export class MemStorage implements IStorage {
       exclusionesGeograficas: insertCliente.exclusionesGeograficas || null,
       integracion: insertCliente.integracion || null,
       tipoCliente: insertCliente.tipoCliente || null,
+      informacionAdicional: insertCliente.informacionAdicional || null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -1212,6 +1221,14 @@ export class DatabaseStorage implements IStorage {
 
   async getAllClientes(): Promise<Cliente[]> {
     return await db.select().from(clientes);
+  }
+
+  async getClientesByUserId(userId: number): Promise<Cliente[]> {
+    return await db
+      .select()
+      .from(clientes)
+      .where(eq(clientes.userId, userId))
+      .orderBy(clientes.nombreCliente);
   }
 
   async createCliente(cliente: InsertCliente): Promise<Cliente> {

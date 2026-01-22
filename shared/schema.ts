@@ -10,7 +10,7 @@ import {
   date,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod";
+import { number, z } from "zod";
 
 // Usuario y autenticación
 export const users = pgTable("users", {
@@ -243,6 +243,7 @@ export const clientes = pgTable("clientes", {
   nombreComercial: text("nombre_comercial").notNull(),
   telefono: text("telefono"),
   email: text("email"),
+  userId: integer("user_id").references(() => users.id), // ID de usuario asignado
   fechaAlta: timestamp("fecha_alta").defaultNow(),
   cuitCliente: text("cuit_cliente"),
   tipoFacturacion: text("tipo_facturacion").notNull(), // "C" o "A"

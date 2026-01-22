@@ -25,6 +25,7 @@ import {
   insertLeadNoteSchema,
   insertUserSchema,
   insertClienteSchema,
+  InsertCliente,
   insertCampanaComercialSchema,
   createCampanaComercialSchema,
   clientes,
@@ -2913,26 +2914,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Endpoints para gestión de clientes
+  //app.get("/api/clientes", async (req, res) => {
+  //try {
+  //const clientes = await storage.getAllClientes();
+  //res.json(clientes);
+  //} catch (error) {
+  //res.status(500).json({ error: "Failed to fetch clientes" });
+  //}
+  //});
   app.get("/api/clientes", async (req, res) => {
     try {
-      const clientes = await storage.getAllClientes();
+      if (!req.session?.userId) {
+        return res.status(401).json({ error: "No autorizado" });
+      }
+
+      const userId = req.session.userId;
+      const userRole = req.session.role;
+
+      let clientes;
+
+      if (userRole === "admin") {
+        // Admin ve TODOS
+        clientes = await storage.getAllClientes();
+      } else {
+        // Usuario normal ve SOLO los suyos
+        //clientes = await storage.getClientesByUserId(userId);
+        const todosClientes = await storage.getAllClientes();
+        clientes = todosClientes.filter((c) => c.userId === userId);
+      }
+
       res.json(clientes);
     } catch (error) {
+      console.error("Error fetching clientes:", error);
       res.status(500).json({ error: "Failed to fetch clientes" });
+    }
+  });
+
+  //app.get("/api/clientes/:id", async (req, res) => {
+  //try {
+  //const id = parseInt(req.params.id);
+  //const cliente = await storage.getCliente(id);
+
+  //if (!cliente) {
+  //return res.status(404).json({ error: "Cliente not found" });
+  //}
+
+  //res.json(cliente);
+  //} catch (error) {
+  //res.status(500).json({ error: "Failed to fetch cliente" });
+  //}
+  //});
+  app.get("/api/clientes/stats", async (req, res) => {
+    try {
+      // Verificar autenticación
+      if (!req.session || !req.session.userId) {
+        return res.status(401).json({ error: "No autenticado" });
+      }
+
+      const userId = req.session.userId; // Ya es number del session
+      const userRole = req.session.role;
+
+      console.log("Stats - userId:", userId, "role:", userRole);
+
+      let totalClientes: number;
+
+      if (userRole === "admin") {
+        // Admin ve todos los clientes
+        const clientes = await storage.getAllClientes();
+        totalClientes = clientes.length;
+      } else {
+        // Usuario normal ve solo sus clientes
+        const clientes = await storage.getClientesByUserId(userId);
+        totalClientes = clientes.length;
+      }
+
+      console.log("Total clientes:", totalClientes);
+
+      res.json({ total: totalClientes });
+    } catch (error) {
+      console.error("Error fetching clientes stats:", error);
+      res.status(500).json({ error: "Failed to fetch clientes stats" });
     }
   });
 
   app.get("/api/clientes/:id", async (req, res) => {
     try {
+      // Verificar autenticación
+      if (!req.session || !req.session.userId) {
+        return res.status(401).json({
+          error: "No autorizado. Debes iniciar sesión.",
+        });
+      }
+
       const id = parseInt(req.params.id);
+      const userId = req.session.userId;
+      const userRole = req.session.role;
+
+      // Buscar el cliente
       const cliente = await storage.getCliente(id);
 
       if (!cliente) {
         return res.status(404).json({ error: "Cliente not found" });
       }
 
+      // Si no es admin, verificar que el cliente le pertenezca
+      if (userRole !== "admin" && cliente.userId !== userId) {
+        return res.status(403).json({
+          error: "No tienes permiso para ver este cliente",
+        });
+      }
+
       res.json(cliente);
     } catch (error) {
+      console.error("Error fetching cliente:", error);
       res.status(500).json({ error: "Failed to fetch cliente" });
     }
   });
@@ -2940,16 +3034,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/clientes", async (req, res) => {
     try {
       if (!req.session || !req.session.userId) {
-        return res.status(401).json({ 
-          error: "No autorizado. Debes iniciar sesión." 
+        return res.status(401).json({
+          error: "No autorizado. Debes iniciar sesión.",
         });
       }
       console.log("Creating cliente with data:", req.body);
       console.log("User ID from session:", req.session.userId);
-      const validatedData = insertClienteSchema.parse(req.body);
-      const clienteData ={validatedData, userId: req.session.userId}
+      const dataWithDefaults = {
+        ...req.body,
+        // Si no viene nombreComercial, usar nombreCliente
+        nombreComercial:
+          req.body.nombreComercial ||
+          req.body.nombreCliente ||
+          "Sin especificar",
+        // Si no viene tipoFacturacion, usar "C" por defecto
+        tipoFacturacion: req.body.tipoFacturacion || "C",
+      };
+      const validatedData = insertClienteSchema.parse(dataWithDefaults);
+      //const clienteData = { validatedData, userId: req.session.userId };
+      const cliente = await storage.createCliente({
+        ...validatedData,
+        userId: req.session.userId,
+      } as InsertCliente);
       //const cliente = await storage.createCliente(validatedData);
-      const cliente = await storage.createCliente(clienteData);
+      //const cliente = await storage.createCliente(clienteData);
       console.log("Cliente created successfully:", cliente);
       res.status(201).json(cliente);
     } catch (error) {
@@ -2962,32 +3070,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  //app.put("/api/clientes/:id", async (req, res) => {
+  //try {
+  //const id = parseInt(req.params.id);
+  //const cliente = await storage.updateCliente(id, req.body);
+
+  //if (!cliente) {
+  //return res.status(404).json({ error: "Cliente not found" });
+  //}
+
+  //res.json(cliente);
+  //} catch (error) {
+  //res.status(500).json({ error: "Failed to update cliente" });
+  //}
+  //});
   app.put("/api/clientes/:id", async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      const cliente = await storage.updateCliente(id, req.body);
+      // 1. Verificar autenticación
+      if (!req.session || !req.session.userId) {
+        return res.status(401).json({
+          error: "No autorizado. Debes iniciar sesión.",
+        });
+      }
 
-      if (!cliente) {
+      const id = parseInt(req.params.id);
+      const userId = req.session.userId;
+      const userRole = req.session.role;
+
+      // 2. Buscar el cliente antes de actualizar
+      const clienteExistente = await storage.getCliente(id);
+
+      if (!clienteExistente) {
         return res.status(404).json({ error: "Cliente not found" });
       }
 
-      res.json(cliente);
+      // 3. Verificar propiedad (si no es admin)
+      if (userRole !== "admin" && clienteExistente.userId !== userId) {
+        return res.status(403).json({
+          error: "No tienes permiso para actualizar este cliente",
+        });
+      }
+
+      // 4. Actualizar el cliente
+      const clienteActualizado = await storage.updateCliente(id, req.body);
+
+      if (!clienteActualizado) {
+        return res.status(404).json({ error: "Cliente not found" });
+      }
+
+      res.json(clienteActualizado);
     } catch (error) {
+      console.error("Error updating cliente:", error);
       res.status(500).json({ error: "Failed to update cliente" });
     }
   });
 
+  //app.delete("/api/clientes/:id", async (req, res) => {
+  //try {
+  //const id = parseInt(req.params.id);
+  //const deleted = await storage.deleteCliente(id);
+
+  //if (!deleted) {
+  //return res.status(404).json({ error: "Cliente not found" });
+  //}
+
+  //res.json({ success: true });
+  //} catch (error) {
+  //res.status(500).json({ error: "Failed to delete cliente" });
+  //}
+  //});
   app.delete("/api/clientes/:id", async (req, res) => {
     try {
+      // 1. Verificar autenticación
+      if (!req.session || !req.session.userId) {
+        return res.status(401).json({
+          error: "No autorizado. Debes iniciar sesión.",
+        });
+      }
+
       const id = parseInt(req.params.id);
+      const userId = req.session.userId;
+      const userRole = req.session.role;
+
+      // 2. Buscar el cliente ANTES de eliminar
+      const clienteExistente = await storage.getCliente(id);
+
+      if (!clienteExistente) {
+        return res.status(404).json({ error: "Cliente not found" });
+      }
+
+      // 3. Validar propiedad (si no es admin)
+      if (userRole !== "admin" && clienteExistente.userId !== userId) {
+        return res.status(403).json({
+          error: "No tienes permiso para eliminar este cliente",
+        });
+      }
+
+      // 4. Eliminar el cliente
       const deleted = await storage.deleteCliente(id);
 
       if (!deleted) {
         return res.status(404).json({ error: "Cliente not found" });
       }
 
-      res.json({ success: true });
+      res.json({
+        success: true,
+        message: "Cliente eliminado correctamente",
+      });
     } catch (error) {
+      console.error("Error deleting cliente:", error);
       res.status(500).json({ error: "Failed to delete cliente" });
     }
   });
