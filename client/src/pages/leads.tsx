@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { Link } from "wouter";
 import { ReassignLeadsDialog } from "@/components/leads/ReassignLeadsDialog";
 
 // --- CONSTANTES ---
@@ -336,6 +337,11 @@ function LeadsPage() {
       {/* Encabezado */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
+          <Link href="/">
+            <button className="px-3 py-1 rounded border border-gray-300 hover:bg-gray-100 flex items-center gap-1 text-gray-600">
+              <span>←</span> Atrás
+            </button>
+          </Link>
           <h1 className="text-xl font-semibold">Leads</h1>
           {!loading && (
             <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full border font-medium">
