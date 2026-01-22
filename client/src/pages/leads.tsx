@@ -398,7 +398,12 @@ function LeadsPage() {
         </div>
 
         <div className="flex gap-2">
-          {/* Botón Sync */}
+          <Link href="/leads-kanban">
+            <button className="px-3 py-1 rounded border border-purple-600 text-purple-700 bg-purple-50 hover:bg-purple-100 flex items-center gap-2">
+              📊 Vista Kanban
+            </button>
+          </Link>
+
           <button
             className="px-3 py-1 rounded border border-green-600 text-green-700 bg-green-50 hover:bg-green-100 disabled:opacity-50 flex items-center gap-2"
             onClick={handleSync}
@@ -415,7 +420,7 @@ function LeadsPage() {
           </button>
 
           <button
-            className="px-3 py-1 rounded border hover:bg-gray-100"
+            className="px-3 py-1 rounded border hover:bg-gray-100 bg-white"
             onClick={fetchLeads}
             disabled={loading}
           >
