@@ -30,37 +30,7 @@ interface WebhookLead {
   comentarios: string | null;
   source: string;
   createdAt: string;
-  estadoLead: string | null;
-  subEstado: string | null;
-  ultimoContacto: string | null;
-  proximoSeguimiento: string | null;
-  prioridad: string | null;
-  observaciones: string | null;
-  vendedorAsignado: string | null;
 }
-
-const ESTADOS_PRINCIPALES = [
-  { value: "nuevo", label: "Nuevo", color: "bg-blue-100 text-blue-800" },
-  { value: "en_seguimiento", label: "En seguimiento", color: "bg-yellow-100 text-yellow-800" },
-  { value: "proximo_venta", label: "Próximo a venta", color: "bg-purple-100 text-purple-800" },
-  { value: "vendido", label: "Vendido", color: "bg-green-100 text-green-800" },
-  { value: "no_interesado", label: "No interesado", color: "bg-red-100 text-red-800" },
-];
-
-const SUB_ESTADOS = [
-  { value: "llamado_no_atendio", label: "Llamado - No atendió" },
-  { value: "contactado", label: "Contactado" },
-  { value: "interesado", label: "Interesado" },
-  { value: "turno_agendado", label: "Turno agendado" },
-  { value: "presentado_concesionario", label: "Presentado en concesionario" },
-  { value: "caido_perdido", label: "Caído / Perdido" },
-];
-
-const PRIORIDADES = [
-  { value: "alta", label: "Alta", color: "bg-red-100 text-red-700" },
-  { value: "media", label: "Media", color: "bg-yellow-100 text-yellow-700" },
-  { value: "baja", label: "Baja", color: "bg-gray-100 text-gray-700" },
-];
 
 function LeadsPage() {
   const [leads, setLeads] = useState<WebhookLead[]>([]);
@@ -87,11 +57,11 @@ function LeadsPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Carga inicial - usando endpoint CRM que incluye todos los campos
+  // Carga inicial
   const fetchLeads = async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/webhook/leads-crm");
+      const response = await fetch("/api/webhook/leads");
       if (!response.ok) throw new Error("Error al cargar leads");
       const result = await response.json();
       setLeads(result.data || []);
@@ -132,23 +102,6 @@ function LeadsPage() {
       alert("❌ Error al sincronizar: " + err.message);
     } finally {
       setSyncing(false);
-    }
-  };
-
-  const updateLeadCRM = async (id: number, field: string, value: any) => {
-    try {
-      const response = await fetch(`/api/webhook/leads/${id}/crm`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [field]: value }),
-      });
-      if (!response.ok) throw new Error("Error al actualizar");
-      setLeads((prev) =>
-        prev.map((l) => (l.id === id ? { ...l, [field]: value } : l))
-      );
-    } catch (err: any) {
-      console.error("Error actualizando lead:", err);
-      alert("Error al actualizar: " + err.message);
     }
   };
 
@@ -398,12 +351,7 @@ function LeadsPage() {
         </div>
 
         <div className="flex gap-2">
-          <Link href="/leads-kanban">
-            <button className="px-3 py-1 rounded border border-purple-600 text-purple-700 bg-purple-50 hover:bg-purple-100 flex items-center gap-2">
-              📊 Vista Kanban
-            </button>
-          </Link>
-
+          {/* Botón Sync */}
           <button
             className="px-3 py-1 rounded border border-green-600 text-green-700 bg-green-50 hover:bg-green-100 disabled:opacity-50 flex items-center gap-2"
             onClick={handleSync}
@@ -420,7 +368,7 @@ function LeadsPage() {
           </button>
 
           <button
-            className="px-3 py-1 rounded border hover:bg-gray-100 bg-white"
+            className="px-3 py-1 rounded border hover:bg-gray-100"
             onClick={fetchLeads}
             disabled={loading}
           >
@@ -586,135 +534,83 @@ function LeadsPage() {
         </div>
       )}
 
-      {/* Tabla con campos CRM */}
+      {/* Tabla (Sin cambios) */}
       <div className="border rounded overflow-x-auto bg-white shadow-sm mt-4">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b sticky top-0">
+        <table className="w-full table-fixed text-sm">
+          <thead className="bg-gray-50 border-b">
             <tr>
-              <th className="w-10 px-3 py-3">
+              <th className="w-10 px-4 py-3">
                 <input
                   type="checkbox"
                   checked={isAllSelected}
                   onChange={toggleSelectAll}
                 />
               </th>
-              <th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Fecha</th>
-              <th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Nombre</th>
-              <th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Teléfono</th>
-              <th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Estado</th>
-              <th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Sub-estado</th>
-              <th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Prioridad</th>
-              <th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Vendedor</th>
-              <th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Últ. Contacto</th>
-              <th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Próx. Seguim.</th>
-              <th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Cliente</th>
-              <th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Auto</th>
-              <th className="px-3 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Observaciones</th>
+              <th className="w-[150px] px-4 py-3 text-left font-medium text-gray-600">
+                Fecha
+              </th>
+              <th className="w-[200px] px-4 py-3 text-left font-medium text-gray-600">
+                Nombre
+              </th>
+              <th className="w-[150px] px-4 py-3 text-left font-medium text-gray-600">
+                Teléfono
+              </th>
+              <th className="w-[140px] px-4 py-3 text-left font-medium text-gray-600">
+                Cliente
+              </th>
+              <th className="w-[150px] px-4 py-3 text-left font-medium text-gray-600">
+                Auto
+              </th>
+              <th className="w-[150px] px-4 py-3 text-left font-medium text-gray-600">
+                Localidad
+              </th>
+              <th className="w-[250px] px-4 py-3 text-left font-medium text-gray-600">
+                Comentario
+              </th>
+              <th className="w-[120px] px-4 py-3 text-left font-medium text-gray-600">
+                Origen
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {paginatedLeads.map((lead) => {
-              const estadoInfo = ESTADOS_PRINCIPALES.find(e => e.value === (lead.estadoLead || 'nuevo'));
-              const prioridadInfo = PRIORIDADES.find(p => p.value === (lead.prioridad || 'media'));
-              
-              return (
-                <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-3 py-2 text-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(lead.id)}
-                      onChange={() => toggleSelect(lead.id)}
-                    />
-                  </td>
-                  <td className="px-3 py-2 text-gray-500 text-xs whitespace-nowrap">
-                    {new Date(lead.createdAt).toLocaleDateString('es-AR')}
-                  </td>
-                  <td className="px-3 py-2 font-medium text-gray-900 whitespace-nowrap">
-                    {lead.nombre}
-                  </td>
-                  <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{lead.telefono}</td>
-                  <td className="px-3 py-2">
-                    <select
-                      className={`text-xs px-2 py-1 rounded-full border-0 cursor-pointer ${estadoInfo?.color || 'bg-gray-100'}`}
-                      value={lead.estadoLead || 'nuevo'}
-                      onChange={(e) => updateLeadCRM(lead.id, 'estadoLead', e.target.value)}
-                    >
-                      {ESTADOS_PRINCIPALES.map(e => (
-                        <option key={e.value} value={e.value}>{e.label}</option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="px-3 py-2">
-                    {(lead.estadoLead === 'en_seguimiento') ? (
-                      <select
-                        className="text-xs px-2 py-1 rounded border border-gray-300 cursor-pointer"
-                        value={lead.subEstado || ''}
-                        onChange={(e) => updateLeadCRM(lead.id, 'subEstado', e.target.value)}
-                      >
-                        <option value="">Seleccionar...</option>
-                        {SUB_ESTADOS.map(s => (
-                          <option key={s.value} value={s.value}>{s.label}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span className="text-xs text-gray-400">-</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    <select
-                      className={`text-xs px-2 py-1 rounded-full border-0 cursor-pointer ${prioridadInfo?.color || 'bg-gray-100'}`}
-                      value={lead.prioridad || 'media'}
-                      onChange={(e) => updateLeadCRM(lead.id, 'prioridad', e.target.value)}
-                    >
-                      {PRIORIDADES.map(p => (
-                        <option key={p.value} value={p.value}>{p.label}</option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="px-3 py-2">
-                    <input
-                      type="text"
-                      className="text-xs px-2 py-1 border border-gray-300 rounded w-24"
-                      placeholder="Vendedor..."
-                      value={lead.vendedorAsignado || ''}
-                      onChange={(e) => updateLeadCRM(lead.id, 'vendedorAsignado', e.target.value)}
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <input
-                      type="datetime-local"
-                      className="text-xs px-1 py-1 border border-gray-300 rounded w-36"
-                      value={lead.ultimoContacto ? lead.ultimoContacto.slice(0, 16) : ''}
-                      onChange={(e) => updateLeadCRM(lead.id, 'ultimoContacto', e.target.value)}
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <input
-                      type="datetime-local"
-                      className="text-xs px-1 py-1 border border-gray-300 rounded w-36"
-                      value={lead.proximoSeguimiento ? lead.proximoSeguimiento.slice(0, 16) : ''}
-                      onChange={(e) => updateLeadCRM(lead.id, 'proximoSeguimiento', e.target.value)}
-                    />
-                  </td>
-                  <td className="px-3 py-2 text-gray-800 font-medium whitespace-nowrap">
-                    {lead.cliente || "-"}
-                  </td>
-                  <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{lead.auto || "-"}</td>
-                  <td className="px-3 py-2">
-                    <input
-                      type="text"
-                      className="text-xs px-2 py-1 border border-gray-300 rounded w-32"
-                      placeholder="Observaciones..."
-                      value={lead.observaciones || ''}
-                      onChange={(e) => updateLeadCRM(lead.id, 'observaciones', e.target.value)}
-                    />
-                  </td>
-                </tr>
-              );
-            })}
+            {paginatedLeads.map((lead) => (
+              <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
+                <td className="px-4 py-3 text-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(lead.id)}
+                    onChange={() => toggleSelect(lead.id)}
+                  />
+                </td>
+                <td className="px-4 py-3 text-gray-500">
+                  {new Date(lead.createdAt).toLocaleString()}
+                </td>
+                <td className="px-4 py-3 font-medium text-gray-900">
+                  {lead.nombre}
+                </td>
+                <td className="px-4 py-3 text-gray-600">{lead.telefono}</td>
+                <td className="px-4 py-3 text-gray-800 font-medium">
+                  {lead.cliente || "-"}
+                </td>
+                <td className="px-4 py-3 text-gray-600">{lead.auto || "-"}</td>
+                <td className="px-4 py-3 text-gray-600">
+                  {lead.localidad || "-"}
+                </td>
+                <td className="px-4 py-3 text-gray-600">
+                  <div className="whitespace-normal break-words text-xs leading-snug max-h-[80px] overflow-y-auto">
+                    {lead.comentarios || "-"}
+                  </div>
+                </td>
+                <td className="px-4 py-3">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    {lead.source}
+                  </span>
+                </td>
+              </tr>
+            ))}
             {paginatedLeads.length === 0 && !loading && (
               <tr>
-                <td className="px-4 py-8 text-center text-gray-500" colSpan={13}>
+                <td className="px-4 py-8 text-center text-gray-500" colSpan={9}>
                   No se encontraron resultados.
                 </td>
               </tr>

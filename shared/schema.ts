@@ -337,28 +337,6 @@ export const enviadosMetrics = pgTable("enviados_metrics", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// Estados principales del lead (CRM Kanban)
-export const LEAD_ESTADOS_PRINCIPALES = [
-  "nuevo",
-  "en_seguimiento",
-  "proximo_venta",
-  "vendido",
-  "no_interesado"
-] as const;
-
-// Sub-estados para "En seguimiento"
-export const LEAD_SUB_ESTADOS = [
-  "llamado_no_atendio",
-  "contactado",
-  "interesado",
-  "turno_agendado",
-  "presentado_concesionario",
-  "caido_perdido"
-] as const;
-
-// Prioridades
-export const LEAD_PRIORIDADES = ["alta", "media", "baja"] as const;
-
 // Tabla para recibir leads desde webhooks externos
 export const opLeadWebhook = pgTable("op_lead_webhook", {
   id: serial("id").primaryKey(),
@@ -371,15 +349,6 @@ export const opLeadWebhook = pgTable("op_lead_webhook", {
   source: text("source").notNull().default("webhook"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  
-  // Nuevos campos CRM
-  estadoLead: text("estado_lead").default("nuevo"), // Estado principal del lead
-  subEstado: text("sub_estado"), // Sub-estado (solo para "en_seguimiento")
-  ultimoContacto: timestamp("ultimo_contacto"), // Fecha/hora del último contacto
-  proximoSeguimiento: timestamp("proximo_seguimiento"), // Fecha/hora del próximo seguimiento
-  prioridad: text("prioridad").default("media"), // alta, media, baja
-  observaciones: text("observaciones"), // Notas adicionales
-  vendedorAsignado: text("vendedor_asignado"), // Vendedor responsable
 });
 
 // Zod schemas
