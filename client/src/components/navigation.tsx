@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Users, LogOut, User, UserPlus, Shield } from "lucide-react";
+import { Users, LogOut, User, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth-context";

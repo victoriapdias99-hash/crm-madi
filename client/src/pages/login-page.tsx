@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, LogIn, UserPlus } from "lucide-react";
+import { Loader2, LogIn } from "lucide-react";
 
 export default function LoginPage() {
   const [, setLocation] = useLocation();
@@ -110,21 +110,6 @@ export default function LoginPage() {
                 </>
               )}
             </Button>
-
-            <div className="text-center pt-4">
-              <p className="text-sm text-muted-foreground">
-                ¿No tienes una cuenta?{" "}
-                <Button
-                  type="button"
-                  variant="link"
-                  className="p-0 h-auto font-normal"
-                  onClick={() => setLocation("/register")}
-                >
-                  <UserPlus className="mr-1 h-3 w-3" />
-                  Regístrate aquí
-                </Button>
-              </p>
-            </div>
           </form>
         </CardContent>
       </Card>

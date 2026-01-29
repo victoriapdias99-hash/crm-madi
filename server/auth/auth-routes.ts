@@ -117,10 +117,16 @@ router.post("/login", async (req: Request, res: Response) => {
       req.session.userId = user.id;
       req.session.username = user.username;
       req.session.role = user.role;
+
+      // NUEVO: Agregar parentGerenteId si es asesor
+      if (user.role === "asesor" && user.parentGerenteId) {
+        req.session.parentGerenteId = user.parentGerenteId;
+      }
     }
 
     // Retornar usuario sin password
     const { password, ...userWithoutPassword } = user;
+    console.log(`✅ Login exitoso: ${user.username} (${user.role})`);
 
     return res.status(200).json({
       success: true,

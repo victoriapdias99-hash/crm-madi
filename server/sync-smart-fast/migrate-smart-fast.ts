@@ -200,7 +200,7 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
         batchData.push({
           metaLeadId: finalMetaLeadId,
           leadData,
-          createdAt: now,
+          createdAt: fechaCreacion,
           updatedAt: now,
         });
       }

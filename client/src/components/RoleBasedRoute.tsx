@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 
 interface RoleBasedRouteProps {
   children: ReactNode;
-  allowedRoles?: string[]; // ["admin", "user"] por defecto permite ambos
+  allowedRoles?: string[]; // ["admin", "gerente", "asesor"] por defecto
   requireAdmin?: boolean; // true = solo admin
 }
 
@@ -25,13 +25,13 @@ interface RoleBasedRouteProps {
  *   <AdminDashboard />
  * </RoleBasedRoute>
  *
- * <RoleBasedRoute allowedRoles={["user", "admin"]}>
+ * <RoleBasedRoute allowedRoles={["gerente", "admin"]}>
  *   <PublicFeature />
  * </RoleBasedRoute>
  */
 export function RoleBasedRoute({
   children,
-  allowedRoles = ["admin", "user"],
+  allowedRoles = ["admin", "gerente", "asesor"], // ✅ ACTUALIZADO
   requireAdmin = false,
 }: RoleBasedRouteProps) {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
@@ -63,6 +63,14 @@ export function RoleBasedRoute({
     ? userRole === "admin"
     : allowedRoles.includes(userRole);
 
+  // ✅ FUNCIÓN PARA OBTENER HOME SEGÚN ROL
+  const getHomeRoute = (role: string): string => {
+    if (role === "admin") return "/";
+    if (role === "gerente") return "/user-home";
+    if (role === "asesor") return "/asesor-home";
+    return "/";
+  };
+
   // Si no tiene permisos, mostrar página de acceso denegado
   if (!hasPermission) {
     return (
@@ -92,9 +100,7 @@ export function RoleBasedRoute({
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={() =>
-                  setLocation(userRole === "admin" ? "/" : "/user-home")
-                }
+                onClick={() => setLocation(getHomeRoute(userRole))} // ✅ ACTUALIZADO
               >
                 Volver al Inicio
               </Button>

@@ -1,4 +1,4 @@
-import type { Express, Request, Response } from "express";
+import type { Router, Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
@@ -17,7 +17,7 @@ import {
 import { contarLeadsYDuplicadosUnificado } from "../shared/utils/campaign-counting-utils";
 import { centralizedDataService } from "./centralized-data-service";
 import { db } from "./db";
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import {
   insertLeadSchema,
   insertCampaignSchema,
@@ -46,8 +46,19 @@ import { promisify } from "util";
 import { existsSync } from "fs";
 import { join } from "path";
 import { migrateSmartFast } from "./sync-smart-fast/migrate-smart-fast";
+import {
+  requireAdmin,
+  requireGerente,
+  requireAuth,
+} from "./auth/role-middleware";
+import { createGerenteSchema, createAsesorSchema } from "./auth/schemas";
+import { AuthService } from "./auth/auth-service";
+import { UserRepository } from "./auth/user-repository";
+import { ZodError } from "zod";
 
 const execAsync = promisify(exec);
+//const router = Router();
+const userRepository = new UserRepository();
 
 // LEGACY CODE REMOVED: ClientMatchingSystem migrado al nuevo sistema refactorizado
 // Ver: server/sync/domain/services/ClientMatcher.ts
@@ -368,6 +379,401 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         message: `Error interno: ${error.message}`,
+      });
+    }
+  });
+
+  // ENDPOINT: Admin crea Gerente
+  /**
+   * POST /api/admin/create-gerente
+   * Solo admin puede crear gerentes
+   */
+  app.post("/api/admin/create-gerente", requireAdmin, async (req, res) => {
+    try {
+      // Validar datos de entrada
+      const validatedData = createGerenteSchema.parse(req.body);
+
+      // Verificar si el username ya existe
+      const exists = await userRepository.usernameExists(
+        validatedData.username,
+      );
+      if (exists) {
+        return res.status(400).json({
+          success: false,
+          message: "El nombre de usuario ya está en uso",
+        });
+      }
+
+      // Hashear la contraseña
+      const hashedPassword = await AuthService.hashPassword(
+        validatedData.password,
+      );
+
+      // Crear el gerente
+      const newGerente = await userRepository.create({
+        username: validatedData.username,
+        password: hashedPassword,
+        email: validatedData.email || null,
+        role: "gerente",
+        createdBy: req.session!.userId, // ID del admin
+      });
+
+      console.log(
+        `✅ Admin ${req.session!.username} creó gerente: ${newGerente.username}`,
+      );
+
+      return res.status(201).json({
+        success: true,
+        message: "Gerente creado exitosamente",
+        user: newGerente,
+      });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({
+          success: false,
+          message: "Datos inválidos",
+          errors: error.errors.map((e) => ({
+            field: e.path.join("."),
+            message: e.message,
+          })),
+        });
+      }
+
+      console.error("Error creando gerente:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error al crear gerente",
+      });
+    }
+  });
+
+  /**
+   * POST /api/admin/create-gerente-from-cliente
+   * Crear usuario gerente vinculado a un cliente existente
+   */
+  app.post(
+    "/api/admin/create-gerente-from-cliente",
+    requireAdmin,
+    async (req, res) => {
+      try {
+        const { clienteId, username, password } = req.body;
+
+        // Validar datos
+        if (!clienteId || !username || !password) {
+          return res.status(400).json({
+            success: false,
+            message: "Faltan datos requeridos",
+          });
+        }
+
+        // Verificar que el cliente existe
+        const cliente = await db
+          .select()
+          .from(clientes)
+          .where(eq(clientes.id, clienteId))
+          .limit(1);
+
+        if (!cliente || cliente.length === 0) {
+          return res.status(404).json({
+            success: false,
+            message: "Cliente no encontrado",
+          });
+        }
+
+        // Verificar que el cliente NO tenga ya un usuario
+        if (cliente[0].userId) {
+          return res.status(400).json({
+            success: false,
+            message: "Este cliente ya tiene acceso al CRM",
+          });
+        }
+
+        // Verificar si el username ya existe
+        const userExists = await userRepository.usernameExists(username);
+        if (userExists) {
+          return res.status(400).json({
+            success: false,
+            message: "El nombre de usuario ya está en uso",
+          });
+        }
+
+        // Hashear password
+        const hashedPassword = await AuthService.hashPassword(password);
+
+        // Crear usuario gerente
+        const newGerente = await userRepository.create({
+          username,
+          password: hashedPassword,
+          email: cliente[0].email || null,
+          role: "gerente",
+          createdBy: req.session!.userId,
+        });
+
+        // Vincular cliente con usuario
+        await db
+          .update(clientes)
+          .set({ userId: newGerente.id })
+          .where(eq(clientes.id, clienteId));
+
+        console.log(
+          `✅ Admin creó acceso CRM para cliente ${clienteId} -> usuario ${newGerente.id}`,
+        );
+
+        return res.status(201).json({
+          success: true,
+          message: "Acceso al CRM creado exitosamente",
+          user: newGerente,
+        });
+      } catch (error) {
+        console.error("Error creando acceso CRM:", error);
+        return res.status(500).json({
+          success: false,
+          message: "Error al crear acceso al CRM",
+        });
+      }
+    },
+  );
+
+  // ENDPOINT: Gerente crea Asesor
+  /**
+   * POST /api/gerente/create-asesor
+   * Solo gerente puede crear asesores
+   */
+  app.post("/api/gerente/create-asesor", requireGerente, async (req, res) => {
+    try {
+      // Validar datos de entrada
+      const validatedData = createAsesorSchema.parse(req.body);
+
+      // Verificar si el username ya existe
+      const exists = await userRepository.usernameExists(
+        validatedData.username,
+      );
+      if (exists) {
+        return res.status(400).json({
+          success: false,
+          message: "El nombre de usuario ya está en uso",
+        });
+      }
+
+      // Hashear la contraseña
+      const hashedPassword = await AuthService.hashPassword(
+        validatedData.password,
+      );
+
+      // Crear el asesor
+      const newAsesor = await userRepository.create({
+        username: validatedData.username,
+        password: hashedPassword,
+        email: validatedData.email || null,
+        role: "asesor",
+        createdBy: req.session!.userId, // ID del gerente
+        parentGerenteId: req.session!.userId, // ID del gerente
+      });
+
+      console.log(
+        `✅ Gerente ${req.session!.username} creó asesor: ${newAsesor.username}`,
+      );
+
+      return res.status(201).json({
+        success: true,
+        message: "Asesor creado exitosamente",
+        user: newAsesor,
+      });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({
+          success: false,
+          message: "Datos inválidos",
+          errors: error.errors.map((e) => ({
+            field: e.path.join("."),
+            message: e.message,
+          })),
+        });
+      }
+
+      console.error("Error creando asesor:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error al crear asesor",
+      });
+    }
+  });
+
+  // ENDPOINT: Admin lista Gerentes
+  /**
+   * GET /api/admin/gerentes
+   * Admin obtiene lista de todos los gerentes
+   */
+  app.get("/api/admin/gerentes", requireAdmin, async (req, res) => {
+    try {
+      const gerentes = await userRepository.findByRole("gerente");
+
+      return res.status(200).json({
+        success: true,
+        gerentes,
+        count: gerentes.length,
+      });
+    } catch (error) {
+      console.error("Error obteniendo gerentes:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error al obtener gerentes",
+      });
+    }
+  });
+
+  // ENDPOINT: Gerente lista sus Asesores
+  /**
+   * GET /api/gerente/asesores
+   * Gerente obtiene lista de sus asesores
+   */
+  app.get("/api/gerente/asesores", requireGerente, async (req, res) => {
+    try {
+      const asesores = await userRepository.findAsesorsByGerenteId(
+        req.session!.userId!,
+      );
+
+      return res.status(200).json({
+        success: true,
+        asesores,
+        count: asesores.length,
+      });
+    } catch (error) {
+      console.error("Error obteniendo asesores:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error al obtener asesores",
+      });
+    }
+  });
+
+  // ENDPOINT: Obtener estadísticas de usuarios (Admin)
+  /**
+   * GET /api/admin/users/stats
+   * Estadísticas de usuarios del sistema
+   */
+  app.get("/api/admin/users/stats", requireAdmin, async (req, res) => {
+    try {
+      const stats = await userRepository.getUserStats();
+
+      return res.status(200).json({
+        success: true,
+        stats,
+      });
+    } catch (error) {
+      console.error("Error obteniendo estadísticas:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error al obtener estadísticas",
+      });
+    }
+  });
+
+  // ENDPOINT: Eliminar Gerente (Admin)
+  /**
+   * DELETE /api/admin/gerente/:id
+   * Admin elimina un gerente (y sus asesores en cascada)
+   */
+  app.delete("/api/admin/gerente/:id", requireAdmin, async (req, res) => {
+    try {
+      const gerenteId = parseInt(req.params.id);
+
+      if (isNaN(gerenteId)) {
+        return res.status(400).json({
+          success: false,
+          message: "ID inválido",
+        });
+      }
+
+      // Verificar que existe y es gerente
+      const gerente = await userRepository.findById(gerenteId);
+      if (!gerente) {
+        return res.status(404).json({
+          success: false,
+          message: "Gerente no encontrado",
+        });
+      }
+
+      if (gerente.role !== "gerente") {
+        return res.status(400).json({
+          success: false,
+          message: "El usuario no es un gerente",
+        });
+      }
+
+      // Eliminar gerente (los asesores se eliminan en cascada)
+      await userRepository.deleteUser(gerenteId);
+
+      console.log(`✅ Admin eliminó gerente ID ${gerenteId}`);
+
+      return res.status(200).json({
+        success: true,
+        message: "Gerente eliminado exitosamente",
+      });
+    } catch (error) {
+      console.error("Error eliminando gerente:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error al eliminar gerente",
+      });
+    }
+  });
+
+  // ENDPOINT: Eliminar Asesor (Gerente)
+  /**
+   * DELETE /api/gerente/asesor/:id
+   * Gerente elimina uno de sus asesores
+   */
+  app.delete("/api/gerente/asesor/:id", requireGerente, async (req, res) => {
+    try {
+      const asesorId = parseInt(req.params.id);
+
+      if (isNaN(asesorId)) {
+        return res.status(400).json({
+          success: false,
+          message: "ID inválido",
+        });
+      }
+
+      // Verificar que existe y pertenece al gerente
+      const asesor = await userRepository.findById(asesorId);
+      if (!asesor) {
+        return res.status(404).json({
+          success: false,
+          message: "Asesor no encontrado",
+        });
+      }
+
+      if (asesor.role !== "asesor") {
+        return res.status(400).json({
+          success: false,
+          message: "El usuario no es un asesor",
+        });
+      }
+
+      if (asesor.parentGerenteId !== req.session!.userId) {
+        return res.status(403).json({
+          success: false,
+          message: "No tienes permiso para eliminar este asesor",
+        });
+      }
+
+      // Eliminar asesor
+      await userRepository.deleteUser(asesorId);
+
+      console.log(
+        `✅ Gerente ${req.session!.userId} eliminó asesor ID ${asesorId}`,
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Asesor eliminado exitosamente",
+      });
+    } catch (error) {
+      console.error("Error eliminando asesor:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error al eliminar asesor",
       });
     }
   });
@@ -3054,7 +3460,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       //const clienteData = { validatedData, userId: req.session.userId };
       const cliente = await storage.createCliente({
         ...validatedData,
-        userId: req.session.userId,
+        //userId: req.session.userId,
+        userId: null,
       } as InsertCliente);
       //const cliente = await storage.createCliente(validatedData);
       //const cliente = await storage.createCliente(clienteData);
@@ -5009,5 +5416,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   return httpServer;
 }
 
+//export { router as userManagementRoutes };
 // Exportar funciones para uso en otros servicios
 export { broadcastDashboardUpdate, getRealtimeStats };

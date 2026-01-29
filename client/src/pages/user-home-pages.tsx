@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  Building2,
+  UserPlus,
   Target,
   Users,
   TrendingUp,
@@ -18,7 +18,8 @@ import {
   User,
   Loader2,
   Trash2,
-  Pencil,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import {
@@ -34,6 +35,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function UserHomePage() {
   const { user, logout } = useAuth();
@@ -41,48 +43,44 @@ export default function UserHomePage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Estados para formularios
-  const [clientDialogOpen, setClientDialogOpen] = useState(false);
-  const [campaignDialogOpen, setCampaignDialogOpen] = useState(false);
+  // Estados para el formulario de crear asesor
+  const [asesorDialogOpen, setAsesorDialogOpen] = useState(false);
+  const [asesorUsername, setAsesorUsername] = useState("");
+  const [asesorEmail, setAsesorEmail] = useState("");
+  const [asesorPassword, setAsesorPassword] = useState("");
+  const [asesorConfirmPassword, setAsesorConfirmPassword] = useState("");
+  const [asesorError, setAsesorError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Estados de formulario de cliente
-  const [clientName, setClientName] = useState("");
-  const [clientEmail, setClientEmail] = useState("");
-  const [clientPhone, setClientPhone] = useState("");
-  const [clientDescription, setClientDescription] = useState("");
+  // Estados para eliminación de asesores
+  const [deleteAsesorDialogOpen, setDeleteAsesorDialogOpen] = useState(false);
+  const [asesorToDelete, setAsesorToDelete] = useState<any>(null);
 
   // Estados de formulario de campaña
+  const [campaignDialogOpen, setCampaignDialogOpen] = useState(false);
   const [campaignName, setCampaignName] = useState("");
   const [campaignBudget, setCampaignBudget] = useState("");
   const [campaignStartDate, setCampaignStartDate] = useState("");
   const [campaignDescription, setCampaignDescription] = useState("");
 
-  // Estados para eliminación de clientes
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [clienteToDelete, setClienteToDelete] = useState<any>(null);
-
-  // Estados para edición de clientes
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [clienteToEdit, setClienteToEdit] = useState<any>(null);
-
-  // Estados del formulario de edición
-  const [editClientName, setEditClientName] = useState("");
-  const [editClientEmail, setEditClientEmail] = useState("");
-  const [editClientPhone, setEditClientPhone] = useState("");
-  const [editClientDescription, setEditClientDescription] = useState("");
-
-  // Queries para estadísticas (optimizadas)
-  const { data: clientesStats, isLoading: loadingClientesStats } = useQuery({
-    queryKey: ["/api/clientes/stats"],
+  // Query para obtener asesores del gerente
+  const { data: asesores = [], isLoading: loadingAsesores } = useQuery({
+    queryKey: ["/api/gerente/asesores"],
     queryFn: async () => {
-      const res = await fetch("/api/clientes/stats", {
+      const res = await fetch("/api/gerente/asesores", {
         credentials: "include",
       });
-      if (!res.ok) throw new Error("Error al obtener estadísticas de clientes");
-      return res.json();
+      if (!res.ok) {
+        if (res.status === 404) return [];
+        throw new Error("Error al obtener asesores");
+      }
+      const data = await res.json();
+      return data.asesores || [];
     },
   });
 
+  // Query para campañas
   const { data: campanasStats, isLoading: loadingCampanasStats } = useQuery({
     queryKey: ["/api/campanas-comerciales/stats"],
     queryFn: async () => {
@@ -90,20 +88,28 @@ export default function UserHomePage() {
         credentials: "include",
       });
       if (!res.ok) {
-        //Si el endpoint no existe, retornar 0
         return { total: 0 };
       }
       return res.json();
     },
   });
 
-  // Queries para listas (solo últimos 5 para mostrar)
-  const { data: clientes = [], isLoading: loadingClientes } = useQuery({
-    queryKey: ["/api/clientes"],
-  });
-
   const { data: campanas = [], isLoading: loadingCampanas } = useQuery({
     queryKey: ["/api/campanas-comerciales"],
+  });
+
+  // Query para estadísticas de leads
+  const { data: leadsStats } = useQuery({
+    queryKey: ["/api/gerente/leads/stats"],
+    queryFn: async () => {
+      const res = await fetch("/api/gerente/leads/stats", {
+        credentials: "include",
+      });
+      if (!res.ok) {
+        return { total: 0 };
+      }
+      return res.json();
+    },
   });
 
   const handleLogout = async () => {
@@ -111,117 +117,85 @@ export default function UserHomePage() {
     setLocation("/login");
   };
 
-  const createClientMutation = useMutation({
-    mutationFn: async (clientData: any) => {
-      const response = await fetch("/api/clientes", {
+  // Mutation para crear asesor
+  const createAsesorMutation = useMutation({
+    mutationFn: async (data: {
+      username: string;
+      password: string;
+      email?: string;
+    }) => {
+      const response = await fetch("/api/gerente/create-asesor", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         credentials: "include",
-        body: JSON.stringify(clientData),
+        body: JSON.stringify(data),
       });
-      if (!response.ok) throw new Error("Error al crear cliente");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/clientes"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/clientes/stats"] });
 
-      // ✅ TOAST ACTUALIZADO
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Error al crear asesor");
+      }
+
+      return result;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/gerente/asesores"] });
       toast({
-        title: "🎉 ¡Cliente creado!",
-        description: `${clientName} ha sido registrado exitosamente.`,
+        title: "👤 ¡Asesor creado!",
+        description: `${data.user.username} ha sido creado exitosamente.`,
         className:
           "bg-green-100 border-green-300 shadow-lg dark:bg-green-800 dark:border-green-600",
       });
-
-      setClientName("");
-      setClientEmail("");
-      setClientPhone("");
-      setClientDescription("");
-      setClientDialogOpen(false);
+      resetAsesorForm();
+      setAsesorDialogOpen(false);
     },
-    onError: () => {
+    onError: (error: Error) => {
+      setAsesorError(error.message);
       toast({
-        title: "Error",
-        description: "No se pudo crear el cliente. Intenta nuevamente.",
-        variant: "destructive", // Esto ya es rojo
+        title: "❌ Error",
+        description: error.message || "No se pudo crear el asesor.",
+        variant: "destructive",
       });
     },
   });
 
-  // Mutation para eliminar cliente
-  const deleteClienteMutation = useMutation({
-    mutationFn: async (clienteId: number) => {
-      const response = await fetch(`/api/clientes/${clienteId}`, {
+  // Mutation para eliminar asesor
+  const deleteAsesorMutation = useMutation({
+    mutationFn: async (asesorId: number) => {
+      const response = await fetch(`/api/gerente/asesor/${asesorId}`, {
         method: "DELETE",
         credentials: "include",
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Error al eliminar cliente");
+        throw new Error(error.message || "Error al eliminar asesor");
       }
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/clientes"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/clientes/stats"] });
-
-      // ✅ TOAST ACTUALIZADO
+      queryClient.invalidateQueries({ queryKey: ["/api/gerente/asesores"] });
       toast({
-        title: "🗑️ ¡Cliente eliminado!",
-        description: `${clienteToDelete?.nombreCliente} ha sido eliminado exitosamente.`,
+        title: "🗑️ ¡Asesor eliminado!",
+        description: `${asesorToDelete?.username} ha sido eliminado exitosamente.`,
         className:
           "bg-blue-100 border-blue-300 shadow-lg dark:bg-blue-800 dark:border-blue-600",
       });
-
-      setDeleteDialogOpen(false);
-      setClienteToDelete(null);
+      setDeleteAsesorDialogOpen(false);
+      setAsesorToDelete(null);
     },
     onError: (error: Error) => {
       toast({
         title: "Error",
-        description: error.message || "No se pudo eliminar el cliente.",
+        description: error.message || "No se pudo eliminar el asesor.",
         variant: "destructive",
       });
     },
   });
 
-  // Mutation para actualizar cliente
-  const updateClienteMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      const response = await fetch(`/api/clientes/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Error al actualizar cliente");
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/clientes"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/clientes/stats"] });
-      toast({
-        title: "✏️ ¡Cliente actualizado!",
-        description: `${editClientName} ha sido actualizado exitosamente.`,
-        className:
-          "bg-amber-100 border-amber-300 shadow-lg dark:bg-amber-800 dark:border-amber-600",
-      });
-      setEditDialogOpen(false);
-      setClienteToEdit(null);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message || "No se pudo actualizar el cliente.",
-        variant: "destructive",
-      });
-    },
-  });
-
+  // Mutation para crear campaña
   const createCampaignMutation = useMutation({
     mutationFn: async (campaignData: any) => {
       const response = await fetch("/api/campanas-comerciales", {
@@ -240,15 +214,12 @@ export default function UserHomePage() {
       queryClient.invalidateQueries({
         queryKey: ["/api/campanas-comerciales/stats"],
       });
-
-      // ✅ TOAST ACTUALIZADO
       toast({
         title: "🚀 ¡Campaña creada!",
         description: `${campaignName} ha sido creada exitosamente.`,
         className:
           "bg-purple-100 border-purple-300 shadow-lg dark:bg-purple-800 dark:border-purple-600",
       });
-
       setCampaignName("");
       setCampaignBudget("");
       setCampaignStartDate("");
@@ -264,39 +235,40 @@ export default function UserHomePage() {
     },
   });
 
-  // Función para abrir el dialog de edición
-  const handleEditClick = (cliente: any) => {
-    setClienteToEdit(cliente);
-    setEditClientName(cliente.nombreCliente || "");
-    setEditClientEmail(cliente.email || "");
-    setEditClientPhone(cliente.telefono || "");
-    setEditClientDescription(cliente.descripcion || "");
-    setEditDialogOpen(true);
+  const resetAsesorForm = () => {
+    setAsesorUsername("");
+    setAsesorEmail("");
+    setAsesorPassword("");
+    setAsesorConfirmPassword("");
+    setAsesorError("");
+    setShowPassword(false);
+    setShowConfirmPassword(false);
   };
 
-  // Función para manejar el submit del formulario de edición
-  const handleEditSubmit = (e: React.FormEvent) => {
+  const handleCreateAsesor = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!clienteToEdit) return;
+    setAsesorError("");
 
-    updateClienteMutation.mutate({
-      id: clienteToEdit.id,
-      data: {
-        nombreCliente: editClientName,
-        email: editClientEmail,
-        telefono: editClientPhone,
-        descripcion: editClientDescription,
-      },
-    });
-  };
+    // Validaciones
+    if (asesorPassword !== asesorConfirmPassword) {
+      setAsesorError("Las contraseñas no coinciden");
+      return;
+    }
 
-  const handleCreateClient = (e: React.FormEvent) => {
-    e.preventDefault();
-    createClientMutation.mutate({
-      nombreCliente: clientName,
-      email: clientEmail,
-      telefono: clientPhone,
-      descripcion: clientDescription,
+    if (asesorPassword.length < 6) {
+      setAsesorError("La contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+
+    if (asesorUsername.length < 3) {
+      setAsesorError("El nombre de usuario debe tener al menos 3 caracteres");
+      return;
+    }
+
+    createAsesorMutation.mutate({
+      username: asesorUsername,
+      password: asesorPassword,
+      email: asesorEmail || undefined,
     });
   };
 
@@ -307,6 +279,15 @@ export default function UserHomePage() {
       presupuesto: parseFloat(campaignBudget),
       fechaInicio: campaignStartDate,
       descripcion: campaignDescription,
+    });
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString("es-AR", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
@@ -321,7 +302,7 @@ export default function UserHomePage() {
             </div>
             <div>
               <h1 className="text-xl font-bold">CRM MADI</h1>
-              <p className="text-sm text-muted-foreground">Panel de Usuario</p>
+              <p className="text-sm text-muted-foreground">Panel de Gerente</p>
             </div>
           </div>
 
@@ -348,7 +329,7 @@ export default function UserHomePage() {
             ¡Bienvenido, {user?.username}! 👋
           </h2>
           <p className="text-muted-foreground">
-            Gestiona tus clientes y campañas desde un solo lugar
+            Gestiona tus asesores y campañas desde un solo lugar
           </p>
         </div>
 
@@ -357,22 +338,22 @@ export default function UserHomePage() {
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Clientes Activos
+                Asesores Activos
               </CardTitle>
-              <Building2 className="w-4 h-4 text-muted-foreground" />
+              <Users className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {loadingClientesStats ? (
+              {loadingAsesores ? (
                 <Loader2 className="w-6 h-6 animate-spin" />
               ) : (
                 <>
                   <div className="text-2xl font-bold">
-                    {clientesStats?.total || 0}
+                    {asesores?.length || 0}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {clientesStats?.total === 0
-                      ? "Aún no has creado clientes"
-                      : "Clientes registrados"}
+                    {asesores?.length === 0
+                      ? "Crea tu primer asesor"
+                      : "Miembros del equipo"}
                   </p>
                 </>
               )}
@@ -409,10 +390,10 @@ export default function UserHomePage() {
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Leads Generados
               </CardTitle>
-              <Users className="w-4 h-4 text-muted-foreground" />
+              <TrendingUp className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">{leadsStats?.total || 0}</div>
               <p className="text-xs text-muted-foreground mt-1">
                 Tus campañas generarán leads
               </p>
@@ -422,91 +403,167 @@ export default function UserHomePage() {
 
         {/* Action Cards */}
         <div className="grid md:grid-cols-2 gap-6 mb-8">
-          {/* Crear Cliente */}
+          {/* Crear Asesor */}
           <Card className="hover:shadow-xl transition-all border-2 border-transparent hover:border-blue-200">
             <CardHeader>
               <div className="flex items-center gap-3 mb-2">
                 <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                  <Building2 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                  <UserPlus className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <CardTitle>Crear Cliente</CardTitle>
+                  <CardTitle>Crear Asesor</CardTitle>
                   <CardDescription>
-                    Registra un nuevo cliente en el sistema
+                    Registra un nuevo asesor para tu equipo
                   </CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">
-                Los clientes son la base de tu negocio. Registra sus datos para
-                comenzar a gestionar sus campañas publicitarias.
+                Los asesores te ayudarán a gestionar y dar seguimiento a los
+                leads. Cada asesor tendrá acceso a visualizar tus leads.
               </p>
 
               <Dialog
-                open={clientDialogOpen}
-                onOpenChange={setClientDialogOpen}
+                open={asesorDialogOpen}
+                onOpenChange={setAsesorDialogOpen}
               >
                 <DialogTrigger asChild>
                   <Button className="w-full" size="lg">
                     <Plus className="w-4 h-4 mr-2" />
-                    Nuevo Cliente
+                    Nuevo Asesor
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-md">
                   <DialogHeader>
-                    <DialogTitle>Crear Nuevo Cliente</DialogTitle>
+                    <DialogTitle>Crear Nuevo Asesor</DialogTitle>
                     <DialogDescription>
-                      Completa la información del cliente
+                      El asesor podrá visualizar y gestionar tus leads
                     </DialogDescription>
                   </DialogHeader>
 
-                  <form onSubmit={handleCreateClient} className="space-y-4">
+                  <form onSubmit={handleCreateAsesor} className="space-y-4">
+                    {asesorError && (
+                      <Alert variant="destructive">
+                        <AlertDescription>{asesorError}</AlertDescription>
+                      </Alert>
+                    )}
+
                     <div className="space-y-2">
-                      <Label htmlFor="clientName">
-                        Nombre del Cliente{" "}
+                      <Label htmlFor="asesorUsername">
+                        Nombre de usuario{" "}
                         <span className="text-red-500">*</span>
                       </Label>
                       <Input
-                        id="clientName"
-                        placeholder="Ej: Empresa XYZ"
-                        value={clientName}
-                        onChange={(e) => setClientName(e.target.value)}
+                        id="asesorUsername"
+                        type="text"
+                        placeholder="juanperez"
+                        value={asesorUsername}
+                        onChange={(e) => setAsesorUsername(e.target.value)}
+                        disabled={createAsesorMutation.isPending}
                         required
+                        autoFocus
+                        minLength={3}
+                        maxLength={50}
                       />
+                      <p className="text-xs text-muted-foreground">
+                        Mínimo 3 caracteres. Solo letras, números y guiones
+                        bajos.
+                      </p>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="clientEmail">Email</Label>
+                      <Label htmlFor="asesorEmail">
+                        Email{" "}
+                        <span className="text-muted-foreground">
+                          (opcional)
+                        </span>
+                      </Label>
                       <Input
-                        id="clientEmail"
+                        id="asesorEmail"
                         type="email"
-                        placeholder="contacto@empresa.com"
-                        value={clientEmail}
-                        onChange={(e) => setClientEmail(e.target.value)}
+                        placeholder="asesor@empresa.com"
+                        value={asesorEmail}
+                        onChange={(e) => setAsesorEmail(e.target.value)}
+                        disabled={createAsesorMutation.isPending}
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="clientPhone">Teléfono</Label>
-                      <Input
-                        id="clientPhone"
-                        type="tel"
-                        placeholder="+54 11 1234-5678"
-                        value={clientPhone}
-                        onChange={(e) => setClientPhone(e.target.value)}
-                      />
+                      <Label htmlFor="asesorPassword">
+                        Contraseña <span className="text-red-500">*</span>
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="asesorPassword"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          value={asesorPassword}
+                          onChange={(e) => setAsesorPassword(e.target.value)}
+                          disabled={createAsesorMutation.isPending}
+                          required
+                          minLength={6}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Mínimo 6 caracteres.
+                      </p>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="clientDescription">Descripción</Label>
-                      <Textarea
-                        id="clientDescription"
-                        placeholder="Información adicional sobre el cliente..."
-                        value={clientDescription}
-                        onChange={(e) => setClientDescription(e.target.value)}
-                        rows={3}
-                      />
+                      <Label htmlFor="asesorConfirmPassword">
+                        Confirmar Contraseña{" "}
+                        <span className="text-red-500">*</span>
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="asesorConfirmPassword"
+                          type={showConfirmPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          value={asesorConfirmPassword}
+                          onChange={(e) =>
+                            setAsesorConfirmPassword(e.target.value)
+                          }
+                          disabled={createAsesorMutation.isPending}
+                          required
+                          minLength={6}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                          onClick={() =>
+                            setShowConfirmPassword(!showConfirmPassword)
+                          }
+                        >
+                          {showConfirmPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md">
+                      <p className="text-xs text-blue-800 dark:text-blue-200">
+                        <strong>Nota:</strong> El asesor podrá iniciar sesión
+                        con estas credenciales y visualizar todos tus leads.
+                      </p>
                     </div>
 
                     <div className="flex gap-2 pt-4">
@@ -514,22 +571,35 @@ export default function UserHomePage() {
                         type="button"
                         variant="outline"
                         className="flex-1"
-                        onClick={() => setClientDialogOpen(false)}
+                        onClick={() => {
+                          setAsesorDialogOpen(false);
+                          resetAsesorForm();
+                        }}
+                        disabled={createAsesorMutation.isPending}
                       >
                         Cancelar
                       </Button>
                       <Button
                         type="submit"
                         className="flex-1"
-                        disabled={createClientMutation.isPending}
+                        disabled={
+                          createAsesorMutation.isPending ||
+                          !asesorUsername ||
+                          !asesorPassword ||
+                          !asesorConfirmPassword ||
+                          asesorPassword !== asesorConfirmPassword
+                        }
                       >
-                        {createClientMutation.isPending ? (
+                        {createAsesorMutation.isPending ? (
                           <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                             Creando...
                           </>
                         ) : (
-                          "Crear Cliente"
+                          <>
+                            <UserPlus className="w-4 h-4 mr-2" />
+                            Crear Asesor
+                          </>
                         )}
                       </Button>
                     </div>
@@ -667,59 +737,55 @@ export default function UserHomePage() {
 
         {/* Lists Section */}
         <div className="grid md:grid-cols-2 gap-6">
-          {/* Mis Clientes */}
+          {/* Mis Asesores */}
           <Card>
             <CardHeader>
-              <CardTitle>Mis Clientes</CardTitle>
+              <CardTitle>Mis Asesores</CardTitle>
               <CardDescription>
-                {loadingClientesStats
+                {loadingAsesores
                   ? "Cargando..."
-                  : `${clientesStats?.total || 0} cliente${clientesStats?.total !== 1 ? "s" : ""} registrado${clientesStats?.total !== 1 ? "s" : ""}`}
+                  : `${asesores?.length || 0} asesor${asesores?.length !== 1 ? "es" : ""} registrado${asesores?.length !== 1 ? "s" : ""}`}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {loadingClientes ? (
+              {loadingAsesores ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
                 </div>
-              ) : clientes.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4">
-                  Aún no has creado clientes. ¡Crea tu primer cliente arriba!
-                </p>
+              ) : asesores.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium mb-2">
+                    No hay asesores registrados
+                  </p>
+                  <p className="text-sm">
+                    Crea tu primer asesor usando el botón "Nuevo Asesor"
+                  </p>
+                </div>
               ) : (
                 <div className="space-y-2">
-                  {clientes.slice(0, 5).map((cliente: any) => (
+                  {asesores.slice(0, 5).map((asesor: any) => (
                     <div
-                      key={cliente.id}
+                      key={asesor.id}
                       className="p-3 border rounded-lg hover:bg-muted/50 transition-colors flex items-center justify-between group"
                     >
                       <div className="flex-1">
-                        <p className="font-medium">{cliente.nombreCliente}</p>
-                        {cliente.email && (
+                        <p className="font-medium">{asesor.username}</p>
+                        {asesor.email && (
                           <p className="text-xs text-muted-foreground">
-                            {cliente.email}
+                            {asesor.email}
                           </p>
                         )}
                       </div>
 
-                      {/* Botones de acción */}
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {/* Botón de editar */}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditClick(cliente)}
-                        >
-                          <Pencil className="w-4 h-4 text-blue-600" />
-                        </Button>
-
-                        {/* Botón de eliminar */}
+                      {/* Botón de eliminar */}
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => {
-                            setClienteToDelete(cliente);
-                            setDeleteDialogOpen(true);
+                            setAsesorToDelete(asesor);
+                            setDeleteAsesorDialogOpen(true);
                           }}
                         >
                           <Trash2 className="w-4 h-4 text-destructive" />
@@ -727,9 +793,9 @@ export default function UserHomePage() {
                       </div>
                     </div>
                   ))}
-                  {clientes.length > 5 && (
+                  {asesores.length > 5 && (
                     <p className="text-xs text-center text-muted-foreground pt-2">
-                      +{clientes.length - 5} más
+                      +{asesores.length - 5} más
                     </p>
                   )}
                 </div>
@@ -819,14 +885,18 @@ export default function UserHomePage() {
         </Card>
       </div>
 
-      {/* ✅ Dialog de confirmación de eliminación */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      {/* Dialog de confirmación de eliminación de asesor */}
+      <Dialog
+        open={deleteAsesorDialogOpen}
+        onOpenChange={setDeleteAsesorDialogOpen}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>¿Eliminar Cliente?</DialogTitle>
+            <DialogTitle>¿Eliminar Asesor?</DialogTitle>
             <DialogDescription>
-              Esta acción no se puede deshacer. El cliente "
-              {clienteToDelete?.nombreCliente}" será eliminado permanentemente.
+              Esta acción no se puede deshacer. El asesor "
+              {asesorToDelete?.username}" será eliminado permanentemente y ya no
+              tendrá acceso al sistema.
             </DialogDescription>
           </DialogHeader>
 
@@ -835,8 +905,8 @@ export default function UserHomePage() {
               variant="outline"
               className="flex-1"
               onClick={() => {
-                setDeleteDialogOpen(false);
-                setClienteToDelete(null);
+                setDeleteAsesorDialogOpen(false);
+                setAsesorToDelete(null);
               }}
             >
               Cancelar
@@ -845,13 +915,13 @@ export default function UserHomePage() {
               variant="destructive"
               className="flex-1"
               onClick={() => {
-                if (clienteToDelete) {
-                  deleteClienteMutation.mutate(clienteToDelete.id);
+                if (asesorToDelete) {
+                  deleteAsesorMutation.mutate(asesorToDelete.id);
                 }
               }}
-              disabled={deleteClienteMutation.isPending}
+              disabled={deleteAsesorMutation.isPending}
             >
-              {deleteClienteMutation.isPending ? (
+              {deleteAsesorMutation.isPending ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Eliminando...
@@ -861,94 +931,6 @@ export default function UserHomePage() {
               )}
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog de edición de cliente */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Editar Cliente</DialogTitle>
-            <DialogDescription>
-              Actualiza la información de {clienteToEdit?.nombreCliente}
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleEditSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="editClientName">
-                Nombre del Cliente <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="editClientName"
-                placeholder="Ej: Empresa XYZ"
-                value={editClientName}
-                onChange={(e) => setEditClientName(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="editClientEmail">Email</Label>
-              <Input
-                id="editClientEmail"
-                type="email"
-                placeholder="contacto@empresa.com"
-                value={editClientEmail}
-                onChange={(e) => setEditClientEmail(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="editClientPhone">Teléfono</Label>
-              <Input
-                id="editClientPhone"
-                type="tel"
-                placeholder="+54 11 1234-5678"
-                value={editClientPhone}
-                onChange={(e) => setEditClientPhone(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="editClientDescription">Descripción</Label>
-              <Textarea
-                id="editClientDescription"
-                placeholder="Información adicional sobre el cliente..."
-                value={editClientDescription}
-                onChange={(e) => setEditClientDescription(e.target.value)}
-                rows={3}
-              />
-            </div>
-
-            <div className="flex gap-2 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                onClick={() => {
-                  setEditDialogOpen(false);
-                  setClienteToEdit(null);
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                className="flex-1"
-                disabled={updateClienteMutation.isPending}
-              >
-                {updateClienteMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Actualizando...
-                  </>
-                ) : (
-                  "Guardar Cambios"
-                )}
-              </Button>
-            </div>
-          </form>
         </DialogContent>
       </Dialog>
     </div>

@@ -8,6 +8,7 @@ declare module "express-session" {
     userId?: number;
     username?: string;
     role?: string;
+    parentGerenteId?: number; // NUEVO: ID del gerente (para asesores)
   }
 }
 

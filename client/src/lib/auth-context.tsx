@@ -85,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { role: data.user.role };
   };
 
+  // Este método ya no esta disponible, el registro lo hace cada rol (admin o gerente)
   const register = async (
     username: string,
     password: string,
@@ -146,5 +147,14 @@ export function useAuth() {
  * Helper para determinar la ruta inicial según el rol
  */
 export function getHomeRoute(role: string): string {
-  return role === "admin" ? "/" : "/user-home";
+  if (role === "admin") {
+    return "/"; // Dashboard admin
+  }
+  if (role === "gerente") {
+    return "/user-home"; // Dashboard gerente
+  }
+  if (role === "asesor") {
+    return "/asesor-home"; // Dashboard asesor (crear después)
+  }
+  return "/"; // Default
 }

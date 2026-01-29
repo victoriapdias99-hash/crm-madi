@@ -10,6 +10,7 @@ import NotFound from "@/pages/not-found";
 // Páginas de autenticación
 import LoginPage from "@/pages/login-page";
 import RegisterPage from "@/pages/register-page";
+import GerentesManagementPage from "@/pages/gerentes-management-page";
 
 // Página de usuario normal
 import UserHomePage from "@/pages/user-home-pages";
@@ -40,11 +41,16 @@ function Router() {
     <Switch>
       {/* Rutas públicas (sin autenticación) */}
       <Route path="/login" component={LoginPage} />
-      <Route path="/register" component={RegisterPage} />
+      {/*<Route path="/register" component={RegisterPage} />*/}
+      <Route path="/gerentes-management">
+        <RoleBasedRoute allowedRoles={["admin"]}>
+          <GerentesManagementPage />
+        </RoleBasedRoute>
+      </Route>
 
       {/* Ruta para usuarios normales */}
       <Route path="/user-home">
-        <RoleBasedRoute allowedRoles={["user"]}>
+        <RoleBasedRoute allowedRoles={["gerente", "asesor"]}>
           <UserHomePage />
         </RoleBasedRoute>
       </Route>

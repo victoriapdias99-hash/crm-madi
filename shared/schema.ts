@@ -3,6 +3,7 @@ import {
   text,
   serial,
   integer,
+  index,
   boolean,
   timestamp,
   jsonb,
@@ -13,14 +14,40 @@ import { createInsertSchema } from "drizzle-zod";
 import { number, z } from "zod";
 
 // Usuario y autenticación
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-  email: text("email"),
-  role: text("role").notNull().default("user"), // admin, user
-  createdAt: timestamp("created_at").defaultNow(),
-});
+export const users = pgTable(
+  "users",
+  {
+    id: serial("id").primaryKey(),
+    username: text("username").notNull().unique(),
+    password: text("password").notNull(),
+    email: text("email"),
+    // Role puede ser: 'admin', 'gerente', 'asesor'
+    role: text("role").notNull().default("gerente"), // admin, user
+
+    // NUEVOS CAMPOS
+    // ID del usuario que creó este usuario
+    // Admin crea gerentes, Gerente crea asesores
+    createdBy: integer("created_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+
+    // ID del gerente al que pertenece el asesor
+    // Solo se usa si role = 'asesor'
+    parentGerenteId: integer("parent_gerente_id").references(() => users.id, {
+      onDelete: "cascade",
+    }),
+
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => ({
+    // Índices para mejor performance
+    createdByIdx: index("idx_users_created_by").on(table.createdBy),
+    parentGerenteIdx: index("idx_users_parent_gerente_id").on(
+      table.parentGerenteId,
+    ),
+    roleIdx: index("idx_users_role").on(table.role),
+  }),
+);
 
 // Campañas de Meta Ads
 export const campaigns = pgTable("campaigns", {
@@ -74,37 +101,53 @@ export const leads = pgTable("leads", {
 });
 
 // Leads de Google Sheets (tabla optimizada para sincronización)
-export const opLead = pgTable("op_lead", {
-  id: serial("id").primaryKey(),
-  metaLeadId: text("meta_lead_id").unique().notNull(), // ID único garantizado
+export const opLead = pgTable(
+  "op_lead",
+  {
+    id: serial("id").primaryKey(),
+    metaLeadId: text("meta_lead_id").unique().notNull(), // ID único garantizado
 
-  // Información básica del lead
-  nombre: text("nombre").notNull(), // Con fallback 'S/N'
-  telefono: text("telefono").notNull(), // Siempre normalizado
-  email: text("email"), // Opcional, siempre aceptado
-  ciudad: text("ciudad"), // También llamada "Localidad"
-  modelo: text("modelo"), // Modelo del auto
-  comentarioHorario: text("comentario_horario"), // Horario de contacto / Comentarios
+    // Información básica del lead
+    nombre: text("nombre").notNull(), // Con fallback 'S/N'
+    telefono: text("telefono").notNull(), // Siempre normalizado
+    email: text("email"), // Opcional, siempre aceptado
+    ciudad: text("ciudad"), // También llamada "Localidad"
+    modelo: text("modelo"), // Modelo del auto
+    comentarioHorario: text("comentario_horario"), // Horario de contacto / Comentarios
 
-  // Datos específicos de Google Sheets (columnas G, H, I)
-  origen: text("origen"), // WhatsApp, Instagram, etc.
-  localizacion: text("localizacion"), // Ubicación geográfica
-  cliente: text("cliente"), // Cliente específico
+    // Datos específicos de Google Sheets (columnas G, H, I)
+    origen: text("origen"), // WhatsApp, Instagram, etc.
+    localizacion: text("localizacion"), // Ubicación geográfica
+    cliente: text("cliente"), // Cliente específico
 
-  // Metadatos de campaña
-  marca: text("marca").notNull(), // Fiat, Toyota, VW, etc.
-  campaign: text("campaign").notNull(), // Nombre de campaña original
-  campaignId: integer("campaign_id"), // ID de campaña asignada (para cierre de campañas)
+    // Metadatos de campaña
+    marca: text("marca").notNull(), // Fiat, Toyota, VW, etc.
+    campaign: text("campaign").notNull(), // Nombre de campaña original
+    campaignId: integer("campaign_id"), // ID de campaña asignada (para cierre de campañas)
 
-  // Control de sincronización con Google Sheets
-  googleSheetsRowNumber: integer("google_sheets_row_number"), // Número de fila exacto en Google Sheets
+    // NUEVO CAMPO
+    // ID del gerente propietario de este lead
+    gerenteId: integer("gerente_id").references(() => users.id, {
+      onDelete: "cascade",
+    }),
 
-  // Sistema
-  source: text("source").notNull().default("google_sheets"),
-  fechaCreacion: timestamp("fecha_creacion").notNull(), // Fecha original del lead
-  createdAt: timestamp("created_at").defaultNow(), // Fecha de inserción en DB
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+    // Control de sincronización con Google Sheets
+    googleSheetsRowNumber: integer("google_sheets_row_number"), // Número de fila exacto en Google Sheets
+
+    // Sistema
+    source: text("source").notNull().default("google_sheets"),
+    fechaCreacion: timestamp("fecha_creacion").notNull(), // Fecha original del lead
+    createdAt: timestamp("created_at").defaultNow(), // Fecha de inserción en DB
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => ({
+    // Índices
+    gerenteIdx: index("idx_op_lead_gerente_id").on(table.gerenteId),
+    metaLeadIdIdx: index("idx_op_lead_meta_lead_id").on(table.metaLeadId),
+    telefonoIdx: index("idx_op_lead_telefono").on(table.telefono),
+    marcaIdx: index("idx_op_lead_marca").on(table.marca),
+  }),
+);
 
 // Vista optimizada de leads sin duplicados (op_leads_rep)
 export const opLeadsRep = pgTable("op_leads_rep", {
@@ -462,7 +505,8 @@ export const insertOpLeadWebhookSchema = createInsertSchema(opLeadWebhook).pick(
 
 // Types
 export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
+export type InsertUser = typeof users.$inferInsert;
+//export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export type Campaign = typeof campaigns.$inferSelect;
 export type InsertCampaign = z.infer<typeof insertCampaignSchema>;
@@ -599,6 +643,9 @@ export type InsertEnviadosMetrics = z.infer<typeof insertEnviadosMetricsSchema>;
 
 export type OpLeadWebhook = typeof opLeadWebhook.$inferSelect;
 export type InsertOpLeadWebhook = z.infer<typeof insertOpLeadWebhookSchema>;
+
+export type OpLead = typeof opLead.$inferSelect;
+export type InsertOpLead = typeof opLead.$inferInsert;
 
 export const CAMPAIGN_STATUS = {
   ACTIVE: "active",
@@ -818,6 +865,30 @@ export const ZONAS = {
   NACIONAL: "NACIONAL",
   LOCALIZADO: "LOCALIZADO",
 } as const;
+
+export const UserRole = {
+  ADMIN: "admin",
+  GERENTE: "gerente",
+  ASESOR: "asesor",
+} as const;
+
+export type UserRoleType = (typeof UserRole)[keyof typeof UserRole];
+
+export function isAdmin(role: string): boolean {
+  return role === UserRole.ADMIN;
+}
+
+export function isGerente(role: string): boolean {
+  return role === UserRole.GERENTE;
+}
+
+export function isAsesor(role: string): boolean {
+  return role === UserRole.ASESOR;
+}
+
+export function canCreateUsers(role: string): boolean {
+  return role === UserRole.ADMIN || role === UserRole.GERENTE;
+}
 
 export type Zona = (typeof ZONAS)[keyof typeof ZONAS];
 
