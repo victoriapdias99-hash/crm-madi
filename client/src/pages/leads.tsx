@@ -334,11 +334,37 @@ function LeadsPage() {
     }
   };
 
-  const handleConfirmReassign = (payload: any) => {
-    console.log("Reasignando:", payload);
-    setDialogOpen(false);
-    setSelectedIds([]);
-    alert("Funcionalidad de reasignar pendiente");
+  const handleConfirmReassign = async (clienteNuevo: string): Promise<void> => {
+    console.log("Reasignando leads:", selectedIds, "a cliente:", clienteNuevo);
+    
+    try {
+      const response = await fetch("/api/webhook/leads/reassign", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          leadIds: selectedIds,
+          clienteNuevo: clienteNuevo,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Error al reasignar leads");
+      }
+
+      alert(`✅ ${data.message}`);
+      setSelectedIds([]);
+      setDialogOpen(false);
+      
+      // Refrescar la lista de leads
+      await fetchLeads();
+    } catch (err: any) {
+      console.error("Error reasignando leads:", err);
+      throw new Error(err.message || "Error al reasignar los leads");
+    }
   };
 
   const isAllSelected =
