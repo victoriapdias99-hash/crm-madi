@@ -144,4 +144,106 @@ export class WebhookController {
       });
     }
   }
+
+  /**
+   * POST /api/webhook/leads/reassign
+   * Reasigna múltiples leads a un nuevo cliente
+   */
+  async reassignLeads(req: Request, res: Response): Promise<void> {
+    try {
+      const { leadIds, clienteNuevo } = req.body;
+
+      console.log("🔄 Reasignando leads:");
+      console.log("  - IDs:", leadIds);
+      console.log("  - Cliente nuevo:", clienteNuevo);
+
+      // Validaciones
+      if (!Array.isArray(leadIds) || leadIds.length === 0) {
+        res.status(400).json({
+          success: false,
+          message: "Debe proporcionar al menos un ID de lead",
+        });
+        return;
+      }
+
+      if (!clienteNuevo || typeof clienteNuevo !== "string") {
+        res.status(400).json({
+          success: false,
+          message: "Debe proporcionar un cliente válido",
+        });
+        return;
+      }
+
+      // Si el repositorio tiene un método reassign, usarlo
+      let totalUpdated = 0;
+
+      if (typeof this.repository.reassign === "function") {
+        totalUpdated = await this.repository.reassign(leadIds, clienteNuevo);
+      } else {
+        // Fallback: actualizar directamente con consultas SQL
+        // Importar db desde donde corresponda
+        const { db } = await import("../../../db");
+
+        // Actualizar en op_lead
+        const result1 = await db.query(
+          `
+          UPDATE op_lead
+          SET cliente = $1, updated_at = NOW()
+          WHERE id = ANY($2::int[])
+        `,
+          [clienteNuevo, leadIds],
+        );
+        totalUpdated += result1.rowCount || 0;
+
+        // Actualizar en op_lead_webhook
+        const result2 = await db.query(
+          `
+          UPDATE op_lead_webhook
+          SET cliente = $1, updated_at = NOW()
+          WHERE id = ANY($2::int[])
+        `,
+          [clienteNuevo, leadIds],
+        );
+        totalUpdated += result2.rowCount || 0;
+
+        // Actualizar en leads
+        const result3 = await db.query(
+          `
+          UPDATE leads
+          SET cliente = $1, updated_at = NOW()
+          WHERE id = ANY($2::int[])
+        `,
+          [clienteNuevo, leadIds],
+        );
+        totalUpdated += result3.rowCount || 0;
+      }
+
+      if (totalUpdated === 0) {
+        res.status(404).json({
+          success: false,
+          message: "No se encontraron leads para actualizar",
+        });
+        return;
+      }
+
+      console.log(`✅ ${totalUpdated} lead(s) reasignados exitosamente`);
+
+      res.status(200).json({
+        success: true,
+        message: `${totalUpdated} lead(s) reasignado(s) exitosamente a ${clienteNuevo}`,
+        data: {
+          leadsUpdated: totalUpdated,
+          clienteNuevo,
+          leadIds,
+        },
+      });
+    } catch (error: any) {
+      console.error("❌ Error al reasignar leads:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error al reasignar los leads",
+        error: error.message,
+      });
+    }
+  }
 }

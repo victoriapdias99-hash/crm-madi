@@ -6,11 +6,21 @@ import { ReassignLeadsDialog } from "@/components/leads/ReassignLeadsDialog";
 const ZONES = ["AMBA", "Córdoba", "Mendoza", "NACIONAL", "Santa Fe"];
 const BRANDS = [
   "BAIC",
+  "BYD",
+  "Chery",
   "Chevrolet",
   "Citroen",
+  "DFSK",
   "Fiat",
   "Ford",
+  "Haval",
+  "JAC",
   "Jeep",
+  "JMEV",
+  "Leapmotor",
+  "MG",
+  "Maxus",
+  "Forthing",
   "Nissan",
   "Peugeot",
   "Renault",
@@ -112,7 +122,17 @@ function LeadsPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedZone, selectedBrand, selectedClient, startDate, endDate, searchNombre, searchApellido, searchTelefono, searchLocalidad]);
+  }, [
+    selectedZone,
+    selectedBrand,
+    selectedClient,
+    startDate,
+    endDate,
+    searchNombre,
+    searchApellido,
+    searchTelefono,
+    searchLocalidad,
+  ]);
 
   // ORDENAMIENTO FORZADO EN FRONTEND (useMemo)
   // Esto asegura que, sin importar cómo vengan del backend, se ordenen
@@ -237,23 +257,23 @@ function LeadsPage() {
 
       // Filtros de búsqueda por texto
       const leadNombre = normalizeText(lead.nombre);
-      
+
       if (searchNombre) {
         const searchTerm = normalizeText(searchNombre);
         if (!leadNombre.includes(searchTerm)) return false;
       }
-      
+
       if (searchApellido) {
         const searchTerm = normalizeText(searchApellido);
         if (!leadNombre.includes(searchTerm)) return false;
       }
-      
+
       if (searchTelefono) {
         const leadTel = (lead.telefono || "").replace(/\D/g, "");
         const searchTel = searchTelefono.replace(/\D/g, "");
         if (!leadTel.includes(searchTel)) return false;
       }
-      
+
       if (searchLocalidad) {
         const leadLoc = normalizeText(lead.localidad);
         const searchTerm = normalizeText(searchLocalidad);
@@ -333,7 +353,10 @@ function LeadsPage() {
   };
 
   return (
-    <div className="min-h-screen p-4 space-y-4" style={{ backgroundColor: '#5b9bd5' }}>
+    <div
+      className="min-h-screen p-4 space-y-4"
+      style={{ backgroundColor: "#5b9bd5" }}
+    >
       {/* Encabezado */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">

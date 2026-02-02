@@ -2,6 +2,7 @@ import {
   users,
   campaigns,
   leads,
+  opLead,
   dailyStats,
   leadNotes,
   clientes,
@@ -974,13 +975,58 @@ export class DatabaseStorage implements IStorage {
     return lead || undefined;
   }
 
-  async getLeads(filters?: {
+  /*async getLeads(filters?: {
     status?: string;
     campaignId?: number;
     limit?: number;
   }): Promise<Lead[]> {
     let query = db.select().from(leads);
 
+    if (filters?.status) {
+      query = query.where(eq(leads.status, filters.status)) as any;
+    }
+    if (filters?.campaignId) {
+      query = query.where(eq(leads.campaignId, filters.campaignId)) as any;
+    }
+    query = query.orderBy(desc(leads.createdAt)) as any;
+    if (filters?.limit) {
+      query = query.limit(filters.limit) as any;
+    }
+
+    return await query;
+  }*/
+  async getLeads(filters?: {
+    status?: string;
+    campaignId?: number;
+    limit?: number;
+  }): Promise<any[]> {
+    let query = db
+      .select({
+        id: opLead.id,
+        metaLeadId: opLead.metaLeadId,
+        nombre: opLead.nombre,
+        telefono: opLead.telefono,
+        email: opLead.email,
+        ciudad: opLead.ciudad,
+        modelo: opLead.modelo,
+        comentarioHorario: opLead.comentarioHorario,
+        origen: opLead.origen,
+        localizacion: opLead.localizacion,
+        cliente: opLead.cliente,
+        marca: opLead.marca,
+        campaign: opLead.campaign,
+        campaignId: opLead.campaignId,
+        googleSheetsRowNumber: opLead.googleSheetsRowNumber,
+        source: opLead.source,
+        fechaCreacion: opLead.fechaCreacion,
+        createdAt: opLead.createdAt,
+        updatedAt: opLead.updatedAt,
+      })
+      .from(opLead);
+
+    // Ordena por fechaCreacion en lugar de createdAt
+    query = query.orderBy(desc(opLead.fechaCreacion)) as any;
+    // ...
     if (filters?.status) {
       query = query.where(eq(leads.status, filters.status)) as any;
     }

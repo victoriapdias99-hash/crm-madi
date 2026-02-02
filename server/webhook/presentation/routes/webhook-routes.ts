@@ -13,7 +13,7 @@ export function registerWebhookRoutes(app: Express): void {
   // Ahora sí estamos instanciando las clases NUEVAS que editamos
   const repository = new PostgresWebhookRepository();
   const createLeadUseCase = new CreateWebhookLeadUseCase(repository);
-  const controller = new WebhookController(createLeadUseCase, repository); 
+  const controller = new WebhookController(createLeadUseCase, repository);
 
   // Rutas
   app.post("/api/webhook/lead-webhook", (req, res) => {
@@ -22,6 +22,9 @@ export function registerWebhookRoutes(app: Express): void {
   });
 
   app.get("/api/webhook/leads", (req, res) => controller.getLeads(req, res));
+  app.post("/api/webhook/leads/reassign", (req, res) =>
+    controller.reassignLeads(req, res),
+  );
 
   console.log("✅ Rutas del sistema de webhooks registradas correctamente.");
 }

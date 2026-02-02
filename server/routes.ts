@@ -4417,6 +4417,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint para reasignar múltiples leads a un cliente
+
+  app.post("/api/webhook/leads/reassign", async (req, res) => {
+    try {
+      const { leadIds, clienteNuevo } = req.body;
+
+      // Validaciones
+      if (!Array.isArray(leadIds) || leadIds.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Debe proporcionar al menos un ID de lead",
+        });
+      }
+
+      if (!clienteNuevo || typeof clienteNuevo !== "string") {
+        return res.status(400).json({
+          success: false,
+          message: "Debe proporcionar un cliente válido",
+        });
+      }
+
+      console.log(
+        `🔄 Reasignando ${leadIds.length} leads al cliente: ${clienteNuevo}`,
+      );
+
+      // ACTUALIZACIÓN EN MÚLTIPLES TABLAS
+      // Como los leads pueden venir de 3 tablas diferentes (op_lead,
+      // op_lead_webhook, leads), necesitamos actualizar en todas
+
+      let totalUpdated = 0;
+      const errors: string[] = [];
+
+      // 1. Actualizar en op_lead (tabla principal)
+      try {
+        const result1 = await db.query(
+          `
+          UPDATE op_lead
+          SET cliente = $1, updated_at = NOW()
+          WHERE id = ANY($2::int[])
+        `,
+          [clienteNuevo, leadIds],
+        );
+
+        totalUpdated += result1.rowCount || 0;
+        console.log(`✅ Actualizados ${result1.rowCount} leads en op_lead`);
+      } catch (err: any) {
+        console.error("Error actualizando op_lead:", err);
+        errors.push(`op_lead: ${err.message}`);
+      }
+
+      // 2. Actualizar en op_lead_webhook (legacy webhooks)
+      try {
+        const result2 = await db.query(
+          `
+          UPDATE op_lead_webhook
+          SET cliente = $1, updated_at = NOW()
+          WHERE id = ANY($2::int[])
+        `,
+          [clienteNuevo, leadIds],
+        );
+
+        totalUpdated += result2.rowCount || 0;
+        console.log(
+          `✅ Actualizados ${result2.rowCount} leads en op_lead_webhook`,
+        );
+      } catch (err: any) {
+        console.error("Error actualizando op_lead_webhook:", err);
+        errors.push(`op_lead_webhook: ${err.message}`);
+      }
+
+      // 3. Actualizar en leads (Meta Ads legacy)
+      try {
+        const result3 = await db.query(
+          `
+          UPDATE leads
+          SET cliente = $1, updated_at = NOW()
+          WHERE id = ANY($2::int[])
+        `,
+          [clienteNuevo, leadIds],
+        );
+
+        totalUpdated += result3.rowCount || 0;
+        console.log(`✅ Actualizados ${result3.rowCount} leads en leads`);
+      } catch (err: any) {
+        console.error("Error actualizando leads:", err);
+        errors.push(`leads: ${err.message}`);
+      }
+
+      // Verificar si se actualizó al menos un lead
+      if (totalUpdated === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "No se encontraron leads para actualizar",
+          errors: errors.length > 0 ? errors : undefined,
+        });
+      }
+
+      // Respuesta exitosa
+      res.json({
+        success: true,
+        message: `${totalUpdated} lead(s) reasignado(s) exitosamente a ${clienteNuevo}`,
+        data: {
+          leadsUpdated: totalUpdated,
+          clienteNuevo,
+          leadIds,
+        },
+      });
+    } catch (error: any) {
+      console.error("❌ Error en endpoint de reasignación:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error al reasignar los leads",
+        error: error.message,
+      });
+    }
+  });
+
   // Sistema de webhooks (refactorizado a Clean Architecture)
   // Las rutas se registran desde el módulo webhook
   // Ver: server/webhook/*
