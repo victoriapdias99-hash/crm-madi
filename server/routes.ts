@@ -17,7 +17,8 @@ import {
 import { contarLeadsYDuplicadosUnificado } from "../shared/utils/campaign-counting-utils";
 import { centralizedDataService } from "./centralized-data-service";
 import { db } from "./db";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, inArray, sql } from "drizzle-orm";
+import { opLead, opLeadWebhook, leads as leadsTable } from "../shared/schema";
 import {
   insertLeadSchema,
   insertCampaignSchema,
@@ -4451,17 +4452,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // 1. Actualizar en op_lead (tabla principal)
       try {
-        const result1 = await db.query(
-          `
-          UPDATE op_lead
-          SET cliente = $1, updated_at = NOW()
-          WHERE id = ANY($2::int[])
-        `,
-          [clienteNuevo, leadIds],
-        );
+        const result1 = await db
+          .update(opLead)
+          .set({ cliente: clienteNuevo, updatedAt: new Date() })
+          .where(inArray(opLead.id, leadIds));
 
-        totalUpdated += result1.rowCount || 0;
-        console.log(`✅ Actualizados ${result1.rowCount} leads en op_lead`);
+        console.log(`✅ Actualizados leads en op_lead`);
       } catch (err: any) {
         console.error("Error actualizando op_lead:", err);
         errors.push(`op_lead: ${err.message}`);
@@ -4469,19 +4465,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // 2. Actualizar en op_lead_webhook (legacy webhooks)
       try {
-        const result2 = await db.query(
-          `
-          UPDATE op_lead_webhook
-          SET cliente = $1, updated_at = NOW()
-          WHERE id = ANY($2::int[])
-        `,
-          [clienteNuevo, leadIds],
-        );
+        const result2 = await db
+          .update(opLeadWebhook)
+          .set({ cliente: clienteNuevo, updatedAt: new Date() })
+          .where(inArray(opLeadWebhook.id, leadIds));
 
-        totalUpdated += result2.rowCount || 0;
-        console.log(
-          `✅ Actualizados ${result2.rowCount} leads en op_lead_webhook`,
-        );
+        totalUpdated += leadIds.length;
+        console.log(`✅ Actualizados ${leadIds.length} leads en op_lead_webhook`);
       } catch (err: any) {
         console.error("Error actualizando op_lead_webhook:", err);
         errors.push(`op_lead_webhook: ${err.message}`);
@@ -4489,17 +4479,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // 3. Actualizar en leads (Meta Ads legacy)
       try {
-        const result3 = await db.query(
-          `
-          UPDATE leads
-          SET cliente = $1, updated_at = NOW()
-          WHERE id = ANY($2::int[])
-        `,
-          [clienteNuevo, leadIds],
-        );
+        const result3 = await db
+          .update(leadsTable)
+          .set({ cliente: clienteNuevo, updatedAt: new Date() })
+          .where(inArray(leadsTable.id, leadIds));
 
-        totalUpdated += result3.rowCount || 0;
-        console.log(`✅ Actualizados ${result3.rowCount} leads en leads`);
+        console.log(`✅ Actualizados leads en leads`);
       } catch (err: any) {
         console.error("Error actualizando leads:", err);
         errors.push(`leads: ${err.message}`);
