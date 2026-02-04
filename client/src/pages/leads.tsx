@@ -635,9 +635,8 @@ function LeadsPage() {
                   />
                 </td>
                 <td className="px-4 py-3 text-gray-500">
-                  {/*{new Date(lead.createdAt).toLocaleString()}*/}
-                  {lead.createdAt
-                    ? new Date(lead.createdAt).toLocaleString()
+                  {(lead.fechaCreacion || lead.createdAt)
+                    ? new Date(lead.fechaCreacion || lead.createdAt).toLocaleString()
                     : "-"}
                 </td>
                 <td className="px-4 py-3 font-medium text-gray-900">
