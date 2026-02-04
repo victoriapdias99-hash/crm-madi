@@ -149,6 +149,9 @@ export const opLead = pgTable(
   }),
 );
 
+// Definición del índice único telefono+marca (ya creado en DB)
+// Para que Drizzle lo reconozca en UPSERT: op_lead_telefono_marca_unique
+
 // Vista optimizada de leads sin duplicados (op_leads_rep)
 export const opLeadsRep = pgTable("op_leads_rep", {
   id: serial("id").primaryKey(),
@@ -645,7 +648,6 @@ export type OpLeadWebhook = typeof opLeadWebhook.$inferSelect;
 export type InsertOpLeadWebhook = z.infer<typeof insertOpLeadWebhookSchema>;
 
 export type OpLead = typeof opLead.$inferSelect;
-export type InsertOpLead = typeof opLead.$inferInsert;
 
 export const CAMPAIGN_STATUS = {
   ACTIVE: "active",

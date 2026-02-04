@@ -224,14 +224,15 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
           }));
 
           // UPSERT batch usando ON CONFLICT DO UPDATE
+          // Usamos telefono + marca como criterio de deduplicación
           await db
             .insert(opLead)
             .values(batchValues)
             .onConflictDoUpdate({
-              target: opLead.metaLeadId,
+              target: [opLead.telefono, opLead.marca],
               set: {
+                metaLeadId: sql`EXCLUDED.meta_lead_id`,
                 nombre: sql`EXCLUDED.nombre`,
-                telefono: sql`EXCLUDED.telefono`,
                 email: sql`EXCLUDED.email`,
                 ciudad: sql`EXCLUDED.ciudad`,
                 modelo: sql`EXCLUDED.modelo`,
@@ -239,7 +240,6 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
                 origen: sql`EXCLUDED.origen`,
                 localizacion: sql`EXCLUDED.localizacion`,
                 cliente: sql`EXCLUDED.cliente`,
-                marca: sql`EXCLUDED.marca`,
                 campaign: sql`EXCLUDED.campaign`,
                 googleSheetsRowNumber: sql`EXCLUDED.google_sheets_row_number`,
                 fechaCreacion: sql`EXCLUDED.fecha_creacion`,
