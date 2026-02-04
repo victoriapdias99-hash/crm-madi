@@ -213,7 +213,7 @@ export class PostgresWebhookRepository implements IWebhookRepository {
       data.nombre,
       data.telefono,
       data.modelo, // Mapeo BD -> Entidad
-      data.localizacion, // Mapeo BD -> Entidad
+      data.ciudad, // Mapeo BD -> Entidad (ciudad contiene la localidad real del Sheet)
       data.cliente,
       data.comentarioHorario,
       data.source || "google_sheets",
