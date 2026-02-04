@@ -130,6 +130,11 @@ export class PostgresWebhookRepository implements IWebhookRepository {
       querySheets,
       queryLeads,
     ]);
+    console.log("🔍 Ejemplo de lead de Sheets:", sheetsResults[0]);
+    console.log(
+      "🔍 Propiedades disponibles:",
+      Object.keys(sheetsResults[0] || {}),
+    );
 
     // Combinamos los arrays
     const allLeadsRaw = [...webhooksResults, ...sheetsResults, ...leadsResults];
@@ -212,8 +217,9 @@ export class PostgresWebhookRepository implements IWebhookRepository {
       data.cliente,
       data.comentarioHorario,
       data.source || "google_sheets",
+      data.createdAt,
+      data.updatedAt,
       data.fechaCreacion,
-      data.updatedAt || data.fechaCreacion,
     );
   }
 

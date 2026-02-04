@@ -13,6 +13,7 @@ export class WebhookLead {
     public readonly source: string = "webhook",
     public readonly createdAt?: Date,
     public readonly updatedAt?: Date,
+    public readonly fechaCreacion?: Date,
   ) {}
 
   /**

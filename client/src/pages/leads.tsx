@@ -40,6 +40,7 @@ interface WebhookLead {
   comentarios: string | null;
   source: string;
   createdAt: string;
+  fechaCreacion?: string;
 }
 
 function LeadsPage() {
@@ -140,8 +141,10 @@ function LeadsPage() {
   const sortedLeads = useMemo(() => {
     // Creamos una copia [...] para ordenar sin mutar el estado original
     return [...leads].sort((a, b) => {
-      const dateA = new Date(a.createdAt).getTime();
-      const dateB = new Date(b.createdAt).getTime();
+      //const dateA = new Date(a.createdAt).getTime();
+      //const dateB = new Date(b.createdAt).getTime();
+      const dateA = new Date(a.fechaCreacion || a.createdAt).getTime();
+      const dateB = new Date(b.fechaCreacion || b.createdAt).getTime();
 
       // Protección contra fechas inválidas (las manda al final)
       if (isNaN(dateA)) return 1;
@@ -336,7 +339,7 @@ function LeadsPage() {
 
   const handleConfirmReassign = async (clienteNuevo: string): Promise<void> => {
     console.log("Reasignando leads:", selectedIds, "a cliente:", clienteNuevo);
-    
+
     try {
       const response = await fetch("/api/webhook/leads/reassign", {
         method: "POST",
@@ -358,7 +361,7 @@ function LeadsPage() {
       alert(`✅ ${data.message}`);
       setSelectedIds([]);
       setDialogOpen(false);
-      
+
       // Refrescar la lista de leads
       await fetchLeads();
     } catch (err: any) {
@@ -632,7 +635,10 @@ function LeadsPage() {
                   />
                 </td>
                 <td className="px-4 py-3 text-gray-500">
-                  {new Date(lead.createdAt).toLocaleString()}
+                  {/*{new Date(lead.createdAt).toLocaleString()}*/}
+                  {lead.createdAt
+                    ? new Date(lead.createdAt).toLocaleString()
+                    : "-"}
                 </td>
                 <td className="px-4 py-3 font-medium text-gray-900">
                   {lead.nombre}
