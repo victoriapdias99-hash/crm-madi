@@ -64,53 +64,60 @@ export function getBaseMetaLeadId(metaLeadId: string): string {
  */
 export function parseSheetDate(dateStr: string): Date {
   if (!dateStr || typeof dateStr !== "string" || dateStr.trim() === "") {
-    // console.warn('⚠️ Fecha vacía o inválida, usando fecha actual');
     return new Date();
   }
 
   const cleanDate = dateStr.trim();
 
   try {
-    // 1. Intentar Regex Flexible para DD/MM/YYYY o DD-MM-YYYY
-    // Explicación:
-    // ^(\d{1,2})       -> Empieza con 1 o 2 dígitos (Día)
-    // [\/-]            -> Separador / o -
-    // (\d{1,2})        -> 1 o 2 dígitos (Mes)
-    // [\/-]            -> Separador
-    // (\d{2,4})        -> 2 o 4 dígitos (Año)
-    // (?:.*)?$         -> (Opcional) Cualquier cosa después (hora), ignorado
-    const flexibleMatch = cleanDate.match(
-      /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})(?:.*)?$/,
+    // 1. ISO 8601 con timezone: 2026-01-15T15:59:00-03:00
+    const isoWithTzMatch = cleanDate.match(
+      /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})([+-]\d{2}:\d{2}|Z)?$/
     );
-
-    if (flexibleMatch) {
-      const [, day, month, yearStr] = flexibleMatch;
-      let year = parseInt(yearStr);
-
-      // Corrección de año de 2 dígitos (ej: "24" -> 2024)
-      if (year < 100) {
-        year += 2000;
-      }
-
-      // Crear fecha en UTC puro para evitar problemas de zona horaria
-      const date = new Date(Date.UTC(year, parseInt(month) - 1, parseInt(day)));
-
+    if (isoWithTzMatch) {
+      const [, year, month, day] = isoWithTzMatch;
+      const date = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
       if (!isNaN(date.getTime())) {
         return date;
       }
     }
 
-    // 2. Intento directo ISO (YYYY-MM-DD...)
+    // 2. ISO 8601 simple: 2026-01-15 o 2026-01-15T15:59:00
+    const isoSimpleMatch = cleanDate.match(
+      /^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/
+    );
+    if (isoSimpleMatch) {
+      const [, year, month, day] = isoSimpleMatch;
+      const date = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
+      if (!isNaN(date.getTime())) {
+        return date;
+      }
+    }
+
+    // 3. DD/MM/YYYY o DD-MM-YYYY (con hora opcional)
+    const flexibleMatch = cleanDate.match(
+      /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})(?:.*)?$/
+    );
+    if (flexibleMatch) {
+      const [, day, month, yearStr] = flexibleMatch;
+      let year = parseInt(yearStr);
+      if (year < 100) {
+        year += 2000;
+      }
+      const date = new Date(Date.UTC(year, parseInt(month) - 1, parseInt(day)));
+      if (!isNaN(date.getTime())) {
+        return date;
+      }
+    }
+
+    // 4. Fallback: intento directo con Date constructor
     const isoDate = new Date(cleanDate);
     if (!isNaN(isoDate.getTime())) {
-      // Normalizar a medianoche UTC
       isoDate.setUTCHours(0, 0, 0, 0);
       return isoDate;
     }
 
-    console.warn(
-      `⚠️ No se pudo parsear fecha: "${cleanDate}", usando fecha actual`,
-    );
+    console.warn(`⚠️ No se pudo parsear fecha: "${cleanDate}", usando fecha actual`);
     return new Date();
   } catch (error) {
     console.error(`❌ Error parseando fecha: "${cleanDate}":`, error);
