@@ -70,7 +70,25 @@ export function parseSheetDate(dateStr: string): Date {
   const cleanDate = dateStr.trim();
 
   try {
-    // 1. ISO 8601 con timezone: 2026-01-15T15:59:00-03:00
+    // 1. Excel Serial Number: "46000,76806" o "46000.76806"
+    // Excel cuenta días desde 1899-12-30 (epoch de Excel)
+    const excelSerialMatch = cleanDate.match(/^(\d{4,5})[,.]?(\d*)$/);
+    if (excelSerialMatch) {
+      const days = parseInt(excelSerialMatch[1]);
+      // Excel epoch: 1899-12-30
+      // Convertir días de Excel a fecha JavaScript
+      if (days >= 1 && days <= 100000) {
+        const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+        const msPerDay = 24 * 60 * 60 * 1000;
+        const date = new Date(excelEpoch.getTime() + days * msPerDay);
+        date.setUTCHours(0, 0, 0, 0);
+        if (!isNaN(date.getTime())) {
+          return date;
+        }
+      }
+    }
+
+    // 2. ISO 8601 con timezone: 2026-01-15T15:59:00-03:00
     const isoWithTzMatch = cleanDate.match(
       /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})([+-]\d{2}:\d{2}|Z)?$/
     );
@@ -82,7 +100,7 @@ export function parseSheetDate(dateStr: string): Date {
       }
     }
 
-    // 2. ISO 8601 simple: 2026-01-15 o 2026-01-15T15:59:00
+    // 3. ISO 8601 simple: 2026-01-15 o 2026-01-15T15:59:00
     const isoSimpleMatch = cleanDate.match(
       /^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/
     );
@@ -94,7 +112,7 @@ export function parseSheetDate(dateStr: string): Date {
       }
     }
 
-    // 3. DD/MM/YYYY o DD-MM-YYYY (con hora opcional)
+    // 4. DD/MM/YYYY o DD-MM-YYYY (con hora opcional)
     const flexibleMatch = cleanDate.match(
       /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})(?:.*)?$/
     );
@@ -110,7 +128,7 @@ export function parseSheetDate(dateStr: string): Date {
       }
     }
 
-    // 4. Fallback: intento directo con Date constructor
+    // 5. Fallback: intento directo con Date constructor
     const isoDate = new Date(cleanDate);
     if (!isNaN(isoDate.getTime())) {
       isoDate.setUTCHours(0, 0, 0, 0);
