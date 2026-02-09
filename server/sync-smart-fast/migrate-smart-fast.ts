@@ -224,15 +224,16 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
           }));
 
           // UPSERT batch usando ON CONFLICT DO UPDATE
-          // Usamos telefono + marca como criterio de deduplicación
+          // Usamos metaLeadId como criterio - permite múltiples leads con mismo teléfono+marca
+          // El metaLeadId incluye teléfono+fecha+marca, así cada lead de distinta fecha es único
           await db
             .insert(opLead)
             .values(batchValues)
             .onConflictDoUpdate({
-              target: [opLead.telefono, opLead.marca],
+              target: opLead.metaLeadId,
               set: {
-                metaLeadId: sql`EXCLUDED.meta_lead_id`,
                 nombre: sql`EXCLUDED.nombre`,
+                telefono: sql`EXCLUDED.telefono`,
                 email: sql`EXCLUDED.email`,
                 ciudad: sql`EXCLUDED.ciudad`,
                 modelo: sql`EXCLUDED.modelo`,
@@ -240,6 +241,7 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
                 origen: sql`EXCLUDED.origen`,
                 localizacion: sql`EXCLUDED.localizacion`,
                 cliente: sql`EXCLUDED.cliente`,
+                marca: sql`EXCLUDED.marca`,
                 campaign: sql`EXCLUDED.campaign`,
                 googleSheetsRowNumber: sql`EXCLUDED.google_sheets_row_number`,
                 fechaCreacion: sql`EXCLUDED.fecha_creacion`,
@@ -286,6 +288,48 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
       console.error(`   ❌ Error procesando ${sheetName}:`, error.message);
       stats.errors++;
     }
+  }
+
+  // Refrescar tabla op_leads_rep (leads consolidados para conteo de campañas)
+  console.log("\n🔄 Refrescando tabla op_leads_rep (leads consolidados)...");
+  try {
+    await db.execute(sql`TRUNCATE TABLE op_leads_rep RESTART IDENTITY`);
+    await db.execute(sql`
+      INSERT INTO op_leads_rep (
+        meta_lead_id, nombre, telefono, email, ciudad, modelo, comentario_horario,
+        origen, localizacion, cliente, marca, campaign, campaign_id, 
+        google_sheets_row_number, source, fecha_creacion, created_at, updated_at,
+        cantidad_duplicados, duplicate_ids
+      )
+      SELECT 
+        (array_agg(meta_lead_id ORDER BY fecha_creacion DESC))[1],
+        (array_agg(nombre ORDER BY fecha_creacion DESC))[1],
+        telefono,
+        (array_agg(email ORDER BY fecha_creacion DESC))[1],
+        (array_agg(ciudad ORDER BY fecha_creacion DESC))[1],
+        (array_agg(modelo ORDER BY fecha_creacion DESC))[1],
+        (array_agg(comentario_horario ORDER BY fecha_creacion DESC))[1],
+        (array_agg(origen ORDER BY fecha_creacion DESC))[1],
+        (array_agg(localizacion ORDER BY fecha_creacion DESC))[1],
+        (array_agg(cliente ORDER BY fecha_creacion DESC))[1],
+        marca,
+        (array_agg(campaign ORDER BY fecha_creacion DESC))[1],
+        (array_agg(campaign_id ORDER BY fecha_creacion DESC))[1],
+        (array_agg(google_sheets_row_number ORDER BY fecha_creacion DESC))[1],
+        'google_sheets',
+        MIN(fecha_creacion),
+        MIN(created_at),
+        MAX(updated_at),
+        COUNT(*),
+        array_agg(id ORDER BY fecha_creacion ASC)
+      FROM op_lead
+      GROUP BY telefono, marca
+    `);
+    const repResult = await db.execute(sql`SELECT COUNT(*) as count FROM op_leads_rep`);
+    const repCount = (repResult as any).rows?.[0]?.count ?? (repResult as any)[0]?.count ?? '?';
+    console.log(`✅ op_leads_rep refrescada: ${repCount} leads únicos`);
+  } catch (error: any) {
+    console.error(`❌ Error refrescando op_leads_rep:`, error.message);
   }
 
   return stats;
