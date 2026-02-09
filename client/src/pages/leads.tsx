@@ -1,8 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "wouter";
 import { ReassignLeadsDialog } from "@/components/leads/ReassignLeadsDialog";
 
-// --- CONSTANTES ---
 const ZONES = ["AMBA", "Córdoba", "Mendoza", "NACIONAL", "Santa Fe"];
 const BRANDS = [
   "BAIC",
@@ -32,6 +31,7 @@ const ITEMS_PER_PAGE = 100;
 
 interface WebhookLead {
   id: number;
+  tabla: string;
   nombre: string;
   telefono: string;
   auto: string | null;
@@ -43,16 +43,27 @@ interface WebhookLead {
   fechaCreacion?: string;
 }
 
+interface PaginatedResponse {
+  success: boolean;
+  count: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  data: WebhookLead[];
+}
+
 function LeadsPage() {
   const [leads, setLeads] = useState<WebhookLead[]>([]);
   const [clientsList, setClientsList] = useState<string[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Estados de filtros
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [selectedLeads, setSelectedLeads] = useState<{id: number; tabla: string}[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const [selectedZone, setSelectedZone] = useState("all");
@@ -62,20 +73,37 @@ function LeadsPage() {
   const [endDate, setEndDate] = useState("");
 
   const [searchNombre, setSearchNombre] = useState("");
-  const [searchApellido, setSearchApellido] = useState("");
   const [searchTelefono, setSearchTelefono] = useState("");
   const [searchLocalidad, setSearchLocalidad] = useState("");
 
-  const [currentPage, setCurrentPage] = useState(1);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Carga inicial
-  const fetchLeads = async () => {
+  const buildQueryString = useCallback((page: number) => {
+    const params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("limit", String(ITEMS_PER_PAGE));
+    if (selectedZone !== "all") params.set("zone", selectedZone);
+    if (selectedBrand !== "all") params.set("brand", selectedBrand);
+    if (selectedClient !== "all") params.set("client", selectedClient);
+    if (startDate) params.set("startDate", startDate);
+    if (endDate) params.set("endDate", endDate);
+    if (searchNombre) params.set("searchNombre", searchNombre);
+    if (searchTelefono) params.set("searchTelefono", searchTelefono);
+    if (searchLocalidad) params.set("searchLocalidad", searchLocalidad);
+    return params.toString();
+  }, [selectedZone, selectedBrand, selectedClient, startDate, endDate, searchNombre, searchTelefono, searchLocalidad]);
+
+  const fetchLeads = useCallback(async (page: number) => {
     setLoading(true);
     try {
-      const response = await fetch("/api/webhook/leads");
+      const qs = buildQueryString(page);
+      const response = await fetch(`/api/webhook/leads-paginated?${qs}`);
       if (!response.ok) throw new Error("Error al cargar leads");
-      const result = await response.json();
+      const result: PaginatedResponse = await response.json();
       setLeads(result.data || []);
+      setTotalCount(result.count);
+      setTotalPages(result.totalPages);
+      setCurrentPage(result.page);
       setError(null);
     } catch (err: any) {
       console.error(err);
@@ -83,7 +111,7 @@ function LeadsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [buildQueryString]);
 
   const fetchClients = async () => {
     try {
@@ -102,211 +130,39 @@ function LeadsPage() {
     try {
       const response = await fetch("/api/sync/sheets", { method: "POST" });
       const data = await response.json();
-
       if (!response.ok) throw new Error(data.message || "Error en sync");
-
-      alert(`✅ Sincronización exitosa!\n${data.message}`);
-      fetchLeads();
+      alert(`Sincronización exitosa!\n${data.message}`);
+      fetchLeads(1);
       fetchClients();
     } catch (err: any) {
       console.error("Sync error:", err);
-      alert("❌ Error al sincronizar: " + err.message);
+      alert("Error al sincronizar: " + err.message);
     } finally {
       setSyncing(false);
     }
   };
 
   useEffect(() => {
-    fetchLeads();
+    fetchLeads(1);
     fetchClients();
   }, []);
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [
-    selectedZone,
-    selectedBrand,
-    selectedClient,
-    startDate,
-    endDate,
-    searchNombre,
-    searchApellido,
-    searchTelefono,
-    searchLocalidad,
-  ]);
-
-  // ORDENAMIENTO FORZADO EN FRONTEND (useMemo)
-  // Esto asegura que, sin importar cómo vengan del backend, se ordenen
-  // por fecha descendente (más nuevo arriba) antes de filtrar.
-  const sortedLeads = useMemo(() => {
-    // Creamos una copia [...] para ordenar sin mutar el estado original
-    return [...leads].sort((a, b) => {
-      //const dateA = new Date(a.createdAt).getTime();
-      //const dateB = new Date(b.createdAt).getTime();
-      const dateA = new Date(a.fechaCreacion || a.createdAt).getTime();
-      const dateB = new Date(b.fechaCreacion || b.createdAt).getTime();
-
-      // Protección contra fechas inválidas (las manda al final)
-      if (isNaN(dateA)) return 1;
-      if (isNaN(dateB)) return -1;
-
-      // Orden descendente: fecha más grande (B) menos fecha más chica (A)
-      return dateB - dateA;
-    });
-  }, [leads]); // Se ejecuta cada vez que la lista base 'leads' cambia
-
-  // --- LÓGICA DE FILTRADO (Ahora usa sortedLeads) ---
-  const filteredLeads = useMemo(() => {
-    const normalizeText = (text: string | null) => {
-      if (!text) return "";
-      return text
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[_-]/g, " ")
-        .trim();
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setCurrentPage(1);
+      fetchLeads(1);
+    }, 400);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
     };
+  }, [selectedZone, selectedBrand, selectedClient, startDate, endDate, searchNombre, searchTelefono, searchLocalidad]);
 
-    const EXCLUDED_FROM_NACIONAL = ["amba", "cordoba", "mendoza", "santa fe"];
-    // Conversión de la lista de marcas constante a formato limpio para comparar
-    const MAIN_BRANDS_NORMALIZED = BRANDS.map((b) => normalizeText(b));
+  const goToPage = (page: number) => {
+    setCurrentPage(page);
+    fetchLeads(page);
+  };
 
-    // Se usa 'sortedLeads' en lugar de 'leads'
-    return sortedLeads.filter((lead) => {
-      // FILTRO ZONA
-      if (selectedZone !== "all") {
-        // Se normalizan ambos lados: lo que viene del Lead y lo que se elige en el Select
-        const leadZoneClean = normalizeText(lead.localidad);
-        const selectedZoneClean = normalizeText(selectedZone);
-
-        if (selectedZone === "NACIONAL") {
-          // CASO ESPECIAL: Si es NACIONAL, se muestra todo lo que NO esté en la lista de excluidos
-          if (EXCLUDED_FROM_NACIONAL.includes(leadZoneClean)) return false;
-        } else {
-          // CASO NORMAL: Comparamos directamente (ej: "amba" == "amba")
-          if (leadZoneClean !== selectedZoneClean) return false;
-        }
-      }
-
-      // Filtro Marca
-      if (selectedBrand !== "all") {
-        const leadAutoClean = normalizeText(lead.auto);
-        const selectedBrandClean = normalizeText(selectedBrand);
-
-        // CASO ESPECIAL: "Otras Marcas"
-        if (selectedBrand === "Otras Marcas") {
-          // Creamos una lista de las marcas REALES (todas menos "Otras Marcas")
-          // para saber qué debemos excluir.
-          const realBrandsToCheck = BRANDS.filter(
-            (b) => b !== "Otras Marcas",
-          ).map((b) => normalizeText(b));
-
-          // Verificamos si el auto del lead coincide con alguna marca real
-          const isMainBrand = realBrandsToCheck.some((mainBrand) =>
-            leadAutoClean.includes(mainBrand),
-          );
-
-          // Si ES una marca conocida, la ocultamos (porque queremos ver "las otras")
-          if (isMainBrand) return false;
-        } else {
-          // CASO NORMAL
-          if (!leadAutoClean.includes(selectedBrandClean)) return false;
-        }
-      }
-
-      // Filtro Cliente
-      if (selectedClient !== "all") {
-        const leadClientClean = normalizeText(lead.cliente);
-        const selectedClientClean = normalizeText(selectedClient);
-
-        // CASO ESPECIAL: "Otros Clientes"
-        if (selectedClient === "Otros Clientes") {
-          // Verificar si el cliente del lead coincide con ALGUNO de la lista oficial (clientsList)
-          const isKnownClient = clientsList.some((clientName) => {
-            const knownClientClean = normalizeText(clientName);
-            // Si el nombre del lead contiene el nombre oficial
-            return leadClientClean.includes(knownClientClean);
-          });
-
-          // Si es conocido, lo ocultamos (porque queremos ver los "Otros")
-          if (isKnownClient) return false;
-        } else {
-          // Lógica normal (Búsqueda específica)
-          if (
-            !leadClientClean.includes(selectedClientClean) &&
-            leadClientClean !== selectedClientClean
-          ) {
-            return false;
-          }
-        }
-      }
-
-      // Filtro Rango de Fechas
-      if (startDate || endDate) {
-        const leadDate = new Date(lead.createdAt);
-        leadDate.setHours(0, 0, 0, 0);
-        if (startDate) {
-          const start = new Date(startDate);
-          start.setMinutes(start.getMinutes() + start.getTimezoneOffset());
-          if (leadDate < start) return false;
-        }
-        if (endDate) {
-          const end = new Date(endDate);
-          end.setMinutes(end.getMinutes() + end.getTimezoneOffset());
-          end.setHours(23, 59, 59, 999);
-          if (leadDate > end) return false;
-        }
-      }
-
-      // Filtros de búsqueda por texto
-      const leadNombre = normalizeText(lead.nombre);
-
-      if (searchNombre) {
-        const searchTerm = normalizeText(searchNombre);
-        if (!leadNombre.includes(searchTerm)) return false;
-      }
-
-      if (searchApellido) {
-        const searchTerm = normalizeText(searchApellido);
-        if (!leadNombre.includes(searchTerm)) return false;
-      }
-
-      if (searchTelefono) {
-        const leadTel = (lead.telefono || "").replace(/\D/g, "");
-        const searchTel = searchTelefono.replace(/\D/g, "");
-        if (!leadTel.includes(searchTel)) return false;
-      }
-
-      if (searchLocalidad) {
-        const leadLoc = normalizeText(lead.localidad);
-        const searchTerm = normalizeText(searchLocalidad);
-        if (!leadLoc.includes(searchTerm)) return false;
-      }
-
-      return true;
-    });
-  }, [
-    sortedLeads,
-    selectedZone,
-    selectedBrand,
-    selectedClient,
-    startDate,
-    endDate,
-    searchNombre,
-    searchApellido,
-    searchTelefono,
-    searchLocalidad,
-  ]);
-
-  const totalItems = filteredLeads.length;
-  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedLeads = filteredLeads.slice(
-    startIndex,
-    startIndex + ITEMS_PER_PAGE,
-  );
-
-  // Funciones auxiliares
   const resetFilters = () => {
     setSelectedZone("all");
     setSelectedBrand("all");
@@ -314,71 +170,103 @@ function LeadsPage() {
     setStartDate("");
     setEndDate("");
     setSearchNombre("");
-    setSearchApellido("");
     setSearchTelefono("");
     setSearchLocalidad("");
-    setCurrentPage(1);
   };
 
-  const toggleSelect = (id: number) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
+  const selectedIds = selectedLeads.map(l => l.id);
+
+  const toggleSelect = (lead: WebhookLead) => {
+    setSelectedLeads((prev) => {
+      const exists = prev.some(s => s.id === lead.id && s.tabla === lead.tabla);
+      if (exists) return prev.filter((s) => !(s.id === lead.id && s.tabla === lead.tabla));
+      return [...prev, { id: lead.id, tabla: lead.tabla }];
+    });
+  };
+
+  const isSelected = (lead: WebhookLead) => {
+    return selectedLeads.some(s => s.id === lead.id && s.tabla === lead.tabla);
   };
 
   const toggleSelectAll = () => {
-    if (
-      selectedIds.length === filteredLeads.length &&
-      filteredLeads.length > 0
-    ) {
-      setSelectedIds([]);
+    if (selectedLeads.length === leads.length && leads.length > 0) {
+      setSelectedLeads([]);
     } else {
-      setSelectedIds(filteredLeads.map((l) => l.id));
+      setSelectedLeads(leads.map((l) => ({ id: l.id, tabla: l.tabla })));
     }
   };
 
   const handleConfirmReassign = async (clienteNuevo: string): Promise<void> => {
-    console.log("Reasignando leads:", selectedIds, "a cliente:", clienteNuevo);
-
     try {
       const response = await fetch("/api/webhook/leads/reassign", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          leadIds: selectedIds,
-          clienteNuevo: clienteNuevo,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leads: selectedLeads, clienteNuevo }),
       });
-
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Error al reasignar leads");
-      }
-
-      alert(`✅ ${data.message}`);
-      setSelectedIds([]);
+      if (!response.ok) throw new Error(data.message || "Error al reasignar leads");
+      alert(`${data.message}`);
+      setSelectedLeads([]);
       setDialogOpen(false);
-
-      // Refrescar la lista de leads
-      await fetchLeads();
+      await fetchLeads(currentPage);
     } catch (err: any) {
       console.error("Error reasignando leads:", err);
       throw new Error(err.message || "Error al reasignar los leads");
     }
   };
 
-  const isAllSelected =
-    filteredLeads.length > 0 && selectedIds.length === filteredLeads.length;
+  const isAllSelected = leads.length > 0 && selectedLeads.length === leads.length;
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
 
-  const goToNextPage = () => {
-    if (currentPage < totalPages) setCurrentPage((prev) => prev + 1);
-  };
+  const renderPageButtons = () => {
+    const buttons: JSX.Element[] = [];
+    const maxVisible = 7;
 
-  const goToPrevPage = () => {
-    if (currentPage > 1) setCurrentPage((prev) => prev - 1);
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        buttons.push(
+          <button
+            key={i}
+            onClick={() => goToPage(i)}
+            className={`px-3 py-1 text-sm border rounded ${currentPage === i ? "bg-blue-600 text-white border-blue-600" : "bg-white hover:bg-gray-100"}`}
+          >
+            {i}
+          </button>
+        );
+      }
+    } else {
+      buttons.push(
+        <button key={1} onClick={() => goToPage(1)} className={`px-3 py-1 text-sm border rounded ${currentPage === 1 ? "bg-blue-600 text-white border-blue-600" : "bg-white hover:bg-gray-100"}`}>1</button>
+      );
+
+      if (currentPage > 3) {
+        buttons.push(<span key="dots1" className="px-2 py-1 text-gray-400">...</span>);
+      }
+
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      for (let i = start; i <= end; i++) {
+        buttons.push(
+          <button
+            key={i}
+            onClick={() => goToPage(i)}
+            className={`px-3 py-1 text-sm border rounded ${currentPage === i ? "bg-blue-600 text-white border-blue-600" : "bg-white hover:bg-gray-100"}`}
+          >
+            {i}
+          </button>
+        );
+      }
+
+      if (currentPage < totalPages - 2) {
+        buttons.push(<span key="dots2" className="px-2 py-1 text-gray-400">...</span>);
+      }
+
+      buttons.push(
+        <button key={totalPages} onClick={() => goToPage(totalPages)} className={`px-3 py-1 text-sm border rounded ${currentPage === totalPages ? "bg-blue-600 text-white border-blue-600" : "bg-white hover:bg-gray-100"}`}>{totalPages}</button>
+      );
+    }
+
+    return buttons;
   };
 
   return (
@@ -386,7 +274,6 @@ function LeadsPage() {
       className="min-h-screen p-4 space-y-4"
       style={{ backgroundColor: "#5b9bd5" }}
     >
-      {/* Encabezado */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Link href="/">
@@ -397,13 +284,12 @@ function LeadsPage() {
           <h1 className="text-xl font-semibold">Leads</h1>
           {!loading && (
             <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full border font-medium">
-              {totalItems} registros
+              {totalCount.toLocaleString()} registros
             </span>
           )}
         </div>
 
         <div className="flex gap-2">
-          {/* Botón Sync */}
           <button
             className="px-3 py-1 rounded border border-green-600 text-green-700 bg-green-50 hover:bg-green-100 disabled:opacity-50 flex items-center gap-2"
             onClick={handleSync}
@@ -421,7 +307,7 @@ function LeadsPage() {
 
           <button
             className="px-3 py-1 rounded border hover:bg-gray-100"
-            onClick={fetchLeads}
+            onClick={() => fetchLeads(currentPage)}
             disabled={loading}
           >
             {loading ? "Cargando..." : "Refrescar"}
@@ -429,20 +315,17 @@ function LeadsPage() {
 
           <button
             className="px-3 py-1 rounded bg-blue-600 text-white disabled:bg-gray-400"
-            disabled={selectedIds.length === 0}
+            disabled={selectedLeads.length === 0}
             onClick={() => setDialogOpen(true)}
           >
-            Reasignar ({selectedIds.length})
+            Reasignar ({selectedLeads.length})
           </button>
         </div>
       </div>
 
-      {/* BARRA DE FILTROS */}
       <div className="flex flex-row items-end gap-3 bg-white p-4 rounded border border-gray-200 shadow-sm overflow-x-auto pb-4">
         <div className="flex flex-col gap-1 shrink-0">
-          <label className="text-xs font-semibold text-gray-500 uppercase">
-            Zona
-          </label>
+          <label className="text-xs font-semibold text-gray-500 uppercase">Zona</label>
           <select
             className="border border-gray-300 rounded px-3 py-2 text-sm min-w-[140px] focus:ring-2 focus:ring-blue-500 outline-none"
             value={selectedZone}
@@ -450,35 +333,27 @@ function LeadsPage() {
           >
             <option value="all">Todas las zonas</option>
             {ZONES.map((z) => (
-              <option key={z} value={z}>
-                {z}
-              </option>
+              <option key={z} value={z}>{z}</option>
             ))}
           </select>
         </div>
 
         <div className="flex flex-col gap-1 shrink-0">
-          <label className="text-xs font-semibold text-gray-500 uppercase">
-            Marca
-          </label>
+          <label className="text-xs font-semibold text-gray-500 uppercase">Marca</label>
           <select
             className="border border-gray-300 rounded px-3 py-2 text-sm min-w-[140px] focus:ring-2 focus:ring-blue-500 outline-none"
             value={selectedBrand}
             onChange={(e) => setSelectedBrand(e.target.value)}
           >
             <option value="all">Todas las marcas</option>
-            {BRANDS.map((b) => (
-              <option key={b} value={b}>
-                {b}
-              </option>
+            {BRANDS.filter(b => b !== "Otras Marcas").map((b) => (
+              <option key={b} value={b}>{b}</option>
             ))}
           </select>
         </div>
 
         <div className="flex flex-col gap-1 shrink-0">
-          <label className="text-xs font-semibold text-gray-500 uppercase">
-            Cliente
-          </label>
+          <label className="text-xs font-semibold text-gray-500 uppercase">Cliente</label>
           <select
             className="border border-gray-300 rounded px-3 py-2 text-sm min-w-[160px] focus:ring-2 focus:ring-blue-500 outline-none"
             value={selectedClient}
@@ -486,19 +361,13 @@ function LeadsPage() {
           >
             <option value="all">Todos los clientes</option>
             {clientsList.map((clientName) => (
-              <option key={clientName} value={clientName}>
-                {clientName}
-              </option>
+              <option key={clientName} value={clientName}>{clientName}</option>
             ))}
-            {/* Opción Nueva para descartes */}
-            <option value="Otros Clientes">Otros Clientes</option>
           </select>
         </div>
 
         <div className="flex flex-col gap-1 shrink-0">
-          <label className="text-xs font-semibold text-gray-500 uppercase">
-            Rango de Fecha
-          </label>
+          <label className="text-xs font-semibold text-gray-500 uppercase">Rango de Fecha</label>
           <div className="flex items-center gap-2">
             <input
               type="date"
@@ -519,9 +388,7 @@ function LeadsPage() {
         <div className="h-8 w-px bg-gray-300 mx-2 shrink-0"></div>
 
         <div className="flex flex-col gap-1 shrink-0">
-          <label className="text-xs font-semibold text-gray-500 uppercase">
-            Nombre
-          </label>
+          <label className="text-xs font-semibold text-gray-500 uppercase">Nombre</label>
           <input
             type="text"
             placeholder="Buscar nombre..."
@@ -532,22 +399,7 @@ function LeadsPage() {
         </div>
 
         <div className="flex flex-col gap-1 shrink-0">
-          <label className="text-xs font-semibold text-gray-500 uppercase">
-            Apellido
-          </label>
-          <input
-            type="text"
-            placeholder="Buscar apellido..."
-            className="border border-gray-300 rounded px-3 py-2 text-sm min-w-[140px] focus:ring-2 focus:ring-blue-500 outline-none"
-            value={searchApellido}
-            onChange={(e) => setSearchApellido(e.target.value)}
-          />
-        </div>
-
-        <div className="flex flex-col gap-1 shrink-0">
-          <label className="text-xs font-semibold text-gray-500 uppercase">
-            Teléfono
-          </label>
+          <label className="text-xs font-semibold text-gray-500 uppercase">Teléfono</label>
           <input
             type="text"
             placeholder="Buscar teléfono..."
@@ -558,9 +410,7 @@ function LeadsPage() {
         </div>
 
         <div className="flex flex-col gap-1 shrink-0">
-          <label className="text-xs font-semibold text-gray-500 uppercase">
-            Localidad
-          </label>
+          <label className="text-xs font-semibold text-gray-500 uppercase">Localidad</label>
           <input
             type="text"
             placeholder="Buscar localidad..."
@@ -582,11 +432,10 @@ function LeadsPage() {
 
       {error && (
         <div className="p-3 bg-red-100 text-red-700 rounded border border-red-200">
-          ⚠️ Error: {error}
+          Error: {error}
         </div>
       )}
 
-      {/* Tabla (Sin cambios) */}
       <div className="border rounded overflow-x-auto bg-white shadow-sm mt-4">
         <table className="w-full table-fixed text-sm">
           <thead className="bg-gray-50 border-b">
@@ -598,102 +447,88 @@ function LeadsPage() {
                   onChange={toggleSelectAll}
                 />
               </th>
-              <th className="w-[150px] px-4 py-3 text-left font-medium text-gray-600">
-                Fecha
-              </th>
-              <th className="w-[200px] px-4 py-3 text-left font-medium text-gray-600">
-                Nombre
-              </th>
-              <th className="w-[150px] px-4 py-3 text-left font-medium text-gray-600">
-                Teléfono
-              </th>
-              <th className="w-[140px] px-4 py-3 text-left font-medium text-gray-600">
-                Cliente
-              </th>
-              <th className="w-[150px] px-4 py-3 text-left font-medium text-gray-600">
-                Auto
-              </th>
-              <th className="w-[150px] px-4 py-3 text-left font-medium text-gray-600">
-                Localidad
-              </th>
-              <th className="w-[250px] px-4 py-3 text-left font-medium text-gray-600">
-                Comentario
-              </th>
-              <th className="w-[120px] px-4 py-3 text-left font-medium text-gray-600">
-                Origen
-              </th>
+              <th className="w-[150px] px-4 py-3 text-left font-medium text-gray-600">Fecha</th>
+              <th className="w-[200px] px-4 py-3 text-left font-medium text-gray-600">Nombre</th>
+              <th className="w-[150px] px-4 py-3 text-left font-medium text-gray-600">Teléfono</th>
+              <th className="w-[140px] px-4 py-3 text-left font-medium text-gray-600">Cliente</th>
+              <th className="w-[150px] px-4 py-3 text-left font-medium text-gray-600">Auto</th>
+              <th className="w-[150px] px-4 py-3 text-left font-medium text-gray-600">Localidad</th>
+              <th className="w-[250px] px-4 py-3 text-left font-medium text-gray-600">Comentario</th>
+              <th className="w-[120px] px-4 py-3 text-left font-medium text-gray-600">Origen</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {paginatedLeads.map((lead) => (
-              <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-4 py-3 text-center">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.includes(lead.id)}
-                    onChange={() => toggleSelect(lead.id)}
-                  />
-                </td>
-                <td className="px-4 py-3 text-gray-500">
-                  {(lead.fechaCreacion || lead.createdAt)
-                    ? new Date(lead.fechaCreacion || lead.createdAt).toLocaleString()
-                    : "-"}
-                </td>
-                <td className="px-4 py-3 font-medium text-gray-900">
-                  {lead.nombre}
-                </td>
-                <td className="px-4 py-3 text-gray-600">{lead.telefono}</td>
-                <td className="px-4 py-3 text-gray-800 font-medium">
-                  {lead.cliente || "-"}
-                </td>
-                <td className="px-4 py-3 text-gray-600">{lead.auto || "-"}</td>
-                <td className="px-4 py-3 text-gray-600">
-                  {lead.localidad || "-"}
-                </td>
-                <td className="px-4 py-3 text-gray-600">
-                  <div className="whitespace-normal break-words text-xs leading-snug max-h-[80px] overflow-y-auto">
-                    {lead.comentarios || "-"}
+            {loading ? (
+              <tr>
+                <td className="px-4 py-8 text-center text-gray-500" colSpan={9}>
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="animate-spin h-4 w-4 border-2 border-blue-600 rounded-full border-t-transparent"></span>
+                    Cargando leads...
                   </div>
                 </td>
-                <td className="px-4 py-3">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {lead.source}
-                  </span>
-                </td>
               </tr>
-            ))}
-            {paginatedLeads.length === 0 && !loading && (
+            ) : leads.length === 0 ? (
               <tr>
                 <td className="px-4 py-8 text-center text-gray-500" colSpan={9}>
                   No se encontraron resultados.
                 </td>
               </tr>
+            ) : (
+              leads.map((lead) => (
+                <tr key={`${lead.tabla}-${lead.id}`} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={isSelected(lead)}
+                      onChange={() => toggleSelect(lead)}
+                    />
+                  </td>
+                  <td className="px-4 py-3 text-gray-500">
+                    {(lead.fechaCreacion || lead.createdAt)
+                      ? new Date(lead.fechaCreacion || lead.createdAt).toLocaleString()
+                      : "-"}
+                  </td>
+                  <td className="px-4 py-3 font-medium text-gray-900">{lead.nombre}</td>
+                  <td className="px-4 py-3 text-gray-600">{lead.telefono}</td>
+                  <td className="px-4 py-3 text-gray-800 font-medium">{lead.cliente || "-"}</td>
+                  <td className="px-4 py-3 text-gray-600">{lead.auto || "-"}</td>
+                  <td className="px-4 py-3 text-gray-600">{lead.localidad || "-"}</td>
+                  <td className="px-4 py-3 text-gray-600">
+                    <div className="whitespace-normal break-words text-xs leading-snug max-h-[80px] overflow-y-auto">
+                      {lead.comentarios || "-"}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {lead.source}
+                    </span>
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>
 
-        {totalItems > 0 && (
+        {totalCount > 0 && !loading && (
           <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t">
             <div className="text-xs text-gray-500">
               Mostrando <span className="font-medium">{startIndex + 1}</span> a{" "}
               <span className="font-medium">
-                {Math.min(startIndex + ITEMS_PER_PAGE, totalItems)}
+                {Math.min(startIndex + ITEMS_PER_PAGE, totalCount)}
               </span>{" "}
-              de <span className="font-medium">{totalItems}</span> resultados
+              de <span className="font-medium">{totalCount.toLocaleString()}</span> resultados
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-1 items-center">
               <button
-                onClick={goToPrevPage}
+                onClick={() => goToPage(currentPage - 1)}
                 disabled={currentPage === 1}
                 className="px-3 py-1 text-sm border rounded bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Anterior
               </button>
-              <span className="flex items-center px-2 text-sm font-medium text-gray-700">
-                Página {currentPage} de {totalPages}
-              </span>
+              {renderPageButtons()}
               <button
-                onClick={goToNextPage}
+                onClick={() => goToPage(currentPage + 1)}
                 disabled={currentPage === totalPages}
                 className="px-3 py-1 text-sm border rounded bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -707,7 +542,7 @@ function LeadsPage() {
       <ReassignLeadsDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        selectedLeadIds={selectedIds}
+        selectedLeadIds={selectedLeads.map(l => l.id)}
         onConfirm={handleConfirmReassign}
       />
     </div>

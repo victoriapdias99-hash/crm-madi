@@ -22,6 +22,7 @@ export function registerWebhookRoutes(app: Express): void {
   });
 
   app.get("/api/webhook/leads", (req, res) => controller.getLeads(req, res));
+  app.get("/api/webhook/leads-paginated", (req, res) => controller.getLeadsPaginated(req, res));
   app.post("/api/webhook/leads/reassign", (req, res) =>
     controller.reassignLeads(req, res),
   );
