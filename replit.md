@@ -102,6 +102,12 @@ Preferred communication style: Simple, everyday language.
 - `ws` - WebSocket server
 - `express-session` / `connect-pg-simple` - Session management
 
+### Data Architecture Decisions
+- **Deduplication Strategy**: UPSERT uses `metaLeadId` (phone+date+brand) as conflict target, allowing multiple leads with same phone+brand on different dates to coexist
+- **op_leads_rep table**: Consolidated/deduplicated view of op_lead, grouped by telefono+marca. Contains `duplicate_ids` array and `cantidad_duplicados` count. Auto-refreshed after each Google Sheets sync via `migrateSmartFast()`
+- **Campaign Counting**: Uses `op_leads_rep` to count unique available leads per campaign (filters by cliente, campaign/marca, localizacion/zona)
+- **Location fields**: `ciudad` = actual city from Google Sheet (Column D), `localizacion` = zone/area (Column H). Frontend "Localidad" displays `ciudad`
+
 ### Environment Variables Required
 ```
 DATABASE_URL - PostgreSQL connection string
