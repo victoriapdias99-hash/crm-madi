@@ -155,6 +155,12 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
         }
 
         const fechaCreacion = parseSheetDate(row[0]);
+
+        // 🔍 LOG TEMPORAL
+        console.log("🔍 DEBUGGING FECHA:");
+        console.log("  - row[0] (valor crudo del Sheet):", row[0]);
+        console.log("  - fechaCreacion parseada:", fechaCreacion);
+        console.log("  - ¿Es fecha válida?", !isNaN(fechaCreacion.getTime()));
         const marca = sheetName.toUpperCase();
         const rowNumber = i + 2; // +2 porque: header=1, index empieza en 0
 
@@ -325,8 +331,13 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
       FROM op_lead
       GROUP BY telefono, marca
     `);
-    const repResult = await db.execute(sql`SELECT COUNT(*) as count FROM op_leads_rep`);
-    const repCount = (repResult as any).rows?.[0]?.count ?? (repResult as any)[0]?.count ?? '?';
+    const repResult = await db.execute(
+      sql`SELECT COUNT(*) as count FROM op_leads_rep`,
+    );
+    const repCount =
+      (repResult as any).rows?.[0]?.count ??
+      (repResult as any)[0]?.count ??
+      "?";
     console.log(`✅ op_leads_rep refrescada: ${repCount} leads únicos`);
   } catch (error: any) {
     console.error(`❌ Error refrescando op_leads_rep:`, error.message);
