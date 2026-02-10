@@ -59,85 +59,89 @@ export function getBaseMetaLeadId(metaLeadId: string): string {
 
 /**
  * Parsea una fecha de Google Sheets a objeto Date
- * Soporta múltiples formatos y normaliza a medianoche UTC
- * * MEJORADO: Ahora soporta fechas con hora (dd/mm/yyyy hh:mm:ss)
+ * Soporta múltiples formatos:
+ *   - ISO 8601: 2026-02-04T10:26:51-03:00
+ *   - DD/MM/YYYY o DD-MM-YYYY (con o sin hora)
+ *   - Número serial de Google Sheets (ej: 45678.5)
+ *   - Formato genérico reconocible por Date()
+ *
+ * NUNCA usa new Date() como fallback para evitar asignar
+ * la fecha de sincronización como fecha de creación.
+ * Si no se puede parsear, devuelve null.
  */
-export function parseSheetDate(dateStr: string): Date {
-  if (!dateStr || typeof dateStr !== "string" || dateStr.trim() === "") {
-    console.warn("⚠️ Fecha vacía o inválida, usando fecha actual");
-    return new Date();
+export function parseSheetDate(dateStr: string | number | undefined | null): Date | null {
+  if (dateStr === undefined || dateStr === null) {
+    console.warn("⚠️ parseSheetDate: fecha vacía o undefined, retornando null");
+    return null;
   }
 
-  const cleanDate = dateStr.trim();
+  const raw = typeof dateStr === "number" ? dateStr : dateStr;
+
+  if (typeof raw === "number" || (typeof raw === "string" && /^\d+(\.\d+)?$/.test(raw.trim()))) {
+    const serialNum = typeof raw === "number" ? raw : parseFloat(raw.trim());
+    if (serialNum > 1 && serialNum < 200000) {
+      const GOOGLE_EPOCH = new Date(Date.UTC(1899, 11, 30));
+      const wholeDays = Math.floor(serialNum);
+      const fractionalDay = serialNum - wholeDays;
+      const ms = GOOGLE_EPOCH.getTime() + (wholeDays * 86400000) + Math.round(fractionalDay * 86400000);
+      const date = new Date(ms);
+      if (!isNaN(date.getTime())) {
+        return date;
+      }
+    }
+  }
+
+  if (typeof raw !== "string" || raw.trim() === "") {
+    console.warn(`⚠️ parseSheetDate: valor no reconocido: "${raw}", retornando null`);
+    return null;
+  }
+
+  const cleanDate = raw.trim();
 
   try {
-    // ========================================
-    // 1. FORMATO ISO 8601 (Make.com / Manychat)
-    // ========================================
-    // Detecta: 2026-02-04T10:26:51-03:00
-    //          2026-02-04T10:26:51Z
-    //          2026-02-04T10:26:51.000Z
     if (cleanDate.includes("T")) {
       const isoDate = new Date(cleanDate);
       if (!isNaN(isoDate.getTime())) {
-        console.log(
-          `✅ Fecha ISO parseada: ${cleanDate} → ${isoDate.toISOString()}`,
-        );
         return isoDate;
       }
     }
 
-    // ========================================
-    // 2. FORMATO DD/MM/YYYY o DD-MM-YYYY
-    // ========================================
-    // Detecta: 04/02/2026, 4/2/2026, 04-02-2026
     const flexibleMatch = cleanDate.match(
-      /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})(?:.*)?$/,
+      /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?.*$/,
     );
 
     if (flexibleMatch) {
-      const [, day, month, yearStr] = flexibleMatch;
+      const [, dayStr, monthStr, yearStr, hourStr, minStr, secStr] = flexibleMatch;
       let year = parseInt(yearStr);
 
-      // Corrección de año de 2 dígitos (ej: "24" -> 2024)
       if (year < 100) {
         year += 2000;
       }
 
-      // Crear fecha en UTC puro para evitar problemas de zona horaria
-      const date = new Date(Date.UTC(year, parseInt(month) - 1, parseInt(day)));
+      const hour = hourStr ? parseInt(hourStr) : 0;
+      const min = minStr ? parseInt(minStr) : 0;
+      const sec = secStr ? parseInt(secStr) : 0;
+
+      const date = new Date(Date.UTC(year, parseInt(monthStr) - 1, parseInt(dayStr), hour, min, sec));
 
       if (!isNaN(date.getTime())) {
-        console.log(
-          `✅ Fecha DD/MM/YYYY parseada: ${cleanDate} → ${date.toISOString()}`,
-        );
         return date;
       }
     }
 
-    // ========================================
-    // 3. INTENTO DIRECTO (cualquier formato ISO)
-    // ========================================
-    const isoDate = new Date(cleanDate);
-    if (!isNaN(isoDate.getTime())) {
-      // Normalizar a medianoche UTC
-      isoDate.setUTCHours(0, 0, 0, 0);
-      console.log(
-        `✅ Fecha ISO parseada (genérico): ${cleanDate} → ${isoDate.toISOString()}`,
-      );
-      return isoDate;
+    const genericDate = new Date(cleanDate);
+    if (!isNaN(genericDate.getTime())) {
+      genericDate.setUTCHours(0, 0, 0, 0);
+      return genericDate;
     }
 
-    // ========================================
-    // 4. FALLBACK: No se pudo parsear
-    // ========================================
     console.warn(
-      `⚠️ No se pudo parsear fecha: "${cleanDate}", usando fecha actual`,
+      `⚠️ parseSheetDate: no se pudo parsear "${cleanDate}", retornando null`,
     );
-    return new Date();
+    return null;
   } catch (error) {
-    console.error(`❌ Error parseando fecha: "${cleanDate}":`, error);
-    return new Date();
+    console.error(`❌ parseSheetDate: error con "${cleanDate}":`, error);
+    return null;
   }
 }
 

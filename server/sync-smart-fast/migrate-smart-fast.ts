@@ -156,25 +156,25 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
 
         const fechaCreacion = parseSheetDate(row[0]);
 
-        // 🔍 LOG TEMPORAL
-        console.log("🔍 DEBUGGING FECHA:");
-        console.log("  - row[0] (valor crudo del Sheet):", row[0]);
-        console.log("  - fechaCreacion parseada:", fechaCreacion);
-        console.log("  - ¿Es fecha válida?", !isNaN(fechaCreacion.getTime()));
-        const marca = sheetName.toUpperCase();
-        const rowNumber = i + 2; // +2 porque: header=1, index empieza en 0
+        if (!fechaCreacion) {
+          console.warn(`   ⚠️ Fila ${i + 2}: fecha no parseada (valor crudo: "${row[0]}"), lead omitido`);
+          stats.skipped++;
+          continue;
+        }
 
-        // Construir datos del lead
+        const marca = sheetName.toUpperCase();
+        const rowNumber = i + 2;
+
         const leadData: LeadData = {
           nombre: row[1]?.toString().trim() || "S/D",
           telefono,
-          email: null, // Email no existe en Google Sheets
+          email: null,
           ciudad: row[3]?.toString().trim() || null,
           modelo: row[4]?.toString().trim() || null,
           comentarioHorario: row[5]?.toString().trim() || null,
           origen: row[6]?.toString().trim() || null,
           localizacion: row[7]?.toString().trim() || null,
-          cliente: normalizeClientName(row[8]), // ✅ Normalización centralizada
+          cliente: normalizeClientName(row[8]),
           marca,
           campaign: sheetName,
           googleSheetsRowNumber: rowNumber,
