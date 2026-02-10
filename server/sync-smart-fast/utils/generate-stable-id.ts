@@ -64,78 +64,76 @@ export function getBaseMetaLeadId(metaLeadId: string): string {
  */
 export function parseSheetDate(dateStr: string): Date {
   if (!dateStr || typeof dateStr !== "string" || dateStr.trim() === "") {
+    console.warn("⚠️ Fecha vacía o inválida, usando fecha actual");
     return new Date();
   }
 
   const cleanDate = dateStr.trim();
 
   try {
-    // 1. Excel Serial Number: "46000,76806" o "46000.76806"
-    // Excel cuenta días desde 1899-12-30 (epoch de Excel)
-    const excelSerialMatch = cleanDate.match(/^(\d{4,5})[,.]?(\d*)$/);
-    if (excelSerialMatch) {
-      const days = parseInt(excelSerialMatch[1]);
-      // Excel epoch: 1899-12-30
-      // Convertir días de Excel a fecha JavaScript
-      if (days >= 1 && days <= 100000) {
-        const excelEpoch = new Date(Date.UTC(1899, 11, 30));
-        const msPerDay = 24 * 60 * 60 * 1000;
-        const date = new Date(excelEpoch.getTime() + days * msPerDay);
-        date.setUTCHours(0, 0, 0, 0);
-        if (!isNaN(date.getTime())) {
-          return date;
-        }
+    // ========================================
+    // 1. FORMATO ISO 8601 (Make.com / Manychat)
+    // ========================================
+    // Detecta: 2026-02-04T10:26:51-03:00
+    //          2026-02-04T10:26:51Z
+    //          2026-02-04T10:26:51.000Z
+    if (cleanDate.includes("T")) {
+      const isoDate = new Date(cleanDate);
+      if (!isNaN(isoDate.getTime())) {
+        console.log(
+          `✅ Fecha ISO parseada: ${cleanDate} → ${isoDate.toISOString()}`,
+        );
+        return isoDate;
       }
     }
 
-    // 2. ISO 8601 con timezone: 2026-01-15T15:59:00-03:00
-    const isoWithTzMatch = cleanDate.match(
-      /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})([+-]\d{2}:\d{2}|Z)?$/
-    );
-    if (isoWithTzMatch) {
-      const [, year, month, day] = isoWithTzMatch;
-      const date = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
-      if (!isNaN(date.getTime())) {
-        return date;
-      }
-    }
-
-    // 3. ISO 8601 simple: 2026-01-15 o 2026-01-15T15:59:00
-    const isoSimpleMatch = cleanDate.match(
-      /^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/
-    );
-    if (isoSimpleMatch) {
-      const [, year, month, day] = isoSimpleMatch;
-      const date = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
-      if (!isNaN(date.getTime())) {
-        return date;
-      }
-    }
-
-    // 4. DD/MM/YYYY o DD-MM-YYYY (con hora opcional)
+    // ========================================
+    // 2. FORMATO DD/MM/YYYY o DD-MM-YYYY
+    // ========================================
+    // Detecta: 04/02/2026, 4/2/2026, 04-02-2026
     const flexibleMatch = cleanDate.match(
-      /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})(?:.*)?$/
+      /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})(?:.*)?$/,
     );
+
     if (flexibleMatch) {
       const [, day, month, yearStr] = flexibleMatch;
       let year = parseInt(yearStr);
+
+      // Corrección de año de 2 dígitos (ej: "24" -> 2024)
       if (year < 100) {
         year += 2000;
       }
+
+      // Crear fecha en UTC puro para evitar problemas de zona horaria
       const date = new Date(Date.UTC(year, parseInt(month) - 1, parseInt(day)));
+
       if (!isNaN(date.getTime())) {
+        console.log(
+          `✅ Fecha DD/MM/YYYY parseada: ${cleanDate} → ${date.toISOString()}`,
+        );
         return date;
       }
     }
 
-    // 5. Fallback: intento directo con Date constructor
+    // ========================================
+    // 3. INTENTO DIRECTO (cualquier formato ISO)
+    // ========================================
     const isoDate = new Date(cleanDate);
     if (!isNaN(isoDate.getTime())) {
+      // Normalizar a medianoche UTC
       isoDate.setUTCHours(0, 0, 0, 0);
+      console.log(
+        `✅ Fecha ISO parseada (genérico): ${cleanDate} → ${isoDate.toISOString()}`,
+      );
       return isoDate;
     }
 
-    console.warn(`⚠️ No se pudo parsear fecha: "${cleanDate}", usando fecha actual`);
+    // ========================================
+    // 4. FALLBACK: No se pudo parsear
+    // ========================================
+    console.warn(
+      `⚠️ No se pudo parsear fecha: "${cleanDate}", usando fecha actual`,
+    );
     return new Date();
   } catch (error) {
     console.error(`❌ Error parseando fecha: "${cleanDate}":`, error);
