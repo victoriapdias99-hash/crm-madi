@@ -77,8 +77,9 @@ export function parseSheetDate(dateStr: string | number | undefined | null): Dat
 
   const raw = typeof dateStr === "number" ? dateStr : dateStr;
 
-  if (typeof raw === "number" || (typeof raw === "string" && /^\d+(\.\d+)?$/.test(raw.trim()))) {
-    const serialNum = typeof raw === "number" ? raw : parseFloat(raw.trim());
+  if (typeof raw === "number" || (typeof raw === "string" && /^\d+([.,]\d+)?$/.test(raw.trim()))) {
+    const normalized = typeof raw === "number" ? raw : raw.trim().replace(",", ".");
+    const serialNum = typeof normalized === "number" ? normalized : parseFloat(normalized);
     if (serialNum > 1 && serialNum < 200000) {
       const GOOGLE_EPOCH = new Date(Date.UTC(1899, 11, 30));
       const wholeDays = Math.floor(serialNum);
