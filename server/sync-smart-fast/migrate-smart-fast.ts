@@ -303,7 +303,7 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
     await db.execute(sql`
       INSERT INTO op_leads_rep (
         meta_lead_id, nombre, telefono, email, ciudad, modelo, comentario_horario,
-        origen, localizacion, cliente, marca, campaign, campaign_id, 
+        origen, localizacion, cliente, marca, campaign, campaign_id, campaign_ids,
         google_sheets_row_number, source, fecha_creacion, created_at, updated_at,
         cantidad_duplicados, duplicate_ids
       )
@@ -321,6 +321,7 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
         marca,
         (array_agg(campaign ORDER BY fecha_creacion DESC))[1],
         (array_agg(campaign_id ORDER BY fecha_creacion DESC))[1],
+        NULL::integer[],
         (array_agg(google_sheets_row_number ORDER BY fecha_creacion DESC))[1],
         'google_sheets',
         MIN(fecha_creacion),
@@ -339,6 +340,22 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
       (repResult as any)[0]?.count ??
       "?";
     console.log(`✅ op_leads_rep refrescada: ${repCount} leads únicos`);
+
+    // Sync campaign_ids from op_lead to op_leads_rep
+    console.log("🔄 Sincronizando campaign_ids en op_leads_rep...");
+    await db.execute(sql`
+      UPDATE op_leads_rep r
+      SET campaign_ids = sub.merged_ids
+      FROM (
+        SELECT telefono, marca, 
+               array_agg(DISTINCT cid) as merged_ids
+        FROM op_lead, unnest(campaign_ids) as cid
+        WHERE campaign_ids IS NOT NULL
+        GROUP BY telefono, marca
+      ) sub
+      WHERE r.telefono = sub.telefono AND r.marca = sub.marca
+    `);
+    console.log("✅ campaign_ids sincronizados en op_leads_rep");
   } catch (error: any) {
     console.error(`❌ Error refrescando op_leads_rep:`, error.message);
   }

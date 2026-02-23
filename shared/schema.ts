@@ -123,7 +123,8 @@ export const opLead = pgTable(
     // Metadatos de campaña
     marca: text("marca").notNull(), // Fiat, Toyota, VW, etc.
     campaign: text("campaign").notNull(), // Nombre de campaña original
-    campaignId: integer("campaign_id"), // ID de campaña asignada (para cierre de campañas)
+    campaignId: integer("campaign_id"), // LEGACY - mantener por compatibilidad temporal
+    campaignIds: integer("campaign_ids").array(), // Array de IDs de campañas asignadas (multi-campaña)
 
     // NUEVO CAMPO
     // ID del gerente propietario de este lead
@@ -164,7 +165,8 @@ export const opLeadsRep = pgTable("op_leads_rep", {
   cliente: text("cliente"),
   marca: text("marca").notNull(),
   campaign: text("campaign").notNull(),
-  campaignId: integer("campaign_id"), // ✅ NUEVO CAMPO AGREGADO
+  campaignId: integer("campaign_id"), // LEGACY - mantener por compatibilidad temporal
+  campaignIds: integer("campaign_ids").array(), // Array de IDs de campañas asignadas (multi-campaña)
   googleSheetsRowNumber: integer("google_sheets_row_number"),
   source: text("source").notNull().default("google_sheets"),
   fechaCreacion: timestamp("fecha_creacion").notNull(),

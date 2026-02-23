@@ -1176,24 +1176,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let leadsCountMap = new Map<number, number>();
       let duplicadosCountMap = new Map<number, number>();
 
-      // Contar leads de campañas finalizadas (query batch optimizada)
       if (campanasFinalizadas.length > 0) {
-        const leadsFinalizados = await db
-          .select({
-            campaignId: opLeadsRep.campaignId,
-            count: count(),
-          })
-          .from(opLeadsRep)
-          .where(
-            inArray(
-              opLeadsRep.campaignId,
-              campanasFinalizadas.map((c) => c.campanaId),
-            ),
-          )
-          .groupBy(opLeadsRep.campaignId);
+        const campIds = campanasFinalizadas.map((c) => c.campanaId);
+        const leadsFinalizadosResult = await db.execute(sql`
+          SELECT unnest_id as campaign_id, COUNT(*)::int as count
+          FROM op_leads_rep, unnest(campaign_ids) as unnest_id
+          WHERE unnest_id IN (${sql.join(campIds.map(id => sql`${id}`), sql`, `)})
+          GROUP BY unnest_id
+        `);
+        const leadsFinalizados = (leadsFinalizadosResult as any).rows || leadsFinalizadosResult;
 
-        leadsFinalizados.forEach((row) => {
-          if (row.campaignId) leadsCountMap.set(row.campaignId, row.count);
+        leadsFinalizados.forEach((row: any) => {
+          if (row.campaign_id) leadsCountMap.set(row.campaign_id, parseInt(row.count));
         });
 
         console.log(
@@ -1244,28 +1238,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const campaignIds = campanasFinalizadas.map((c) => c.campanaId);
 
         // Obtener meta_lead_ids de leads asignados a estas campañas
-        const leadsAsignados = await db
-          .select({
-            campaignId: opLead.campaignId,
-            metaLeadId: opLead.metaLeadId,
-          })
-          .from(opLead)
-          .where(inArray(opLead.campaignId, campaignIds));
+        const leadsAsignadosResult = await db.execute(sql`
+          SELECT unnest_id as campaign_id, meta_lead_id
+          FROM op_lead, unnest(campaign_ids) as unnest_id
+          WHERE unnest_id IN (${sql.join(campaignIds.map(id => sql`${id}`), sql`, `)})
+        `);
+        const leadsAsignados = ((leadsAsignadosResult as any).rows || leadsAsignadosResult) as { campaign_id: number; meta_lead_id: string }[];
 
         // Agrupar meta_lead_ids por campaignId
         const metaLeadIdsByCampaign = new Map<number, string[]>();
-        leadsAsignados.forEach((lead) => {
-          if (lead.campaignId && lead.metaLeadId) {
-            if (!metaLeadIdsByCampaign.has(lead.campaignId)) {
-              metaLeadIdsByCampaign.set(lead.campaignId, []);
+        leadsAsignados.forEach((lead: any) => {
+          if (lead.campaign_id && lead.meta_lead_id) {
+            if (!metaLeadIdsByCampaign.has(lead.campaign_id)) {
+              metaLeadIdsByCampaign.set(lead.campaign_id, []);
             }
-            metaLeadIdsByCampaign.get(lead.campaignId)!.push(lead.metaLeadId);
+            metaLeadIdsByCampaign.get(lead.campaign_id)!.push(lead.meta_lead_id);
           }
         });
 
         // Buscar duplicados en batch
         const allMetaLeadIds = Array.from(
-          new Set(leadsAsignados.map((l) => l.metaLeadId).filter(Boolean)),
+          new Set(leadsAsignados.map((l: any) => l.meta_lead_id).filter(Boolean)),
         );
 
         if (allMetaLeadIds.length > 0) {
@@ -3837,13 +3830,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { opLead } = await import("@shared/schema");
         const { eq } = await import("drizzle-orm");
 
-        await db
-          .update(opLead)
-          .set({
-            campaignId: null,
-            updatedAt: new Date(),
-          })
-          .where(eq(opLead.campaignId, id));
+        await db.execute(sql`
+          UPDATE op_lead
+          SET campaign_ids = array_remove(campaign_ids, ${id}),
+              campaign_id = CASE WHEN array_length(array_remove(campaign_ids, ${id}), 1) > 0 
+                            THEN (array_remove(campaign_ids, ${id}))[array_length(array_remove(campaign_ids, ${id}), 1)]
+                            ELSE NULL END,
+              updated_at = NOW()
+          WHERE ${id} = ANY(campaign_ids)
+        `);
 
         console.log(`🔓 Leads liberados de campaña ${id}`);
       } catch (leadError) {

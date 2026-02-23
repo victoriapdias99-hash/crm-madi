@@ -6,23 +6,24 @@ import { ICampaignResetRepository } from '../../domain/interfaces/ICampaignReset
 export class PostgresCampaignResetRepository implements ICampaignResetRepository {
 
   async clearCampaignLeads(campaignId: number): Promise<number> {
-    // Contar antes de limpiar
-    const [countBefore] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(opLead)
-      .where(eq(opLead.campaignId, campaignId));
-
-    const leadsCount = countBefore?.count || 0;
+    const countResult = await db.execute(sql`
+      SELECT COUNT(*)::int as count FROM op_lead WHERE ${campaignId} = ANY(campaign_ids)
+    `);
+    const leadsCount = ((countResult as any).rows?.[0]?.count ?? (countResult as any)[0]?.count) || 0;
 
     if (leadsCount === 0) {
       return 0;
     }
 
-    // Limpiar campaign_id (op_leads_rep se actualiza automáticamente porque es una vista)
-    await db
-      .update(opLead)
-      .set({ campaignId: null })
-      .where(eq(opLead.campaignId, campaignId));
+    await db.execute(sql`
+      UPDATE op_lead 
+      SET campaign_ids = array_remove(campaign_ids, ${campaignId}),
+          campaign_id = CASE WHEN array_length(array_remove(campaign_ids, ${campaignId}), 1) > 0 
+                        THEN (array_remove(campaign_ids, ${campaignId}))[array_length(array_remove(campaign_ids, ${campaignId}), 1)]
+                        ELSE NULL END,
+          updated_at = NOW()
+      WHERE ${campaignId} = ANY(campaign_ids)
+    `);
 
     return leadsCount;
   }
@@ -35,12 +36,10 @@ export class PostgresCampaignResetRepository implements ICampaignResetRepository
   }
 
   async getAssignedLeadsCount(campaignId: number): Promise<number> {
-    const [result] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(opLead)
-      .where(eq(opLead.campaignId, campaignId));
-
-    return result?.count || 0;
+    const result = await db.execute(sql`
+      SELECT COUNT(*)::int as count FROM op_lead WHERE ${campaignId} = ANY(campaign_ids)
+    `);
+    return ((result as any).rows?.[0]?.count ?? (result as any)[0]?.count) || 0;
   }
 
   async getFinishedCampaigns(beforeDate?: Date, afterDate?: Date) {

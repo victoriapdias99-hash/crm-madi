@@ -70,10 +70,9 @@ export class PostgresLeadRepository implements ILeadRepository {
         .from(opLeadsRep)
         .where(
           and(
-            isNull(opLeadsRep.campaignId), // CRÍTICO: Solo leads no asignados
-            multiBrandCondition, // ✅ Usar función centralizada
-            eq(opLeadsRep.cliente, normalizedClient), // ✅ Comparación exacta
-            eq(opLeadsRep.localizacion, normalizedZone), // ✅ Comparación exacta
+            multiBrandCondition,
+            eq(opLeadsRep.cliente, normalizedClient),
+            eq(opLeadsRep.localizacion, normalizedZone),
           ),
         )
         .orderBy(asc(opLeadsRep.fechaCreacion));
@@ -82,32 +81,14 @@ export class PostgresLeadRepository implements ILeadRepository {
         `📊 ⏱️ [TIMING] Query completado - ${uniqueLeads.length} leads encontrados`,
       );
 
-      // Filtrar solo los que no tienen ninguno de sus duplicados asignados
       const availableUniqueLeads: any[] = [];
 
       for (const uniqueLead of uniqueLeads) {
-        // Verificar si alguno de los duplicados ya está asignado
         const duplicateIds = uniqueLead.duplicateIds || [uniqueLead.id];
-
-        const assignedCount = await this.db
-          .select({ count: sql<number>`count(*)::int` })
-          .from(opLead)
-          .where(
-            and(
-              inArray(opLead.id, duplicateIds),
-              sql`${opLead.campaignId} IS NOT NULL`,
-            ),
-          );
-
-        const alreadyAssigned = assignedCount[0]?.count || 0;
-
-        if (alreadyAssigned === 0) {
-          // Ningún duplicado está asignado, incluir este lead único
-          availableUniqueLeads.push({
-            ...this.mapOpLeadRepToAvailableLead(uniqueLead),
-            duplicateIds: duplicateIds,
-          });
-        }
+        availableUniqueLeads.push({
+          ...this.mapOpLeadRepToAvailableLead(uniqueLead),
+          duplicateIds: duplicateIds,
+        });
       }
 
       console.log(
@@ -153,59 +134,27 @@ export class PostgresLeadRepository implements ILeadRepository {
           fechaCreacionField: opLeadsRep.fechaCreacion,
         });
       } else {
-        // Fallback para compatibilidad (legacy)
         conditions = [
-          isNull(opLeadsRep.campaignId),
           eq(opLeadsRep.cliente, normalizedClient),
           eq(opLeadsRep.localizacion, normalizedZone),
           ilike(opLeadsRep.marca, `%${brandName?.toLowerCase() || ""}%`),
         ];
       }
 
-      // Primero obtener leads únicos candidatos
       const uniqueLeads = await this.db
         .select({
           id: opLeadsRep.id,
-          duplicateIds: opLeadsRep.duplicateIds,
         })
         .from(opLeadsRep)
         .where(and(...conditions));
 
-      if (uniqueLeads.length === 0) {
+      const count = uniqueLeads.length;
+
+      if (count === 0) {
         console.log(
           `📊 Leads disponibles: 0 para ${clientName} (${brandName}, ${zone})`,
         );
         return 0;
-      }
-
-      // Verificar duplicados asignados (misma lógica que getLeadsForAssignment)
-      const allDuplicateIds = uniqueLeads.flatMap(
-        (lead) => lead.duplicateIds || [lead.id],
-      );
-
-      const assignedLeads = await this.db
-        .select({ id: opLead.id })
-        .from(opLead)
-        .where(
-          and(
-            inArray(opLead.id, allDuplicateIds),
-            sql`${opLead.campaignId} IS NOT NULL`,
-          ),
-        );
-
-      const assignedSet = new Set(assignedLeads.map((l) => l.id));
-
-      // Contar solo leads únicos sin duplicados asignados
-      let count = 0;
-      for (const uniqueLead of uniqueLeads) {
-        const duplicateIds = uniqueLead.duplicateIds || [uniqueLead.id];
-        const hasAssignedDuplicate = duplicateIds.some((id) =>
-          assignedSet.has(id),
-        );
-
-        if (!hasAssignedDuplicate) {
-          count++;
-        }
       }
 
       console.log(
@@ -256,14 +205,13 @@ export class PostgresLeadRepository implements ILeadRepository {
         );
 
         try {
-          // Actualizar campaign_id para este lote de duplicados
-          await this.db
-            .update(opLead)
-            .set({
-              campaignId: campaignId,
-              updatedAt: new Date(),
-            })
-            .where(inArray(opLead.id, batch));
+          await this.db.execute(sql`
+            UPDATE op_lead 
+            SET campaign_ids = array_append(COALESCE(campaign_ids, '{}'), ${campaignId}),
+                campaign_id = ${campaignId},
+                updated_at = NOW()
+            WHERE id IN (${sql.join(batch.map(id => sql`${id}`), sql`, `)})
+          `);
 
           totalUpdated += batch.length;
           console.log(
@@ -304,7 +252,7 @@ export class PostgresLeadRepository implements ILeadRepository {
       const leads = await this.db
         .select()
         .from(opLead)
-        .where(eq(opLead.campaignId, campaignId))
+        .where(sql`${campaignId} = ANY(campaign_ids)`)
         .orderBy(asc(opLead.fechaCreacion));
 
       console.log(
@@ -338,11 +286,10 @@ export class PostgresLeadRepository implements ILeadRepository {
       const shouldUseGenericFilters = useGenericFilters && featureFlagEnabled;
 
       if (!shouldUseGenericFilters) {
-        // MÉTODO LEGACY: Contar por campaign_id
         const result = await this.db
           .select({ count: sql<number>`count(*)::int` })
           .from(opLead)
-          .where(eq(opLead.campaignId, campaignId));
+          .where(sql`${campaignId} = ANY(campaign_ids)`);
 
         const count = result[0]?.count || 0;
         console.log(
@@ -399,7 +346,7 @@ export class PostgresLeadRepository implements ILeadRepository {
         // El método se llama "countAssignedLeads", por lo que debe contar SOLO asignados
         // Los filtros genéricos (marca/cliente/zona) sirven para VALIDAR que
         // los leads asignados SÍ cumplen con los criterios esperados de la campaña
-        eq(opLead.campaignId, campaignId),
+        sql`${campaignId} = ANY(campaign_ids)`,
       ];
 
       // ❌ FECHAS REMOVIDAS: Ya no se validan fechaCampana o fechaFin
@@ -438,7 +385,7 @@ export class PostgresLeadRepository implements ILeadRepository {
 
     try {
       const result = await this.db
-        .select({ campaignId: opLead.campaignId })
+        .select({ campaignIds: opLead.campaignIds })
         .from(opLead)
         .where(eq(opLead.id, leadId))
         .limit(1);
@@ -447,7 +394,7 @@ export class PostgresLeadRepository implements ILeadRepository {
         return false;
       }
 
-      return result[0].campaignId !== null;
+      return result[0].campaignIds !== null && result[0].campaignIds.length > 0;
     } catch (error: any) {
       console.error(`Error checking if lead ${leadId} is assigned:`, error);
       return false;
@@ -464,7 +411,7 @@ export class PostgresLeadRepository implements ILeadRepository {
       const result = await this.db
         .select({ fechaCreacion: opLead.fechaCreacion })
         .from(opLead)
-        .where(eq(opLead.campaignId, campaignId))
+        .where(sql`${campaignId} = ANY(campaign_ids)`)
         .orderBy(desc(opLead.fechaCreacion))
         .limit(1);
 
@@ -517,22 +464,19 @@ export class PostgresLeadRepository implements ILeadRepository {
           fechaCreacionField: opLeadsRep.fechaCreacion,
         });
       } else {
-        // Fallback para compatibilidad (legacy)
         conditions = [
-          isNull(opLeadsRep.campaignId),
           eq(opLeadsRep.cliente, normalizedClient),
           eq(opLeadsRep.localizacion, normalizedZone),
           ilike(opLeadsRep.marca, `%${brandName?.toLowerCase() || ""}%`),
         ];
       }
 
-      // PASO 1: Obtener leads únicos candidatos
       const uniqueLeads = await this.db
         .select()
         .from(opLeadsRep)
         .where(and(...conditions))
         .orderBy(asc(opLeadsRep.fechaCreacion))
-        .limit(limit * 3); // Traer más para compensar por leads ya asignados
+        .limit(limit);
 
       console.log(
         `📊 [PASO 1] ${uniqueLeads.length} leads únicos candidatos obtenidos`,
@@ -543,62 +487,10 @@ export class PostgresLeadRepository implements ILeadRepository {
         return [];
       }
 
-      // PASO 2: ✅ OPTIMIZACIÓN - Una sola query para verificar todos los duplicados
-      const step2Start = Date.now();
-      const allDuplicateIds = uniqueLeads.flatMap(
-        (lead) => lead.duplicateIds || [lead.id],
-      );
-
-      console.log(
-        `🔍 [PASO 2] Verificando ${allDuplicateIds.length} duplicados con UNA sola query...`,
-      );
-
-      // ✅ Query única para obtener todos los leads asignados
-      const assignedLeads = await this.db
-        .select({
-          id: opLead.id,
-          campaignId: opLead.campaignId,
-        })
-        .from(opLead)
-        .where(
-          and(
-            inArray(opLead.id, allDuplicateIds),
-            sql`${opLead.campaignId} IS NOT NULL`,
-          ),
-        );
-
-      console.log(
-        `✅ [PASO 2] Query completada en ${Date.now() - step2Start}ms - ${assignedLeads.length} duplicados asignados encontrados`,
-      );
-
-      // PASO 3: Crear Set para lookup O(1) y filtrar leads disponibles
-      const step3Start = Date.now();
-      const assignedSet = new Set(assignedLeads.map((l) => l.id));
-
-      const availableUniqueLeads: AvailableLead[] = [];
-
-      for (const uniqueLead of uniqueLeads) {
-        if (availableUniqueLeads.length >= limit) break; // Ya tenemos suficientes
-
-        const duplicateIds = uniqueLead.duplicateIds || [uniqueLead.id];
-
-        // Verificar si alguno de los duplicados está en el Set (O(1) por verificación)
-        const hasAssignedDuplicate = duplicateIds.some((id) =>
-          assignedSet.has(id),
-        );
-
-        if (!hasAssignedDuplicate) {
-          // Ningún duplicado está asignado, incluir este lead único
-          availableUniqueLeads.push({
-            ...this.mapOpLeadRepToAvailableLead(uniqueLead),
-            duplicateIds: duplicateIds, // IMPORTANTE: Incluir los duplicateIds
-          });
-        }
-      }
-
-      console.log(
-        `✅ [PASO 3] Filtrado completado en ${Date.now() - step3Start}ms`,
-      );
+      const availableUniqueLeads: AvailableLead[] = uniqueLeads.map((uniqueLead) => ({
+        ...this.mapOpLeadRepToAvailableLead(uniqueLead),
+        duplicateIds: uniqueLead.duplicateIds || [uniqueLead.id],
+      }));
 
       const queryTime = Date.now() - startTime;
       console.log(
@@ -659,22 +551,18 @@ export class PostgresLeadRepository implements ILeadRepository {
           `⚙️ [BATCH ${batchNum}/${totalBatches}] Procesando ${batch.length} duplicados...`,
         );
 
-        // Actualizar campaign_id para este lote de duplicados
-        const result = await this.db
-          .update(opLead)
-          .set({
-            campaignId: campaignId,
-            updatedAt: new Date(),
-          })
-          .where(
-            and(
-              inArray(opLead.id, batch),
-              isNull(opLead.campaignId), // Doble verificación: solo actualizar si no está asignado
-            ),
-          )
-          .returning({ id: opLead.id });
+        const result = await this.db.execute(sql`
+          UPDATE op_lead 
+          SET campaign_ids = array_append(COALESCE(campaign_ids, '{}'), ${campaignId}),
+              campaign_id = ${campaignId},
+              updated_at = NOW()
+          WHERE id IN (${sql.join(batch.map(id => sql`${id}`), sql`, `)})
+            AND NOT (${campaignId} = ANY(COALESCE(campaign_ids, '{}')))
+          RETURNING id
+        `);
+        const resultRows = (result as any).rows || result;
 
-        const batchAssigned = result.length;
+        const batchAssigned = resultRows.length;
         totalAssigned += batchAssigned;
 
         console.log(
@@ -818,7 +706,7 @@ export class PostgresLeadRepository implements ILeadRepository {
           ${multiBrandCondition}
           AND ${opLeadsRep.cliente} = ${normalizedClientName}
           AND ${opLeadsRep.localizacion} = ${normalizedZone}
-          AND (${opLeadsRep.campaignId} IS NULL OR ${opLeadsRep.campaignId} = ${campaignId})
+          AND (campaign_ids IS NULL OR NOT (${campaignId} = ANY(campaign_ids)))
         `,
         )
         .orderBy(sql`${opLeadsRep.createdAt} ASC`) // ✅ ORDEN CRONOLÓGICO
@@ -886,41 +774,35 @@ export class PostgresLeadRepository implements ILeadRepository {
       // Extraer IDs para actualización en bloque
       const leadIds = leads.map((lead) => lead.id);
 
-      // Actualización atómica en bloque
-      const result = await this.db
-        .update(opLead)
-        .set({
-          campaignId: campaignId,
-          updatedAt: new Date(),
-        })
-        .where(inArray(opLead.id, leadIds))
-        .returning({
-          id: opLead.id,
-          campaign: opLead.campaign,
-          createdAt: opLead.createdAt,
-        });
+      const result = await this.db.execute(sql`
+        UPDATE op_lead 
+        SET campaign_ids = array_append(COALESCE(campaign_ids, '{}'), ${campaignId}),
+            campaign_id = ${campaignId},
+            updated_at = NOW()
+        WHERE id IN (${sql.join(leadIds.map(id => sql`${id}`), sql`, `)})
+        RETURNING id, campaign, created_at
+      `);
+      const resultRows = ((result as any).rows || result) as { id: number; campaign: string; created_at: Date }[];
 
-      // Calcular distribución real por marca
       const brandDistribution: { [marca: string]: number } = {};
-      result.forEach((lead) => {
+      resultRows.forEach((lead) => {
         const campaign = lead.campaign || "Desconocida";
         brandDistribution[campaign] = (brandDistribution[campaign] || 0) + 1;
       });
 
-      // Obtener fecha del último lead asignado
       const finalLeadDate =
-        result.length > 0
+        resultRows.length > 0
           ? new Date(
-              Math.max(...result.map((r) => new Date(r.createdAt!).getTime())),
+              Math.max(...resultRows.map((r) => new Date(r.created_at!).getTime())),
             )
           : undefined;
 
       console.log(`✅ Asignación cronológica completada:`);
-      console.log(`   Leads asignados: ${result.length}`);
+      console.log(`   Leads asignados: ${resultRows.length}`);
       console.log(`   Distribución por marca:`, brandDistribution);
 
       return {
-        assigned: result.length,
+        assigned: resultRows.length,
         finalLeadDate,
         brandDistribution,
       };
@@ -1020,7 +902,7 @@ export class PostgresLeadRepository implements ILeadRepository {
           .from(opLeadsRep)
           .where(
             and(
-              isNull(opLeadsRep.campaignId), // CRÍTICO: Solo leads no asignados
+              sql`(campaign_ids IS NULL OR NOT (${campaignId} = ANY(campaign_ids)))`,
               ilike(opLeadsRep.marca, `%${normalizedBrand}%`),
               ilike(opLeadsRep.cliente, `%${normalizedClient}%`),
               ilike(opLeadsRep.localizacion, `%${normalizedZone}%`),
@@ -1039,26 +921,10 @@ export class PostgresLeadRepository implements ILeadRepository {
         for (const uniqueLead of uniqueLeads) {
           const duplicateIds = uniqueLead.duplicateIds || [uniqueLead.id];
 
-          // Verificar si alguno de los duplicados ya está asignado
-          const assignedCount = await tx
-            .select({ count: sql<number>`count(*)::int` })
-            .from(opLead)
-            .where(
-              and(
-                inArray(opLead.id, duplicateIds),
-                sql`${opLead.campaignId} IS NOT NULL`,
-              ),
-            );
-
-          const alreadyAssigned = assignedCount[0]?.count || 0;
-
-          if (alreadyAssigned === 0) {
-            // Ningún duplicado está asignado, incluir este lead único
-            availableUniqueLeads.push({
-              ...this.mapOpLeadRepToAvailableLead(uniqueLead),
-              duplicateIds: duplicateIds,
-            });
-          }
+          availableUniqueLeads.push({
+            ...this.mapOpLeadRepToAvailableLead(uniqueLead),
+            duplicateIds: duplicateIds,
+          });
         }
 
         console.log(
@@ -1114,36 +980,26 @@ export class PostgresLeadRepository implements ILeadRepository {
 
         console.log(`🔒 Leads bloqueados: ${leadsToAssign.length}`);
 
-        // Verificar que todos estén disponibles
-        const unavailableLeads = leadsToAssign.filter(
-          (lead: any) => lead.campaignId !== null,
-        );
-        if (unavailableLeads.length > 0) {
-          throw new Error(
-            `${unavailableLeads.length} leads ya están asignados. Race condition detectada.`,
-          );
-        }
-
-        // Asignación atómica
-        const updateResult = await tx
-          .update(opLead)
-          .set({
-            campaignId: campaignId,
-            updatedAt: new Date(),
-          })
-          .where(inArray(opLead.id, allDuplicateIds));
+        // Asignación atómica - append campaign to array
+        await tx.execute(sql`
+          UPDATE op_lead 
+          SET campaign_ids = array_append(COALESCE(campaign_ids, '{}'), ${campaignId}),
+              campaign_id = ${campaignId},
+              updated_at = NOW()
+          WHERE id IN (${sql.join(allDuplicateIds.map(id => sql`${id}`), sql`, `)})
+            AND NOT (${campaignId} = ANY(COALESCE(campaign_ids, '{}')))
+        `);
 
         console.log(
           `✅ Asignados ${allDuplicateIds.length} duplicate_ids a campaña ${campaignId}`,
         );
 
-        // PASO 6: Verificación de conteo exacto
         const verificationCount = await tx
           .select({ count: sql<number>`count(*)::int` })
           .from(opLead)
           .where(
             and(
-              eq(opLead.campaignId, campaignId),
+              sql`${campaignId} = ANY(campaign_ids)`,
               inArray(opLead.id, allDuplicateIds),
             ),
           );

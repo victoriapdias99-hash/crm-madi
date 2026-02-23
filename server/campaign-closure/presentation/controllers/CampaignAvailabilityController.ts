@@ -88,7 +88,7 @@ export class CampaignAvailabilityController {
           COUNT(*)::int as count,
           SUM(COALESCE(array_length(duplicate_ids, 1), 1))::int as total_duplicates
         FROM op_leads_rep
-        WHERE campaign_id IS NULL
+        WHERE (campaign_ids IS NULL OR NOT (${campaignId} = ANY(campaign_ids)))
           AND LOWER(marca) LIKE ${`%${campaign.marca.toLowerCase()}%`}
           AND LOWER(cliente) LIKE ${`%${normalizedClient}%`}
           AND LOWER(localizacion) LIKE ${`%${normalizedZone.toLowerCase()}%`}
@@ -117,8 +117,8 @@ export class CampaignAvailabilityController {
         WHERE LOWER(marca) LIKE ${`%${campaign.marca.toLowerCase()}%`}
           AND LOWER(cliente) LIKE ${`%${normalizedClient}%`}
           AND LOWER(localizacion) LIKE ${`%${normalizedZone.toLowerCase()}%`}
-          AND campaign_id IS NOT NULL
-          AND campaign_id != ${campaignId}
+          AND campaign_ids IS NOT NULL
+          AND array_length(campaign_ids, 1) > 0
       `);
 
       const otherRows = otherCampaignsResult.rows || otherCampaignsResult;

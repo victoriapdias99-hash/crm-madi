@@ -93,20 +93,24 @@ export class CampaignReopenController {
       const leadsCountResult = await db.execute<{ count: number }>(sql`
         SELECT COUNT(*)::int as count
         FROM op_lead
-        WHERE campaign_id = ${campaignId}
+        WHERE ${campaignId} = ANY(campaign_ids)
       `);
 
       const leadsCount = leadsCountResult.rows || leadsCountResult;
       const assignedLeads = leadsCount[0]?.count || 0;
       console.log(`📧 [${requestId}] Leads asignados: ${assignedLeads}`);
 
-      // 3. Desasignar leads
+      // 3. Desasignar leads - remove from array
       console.log(`🔄 [${requestId}] Desasignando ${assignedLeads} leads...`);
 
       await db.execute(sql`
         UPDATE op_lead
-        SET campaign_id = NULL
-        WHERE campaign_id = ${campaignId}
+        SET campaign_ids = array_remove(campaign_ids, ${campaignId}),
+            campaign_id = CASE WHEN array_length(array_remove(campaign_ids, ${campaignId}), 1) > 0 
+                          THEN (array_remove(campaign_ids, ${campaignId}))[array_length(array_remove(campaign_ids, ${campaignId}), 1)]
+                          ELSE NULL END,
+            updated_at = NOW()
+        WHERE ${campaignId} = ANY(campaign_ids)
       `);
 
       console.log(`✅ [${requestId}] Leads desasignados`);
@@ -195,11 +199,9 @@ export class CampaignReopenController {
         SELECT
           cc.id,
           cc.fecha_fin,
-          COUNT(ol.id)::int as leads_asignados
+          (SELECT COUNT(*)::int FROM op_lead WHERE ${campaignId} = ANY(campaign_ids)) as leads_asignados
         FROM campanas_comerciales cc
-        LEFT JOIN op_lead ol ON ol.campaign_id = cc.id
         WHERE cc.id = ${campaignId}
-        GROUP BY cc.id, cc.fecha_fin
       `);
 
       const state = stateResult.rows || stateResult;

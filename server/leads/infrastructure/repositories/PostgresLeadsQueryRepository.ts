@@ -154,7 +154,7 @@ export class PostgresLeadsQueryRepository {
       sentLeads = await this.db
         .select()
         .from(opLeadsRep)
-        .where(eq(opLeadsRep.campaignId, campaignId))
+        .where(sql`${campaignId} = ANY(campaign_ids)`)
         .orderBy(opLeadsRep.marca, opLeadsRep.fechaCreacion);
     } else {
       // ========================================

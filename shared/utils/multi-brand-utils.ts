@@ -263,7 +263,7 @@ export function buildCampaignLeadFilters(params: {
     multiBrandCondition,
     eq(clienteField, normalizedClientName),
     eq(localizacionField, localizacionFiltro),
-    sql`(${campaignIdField} IS NULL OR ${campaignIdField} = ${campaign.id})`
+    sql`(campaign_ids IS NULL OR NOT (${campaign.id} = ANY(campaign_ids)))`
   ];
 
   if (campaign.fechaCampana) {
