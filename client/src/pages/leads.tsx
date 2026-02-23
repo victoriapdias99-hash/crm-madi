@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Link } from "wouter";
 import { ReassignLeadsDialog } from "@/components/leads/ReassignLeadsDialog";
+import { buildClientDisplayMap, getClientDisplayName } from "@shared/utils/client-normalization";
 
 const ZONES = ["AMBA", "Córdoba", "Mendoza", "NACIONAL", "Santa Fe"];
 const BRANDS = [
@@ -214,6 +215,8 @@ function LeadsPage() {
       throw new Error(err.message || "Error al reasignar los leads");
     }
   };
+
+  const clientDisplayMap = useMemo(() => buildClientDisplayMap(clientsList), [clientsList]);
 
   const isAllSelected = leads.length > 0 && selectedLeads.length === leads.length;
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -490,7 +493,7 @@ function LeadsPage() {
                   </td>
                   <td className="px-4 py-3 font-medium text-gray-900">{lead.nombre}</td>
                   <td className="px-4 py-3 text-gray-600">{lead.telefono}</td>
-                  <td className="px-4 py-3 text-gray-800 font-medium">{lead.cliente || "-"}</td>
+                  <td className="px-4 py-3 text-gray-800 font-medium">{lead.cliente ? getClientDisplayName(lead.cliente, clientDisplayMap) : "-"}</td>
                   <td className="px-4 py-3 text-gray-600">{lead.auto || "-"}</td>
                   <td className="px-4 py-3 text-gray-600">{lead.localidad || "-"}</td>
                   <td className="px-4 py-3 text-gray-600">

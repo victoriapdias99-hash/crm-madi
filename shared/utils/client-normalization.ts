@@ -31,12 +31,27 @@ export function normalizeClientName(clientName: any): string {
     .replace(/\s+/g, '_');   // Espacios → underscores
 }
 
-/**
- * Ejemplos de uso:
- *
- * normalizeClientName("Mariano - Pichetti") → "mariano_pichetti"
- * normalizeClientName("Toyota China Motors") → "toyota_china_motors"
- * normalizeClientName("TOYOTA # #Mariano Pichetti") → "mariano_pichetti"
- * normalizeClientName(null) → "s_d"
- * normalizeClientName("") → "s_d"
- */
+export function snakeCaseToDisplayName(snakeName: string): string {
+  if (!snakeName || snakeName === 's_d') return snakeName || '';
+  return snakeName
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+export function buildClientDisplayMap(clientNames: string[]): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const name of clientNames) {
+    const normalized = normalizeClientName(name);
+    map[normalized] = name;
+  }
+  return map;
+}
+
+export function getClientDisplayName(
+  snakeName: string,
+  displayMap: Record<string, string>
+): string {
+  if (!snakeName) return '';
+  return displayMap[snakeName] || snakeCaseToDisplayName(snakeName);
+}

@@ -3,6 +3,7 @@ import { CreateWebhookLeadUseCase } from "../../application/usecases/CreateWebho
 import { CreateWebhookLeadDto } from "../../application/dto/WebhookLeadDto";
 import { ZodError } from "zod";
 import { pool } from "../../../db";
+import { normalizeClientName } from "../../../../shared/utils/client-normalization";
 
 /**
  * Controlador para endpoints de webhook
@@ -283,8 +284,9 @@ export class WebhookController {
       }
 
       if (client) {
-        params.push(`%${client.toLowerCase()}%`);
-        whereClauses.push(`LOWER(COALESCE(cliente, '')) LIKE $${paramIdx++}`);
+        const normalizedClient = normalizeClientName(client);
+        params.push(normalizedClient);
+        whereClauses.push(`COALESCE(cliente, '') = $${paramIdx++}`);
       }
 
       if (startDate) {
