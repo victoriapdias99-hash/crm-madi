@@ -1,4 +1,4 @@
-import { sql, eq } from 'drizzle-orm';
+import { sql, eq, gte } from 'drizzle-orm';
 
 /**
  * Utilidades para manejo de campañas con múltiples marcas
@@ -199,11 +199,10 @@ export function mapZonaToLocalizacion(zona: string): string {
  *    - Permite reasignación si se reabre una campaña
  *    - Cuenta leads disponibles + ya asignados a esta campaña específica
  *
- * ❌ 5. SIN FILTRO DE FECHAS:
- *    - NO usa fechaCampana ni fechaFin
- *    - Asignación cronológica pura: ORDER BY fecha_creacion ASC
- *    - Se toman los N leads más antiguos disponibles
- *    - Las fechas son informativas, NO restrictivas
+ * ✅ 5. FILTRO POR FECHA DE CAMPAÑA:
+ *    - fecha_creacion >= fechaCampana
+ *    - Cada campaña solo cuenta leads creados desde su fecha de inicio
+ *    - Campañas del mismo cliente son independientes entre sí
  *
  * ❌ 6. SIN FILTRO DE SOURCE:
  *    - NO filtra por source = 'google_sheets'
@@ -225,7 +224,7 @@ export function mapZonaToLocalizacion(zona: string): string {
  * @param clienteField - Campo de cliente en la tabla (ej: opLeadsRep.cliente)
  * @param localizacionField - Campo de localización en la tabla (ej: opLeadsRep.localizacion)
  * @param campaignIdField - Campo de campaignId en la tabla (ej: opLeadsRep.campaignId)
- * @param fechaCreacionField - Campo de fecha creación (NO USADO para filtrar, solo para ORDER BY)
+ * @param fechaCreacionField - Campo de fecha creación (filtro >= fechaCampana)
  * @returns Array de condiciones SQL para usar con and()
  */
 export function buildCampaignLeadFilters(params: {
@@ -260,18 +259,16 @@ export function buildCampaignLeadFilters(params: {
 
   const multiBrandCondition = createMultiBrandCondition(brands, campaignField);
 
-  // Construir condiciones base
   const conditions: any[] = [
     multiBrandCondition,
     eq(clienteField, normalizedClientName),
     eq(localizacionField, localizacionFiltro),
-    // ✅ Incluye asignados a esta campaña + disponibles
     sql`(${campaignIdField} IS NULL OR ${campaignIdField} = ${campaign.id})`
   ];
 
-  // ❌ FECHAS REMOVIDAS: Ya no se filtran leads por fechaCampana o fechaFin
-  // La asignación se hace por orden cronológico (fecha_creacion ASC)
-  // simplemente tomando los N leads más antiguos disponibles
+  if (campaign.fechaCampana) {
+    conditions.push(gte(fechaCreacionField, new Date(campaign.fechaCampana)));
+  }
 
   return conditions;
 }
