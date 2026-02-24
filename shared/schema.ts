@@ -668,18 +668,28 @@ export type NoteType = (typeof NOTE_TYPES)[keyof typeof NOTE_TYPES];
 
 // Nuevas constantes para clientes
 export const MARCAS_DISPONIBLES = [
-  "Fiat",
-  "Peugeot",
-  "Toyota",
+  "BAIC",
+  "BYD",
+  "Chery",
   "Chevrolet",
-  "Renault",
   "Citroen",
-  "VW",
-  "Mercedes",
+  "DFSK",
+  "Fiat",
   "Ford",
+  "Haval",
+  "JAC",
   "Jeep",
-  "China",
-  "Otra",
+  "JMEV",
+  "Leapmotor",
+  "MG",
+  "Maxus",
+  "Forthing",
+  "Nissan",
+  "Peugeot",
+  "Renault",
+  "Toyota",
+  "Volkswagen",
+  "Otras Marcas",
 ] as const;
 
 export const PROVINCIAS_BUENOS_AIRES = [
