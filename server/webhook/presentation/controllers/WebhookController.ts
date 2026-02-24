@@ -251,16 +251,16 @@ export class WebhookController {
 
       const unifiedQuery = `
         SELECT id, 'op_lead' as tabla, nombre, telefono, ciudad as localidad, modelo as auto, cliente, 
-               comentario_horario as comentarios, source, fecha_creacion, created_at
+               comentario_horario as comentarios, source, fecha_creacion, created_at, campaign as marca
         FROM op_lead
         UNION ALL
         SELECT id, 'op_lead_webhook' as tabla, nombre, telefono, localidad, auto, cliente,
-               comentarios, source, NULL::timestamp as fecha_creacion, created_at
+               comentarios, source, NULL::timestamp as fecha_creacion, created_at, NULL as marca
         FROM op_lead_webhook
         UNION ALL
         SELECT id, 'leads' as tabla, COALESCE(first_name, '') || ' ' || COALESCE(last_name, '') as nombre, 
                phone as telefono, city as localidad, interest as auto, cliente,
-               NULL as comentarios, source, lead_date as fecha_creacion, created_at
+               NULL as comentarios, source, lead_date as fecha_creacion, created_at, NULL as marca
         FROM leads
       `;
 
@@ -280,7 +280,7 @@ export class WebhookController {
 
       if (brand) {
         params.push(`%${brand.toLowerCase()}%`);
-        whereClauses.push(`LOWER(COALESCE(auto, '')) LIKE $${paramIdx++}`);
+        whereClauses.push(`LOWER(COALESCE(marca, '')) LIKE $${paramIdx++}`);
       }
 
       if (client) {
