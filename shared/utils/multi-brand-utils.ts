@@ -153,7 +153,8 @@ const MAPEO_ZONAS: Record<string, string> = {
   'AMBA': 'Amba',
   'Córdoba': 'Cordoba',
   'Santa Fe': 'Santa Fe',
-  'Mendoza': 'Mendoza'
+  'Mendoza': 'Mendoza',
+  'La Rioja': 'La Rioja, Catamarca'
 };
 
 /**
