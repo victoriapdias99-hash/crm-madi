@@ -177,13 +177,14 @@ export default function CampanasManagement() {
       await apiRequest('/api/campanas-comerciales', 'POST', dataToSend);
     },
     onSuccess: () => {
-      // Invalidar múltiples queries para actualizar todos los dashboards
       queryClient.invalidateQueries({ queryKey: ['/api/campanas-comerciales'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/campanas-pendientes'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
       setIsDialogOpen(false);
       form.reset();
-      toast({ title: "Campaña creada exitosamente - aparecerá en Datos Diarios inmediatamente" });
+      toast({ title: "Campaña creada exitosamente" });
     },
     onError: (error: any) => {
       console.error('Frontend: Error creating campaña:', error);
@@ -201,17 +202,15 @@ export default function CampanasManagement() {
       await apiRequest(`/api/campanas-comerciales/${id}`, 'PUT', data);
     },
     onSuccess: () => {
-      // Invalidar múltiples queries para actualización inmediata en todos los dashboards
       queryClient.invalidateQueries({ queryKey: ['/api/campanas-comerciales'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/datos-diarios-db'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/campanas-pendientes'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['/api/finanzas'] });
       setIsDialogOpen(false);
       setEditingCampana(null);
-      toast({ 
-        title: "Campaña actualizada exitosamente", 
-        description: "Los cambios se reflejarán inmediatamente en Datos Diarios" 
-      });
+      toast({ title: "Campaña actualizada exitosamente" });
     },
     onError: () => {
       toast({ title: "Error al actualizar campaña", variant: "destructive" });
