@@ -33,12 +33,14 @@ interface MigrationStats {
   inserted: number;
   updated: number;
   skipped: number;
+  deleted: number;
   errors: number;
   details: Array<{
     marca: string;
     processed: number;
     inserted: number;
     updated: number;
+    deleted: number;
     rowMoved: number; // Registros que cambiaron de fila
   }>;
 }
@@ -73,6 +75,7 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
     inserted: 0,
     updated: 0,
     skipped: 0,
+    deleted: 0,
     errors: 0,
     details: [],
   };
@@ -117,6 +120,8 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
     let marcaInserted = 0;
     let marcaUpdated = 0;
     let marcaRowMoved = 0;
+    let marcaDeleted = 0;
+    const processedMetaLeadIds: string[] = [];
 
     try {
       // Obtener datos de la pestaña (desde fila 2 para skip header)
@@ -211,6 +216,9 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
         });
       }
 
+      // Recolectar todos los metaLeadIds del Sheet actual para saber qué eliminar
+      processedMetaLeadIds.push(...batchData.map((b) => b.metaLeadId));
+
       // 🚀 UPSERT EN LOTES usando ON CONFLICT nativo de PostgreSQL
       const BATCH_SIZE = 50;
       let totalBatchesProcessed = 0;
@@ -276,16 +284,45 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
         }
       }
 
+      // 🗑️ ELIMINAR registros que ya no están en el Sheet (sincronización exacta)
+      if (processedMetaLeadIds.length > 0) {
+        try {
+          const marcaUpper = sheetName.toUpperCase();
+          // Contar cuántos se van a eliminar
+          const countResult = await db.execute(sql`
+            SELECT COUNT(*)::int as cnt FROM op_lead
+            WHERE marca = ${marcaUpper}
+              AND source = 'google_sheets'
+              AND meta_lead_id != ALL(ARRAY[${sql.raw(processedMetaLeadIds.map(id => `'${id.replace(/'/g, "''")}'`).join(","))}]::text[])
+          `);
+          marcaDeleted = (countResult as any).rows?.[0]?.cnt ?? 0;
+
+          if (marcaDeleted > 0) {
+            await db.execute(sql`
+              DELETE FROM op_lead
+              WHERE marca = ${marcaUpper}
+                AND source = 'google_sheets'
+                AND meta_lead_id != ALL(ARRAY[${sql.raw(processedMetaLeadIds.map(id => `'${id.replace(/'/g, "''")}'`).join(","))}]::text[])
+            `);
+            stats.deleted += marcaDeleted;
+            console.log(`   🗑️  Eliminados: ${marcaDeleted} (ya no están en el Sheet)`);
+          }
+        } catch (deleteError: any) {
+          console.error(`   ❌ Error eliminando obsoletos de ${sheetName}:`, deleteError.message);
+        }
+      }
+
       stats.details.push({
         marca: sheetName,
         processed: rows.length,
         inserted: marcaInserted,
         updated: marcaUpdated,
+        deleted: marcaDeleted,
         rowMoved: marcaRowMoved,
       });
 
       console.log(
-        `   ✅ Insertados: ${marcaInserted} | Actualizados: ${marcaUpdated} | Movidos: ${marcaRowMoved}\n`,
+        `   ✅ Insertados: ${marcaInserted} | Actualizados: ${marcaUpdated} | Eliminados: ${marcaDeleted} | Movidos: ${marcaRowMoved}\n`,
       );
 
       // Rate limiting: 1 segundo entre marcas
@@ -374,6 +411,7 @@ async function main() {
     console.log(`📊 Total procesado:     ${stats.totalProcessed}`);
     console.log(`✅ Nuevos insertados:   ${stats.inserted}`);
     console.log(`🔄 Actualizados:        ${stats.updated}`);
+    console.log(`🗑️  Eliminados:         ${stats.deleted}`);
     console.log(`⏭️  Omitidos (sin tel): ${stats.skipped}`);
     console.log(`❌ Errores:             ${stats.errors}`);
     console.log("=".repeat(70));
@@ -384,9 +422,11 @@ async function main() {
       stats.details.forEach((detail) => {
         const moved =
           detail.rowMoved > 0 ? ` (${detail.rowMoved} movidos)` : "";
+        const deleted =
+          detail.deleted > 0 ? `, ${detail.deleted} eliminados` : "";
         console.log(
           `   ${detail.marca.padEnd(20)} → ` +
-            `${detail.inserted} nuevos, ${detail.updated} actualizados${moved}`,
+            `${detail.inserted} nuevos, ${detail.updated} actualizados${deleted}${moved}`,
         );
       });
       console.log("-".repeat(70));
