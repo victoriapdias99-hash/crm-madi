@@ -6,6 +6,20 @@ import { pool } from "../../../db";
 import { normalizeClientName } from "../../../../shared/utils/client-normalization";
 
 /**
+ * Mapa de alias de marcas para el filtro del módulo de leads.
+ * Algunos sheets tienen nombres abreviados (ej: "VW") que no coinciden
+ * con el nombre que usa el frontend ("Volkswagen").
+ */
+const BRAND_ALIASES: Record<string, string[]> = {
+  volkswagen: ["volkswagen", "vw"],
+};
+
+function resolveBrandAliases(brand: string): string[] {
+  const lower = brand.toLowerCase();
+  return BRAND_ALIASES[lower] ?? [lower];
+}
+
+/**
  * Controlador para endpoints de webhook
  */
 export class WebhookController {
@@ -170,28 +184,52 @@ export class WebhookController {
       let totalUpdated = 0;
 
       if (Array.isArray(leadsWithTable) && leadsWithTable.length > 0) {
-        const opLeadIds = leadsWithTable.filter((l: any) => l.tabla === "op_lead").map((l: any) => l.id);
-        const webhookIds = leadsWithTable.filter((l: any) => l.tabla === "op_lead_webhook").map((l: any) => l.id);
-        const legacyIds = leadsWithTable.filter((l: any) => l.tabla === "leads").map((l: any) => l.id);
+        const opLeadIds = leadsWithTable
+          .filter((l: any) => l.tabla === "op_lead")
+          .map((l: any) => l.id);
+        const webhookIds = leadsWithTable
+          .filter((l: any) => l.tabla === "op_lead_webhook")
+          .map((l: any) => l.id);
+        const legacyIds = leadsWithTable
+          .filter((l: any) => l.tabla === "leads")
+          .map((l: any) => l.id);
 
         if (opLeadIds.length > 0) {
-          const r = await pool.query(`UPDATE op_lead SET cliente = $1, updated_at = NOW() WHERE id = ANY($2::int[])`, [clienteNuevo, opLeadIds]);
+          const r = await pool.query(
+            `UPDATE op_lead SET cliente = $1, updated_at = NOW() WHERE id = ANY($2::int[])`,
+            [clienteNuevo, opLeadIds],
+          );
           totalUpdated += r.rowCount || 0;
         }
         if (webhookIds.length > 0) {
-          const r = await pool.query(`UPDATE op_lead_webhook SET cliente = $1, updated_at = NOW() WHERE id = ANY($2::int[])`, [clienteNuevo, webhookIds]);
+          const r = await pool.query(
+            `UPDATE op_lead_webhook SET cliente = $1, updated_at = NOW() WHERE id = ANY($2::int[])`,
+            [clienteNuevo, webhookIds],
+          );
           totalUpdated += r.rowCount || 0;
         }
         if (legacyIds.length > 0) {
-          const r = await pool.query(`UPDATE leads SET cliente = $1, updated_at = NOW() WHERE id = ANY($2::int[])`, [clienteNuevo, legacyIds]);
+          const r = await pool.query(
+            `UPDATE leads SET cliente = $1, updated_at = NOW() WHERE id = ANY($2::int[])`,
+            [clienteNuevo, legacyIds],
+          );
           totalUpdated += r.rowCount || 0;
         }
       } else if (Array.isArray(leadIds) && leadIds.length > 0) {
-        const r1 = await pool.query(`UPDATE op_lead SET cliente = $1, updated_at = NOW() WHERE id = ANY($2::int[])`, [clienteNuevo, leadIds]);
+        const r1 = await pool.query(
+          `UPDATE op_lead SET cliente = $1, updated_at = NOW() WHERE id = ANY($2::int[])`,
+          [clienteNuevo, leadIds],
+        );
         totalUpdated += r1.rowCount || 0;
-        const r2 = await pool.query(`UPDATE op_lead_webhook SET cliente = $1, updated_at = NOW() WHERE id = ANY($2::int[])`, [clienteNuevo, leadIds]);
+        const r2 = await pool.query(
+          `UPDATE op_lead_webhook SET cliente = $1, updated_at = NOW() WHERE id = ANY($2::int[])`,
+          [clienteNuevo, leadIds],
+        );
         totalUpdated += r2.rowCount || 0;
-        const r3 = await pool.query(`UPDATE leads SET cliente = $1, updated_at = NOW() WHERE id = ANY($2::int[])`, [clienteNuevo, leadIds]);
+        const r3 = await pool.query(
+          `UPDATE leads SET cliente = $1, updated_at = NOW() WHERE id = ANY($2::int[])`,
+          [clienteNuevo, leadIds],
+        );
         totalUpdated += r3.rowCount || 0;
       } else {
         res.status(400).json({
@@ -233,7 +271,10 @@ export class WebhookController {
   async getLeadsPaginated(req: Request, res: Response): Promise<void> {
     try {
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
-      const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 100));
+      const limit = Math.min(
+        200,
+        Math.max(1, parseInt(req.query.limit as string) || 100),
+      );
       const offset = (page - 1) * limit;
 
       const zone = (req.query.zone as string) || "";
@@ -265,22 +306,42 @@ export class WebhookController {
       `;
 
       if (zone) {
-        const excludedFromNacional = ["amba", "cordoba", "córdoba", "mendoza", "santa fe"];
+        const excludedFromNacional = [
+          "amba",
+          "cordoba",
+          "córdoba",
+          "mendoza",
+          "santa fe",
+        ];
         if (zone.toLowerCase() === "nacional") {
-          const conditions = excludedFromNacional.map(z => {
-            params.push(`%${z}%`);
-            return `LOWER(COALESCE(localidad, '')) NOT LIKE $${paramIdx++}`;
-          }).join(" AND ");
+          const conditions = excludedFromNacional
+            .map((z) => {
+              params.push(`%${z}%`);
+              return `LOWER(COALESCE(localidad, '')) NOT LIKE $${paramIdx++}`;
+            })
+            .join(" AND ");
           whereClauses.push(`(${conditions})`);
         } else {
           params.push(`%${zone.toLowerCase()}%`);
-          whereClauses.push(`LOWER(COALESCE(localidad, '')) LIKE $${paramIdx++}`);
+          whereClauses.push(
+            `LOWER(COALESCE(localidad, '')) LIKE $${paramIdx++}`,
+          );
         }
       }
 
       if (brand) {
-        params.push(`%${brand.toLowerCase()}%`);
-        whereClauses.push(`LOWER(COALESCE(marca, '')) LIKE $${paramIdx++}`);
+        // Resolver aliases: "Volkswagen" busca tanto "volkswagen" como "vw"
+        const brandAliases = resolveBrandAliases(brand);
+        if (brandAliases.length === 1) {
+          params.push(`%${brandAliases[0]}%`);
+          whereClauses.push(`LOWER(COALESCE(marca, '')) LIKE $${paramIdx++}`);
+        } else {
+          const aliasConditions = brandAliases.map((alias) => {
+            params.push(`%${alias}%`);
+            return `LOWER(COALESCE(marca, '')) LIKE $${paramIdx++}`;
+          });
+          whereClauses.push(`(${aliasConditions.join(" OR ")})`);
+        }
       }
 
       if (client) {
@@ -291,12 +352,16 @@ export class WebhookController {
 
       if (startDate) {
         params.push(startDate);
-        whereClauses.push(`COALESCE(fecha_creacion, created_at) >= $${paramIdx++}::date`);
+        whereClauses.push(
+          `COALESCE(fecha_creacion, created_at) >= $${paramIdx++}::date`,
+        );
       }
 
       if (endDate) {
         params.push(endDate);
-        whereClauses.push(`COALESCE(fecha_creacion, created_at) <= ($${paramIdx++}::date + interval '1 day')`);
+        whereClauses.push(
+          `COALESCE(fecha_creacion, created_at) <= ($${paramIdx++}::date + interval '1 day')`,
+        );
       }
 
       if (searchNombre) {
@@ -314,7 +379,8 @@ export class WebhookController {
         whereClauses.push(`LOWER(COALESCE(localidad, '')) LIKE $${paramIdx++}`);
       }
 
-      const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+      const whereSQL =
+        whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
       const countSQL = `SELECT COUNT(*) as total FROM (${unifiedQuery}) AS unified ${whereSQL}`;
       const dataSQL = `

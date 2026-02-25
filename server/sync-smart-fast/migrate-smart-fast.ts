@@ -1,13 +1,3 @@
-/**
- * SMART-FAST Migration System
- *
- * Migración simplificada con ID estable basado en teléfono + fecha + marca
- * - Solo ~200 líneas vs ~1,700 del sistema anterior
- * - ID estable aunque las filas cambien de posición
- * - UPSERT automático: inserta nuevos, actualiza existentes
- * - Preserva metaLeadId en actualizaciones
- */
-
 import "dotenv/config";
 import { db } from "../db";
 import { opLead } from "../../shared/schema";
@@ -27,6 +17,27 @@ const EXCLUDED_SHEETS = [
   //"datos diarios",
   "control campañas",
 ];
+
+/**
+ * Mapa de normalización: nombre de pestaña en Google Sheets → nombre canónico de marca.
+ * Permite que hojas con nombres abreviados o alternativos se almacenen con el nombre
+ * estándar usado en los filtros del frontend.
+ *
+ * Ejemplo: la hoja "VW" se guarda como marca "VOLKSWAGEN" en la base de datos,
+ * de modo que el filtro "Volkswagen" del frontend la encuentre correctamente.
+ */
+const SHEET_NAME_TO_BRAND: Record<string, string> = {
+  VW: "VOLKSWAGEN",
+};
+
+/**
+ * Devuelve el nombre canónico de marca a partir del nombre de la pestaña.
+ * Si no hay mapeo definido, devuelve el nombre de la pestaña en mayúsculas.
+ */
+function normalizeBrandName(sheetName: string): string {
+  const upper = sheetName.toUpperCase();
+  return SHEET_NAME_TO_BRAND[upper] ?? upper;
+}
 
 interface MigrationStats {
   totalProcessed: number;
@@ -162,12 +173,14 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
         const fechaCreacion = parseSheetDate(row[0]);
 
         if (!fechaCreacion) {
-          console.warn(`   ⚠️ Fila ${i + 2}: fecha no parseada (valor crudo: "${row[0]}"), lead omitido`);
+          console.warn(
+            `   ⚠️ Fila ${i + 2}: fecha no parseada (valor crudo: "${row[0]}"), lead omitido`,
+          );
           stats.skipped++;
           continue;
         }
 
-        const marca = sheetName.toUpperCase();
+        const marca = normalizeBrandName(sheetName);
         const rowNumber = i + 2;
 
         const leadData: LeadData = {
@@ -287,13 +300,13 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
       // 🗑️ ELIMINAR registros que ya no están en el Sheet (sincronización exacta)
       if (processedMetaLeadIds.length > 0) {
         try {
-          const marcaUpper = sheetName.toUpperCase();
+          const marcaUpper = normalizeBrandName(sheetName);
           // Contar cuántos se van a eliminar
           const countResult = await db.execute(sql`
             SELECT COUNT(*)::int as cnt FROM op_lead
             WHERE marca = ${marcaUpper}
               AND source = 'google_sheets'
-              AND meta_lead_id != ALL(ARRAY[${sql.raw(processedMetaLeadIds.map(id => `'${id.replace(/'/g, "''")}'`).join(","))}]::text[])
+              AND meta_lead_id != ALL(ARRAY[${sql.raw(processedMetaLeadIds.map((id) => `'${id.replace(/'/g, "''")}'`).join(","))}]::text[])
           `);
           marcaDeleted = (countResult as any).rows?.[0]?.cnt ?? 0;
 
@@ -302,13 +315,18 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
               DELETE FROM op_lead
               WHERE marca = ${marcaUpper}
                 AND source = 'google_sheets'
-                AND meta_lead_id != ALL(ARRAY[${sql.raw(processedMetaLeadIds.map(id => `'${id.replace(/'/g, "''")}'`).join(","))}]::text[])
+                AND meta_lead_id != ALL(ARRAY[${sql.raw(processedMetaLeadIds.map((id) => `'${id.replace(/'/g, "''")}'`).join(","))}]::text[])
             `);
             stats.deleted += marcaDeleted;
-            console.log(`   🗑️  Eliminados: ${marcaDeleted} (ya no están en el Sheet)`);
+            console.log(
+              `   🗑️  Eliminados: ${marcaDeleted} (ya no están en el Sheet)`,
+            );
           }
         } catch (deleteError: any) {
-          console.error(`   ❌ Error eliminando obsoletos de ${sheetName}:`, deleteError.message);
+          console.error(
+            `   ❌ Error eliminando obsoletos de ${sheetName}:`,
+            deleteError.message,
+          );
         }
       }
 
@@ -440,7 +458,3 @@ async function main() {
     process.exit(1);
   }
 }
-
-// Ejecutar migración SOLO si se ejecuta directamente (no como import)
-// Comentado para evitar ejecución automática al importar
-// main();
