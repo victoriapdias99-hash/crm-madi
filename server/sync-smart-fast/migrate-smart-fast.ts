@@ -39,6 +39,29 @@ function normalizeBrandName(sheetName: string): string {
   return SHEET_NAME_TO_BRAND[upper] ?? upper;
 }
 
+/**
+ * Mapa de normalización de localizaciones: valor en columna H del Sheet → valor canónico.
+ * Permite que ciudades o regiones con nombres alternativos se almacenen con el nombre
+ * estándar que usan las zonas de las campañas.
+ *
+ * Ejemplo: el Sheet puede tener "Rosario" en la columna H, pero la campaña
+ * tiene zona "Santa Fe" → el sistema busca localizacion = 'Santa Fe'.
+ * Agregar aquí cualquier nuevo alias que sea necesario.
+ */
+const LOCALIZACION_ALIASES: Record<string, string> = {
+  rosario: "Santa Fe",
+};
+
+/**
+ * Devuelve la localización canónica a partir del valor crudo del Sheet.
+ * Si no hay mapeo definido, devuelve el valor original sin modificar.
+ */
+function normalizeLocalizacion(localizacion: string | null): string | null {
+  if (!localizacion) return null;
+  const lower = localizacion.toLowerCase().trim();
+  return LOCALIZACION_ALIASES[lower] ?? localizacion.trim();
+}
+
 interface MigrationStats {
   totalProcessed: number;
   inserted: number;
@@ -98,7 +121,7 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
     throw new Error("GOOGLE_SHEETS_API_KEY no configurado en .env");
   }
 
-  // 🔍 Verificar conexión (sin mostrar credenciales completas)
+  // Verificar conexión (sin mostrar credenciales completas)
   console.log("🔑 Conexión a Google Sheets: ✅");
   console.log(`📋 Spreadsheet: ${SPREADSHEET_ID.substring(0, 12)}...***\n`);
 
@@ -149,7 +172,7 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
         continue;
       }
 
-      // 📦 BATCH PROCESSING: Preparar todos los datos con detección de duplicados
+      // BATCH PROCESSING: Preparar todos los datos con detección de duplicados
       const batchData: Array<{
         metaLeadId: string;
         leadData: LeadData;
@@ -191,7 +214,7 @@ export async function migrateSmartFast(): Promise<MigrationStats> {
           modelo: row[4]?.toString().trim() || null,
           comentarioHorario: row[5]?.toString().trim() || null,
           origen: row[6]?.toString().trim() || null,
-          localizacion: row[7]?.toString().trim() || null,
+          localizacion: normalizeLocalizacion(row[7]?.toString() || null),
           cliente: normalizeClientName(row[8]),
           marca,
           campaign: sheetName,
