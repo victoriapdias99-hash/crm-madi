@@ -123,6 +123,7 @@ export default function CampanasManagement() {
   const [clienteFiltro, setClienteFiltro] = useState<string>('todos');
   const [fechaFiltro, setFechaFiltro] = useState<string>('');
   const [mesFiltro, setMesFiltro] = useState<string>('todos');
+  const [marcaFiltro, setMarcaFiltro] = useState<string>('todas');
   const [marcasCount, setMarcasCount] = useState(1); // Número de pares marca/zona visibles
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -443,6 +444,17 @@ export default function CampanasManagement() {
       });
     }
     
+    // Filtrar por marca
+    if (marcaFiltro !== 'todas') {
+      resultado = resultado.filter((campana: CampanaComercial) =>
+        campana.marca === marcaFiltro ||
+        campana.marca2 === marcaFiltro ||
+        campana.marca3 === marcaFiltro ||
+        campana.marca4 === marcaFiltro ||
+        campana.marca5 === marcaFiltro
+      );
+    }
+
     // Ordenar por fecha de inicio (más recientes primero)
     resultado.sort((a: CampanaComercial, b: CampanaComercial) => {
       const fechaA = a.fechaCampana ? new Date(a.fechaCampana).getTime() : 0;
@@ -451,7 +463,7 @@ export default function CampanasManagement() {
     });
     
     return resultado;
-  }, [campanas, clienteFiltro, fechaFiltro, mesFiltro]);
+  }, [campanas, clienteFiltro, fechaFiltro, mesFiltro, marcaFiltro]);
 
   if (isLoading) {
     return (
@@ -481,9 +493,9 @@ export default function CampanasManagement() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4" />
-            <span className="text-sm font-medium">Filtrar por cliente:</span>
+            <span className="text-sm font-medium">Cliente:</span>
             <Select value={clienteFiltro} onValueChange={setClienteFiltro}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Todos los clientes" />
               </SelectTrigger>
               <SelectContent>
@@ -492,6 +504,20 @@ export default function CampanasManagement() {
                   <SelectItem key={cliente.id} value={cliente.id.toString()}>
                     {cliente.nombreCliente}
                   </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Marca:</span>
+            <Select value={marcaFiltro} onValueChange={setMarcaFiltro}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Todas las marcas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas las marcas</SelectItem>
+                {MARCAS_DISPONIBLES.map(marca => (
+                  <SelectItem key={marca} value={marca}>{marca}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
