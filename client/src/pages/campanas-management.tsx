@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Building2, Calendar, Target, Package, Copy, Clock, Edit2, Check, X, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -152,9 +152,27 @@ export default function CampanasManagement() {
       asignacionAutomatica: false,
       fechaCampana: "",
       pedidosPorDia: 0,
+      tipoFacturacion: "C",
+      costeVenta: "0",
       facturacionBruta: "0",
     },
   });
+
+  const watchedCosteVenta = form.watch("costeVenta");
+  const watchedCantidad = form.watch("cantidadDatosSolicitados");
+  const watchedTipoFact = form.watch("tipoFacturacion");
+
+  const facturacionCalculada = useMemo(() => {
+    const coste = parseFloat(String(watchedCosteVenta || "0")) || 0;
+    const cantidad = parseInt(String(watchedCantidad || "0")) || 0;
+    const base = coste * cantidad;
+    return watchedTipoFact === "A" ? base * 1.21 : base;
+  }, [watchedCosteVenta, watchedCantidad, watchedTipoFact]);
+
+  // Sync facturacionBruta con el valor calculado
+  useEffect(() => {
+    form.setValue("facturacionBruta", String(facturacionCalculada));
+  }, [facturacionCalculada]);
 
   // Fetch campañas comerciales
   const { data: campanas = [], isLoading } = useQuery({
@@ -354,6 +372,8 @@ export default function CampanasManagement() {
         asignacionAutomatica: campana.asignacionAutomatica || false,
         fechaCampana: campana.fechaCampana || "",
         pedidosPorDia: campana.pedidosPorDia || 0,
+        tipoFacturacion: (campana.tipoFacturacion as "C" | "A") || "C",
+        costeVenta: campana.costeVenta || "0",
         facturacionBruta: campana.facturacionBruta || "0",
       });
     } else {
@@ -381,6 +401,8 @@ export default function CampanasManagement() {
         asignacionAutomatica: false,
         fechaCampana: "",
         pedidosPorDia: 0,
+        tipoFacturacion: "C",
+        costeVenta: "0",
         facturacionBruta: "0",
       });
     }
@@ -397,6 +419,8 @@ export default function CampanasManagement() {
       zona: campana.zona,
       fechaCampana: "", // Clear date for new campaign
       pedidosPorDia: campana.pedidosPorDia || 0,
+      tipoFacturacion: (campana.tipoFacturacion as "C" | "A") || "C",
+      costeVenta: campana.costeVenta || "0",
       facturacionBruta: campana.facturacionBruta || "0",
     });
     setIsDialogOpen(true);
@@ -937,30 +961,67 @@ export default function CampanasManagement() {
                     )}
                   />
 
-                  {/* Facturación Bruta */}
+                  {/* Tipo de Facturación */}
                   <FormField
                     control={form.control}
-                    name="facturacionBruta"
+                    name="tipoFacturacion"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Facturación Bruta</FormLabel>
+                        <FormLabel>Tipo de Facturación *</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || "C"}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleccionar tipo" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="C">C — Sin IVA (facturación bruta sin cambios)</SelectItem>
+                            <SelectItem value="A">A — Con IVA (se suma 21%)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Coste de Venta */}
+                  <FormField
+                    control={form.control}
+                    name="costeVenta"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Coste de Venta (por lead)</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="number" 
+                          <Input
+                            type="number"
                             min="0"
                             step="0.01"
-                            placeholder="Ej: 600000" 
-                            {...field} 
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            placeholder="Ej: 3000"
+                            {...field}
+                            onChange={(e) => field.onChange(e.target.value)}
                           />
                         </FormControl>
                         <FormMessage />
                         <p className="text-sm text-muted-foreground">
-                          Monto total de facturación bruta por campaña
+                          Precio por lead. La facturación bruta se calculará automáticamente.
                         </p>
                       </FormItem>
                     )}
                   />
+                </div>
+
+                {/* Facturación Bruta — calculada automáticamente */}
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-1">
+                  <p className="text-sm font-medium text-gray-700">Facturación Bruta (calculada)</p>
+                  <p className="text-2xl font-bold text-green-700">
+                    ${facturacionCalculada.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {watchedCosteVenta && Number(watchedCosteVenta) > 0
+                      ? `$${Number(watchedCosteVenta).toLocaleString("es-AR")} × ${watchedCantidad || 0} leads${watchedTipoFact === "A" ? " × 1.21 (IVA 21%)" : ""}`
+                      : "Ingresá el coste de venta para ver el cálculo"}
+                  </p>
+                  <input type="hidden" {...form.register("facturacionBruta")} />
                 </div>
 
                 <div className="flex justify-end space-x-2 pt-4">

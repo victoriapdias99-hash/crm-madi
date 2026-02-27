@@ -338,6 +338,11 @@ export const campanasComerciales = pgTable("campanas_comerciales", {
     precision: 12,
     scale: 2,
   }).default("0"), // Facturación bruta por campaña
+  tipoFacturacion: text("tipo_facturacion").notNull().default("C"), // "C" = sin IVA, "A" = con 21% IVA
+  costeVenta: numeric("coste_venta", {
+    precision: 12,
+    scale: 2,
+  }).default("0"), // Coste por lead (para calcular facturación bruta)
   fechaCreacion: timestamp("fecha_creacion").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -596,11 +601,18 @@ export const insertCampanaComercialSchema = createInsertSchema(
     fechaFin: true,
     pedidosPorDia: true,
     facturacionBruta: true,
+    tipoFacturacion: true,
+    costeVenta: true,
   })
   .extend({
     facturacionBruta: z
       .union([z.string(), z.number()])
       .transform((val) => String(val)),
+    costeVenta: z
+      .union([z.string(), z.number()])
+      .transform((val) => String(val))
+      .optional(),
+    tipoFacturacion: z.enum(["C", "A"]).default("C"),
   });
 
 // Schema para crear campañas sin campos calculados automáticamente
@@ -619,6 +631,11 @@ export const createCampanaComercialSchema = createInsertSchema(
     facturacionBruta: z
       .union([z.string(), z.number()])
       .transform((val) => String(val)),
+    costeVenta: z
+      .union([z.string(), z.number()])
+      .transform((val) => String(val))
+      .optional(),
+    tipoFacturacion: z.enum(["C", "A"]).default("C"),
   });
 
 export type CampanaComercial = typeof campanasComerciales.$inferSelect;
