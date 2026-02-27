@@ -24,6 +24,7 @@ import {
   type CampanaComercial,
   type InsertCampanaComercial,
   type Cliente,
+  MARCAS_DISPONIBLES,
 } from "@shared/schema";
 import { BrandDisplay } from "@/components/ui/brand-display";
 import { getCampaignBrandInfo as getEnhancedCampaignBrandInfo } from "@shared/utils/brand-display-utils";
@@ -531,12 +532,13 @@ export default function CampanasPendientes() {
   }, [datosDiarios]);
 
   const opcionesMarca = useMemo(() => {
-    if (!datosDiarios || !Array.isArray(datosDiarios)) return [];
-    const marcasSet = new Set<string>();
-    datosDiarios.forEach(data => {
-      const brands = getEnhancedCampaignBrandInfo(data, campanasComerciales);
-      brands.forEach(brand => marcasSet.add(brand.marca));
-    });
+    const marcasSet = new Set<string>(MARCAS_DISPONIBLES);
+    if (datosDiarios && Array.isArray(datosDiarios)) {
+      datosDiarios.forEach(data => {
+        const brands = getEnhancedCampaignBrandInfo(data, campanasComerciales);
+        brands.forEach(brand => { if (brand.marca) marcasSet.add(brand.marca); });
+      });
+    }
     return Array.from(marcasSet).filter(Boolean).sort();
   }, [datosDiarios, campanasComerciales]);
 

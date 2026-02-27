@@ -94,19 +94,15 @@ export async function contarLeadsYDuplicadosUnificado(
  * ============================================================================
  *
  * ESTRATEGIA:
- * 1. Los leads ya están asignados con campaign_id en op_lead
- * 2. Consultar op_leads_rep usando los meta_lead_id de op_lead
- * 3. Esto garantiza que usamos la MISMA tabla de análisis consolidada
+ * Contar directamente desde op_lead usando campaign_ids array.
+ * op_leads_rep.campaign_id NO se actualiza al cerrar campañas (solo al hacer
+ * sync de Google Sheets), por eso op_lead es la fuente confiable.
  *
  * ÚNICOS:
- * - Contar registros en op_leads_rep que corresponden a leads asignados
+ * - COUNT(DISTINCT telefono) FROM op_lead WHERE campaignId = ANY(campaign_ids)
  *
  * DUPLICADOS:
- * - Sumar duplicate_ids.length de cada lead asignado
- * - O usar campo cantidad_duplicados si está disponible
- *
- * Esta es la lógica CORRECTA que debe reemplazar la actual en
- * FinishedCampaignEnrichmentService.ts que usa op_lead directamente.
+ * - COUNT(*) total de filas asignadas a la campaña (incluyendo duplicados de teléfono)
  */
 async function contarLeadsFinalizados(
   campaign: any,
@@ -119,66 +115,23 @@ async function contarLeadsFinalizados(
   console.log(`✅ [CampaignCounting] Contando leads FINALIZADOS para campaña ID:${campaign.id}`);
 
   try {
-    // ========================================
-    // PASO 1: Contar ÚNICOS
-    // ========================================
-    // Query directa a op_leads_rep por campaign_id
-    // Esta es la misma lógica que routes.ts:473-490
+    const campId = campaign.id;
 
-    const leadsCountResult = await db
-      .select({ count: count() })
-      .from(opLeadsRep)
-      .where(eq(opLeadsRep.campaignId, campaign.id));
-
-    const enviados = leadsCountResult[0]?.count || 0;
+    // PASO 1: Contar ÚNICOS (teléfonos distintos)
+    const unicosResult = await db.execute(
+      sql`SELECT COUNT(DISTINCT telefono)::int AS cnt FROM op_lead WHERE ${campId} = ANY(campaign_ids)`
+    );
+    const enviados = (unicosResult as any).rows?.[0]?.cnt ?? (unicosResult as any)[0]?.cnt ?? 0;
 
     console.log(`📈 [CampaignCounting] Únicos encontrados: ${enviados}`);
 
-    // ========================================
-    // PASO 2: Contar DUPLICADOS
-    // ========================================
-    // Estrategia: Obtener meta_lead_ids de op_lead, luego buscar en op_leads_rep
-    // Esta es la misma lógica que routes.ts:361-416
+    // PASO 2: Contar DUPLICADOS (total filas asignadas)
+    const totalResult = await db.execute(
+      sql`SELECT COUNT(*)::int AS cnt FROM op_lead WHERE ${campId} = ANY(campaign_ids)`
+    );
+    const totalDuplicados = (totalResult as any).rows?.[0]?.cnt ?? (totalResult as any)[0]?.cnt ?? 0;
 
-    // 2.1: Obtener meta_lead_ids de leads asignados a esta campaña
-    const leadsAsignados = await db
-      .select({
-        metaLeadId: opLead.metaLeadId
-      })
-      .from(opLead)
-      .where(eq(opLead.campaignId, campaign.id));
-
-    if (leadsAsignados.length === 0) {
-      console.log(`⚠️ [CampaignCounting] No hay leads asignados en op_lead`);
-      return { enviados: 0, duplicados: 0 };
-    }
-
-    // 2.2: Extraer meta_lead_ids y filtrar nulls
-    const metaLeadIds = leadsAsignados
-      .map((lead: any) => lead.metaLeadId)
-      .filter((id: any) => id !== null);
-
-    if (metaLeadIds.length === 0) {
-      console.log(`⚠️ [CampaignCounting] No hay meta_lead_ids válidos`);
-      return { enviados, duplicados: 0 };
-    }
-
-    // 2.3: Buscar en op_leads_rep y sumar duplicate_ids
-    const leadsUnicos = await db
-      .select({
-        duplicateIds: opLeadsRep.duplicateIds
-      })
-      .from(opLeadsRep)
-      .where(inArray(opLeadsRep.metaLeadId, metaLeadIds));
-
-    // 2.4: Sumar longitud de arrays duplicate_ids
-    let totalDuplicados = 0;
-    for (const lead of leadsUnicos) {
-      const arrayLength = lead.duplicateIds ? lead.duplicateIds.length : 0;
-      totalDuplicados += arrayLength;
-    }
-
-    console.log(`📊 [CampaignCounting] Duplicados encontrados: ${totalDuplicados}`);
+    console.log(`📊 [CampaignCounting] Total leads (incl. duplicados): ${totalDuplicados}`);
     console.log(`✅ [CampaignCounting] Conteo finalizado - Enviados: ${enviados}, Duplicados: ${totalDuplicados}`);
 
     return { enviados, duplicados: totalDuplicados };
