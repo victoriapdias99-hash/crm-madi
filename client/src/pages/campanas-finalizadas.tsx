@@ -879,7 +879,7 @@ export default function CampanasFinalizadas() {
                               const ff = (data.fechaFin as string) || today;
                               const sk = makeSpendKey(data.marca || '', data.zona || 'NACIONAL', fi, ff);
                               const spendData = spendMap.get(sk) || { spend: 0, results: 0, cpl: 0 };
-                              const fb = typeof data.facturacionBruta === 'number' ? data.facturacionBruta : 0;
+                              const fb = parseFloat(String(data.facturacionBruta || 0)) || 0;
                               const tf = data.tipoFacturacion || 'C';
                               const iibb = calcularIIBB(fb);
                               const iva = calcularIVA(fb, tf);
@@ -898,7 +898,7 @@ export default function CampanasFinalizadas() {
                                     {fb > 0 ? <span className="text-violet-600">{fmtCur(iibb)}</span> : <span className="text-slate-400">-</span>}
                                   </td>
                                   <td className="px-4 py-3 text-center text-sm">
-                                    {fb > 0 ? <span className="text-violet-600">{tf === 'A' ? fmtCur(iva) : '$0 (FC C)'}</span> : <span className="text-slate-400">-</span>}
+                                    {fb > 0 ? <span className="text-violet-600">{tf === 'A' ? fmtCur(iva) : '$0'}</span> : <span className="text-slate-400">-</span>}
                                   </td>
                                   <td className="px-4 py-3 text-center text-sm">
                                     {hasMeta ? <span className="text-violet-600">{fmtCur(impTarjeta)}</span> : <span className="text-slate-400">-</span>}

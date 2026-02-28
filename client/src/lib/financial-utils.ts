@@ -4,7 +4,7 @@ export function calcularIIBB(facturacionBruta: number): number {
 
 export function calcularIVA(facturacionBruta: number, tipoFacturacion: string): number {
   if (tipoFacturacion === 'A') {
-    return facturacionBruta * (21 / 121);
+    return facturacionBruta * 0.21;
   }
   return 0;
 }

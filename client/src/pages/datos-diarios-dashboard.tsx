@@ -1994,7 +1994,7 @@ export default function DatosDiariosDashboard() {
                           const ff = (data.fechaFin as string) || today;
                           const sk = makeSpendKey(data.marca || '', data.zona || 'NACIONAL', fi, ff);
                           const spendData = spendMap.get(sk) || { spend: 0, results: 0, cpl: 0 };
-                          const fb = typeof data.facturacionBruta === 'number' ? data.facturacionBruta : 0;
+                          const fb = parseFloat(String(data.facturacionBruta || 0)) || 0;
                           const tf = data.tipoFacturacion || 'C';
                           const iibb = calcularIIBB(fb);
                           const iva = calcularIVA(fb, tf);
@@ -2016,7 +2016,7 @@ export default function DatosDiariosDashboard() {
                                 {fb > 0 ? <span className="text-violet-600 dark:text-violet-400">{fmtCur(iibb)}</span> : <span className="text-gray-400">-</span>}
                               </td>
                               <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
-                                {fb > 0 ? <span className="text-violet-600 dark:text-violet-400">{tf === 'A' ? fmtCur(iva) : '$0 (FC C)'}</span> : <span className="text-gray-400">-</span>}
+                                {fb > 0 ? <span className="text-violet-600 dark:text-violet-400">{tf === 'A' ? fmtCur(iva) : '$0'}</span> : <span className="text-gray-400">-</span>}
                               </td>
                               <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
                                 {hasMeta ? <span className="text-violet-600 dark:text-violet-400">{fmtCur(impTarjeta)}</span> : <span className="text-gray-400">-</span>}
@@ -2449,7 +2449,7 @@ export default function DatosDiariosDashboard() {
                           const ff = (data.fechaFin as string) || today;
                           const sk = makeSpendKey(data.marca || '', data.zona || 'NACIONAL', fi, ff);
                           const spendData = spendMap.get(sk) || { spend: 0, results: 0, cpl: 0 };
-                          const fb = typeof data.facturacionBruta === 'number' ? data.facturacionBruta : 0;
+                          const fb = parseFloat(String(data.facturacionBruta || 0)) || 0;
                           const tf = data.tipoFacturacion || 'C';
                           const iibb = calcularIIBB(fb);
                           const iva = calcularIVA(fb, tf);
@@ -2471,7 +2471,7 @@ export default function DatosDiariosDashboard() {
                                 {fb > 0 ? <span className="text-violet-600 dark:text-violet-400">{fmtCur(iibb)}</span> : <span className="text-gray-400">-</span>}
                               </td>
                               <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
-                                {fb > 0 ? <span className="text-violet-600 dark:text-violet-400">{tf === 'A' ? fmtCur(iva) : '$0 (FC C)'}</span> : <span className="text-gray-400">-</span>}
+                                {fb > 0 ? <span className="text-violet-600 dark:text-violet-400">{tf === 'A' ? fmtCur(iva) : '$0'}</span> : <span className="text-gray-400">-</span>}
                               </td>
                               <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
                                 {hasMeta ? <span className="text-violet-600 dark:text-violet-400">{fmtCur(impTarjeta)}</span> : <span className="text-gray-400">-</span>}
