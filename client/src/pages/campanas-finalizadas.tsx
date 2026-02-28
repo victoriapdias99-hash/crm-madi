@@ -79,6 +79,7 @@ const FIN_COLS = [
   { key: 'leads_dia', label: 'Leads x Día' },
   { key: 'leads', label: 'Leads' },
   { key: 'progreso', label: 'Progreso' },
+  { key: 'faltantes', label: 'Faltantes' },
   { key: 'facturacionBruta', label: 'Facturación Bruta' },
   { key: 'gastoAcumulado', label: 'Gasto Meta Ads' },
   { key: 'iibb', label: 'IIBB (4.5%)' },
@@ -714,6 +715,7 @@ export default function CampanasFinalizadas() {
                         </th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Leads</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Progreso</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Faltantes</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase tracking-wider">Facturación Bruta</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase tracking-wider">Gasto Meta Ads</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase tracking-wider">IIBB (4.5%)</th>
@@ -848,6 +850,11 @@ export default function CampanasFinalizadas() {
                                     : 'text-slate-600'
                                 }`}>{formatNumber(data.porcentajeDatosEnviados, 0)}%</span>
                               </div>
+                            </td>
+
+                            {/* Faltantes */}
+                            <td className="px-4 py-3 text-center">
+                              <span className="font-semibold text-red-600 text-sm">{inversions.faltantes}</span>
                             </td>
 
                             {/* Financial columns */}
