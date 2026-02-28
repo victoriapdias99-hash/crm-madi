@@ -88,6 +88,8 @@ const FIN_COLS = [
   { key: 'beneficio', label: 'Beneficio' },
   { key: 'margenReal', label: 'Margen Real' },
   { key: 'cplActual', label: 'CPL Actual' },
+  { key: 'reposiciones', label: 'Reposiciones' },
+  { key: 'margenSinMerma', label: 'Margen sin Merma' },
   { key: 'acciones', label: 'Acciones' },
 ];
 
@@ -724,6 +726,8 @@ export default function CampanasFinalizadas() {
                         <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase tracking-wider">Beneficio</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase tracking-wider">Margen Real</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase tracking-wider">CPL Actual</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-orange-700 uppercase tracking-wider">Reposiciones</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-orange-700 uppercase tracking-wider">Margen sin Merma</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Acciones</th>
                       </tr>
                     </thead>
@@ -872,6 +876,11 @@ export default function CampanasFinalizadas() {
                               const beneficio = calcularBeneficio(fb, spendData.spend, iibb, iva, impTarjeta);
                               const margen = calcularMargenReal(beneficio, fb);
                               const cplActual = spendData.results > 0 ? spendData.spend / spendData.results : 0;
+                              const safeEnv = parseFloat(String(data.enviados || 0)) || 0;
+                              const safePed = parseFloat(String(data.pedidosTotal || 0)) || 0;
+                              const reposiciones = Math.max(0, safeEnv - safePed);
+                              const merma = reposiciones * cplActual;
+                              const margenSinMerma = fb > 0 ? ((beneficio + merma) / fb) * 100 : 0;
                               const fmtCur = (v: number) => v === 0 ? '$0' : v.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
                               const hasMeta = spendData.spend > 0 || spendData.results > 0;
                               return (
@@ -903,6 +912,14 @@ export default function CampanasFinalizadas() {
                                   </td>
                                   <td className="px-4 py-3 text-center text-sm">
                                     {hasMeta ? <span className="font-semibold text-violet-700">{fmtCur(cplActual)}</span> : <span className="text-slate-400">-</span>}
+                                  </td>
+                                  <td className="px-4 py-3 text-center text-sm">
+                                    <span className={`font-semibold ${reposiciones > 0 ? 'text-orange-600' : 'text-slate-400'}`}>{reposiciones > 0 ? reposiciones : '0'}</span>
+                                  </td>
+                                  <td className="px-4 py-3 text-center text-sm">
+                                    {fb > 0 && hasMeta ? (
+                                      <span className={`font-bold ${margenSinMerma >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{margenSinMerma.toFixed(1)}%</span>
+                                    ) : <span className="text-slate-400">-</span>}
                                   </td>
                                 </>
                               );
