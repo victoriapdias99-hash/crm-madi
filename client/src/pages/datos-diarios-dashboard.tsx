@@ -154,6 +154,7 @@ const DD_COLS = [
   { key: 'cpl', label: 'CPL Guardado' },
   { key: 'inv_realizada', label: 'Inversión Realizada' },
   { key: 'inv_pendiente', label: 'Inversión Pendiente' },
+  { key: 'facturacionBruta', label: 'Facturación Bruta' },
   { key: 'gastoAcumulado', label: 'Gasto Meta Ads' },
   { key: 'iibb', label: 'IIBB (4.5%)' },
   { key: 'iva', label: 'FC / IVA' },
@@ -2006,6 +2007,9 @@ export default function DatosDiariosDashboard() {
                           return (
                             <>
                               <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
+                                {fb > 0 ? <span className="font-semibold text-violet-700 dark:text-violet-300">{fmtCur(fb)}</span> : <span className="text-gray-400">-</span>}
+                              </td>
+                              <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
                                 {hasMeta ? <span className="font-semibold text-violet-700 dark:text-violet-300">{fmtCur(spendData.spend)}</span> : <span className="text-gray-400">-</span>}
                               </td>
                               <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
@@ -2457,6 +2461,9 @@ export default function DatosDiariosDashboard() {
                           const hasMeta = spendData.spend > 0 || spendData.results > 0;
                           return (
                             <>
+                              <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
+                                {fb > 0 ? <span className="font-semibold text-violet-700 dark:text-violet-300">{fmtCur(fb)}</span> : <span className="text-gray-400">-</span>}
+                              </td>
                               <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
                                 {hasMeta ? <span className="font-semibold text-violet-700 dark:text-violet-300">{fmtCur(spendData.spend)}</span> : <span className="text-gray-400">-</span>}
                               </td>
