@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
@@ -1026,66 +1027,76 @@ export default function CampanasManagement() {
                 </div>
 
                 {/* Facturación Bruta — calculada o manual */}
-                <div className={`border rounded-lg p-4 space-y-3 ${facturacionManual ? "bg-amber-50 border-amber-300" : "bg-gray-50 border-gray-200"}`}>
-                  <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  {/* Checkbox para activar ingreso manual */}
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="facturacion-manual-check"
+                      checked={facturacionManual}
+                      onCheckedChange={(checked) => {
+                        const isChecked = checked === true;
+                        setFacturacionManual(isChecked);
+                        if (!isChecked) {
+                          form.setValue("facturacionBruta", String(facturacionCalculada));
+                        }
+                      }}
+                    />
+                    <label
+                      htmlFor="facturacion-manual-check"
+                      className="text-sm font-medium cursor-pointer select-none"
+                    >
+                      Ingresar Facturación Bruta manualmente
+                    </label>
+                  </div>
+
+                  {/* Panel de resultado */}
+                  <div className={`border rounded-lg p-4 space-y-2 ${facturacionManual ? "bg-amber-50 border-amber-300" : "bg-gray-50 border-gray-200"}`}>
                     <p className="text-sm font-medium text-gray-700">
                       Facturación Bruta
                       {facturacionManual
-                        ? <span className="ml-2 text-xs text-amber-600 font-normal">(valor manual)</span>
+                        ? <span className="ml-2 text-xs text-amber-600 font-normal">(valor hardcodeado)</span>
                         : <span className="ml-2 text-xs text-gray-400 font-normal">(calculada automáticamente)</span>
                       }
                     </p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500">Valor manual</span>
-                      <Switch
-                        checked={facturacionManual}
-                        onCheckedChange={(checked) => {
-                          setFacturacionManual(checked);
-                          if (!checked) {
-                            form.setValue("facturacionBruta", String(facturacionCalculada));
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
 
-                  {facturacionManual ? (
-                    <FormField
-                      control={form.control}
-                      name="facturacionBruta"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              placeholder="Ej: 500000"
-                              {...field}
-                              onChange={(e) => field.onChange(e.target.value)}
-                              className="text-lg font-bold border-amber-300 focus:border-amber-500"
-                            />
-                          </FormControl>
-                          <p className="text-xs text-amber-600">
-                            El valor automático sería: ${facturacionCalculada.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </p>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  ) : (
-                    <>
-                      <p className="text-2xl font-bold text-green-700">
-                        ${facturacionCalculada.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {watchedCosteVenta && Number(watchedCosteVenta) > 0
-                          ? `$${Number(watchedCosteVenta).toLocaleString("es-AR")} × ${watchedCantidad || 0} leads${watchedTipoFact === "A" ? " × 1.21 (IVA 21%)" : ""}`
-                          : "Ingresá el coste de venta para ver el cálculo"}
-                      </p>
-                      <input type="hidden" {...form.register("facturacionBruta")} />
-                    </>
-                  )}
+                    {facturacionManual ? (
+                      <FormField
+                        control={form.control}
+                        name="facturacionBruta"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                placeholder="Ej: 500000"
+                                {...field}
+                                onChange={(e) => field.onChange(e.target.value)}
+                                className="text-lg font-bold border-amber-400 focus:border-amber-500"
+                              />
+                            </FormControl>
+                            <p className="text-xs text-amber-600">
+                              Valor automático (referencia): ${facturacionCalculada.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </p>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    ) : (
+                      <>
+                        <p className="text-2xl font-bold text-green-700">
+                          ${facturacionCalculada.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {watchedCosteVenta && Number(watchedCosteVenta) > 0
+                            ? `$${Number(watchedCosteVenta).toLocaleString("es-AR")} × ${watchedCantidad || 0} leads${watchedTipoFact === "A" ? " × 1.21 (IVA 21%)" : ""}`
+                            : "Ingresá el coste de venta para ver el cálculo"}
+                        </p>
+                        <input type="hidden" {...form.register("facturacionBruta")} />
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex justify-end space-x-2 pt-4">
