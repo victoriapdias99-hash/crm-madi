@@ -39,6 +39,9 @@ export interface FinishedCampaign {
   remaining: number;
   faltantesAEnviar: number;
   cpl: number;
+  facturacionBruta?: number | string;
+  tipoFacturacion?: string;
+  costeVenta?: number | string;
   salesPerCampaign: number;
   ventaPorCampaign: number;
   investment: number;

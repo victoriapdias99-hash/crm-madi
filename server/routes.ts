@@ -1076,6 +1076,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       fechaFin: fechaFinExacta,
       fechaFinReal: fechaFinExacta,
       facturacionBruta: campana.facturacionBruta,
+      tipoFacturacion: campana.tipoFacturacion ?? "C",
+      costeVenta: campana.costeVenta,
       pedidosPorDia: campana.pedidosPorDia ?? 0,
       pedidosTotal: campana.cantidadDatosSolicitados,
       faltantes: tieneCampanaAnterior
@@ -1152,6 +1154,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fechaCampana: campanasComerciales.fechaCampana,
           fechaFin: campanasComerciales.fechaFin,
           facturacionBruta: campanasComerciales.facturacionBruta,
+          tipoFacturacion: campanasComerciales.tipoFacturacion,
+          costeVenta: campanasComerciales.costeVenta,
           pedidosPorDia: campanasComerciales.pedidosPorDia,
           asignacionAutomatica: campanasComerciales.asignacionAutomatica,
           // Cliente data (JOIN)

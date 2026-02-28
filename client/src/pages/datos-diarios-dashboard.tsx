@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useLocation } from "wouter";
 import { CPLStorage } from "@/lib/cpl-storage";
+import { calcularIIBB, calcularIVA, calcularImpuestoTarjeta, calcularBeneficio, calcularMargenReal, makeSpendKey } from "@/lib/financial-utils";
 import { debounce, memoize, measurePerformance } from "@/lib/performance";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -64,6 +65,10 @@ interface DatosDiariosData {
   duplicados?: number | string;
   faltantes?: number | string;
   esSuperior100?: boolean;
+  facturacionBruta?: number;
+  tipoFacturacion?: string;
+  costeVenta?: number;
+  campaignId?: number;
 }
 
 // Función helper para manejar valores que pueden ser números o "-"
@@ -149,6 +154,13 @@ const DD_COLS = [
   { key: 'cpl', label: 'CPL Guardado' },
   { key: 'inv_realizada', label: 'Inversión Realizada' },
   { key: 'inv_pendiente', label: 'Inversión Pendiente' },
+  { key: 'gastoAcumulado', label: 'Gasto Meta Ads' },
+  { key: 'iibb', label: 'IIBB (4.5%)' },
+  { key: 'iva', label: 'FC / IVA' },
+  { key: 'impTarjeta', label: 'Imp. Tarjeta (5.5%)' },
+  { key: 'beneficio', label: 'Beneficio' },
+  { key: 'margenReal', label: 'Margen Real' },
+  { key: 'cplActual', label: 'CPL Actual' },
 ];
 
 export default function DatosDiariosDashboard() {
@@ -441,6 +453,35 @@ export default function DatosDiariosDashboard() {
   });
 
 
+
+  // Mapa de gasto Meta Ads: key = marca|zona|fechaInicio|fechaFin => { spend, results, cpl }
+  const [spendMap, setSpendMap] = useState<Map<string, { spend: number; results: number; cpl: number }>>(new Map());
+
+  useEffect(() => {
+    if (!datosDiarios || datosDiarios.length === 0) return;
+    const today = new Date().toISOString().split('T')[0];
+    const uniqueKeys = new Map<string, { marca: string; zona: string; fechaInicio: string; fechaFin: string }>();
+    datosDiarios.forEach(d => {
+      const fi = d.fechaCampana || today;
+      const ff = d.fechaFin || today;
+      const key = makeSpendKey(d.marca || '', d.zona || 'NACIONAL', fi, ff);
+      if (!uniqueKeys.has(key)) uniqueKeys.set(key, { marca: d.marca || '', zona: d.zona || 'NACIONAL', fechaInicio: fi, fechaFin: ff });
+    });
+    const fetchAll = async () => {
+      const results = await Promise.allSettled([...uniqueKeys.entries()].map(async ([key, p]) => {
+        try {
+          const res = await fetch(`/api/meta-ads/campaign-spend?marca=${encodeURIComponent(p.marca)}&zona=${encodeURIComponent(p.zona)}&fechaInicio=${p.fechaInicio}&fechaFin=${p.fechaFin}`);
+          if (!res.ok) return [key, { spend: 0, results: 0, cpl: 0 }] as [string, { spend: number; results: number; cpl: number }];
+          const data = await res.json();
+          return [key, { spend: data.spend || 0, results: data.results || 0, cpl: data.cpl || 0 }] as [string, { spend: number; results: number; cpl: number }];
+        } catch { return [key, { spend: 0, results: 0, cpl: 0 }] as [string, { spend: number; results: number; cpl: number }]; }
+      }));
+      const map = new Map<string, { spend: number; results: number; cpl: number }>();
+      results.forEach(r => { if (r.status === 'fulfilled') map.set(r.value[0] as string, r.value[1] as { spend: number; results: number; cpl: number }); });
+      setSpendMap(map);
+    };
+    fetchAll();
+  }, [datosDiarios]);
 
   // Limpiar actualizaciones optimistas cuando lleguen los datos reales
   useEffect(() => {
@@ -1685,6 +1726,13 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">CPL Guardado</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Inversión Realizada</th>
                     <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Inversión Pendiente</th>
+                    <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">Gasto Meta Ads</th>
+                    <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">IIBB (4.5%)</th>
+                    <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">FC / IVA</th>
+                    <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">Imp. Tarjeta (5.5%)</th>
+                    <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">Beneficio</th>
+                    <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">Margen Real</th>
+                    <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">CPL Actual</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1943,6 +1991,53 @@ export default function DatosDiariosDashboard() {
                             );
                           })()}
                         </td>
+                        {/* Financial columns */}
+                        {(() => {
+                          const today = new Date().toISOString().split('T')[0];
+                          const fi = data.fechaCampana || today;
+                          const ff = (data.fechaFin as string) || today;
+                          const sk = makeSpendKey(data.marca || '', data.zona || 'NACIONAL', fi, ff);
+                          const spendData = spendMap.get(sk) || { spend: 0, results: 0, cpl: 0 };
+                          const fb = typeof data.facturacionBruta === 'number' ? data.facturacionBruta : 0;
+                          const tf = data.tipoFacturacion || 'C';
+                          const iibb = calcularIIBB(fb);
+                          const iva = calcularIVA(fb, tf);
+                          const impTarjeta = calcularImpuestoTarjeta(spendData.spend);
+                          const beneficio = calcularBeneficio(fb, spendData.spend, iibb, iva, impTarjeta);
+                          const margen = calcularMargenReal(beneficio, fb);
+                          const cplActual = spendData.results > 0 ? spendData.spend / spendData.results : 0;
+                          const fmtCur = (v: number) => v === 0 ? '$0' : v.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
+                          const hasMeta = spendData.spend > 0 || spendData.results > 0;
+                          return (
+                            <>
+                              <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
+                                {hasMeta ? <span className="font-semibold text-violet-700 dark:text-violet-300">{fmtCur(spendData.spend)}</span> : <span className="text-gray-400">-</span>}
+                              </td>
+                              <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
+                                {fb > 0 ? <span className="text-violet-600 dark:text-violet-400">{fmtCur(iibb)}</span> : <span className="text-gray-400">-</span>}
+                              </td>
+                              <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
+                                {fb > 0 ? <span className="text-violet-600 dark:text-violet-400">{tf === 'A' ? fmtCur(iva) : '$0 (FC C)'}</span> : <span className="text-gray-400">-</span>}
+                              </td>
+                              <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
+                                {hasMeta ? <span className="text-violet-600 dark:text-violet-400">{fmtCur(impTarjeta)}</span> : <span className="text-gray-400">-</span>}
+                              </td>
+                              <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
+                                {fb > 0 && hasMeta ? (
+                                  <span className={`font-bold ${beneficio >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{fmtCur(beneficio)}</span>
+                                ) : <span className="text-gray-400">-</span>}
+                              </td>
+                              <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
+                                {fb > 0 && hasMeta ? (
+                                  <span className={`font-bold ${margen >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{margen.toFixed(1)}%</span>
+                                ) : <span className="text-gray-400">-</span>}
+                              </td>
+                              <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
+                                {hasMeta ? <span className="font-semibold text-violet-700 dark:text-violet-300">{fmtCur(cplActual)}</span> : <span className="text-gray-400">-</span>}
+                              </td>
+                            </>
+                          );
+                        })()}
                       </tr>
                     );
                   })}
@@ -2189,6 +2284,13 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">CPL Guardado</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Inversión Realizada</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Inversión Pendiente</th>
+                    <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">Gasto Meta Ads</th>
+                    <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">IIBB (4.5%)</th>
+                    <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">FC / IVA</th>
+                    <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">Imp. Tarjeta (5.5%)</th>
+                    <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">Beneficio</th>
+                    <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">Margen Real</th>
+                    <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">CPL Actual</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2341,6 +2443,53 @@ export default function DatosDiariosDashboard() {
                             <div className="text-xs text-gray-500 mt-1">Completada</div>
                           </div>
                         </td>
+                        {/* Financial columns - finalizadas */}
+                        {(() => {
+                          const today = new Date().toISOString().split('T')[0];
+                          const fi = data.fechaCampana || today;
+                          const ff = (data.fechaFin as string) || today;
+                          const sk = makeSpendKey(data.marca || '', data.zona || 'NACIONAL', fi, ff);
+                          const spendData = spendMap.get(sk) || { spend: 0, results: 0, cpl: 0 };
+                          const fb = typeof data.facturacionBruta === 'number' ? data.facturacionBruta : 0;
+                          const tf = data.tipoFacturacion || 'C';
+                          const iibb = calcularIIBB(fb);
+                          const iva = calcularIVA(fb, tf);
+                          const impTarjeta = calcularImpuestoTarjeta(spendData.spend);
+                          const beneficio = calcularBeneficio(fb, spendData.spend, iibb, iva, impTarjeta);
+                          const margen = calcularMargenReal(beneficio, fb);
+                          const cplActual = spendData.results > 0 ? spendData.spend / spendData.results : 0;
+                          const fmtCur = (v: number) => v === 0 ? '$0' : v.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
+                          const hasMeta = spendData.spend > 0 || spendData.results > 0;
+                          return (
+                            <>
+                              <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
+                                {hasMeta ? <span className="font-semibold text-violet-700 dark:text-violet-300">{fmtCur(spendData.spend)}</span> : <span className="text-gray-400">-</span>}
+                              </td>
+                              <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
+                                {fb > 0 ? <span className="text-violet-600 dark:text-violet-400">{fmtCur(iibb)}</span> : <span className="text-gray-400">-</span>}
+                              </td>
+                              <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
+                                {fb > 0 ? <span className="text-violet-600 dark:text-violet-400">{tf === 'A' ? fmtCur(iva) : '$0 (FC C)'}</span> : <span className="text-gray-400">-</span>}
+                              </td>
+                              <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
+                                {hasMeta ? <span className="text-violet-600 dark:text-violet-400">{fmtCur(impTarjeta)}</span> : <span className="text-gray-400">-</span>}
+                              </td>
+                              <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
+                                {fb > 0 && hasMeta ? (
+                                  <span className={`font-bold ${beneficio >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{fmtCur(beneficio)}</span>
+                                ) : <span className="text-gray-400">-</span>}
+                              </td>
+                              <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
+                                {fb > 0 && hasMeta ? (
+                                  <span className={`font-bold ${margen >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{margen.toFixed(1)}%</span>
+                                ) : <span className="text-gray-400">-</span>}
+                              </td>
+                              <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
+                                {hasMeta ? <span className="font-semibold text-violet-700 dark:text-violet-300">{fmtCur(cplActual)}</span> : <span className="text-gray-400">-</span>}
+                              </td>
+                            </>
+                          );
+                        })()}
                       </tr>
                     );
                   })}

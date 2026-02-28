@@ -335,6 +335,30 @@ export function registerMetaAdsRoutes(app: Express) {
     }
   });
 
+  // Gasto acumulado de Meta Ads para una campaña específica (por marca + zona + fechas)
+  app.get('/api/meta-ads/campaign-spend', async (req, res) => {
+    try {
+      const service = getMetaAdsService();
+      if (!service) {
+        return res.json({ spend: 0, results: 0, cpl: 0, available: false });
+      }
+      const { marca, zona, fechaInicio, fechaFin } = req.query as Record<string, string>;
+      if (!marca || !fechaInicio) {
+        return res.status(400).json({ error: 'marca y fechaInicio son requeridos' });
+      }
+      const today = new Date().toISOString().split('T')[0];
+      const result = await service.getSpendByCampaign(
+        marca,
+        zona || 'NACIONAL',
+        fechaInicio,
+        fechaFin || today
+      );
+      res.json({ ...result, available: true });
+    } catch (error) {
+      res.json({ spend: 0, results: 0, cpl: 0, available: false });
+    }
+  });
+
   // Estado del token de Meta Ads (vencimiento, días restantes)
   app.get('/api/meta-ads/token-status', async (req, res) => {
     try {

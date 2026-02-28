@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useLocation } from "wouter";
 import { CPLStorage } from "@/lib/cpl-storage";
+import { calcularIIBB, calcularIVA, calcularImpuestoTarjeta, calcularBeneficio, calcularMargenReal, makeSpendKey } from "@/lib/financial-utils";
 import { debounce, memoize } from "@/lib/performance";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -63,6 +64,9 @@ interface DatosDiariosData {
   faltantes?: number | string;
   esSuperior100?: boolean;
   campaignId?: number;
+  facturacionBruta?: number;
+  tipoFacturacion?: string;
+  costeVenta?: number;
 }
 
 // Función helper para manejar valores que pueden ser números o "-"
@@ -88,6 +92,13 @@ const PEND_COLS = [
   { key: 'faltantes', label: 'Faltantes' },
   { key: 'cpl', label: 'CPL' },
   { key: 'inversion', label: 'Inversión' },
+  { key: 'gastoAcumulado', label: 'Gasto Meta Ads' },
+  { key: 'iibb', label: 'IIBB (4.5%)' },
+  { key: 'iva', label: 'FC / IVA' },
+  { key: 'impTarjeta', label: 'Imp. Tarjeta (5.5%)' },
+  { key: 'beneficio', label: 'Beneficio' },
+  { key: 'margenReal', label: 'Margen Real' },
+  { key: 'cplActual', label: 'CPL Actual' },
   { key: 'acciones', label: 'Acciones' },
 ];
 
@@ -184,6 +195,35 @@ export default function CampanasPendientes() {
     refetchInterval: 60000,
     staleTime: 30000,
   });
+
+  // Mapa de gasto Meta Ads
+  const [spendMap, setSpendMap] = useState<Map<string, { spend: number; results: number; cpl: number }>>(new Map());
+
+  useEffect(() => {
+    if (!datosDiarios || datosDiarios.length === 0) return;
+    const today = new Date().toISOString().split('T')[0];
+    const uniqueKeys = new Map<string, { marca: string; zona: string; fechaInicio: string; fechaFin: string }>();
+    datosDiarios.forEach(d => {
+      const fi = d.fechaCampana || today;
+      const ff = d.fechaFin || today;
+      const key = makeSpendKey(d.marca || '', d.zona || 'NACIONAL', fi, ff);
+      if (!uniqueKeys.has(key)) uniqueKeys.set(key, { marca: d.marca || '', zona: d.zona || 'NACIONAL', fechaInicio: fi, fechaFin: ff });
+    });
+    const fetchAll = async () => {
+      const results = await Promise.allSettled([...uniqueKeys.entries()].map(async ([key, p]) => {
+        try {
+          const res = await fetch(`/api/meta-ads/campaign-spend?marca=${encodeURIComponent(p.marca)}&zona=${encodeURIComponent(p.zona)}&fechaInicio=${p.fechaInicio}&fechaFin=${p.fechaFin}`);
+          if (!res.ok) return [key, { spend: 0, results: 0, cpl: 0 }] as [string, { spend: number; results: number; cpl: number }];
+          const data = await res.json();
+          return [key, { spend: data.spend || 0, results: data.results || 0, cpl: data.cpl || 0 }] as [string, { spend: number; results: number; cpl: number }];
+        } catch { return [key, { spend: 0, results: 0, cpl: 0 }] as [string, { spend: number; results: number; cpl: number }]; }
+      }));
+      const map = new Map<string, { spend: number; results: number; cpl: number }>();
+      results.forEach(r => { if (r.status === 'fulfilled') map.set(r.value[0] as string, r.value[1] as { spend: number; results: number; cpl: number }); });
+      setSpendMap(map);
+    };
+    fetchAll();
+  }, [datosDiarios]);
 
   // updateMutation para edición
   const updateMutation = useMutation({
@@ -955,6 +995,13 @@ export default function CampanasPendientes() {
                         <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Faltantes</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">CPL</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Inversión</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase tracking-wider">Gasto Meta Ads</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase tracking-wider">IIBB (4.5%)</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase tracking-wider">FC / IVA</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase tracking-wider">Imp. Tarjeta (5.5%)</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase tracking-wider">Beneficio</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase tracking-wider">Margen Real</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase tracking-wider">CPL Actual</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Acciones</th>
                       </tr>
                     </thead>
@@ -1113,6 +1160,54 @@ export default function CampanasPendientes() {
                                 </span>
                               </div>
                             </td>
+
+                            {/* Financial columns */}
+                            {(() => {
+                              const today = new Date().toISOString().split('T')[0];
+                              const fi = data.fechaCampana || today;
+                              const ff = (data.fechaFin as string) || today;
+                              const sk = makeSpendKey(data.marca || '', data.zona || 'NACIONAL', fi, ff);
+                              const spendData = spendMap.get(sk) || { spend: 0, results: 0, cpl: 0 };
+                              const fb = typeof data.facturacionBruta === 'number' ? data.facturacionBruta : 0;
+                              const tf = data.tipoFacturacion || 'C';
+                              const iibb = calcularIIBB(fb);
+                              const iva = calcularIVA(fb, tf);
+                              const impTarjeta = calcularImpuestoTarjeta(spendData.spend);
+                              const beneficio = calcularBeneficio(fb, spendData.spend, iibb, iva, impTarjeta);
+                              const margen = calcularMargenReal(beneficio, fb);
+                              const cplActual = spendData.results > 0 ? spendData.spend / spendData.results : 0;
+                              const fmtCur = (v: number) => v === 0 ? '$0' : v.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
+                              const hasMeta = spendData.spend > 0 || spendData.results > 0;
+                              return (
+                                <>
+                                  <td className="px-4 py-3 text-center text-sm">
+                                    {hasMeta ? <span className="font-semibold text-violet-700">{fmtCur(spendData.spend)}</span> : <span className="text-slate-400">-</span>}
+                                  </td>
+                                  <td className="px-4 py-3 text-center text-sm">
+                                    {fb > 0 ? <span className="text-violet-600">{fmtCur(iibb)}</span> : <span className="text-slate-400">-</span>}
+                                  </td>
+                                  <td className="px-4 py-3 text-center text-sm">
+                                    {fb > 0 ? <span className="text-violet-600">{tf === 'A' ? fmtCur(iva) : '$0 (FC C)'}</span> : <span className="text-slate-400">-</span>}
+                                  </td>
+                                  <td className="px-4 py-3 text-center text-sm">
+                                    {hasMeta ? <span className="text-violet-600">{fmtCur(impTarjeta)}</span> : <span className="text-slate-400">-</span>}
+                                  </td>
+                                  <td className="px-4 py-3 text-center text-sm">
+                                    {fb > 0 && hasMeta ? (
+                                      <span className={`font-bold ${beneficio >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{fmtCur(beneficio)}</span>
+                                    ) : <span className="text-slate-400">-</span>}
+                                  </td>
+                                  <td className="px-4 py-3 text-center text-sm">
+                                    {fb > 0 && hasMeta ? (
+                                      <span className={`font-bold ${margen >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{margen.toFixed(1)}%</span>
+                                    ) : <span className="text-slate-400">-</span>}
+                                  </td>
+                                  <td className="px-4 py-3 text-center text-sm">
+                                    {hasMeta ? <span className="font-semibold text-violet-700">{fmtCur(cplActual)}</span> : <span className="text-slate-400">-</span>}
+                                  </td>
+                                </>
+                              );
+                            })()}
 
                             {/* Acciones */}
                             <td className="px-4 py-3">

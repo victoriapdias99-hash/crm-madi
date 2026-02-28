@@ -480,6 +480,64 @@ class MetaAdsService {
   }
 
   /**
+   * Obtiene gasto de Meta Ads para una campaña específica por marca + zona + fechas
+   * Filtra adsets cuyo nombre contiene keywords de la zona
+   */
+  async getSpendByCampaign(
+    marca: string,
+    zona: string,
+    fechaInicio: string,
+    fechaFin: string
+  ): Promise<{ spend: number; results: number; cpl: number }> {
+    try {
+      const dateRange = {
+        since: fechaInicio,
+        until: fechaFin || new Date().toISOString().split('T')[0]
+      };
+
+      const adsets = await this.getAdsetSpendData({ campaignName: marca, dateRange });
+
+      if (!adsets || adsets.length === 0) {
+        return { spend: 0, results: 0, cpl: 0 };
+      }
+
+      // Keywords de zona para filtrar adsets
+      const zonaKeywords = this.getZonaKeywords(zona);
+
+      // Filtrar adsets por zona (si NACIONAL, acepta todos)
+      const filteredAdsets = zonaKeywords.length === 0
+        ? adsets
+        : adsets.filter(adset => {
+            const name = (adset.adsetName || '').toLowerCase();
+            return zonaKeywords.some(kw => name.includes(kw));
+          });
+
+      // Si no hay adsets que coincidan con la zona, usar todos (fallback)
+      const adsetsToUse = filteredAdsets.length > 0 ? filteredAdsets : adsets;
+
+      const totalSpend = adsetsToUse.reduce((sum, a) => sum + (a.spend || 0), 0);
+      const totalResults = adsetsToUse.reduce((sum, a) => sum + (a.results || 0), 0);
+      const cpl = totalResults > 0 ? totalSpend / totalResults : 0;
+
+      return { spend: totalSpend, results: totalResults, cpl };
+    } catch (error) {
+      return { spend: 0, results: 0, cpl: 0 };
+    }
+  }
+
+  private getZonaKeywords(zona: string): string[] {
+    const z = (zona || '').toUpperCase();
+    if (z === 'NACIONAL') return []; // Sin filtro = acepta todos
+    if (z === 'AMBA') return ['amba', 'buenos aires', 'gba', 'capital', 'caba', 'gran buenos'];
+    if (z === 'CORDOBA' || z === 'CÓRDOBA') return ['cordoba', 'córdoba'];
+    if (z === 'ROSARIO' || z === 'SANTA FE') return ['rosario', 'santa fe'];
+    if (z === 'MENDOZA') return ['mendoza'];
+    if (z === 'TUCUMAN' || z === 'TUCUMÁN') return ['tucuman', 'tucumán'];
+    // Fallback: usar el nombre de la zona como keyword
+    return [z.toLowerCase()];
+  }
+
+  /**
    * Obtiene datos de presupuesto y utilización
    */
   async getCampaignBudgets(campaignIds?: string[]): Promise<BudgetData[]> {
