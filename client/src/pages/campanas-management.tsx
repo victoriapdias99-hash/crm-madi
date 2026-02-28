@@ -153,7 +153,7 @@ export default function CampanasManagement() {
       porcentaje5: 0,
       asignacionAutomatica: false,
       fechaCampana: "",
-      pedidosPorDia: 0,
+      pedidosPorDia: 10,
       tipoFacturacion: "C",
       costeVenta: "0",
       facturacionBruta: "0",
@@ -415,7 +415,7 @@ export default function CampanasManagement() {
         porcentaje5: 0,
         asignacionAutomatica: false,
         fechaCampana: "",
-        pedidosPorDia: 0,
+        pedidosPorDia: 10,
         tipoFacturacion: "C",
         costeVenta: "0",
         facturacionBruta: "0",
@@ -963,7 +963,7 @@ export default function CampanasManagement() {
                           <Input
                             type="number"
                             min="0"
-                            placeholder="Ej: 20"
+                            placeholder="Ej: 10"
                             {...field}
                             value={field.value || 0}
                             onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
