@@ -151,9 +151,6 @@ const DD_COLS = [
   { key: 'datos_enviados', label: '% Datos Enviados' },
   { key: 'faltantes', label: 'Faltantes' },
   { key: 'cpa', label: 'CPA Meta Ads' },
-  { key: 'cpl', label: 'CPL Guardado' },
-  { key: 'inv_realizada', label: 'Inversión Realizada' },
-  { key: 'inv_pendiente', label: 'Inversión Pendiente' },
   { key: 'facturacionBruta', label: 'Facturación Bruta' },
   { key: 'gastoAcumulado', label: 'Gasto Meta Ads' },
   { key: 'iibb', label: 'IIBB (4.5%)' },
@@ -1719,9 +1716,7 @@ export default function DatosDiariosDashboard() {
                         🔍 Duplicados
                       </th>
                     )}
-                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">CPL Guardado</th>
-                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Inversión Realizada</th>
-                    <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Inversión Pendiente</th>
+                    <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">Facturación Bruta</th>
                     <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">Gasto Meta Ads</th>
                     <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">IIBB (4.5%)</th>
                     <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">FC / IVA</th>
@@ -1955,38 +1950,6 @@ export default function DatosDiariosDashboard() {
                             </div>
                           </td>
                         )}
-                        <td className="border border-amber-200 dark:border-amber-600 p-3 text-center">
-                          {currentCpl > 0 ? (
-                            <Badge variant="secondary" className="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold shadow-lg">
-                              ARS ${currentCpl.toLocaleString('es-AR')}
-                            </Badge>
-                          ) : (
-                            <span className="text-gray-400 text-sm">Sin CPL</span>
-                          )}
-                        </td>
-                        <td className="border border-amber-200 dark:border-amber-600 p-3 text-center font-medium">
-                          <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-2 rounded-lg">
-                            <span className="text-green-700 dark:text-green-300 font-bold">
-                              ARS ${inversions.inversionRealizada.toLocaleString('es-AR')}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="border border-amber-200 dark:border-amber-600 p-3 text-center font-medium">
-                          {(() => {
-                            const cplReal = calculateCPLReal(data);
-                            const metaAdsAmount = cplReal > 0 ? Math.round(cplReal * data.enviados) : inversions.inversionPendiente;
-                            return (
-                              <div className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 p-2 rounded-lg">
-                                <span className="text-orange-700 dark:text-orange-300 font-bold">
-                                  ARS ${metaAdsAmount.toLocaleString('es-AR')}
-                                </span>
-                                {cplReal > 0 && (
-                                  <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">Meta Ads Data</div>
-                                )}
-                              </div>
-                            );
-                          })()}
-                        </td>
                         {/* Financial columns */}
                         {(() => {
                           const today = new Date().toISOString().split('T')[0];
@@ -2073,38 +2036,7 @@ export default function DatosDiariosDashboard() {
                           </div>
                         </td>
                       )}
-                      <td className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100">
-                        —
-                      </td>
-                      <td className="border border-amber-200 dark:border-amber-600 p-3 text-center font-medium">
-                        <div className="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-800/50 dark:to-emerald-800/50 p-2 rounded-lg">
-                          <span className="text-green-700 dark:text-green-300 font-bold">
-                            ARS ${campanasEnProceso.reduce((sum: number, data: DatosDiariosData) => {
-                              const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0;
-                              const inversions = calculateInversions(data, currentCpl);
-                              return sum + inversions.inversionRealizada;
-                            }, 0).toLocaleString('es-AR')}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="border border-amber-200 dark:border-amber-600 p-3 text-center font-medium">
-                        <div className="bg-gradient-to-r from-orange-100 to-red-100 dark:from-orange-800/50 dark:to-red-800/50 p-2 rounded-lg">
-                          <span className="text-orange-700 dark:text-orange-300 font-bold">
-                            ARS ${campanasEnProceso.reduce((sum: number, data: DatosDiariosData) => {
-                              const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0;
-                              const inversions = calculateInversions(data, currentCpl);
-                              const cplReal = calculateCPLReal(data);
-                              const enviados = typeof data.enviados === 'number' ? data.enviados : 0;
-                              const metaAdsAmount = cplReal > 0 ? Math.round(cplReal * enviados) : inversions.inversionPendiente;
-                              return sum + metaAdsAmount;
-                            }, 0).toLocaleString('es-AR')}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100">
-                        —
-                      </td>
-                      <td className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100">
+                      <td colSpan={9} className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100">
                         —
                       </td>
                     </tr>
@@ -2280,9 +2212,7 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">% Datos Enviados</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Faltantes</th>
                     <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">CPA Meta Ads</th>
-                    <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">CPL Guardado</th>
-                    <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Inversión Realizada</th>
-                    <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Inversión Pendiente</th>
+                    <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">Facturación Bruta</th>
                     <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">Gasto Meta Ads</th>
                     <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">IIBB (4.5%)</th>
                     <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">FC / IVA</th>
@@ -2415,33 +2345,6 @@ export default function DatosDiariosDashboard() {
                             <span className="text-gray-400 text-sm">Calculando...</span>
                           )}
                         </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
-                          {currentCpl > 0 ? (
-                            <div className="flex flex-col items-center gap-1">
-                              <div className="text-green-600 font-semibold">
-                                ${currentCpl.toLocaleString('es-AR')}
-                              </div>
-                              <div className="text-xs text-gray-500">Guardado</div>
-                            </div>
-                          ) : (
-                            <div className="text-gray-400">-</div>
-                          )}
-                        </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
-                          <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-2 rounded-lg">
-                            <span className="text-green-700 dark:text-green-300 font-bold">
-                              ARS ${inversions.inversionRealizada.toLocaleString('es-AR')}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
-                          <div className="bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 p-2 rounded-lg">
-                            <span className="text-red-700 dark:text-red-300 font-bold">
-                              ARS $0
-                            </span>
-                            <div className="text-xs text-gray-500 mt-1">Completada</div>
-                          </div>
-                        </td>
                         {/* Financial columns - finalizadas */}
                         {(() => {
                           const today = new Date().toISOString().split('T')[0];
@@ -2501,7 +2404,7 @@ export default function DatosDiariosDashboard() {
                       <td className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-bold text-emerald-900 dark:text-emerald-100">
                         —
                       </td>
-                      <td colSpan={12} className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-bold text-emerald-900 dark:text-emerald-100 text-lg">
+                      <td colSpan={10} className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-bold text-emerald-900 dark:text-emerald-100 text-lg">
                         TOTAL CAMPAÑAS FINALIZADAS
                       </td>
                       <td className="border border-emerald-200 dark:border-emerald-600 p-3 text-center">
@@ -2515,29 +2418,7 @@ export default function DatosDiariosDashboard() {
                           </span>
                         </div>
                       </td>
-                      <td className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-bold text-emerald-900 dark:text-emerald-100">
-                        —
-                      </td>
-                      <td className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-medium">
-                        <div className="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-800/50 dark:to-emerald-800/50 p-2 rounded-lg">
-                          <span className="text-green-700 dark:text-green-300 font-bold">
-                            ARS ${campanasFinalizadas.reduce((sum, data) => {
-                              const currentCpl = CPLStorage.get(data.cliente, data.numeroCampana.toString()) || data.cpl || 0;
-                              const inversions = calculateInversions(data, currentCpl);
-                              return sum + inversions.inversionRealizada;
-                            }, 0).toLocaleString('es-AR')}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-medium">
-                        <div className="bg-gradient-to-r from-red-100 to-pink-100 dark:from-red-800/50 dark:to-pink-800/50 p-2 rounded-lg">
-                          <span className="text-red-700 dark:text-red-300 font-bold">
-                            ARS $0
-                          </span>
-                          <div className="text-xs text-gray-500 mt-1">Todas Completadas</div>
-                        </div>
-                      </td>
-                      <td className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-bold text-emerald-900 dark:text-emerald-100">
+                      <td colSpan={9} className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-bold text-emerald-900 dark:text-emerald-100">
                         —
                       </td>
                     </tr>
