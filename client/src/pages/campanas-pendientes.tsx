@@ -90,8 +90,7 @@ const PEND_COLS = [
   { key: 'leads', label: 'Leads' },
   { key: 'progreso', label: 'Progreso' },
   { key: 'faltantes', label: 'Faltantes' },
-  { key: 'cpl', label: 'CPL' },
-  { key: 'inversion', label: 'Inversión' },
+  { key: 'facturacionBruta', label: 'Facturación Bruta' },
   { key: 'gastoAcumulado', label: 'Gasto Meta Ads' },
   { key: 'iibb', label: 'IIBB (4.5%)' },
   { key: 'iva', label: 'FC / IVA' },
@@ -988,8 +987,7 @@ export default function CampanasPendientes() {
                         <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Leads</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Progreso</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Faltantes</th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">CPL</th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Inversión</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase tracking-wider">Facturación Bruta</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase tracking-wider">Gasto Meta Ads</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase tracking-wider">IIBB (4.5%)</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase tracking-wider">FC / IVA</th>
@@ -1133,29 +1131,6 @@ export default function CampanasPendientes() {
                               <span className="font-semibold text-red-600 text-sm">{inversions.faltantes}</span>
                             </td>
 
-                            {/* CPL */}
-                            <td className="px-4 py-3 text-center">
-                              {currentCpl > 0 ? (
-                                <span className="text-xs font-medium text-slate-700">
-                                  ${currentCpl.toLocaleString('es-AR')}
-                                </span>
-                              ) : (
-                                <span className="text-xs text-slate-400">-</span>
-                              )}
-                            </td>
-
-                            {/* Inversión (combinada) */}
-                            <td className="px-4 py-3">
-                              <div className="flex flex-col items-end gap-1">
-                                <span className="text-xs font-medium text-green-700">
-                                  ${(inversions.inversionRealizada / 1000).toFixed(0)}k
-                                </span>
-                                <span className="text-xs text-slate-500">
-                                  Pend: ${(inversions.inversionPendiente / 1000).toFixed(0)}k
-                                </span>
-                              </div>
-                            </td>
-
                             {/* Financial columns */}
                             {(() => {
                               const today = new Date().toISOString().split('T')[0];
@@ -1175,6 +1150,9 @@ export default function CampanasPendientes() {
                               const hasMeta = spendData.spend > 0 || spendData.results > 0;
                               return (
                                 <>
+                                  <td className="px-4 py-3 text-center text-sm">
+                                    {fb > 0 ? <span className="font-semibold text-violet-700">{fmtCur(fb)}</span> : <span className="text-slate-400">-</span>}
+                                  </td>
                                   <td className="px-4 py-3 text-center text-sm">
                                     {hasMeta ? <span className="font-semibold text-violet-700">{fmtCur(spendData.spend)}</span> : <span className="text-slate-400">-</span>}
                                   </td>
