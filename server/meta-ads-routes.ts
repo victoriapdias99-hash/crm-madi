@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { MetaAdsService, type CampaignSpendData } from "./meta-ads-service";
+import { metaTokenRefreshService } from "./meta-token-refresh-service";
 
 let metaAdsService: MetaAdsService | null = null;
 
@@ -333,6 +334,27 @@ export function registerMetaAdsRoutes(app: Express) {
       res.status(500).json({ error: 'Failed to generate audit report' });
     }
   });
+
+  // Estado del token de Meta Ads (vencimiento, días restantes)
+  app.get('/api/meta-ads/token-status', async (req, res) => {
+    try {
+      const status = await metaTokenRefreshService.getStatus();
+      res.json(status);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to get token status' });
+    }
+  });
+
+  // Forzar refresco manual del token
+  app.post('/api/meta-ads/token-refresh', async (req, res) => {
+    try {
+      await metaTokenRefreshService.refreshIfNeeded();
+      const status = await metaTokenRefreshService.getStatus();
+      res.json({ success: true, ...status });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to refresh token' });
+    }
+  });
 }
 
 // Cleanup function para cerrar recursos
@@ -341,4 +363,5 @@ export function cleanupMetaAds() {
     clearInterval(autoSyncInterval);
     autoSyncInterval = null;
   }
+  metaTokenRefreshService.stopAutoRefresh();
 }

@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, XCircle, Settings, Key } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { CheckCircle, XCircle, Settings, Key, RefreshCw, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Navigation } from "@/components/navigation";
@@ -16,14 +17,41 @@ interface ConfigFormData {
   appSecret: string;
 }
 
+interface TokenStatus {
+  expiresAt: string | null;
+  daysRemaining: number | null;
+  lastRefreshed: string | null;
+  tokenType: string;
+  hasToken: boolean;
+}
+
+function TokenStatusBadge({ days }: { days: number | null }) {
+  if (days === null) {
+    return <Badge variant="secondary">Sin vencimiento</Badge>;
+  }
+  if (days < 5) {
+    return <Badge className="bg-red-500 text-white">{days} días restantes</Badge>;
+  }
+  if (days < 15) {
+    return <Badge className="bg-orange-500 text-white">{days} días restantes</Badge>;
+  }
+  return <Badge className="bg-green-600 text-white">{days} días restantes</Badge>;
+}
+
 export default function MetaAdsConfig() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
   const [formData, setFormData] = useState<ConfigFormData>({
-    accessToken: 'EAARsFyVZAqz0BPNpiFxX7X5ZCnbF1xxB6X5Is4uhizndOgUUZBIxbP7s8ZAdfw6ZARMGrMTsGgxJ2ZC1gELyQcZCilMxRtqeKdYsU0XVGboMhrrDI7l0odZAaz7jdP7KZCph0ik4cvdBvaW8fer3zMlWJPZC2gJZANBnfY2fAnfmGBkslN3lzpGcgsBLqHHC60NlvW4ZChFqRyTqYNPENxOWkAqzQwvLbBc4fLGDNdJCwSp8BkuI',
+    accessToken: '',
     accountId: 'act_9696169217103588',
     appSecret: ''
+  });
+
+  const tokenStatusQuery = useQuery<TokenStatus>({
+    queryKey: ['/api/meta-ads/token-status'],
+    retry: false,
+    refetchInterval: 60000,
   });
 
   const configMutation = useMutation({
@@ -52,6 +80,28 @@ export default function MetaAdsConfig() {
     },
   });
 
+  const refreshTokenMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest('/api/meta-ads/token-refresh', {
+        method: 'POST',
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Token refrescado",
+        description: "El token de Meta Ads fue renovado correctamente",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/meta-ads/token-status'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error al refrescar token",
+        description: error.message || "No se pudo renovar el token",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.accessToken || !formData.accountId || !formData.appSecret) {
@@ -72,6 +122,8 @@ export default function MetaAdsConfig() {
     }));
   };
 
+  const tokenStatus = tokenStatusQuery.data;
+
   return (
     <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
       <Navigation />
@@ -85,6 +137,69 @@ export default function MetaAdsConfig() {
             Configura las credenciales para conectar con Meta Ads
           </p>
         </div>
+
+        {/* Estado del token actual */}
+        <Card className="shadow-lg border-2 border-blue-100">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-blue-600" />
+              Estado del Token Actual
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {tokenStatusQuery.isLoading ? (
+              <p className="text-sm text-gray-500">Cargando estado del token...</p>
+            ) : tokenStatus ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700">Estado:</span>
+                  <TokenStatusBadge days={tokenStatus.daysRemaining} />
+                </div>
+                {tokenStatus.expiresAt && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700">Vence:</span>
+                    <span className="text-sm text-gray-600">
+                      {new Date(tokenStatus.expiresAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                    </span>
+                  </div>
+                )}
+                {tokenStatus.lastRefreshed && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700">Último refresco:</span>
+                    <span className="text-sm text-gray-600">
+                      {new Date(tokenStatus.lastRefreshed).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700">Tipo:</span>
+                  <span className="text-sm text-gray-600 capitalize">{tokenStatus.tokenType}</span>
+                </div>
+                <div className="pt-2 border-t">
+                  <p className="text-xs text-gray-500 mb-2">
+                    El token se renueva automáticamente cuando quedan menos de 15 días para vencer.
+                    También puedes forzar un refresco manual:
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => refreshTokenMutation.mutate()}
+                    disabled={refreshTokenMutation.isPending}
+                    className="w-full"
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${refreshTokenMutation.isPending ? 'animate-spin' : ''}`} />
+                    {refreshTokenMutation.isPending ? 'Refrescando...' : 'Refrescar Token Ahora'}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-orange-600">
+                <XCircle className="h-4 w-4" />
+                <span className="text-sm">No hay token almacenado. Configure las credenciales abajo.</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <Card className="shadow-lg">
           <CardHeader>
@@ -198,7 +313,7 @@ export default function MetaAdsConfig() {
                   <span className="text-sm font-medium">Access Token</span>
                 </div>
                 <p className="text-sm text-gray-600 mt-1">
-                  {formData.accessToken ? '✓ Configurado' : '⚠ Pendiente'}
+                  {tokenStatus?.hasToken ? '✓ Configurado en servidor' : '⚠ Pendiente'}
                 </p>
               </div>
               

@@ -90,15 +90,22 @@ app.use((req, res, next) => {
   const server = await registerRoutes(app);
 
   // Configuración automática de Meta Ads al arrancar si las credenciales están disponibles
-  if (process.env.META_ACCESS_TOKEN && process.env.META_AD_ACCOUNT_ID && 
-      process.env.META_APP_ID && process.env.META_APP_SECRET) {
+  if (process.env.META_ACCESS_TOKEN && process.env.META_AD_ACCOUNT_ID) {
     console.log('Auto-configuring Meta Ads with environment credentials...');
     
     setTimeout(async () => {
       try {
         const { MetaAdsService } = await import("./meta-ads-service");
+        const { metaTokenRefreshService } = await import("./meta-token-refresh-service");
+
+        // Inicializar el servicio de refresco de token (exchange + guardado en BD)
+        await metaTokenRefreshService.initialize();
+
+        // Obtener el token (desde BD si ya fue guardado, si no del env var)
+        const token = await metaTokenRefreshService.getToken();
+
         const metaService = new MetaAdsService({
-          accessToken: process.env.META_ACCESS_TOKEN!,
+          accessToken: token,
           accountId: process.env.META_AD_ACCOUNT_ID!,
           appSecret: process.env.META_APP_SECRET
         });
@@ -107,6 +114,9 @@ app.use((req, res, next) => {
         
         // Exportar instancia configurada para uso en rutas
         global.metaAdsService = metaService;
+
+        // Programar auto-refresh del token cada 24 horas
+        metaTokenRefreshService.scheduleAutoRefresh();
         
       } catch (error) {
         console.log('❌ Meta Ads auto-configuration failed:', error instanceof Error ? error.message : 'Unknown error');

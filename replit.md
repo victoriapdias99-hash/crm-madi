@@ -39,6 +39,7 @@ Preferred communication style: Simple, everyday language.
   - `op_leads_rep` - Consolidated leads for analysis
   - `users` - User authentication with role-based access (admin/user)
   - `sync_control` - Synchronization state tracking
+  - `meta_token_store` - Stores Meta Ads access token with expiry for auto-refresh
 
 ### Key Modules
 1. **Campaign Closure System** (`server/campaign-closure/`)

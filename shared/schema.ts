@@ -951,3 +951,14 @@ export const PROVINCIAS_ARGENTINA = [
 
 // Zonas como array para formularios (ahora incluye todas las provincias)
 export const ZONAS_DISPONIBLES = PROVINCIAS_ARGENTINA;
+
+// Tabla para almacenar y auto-refrescar el token de Meta Ads
+export const metaTokenStore = pgTable("meta_token_store", {
+  id: serial("id").primaryKey(),
+  accessToken: text("access_token").notNull(),
+  tokenType: text("token_type").notNull().default("user"),
+  expiresAt: timestamp("expires_at"),
+  appId: text("app_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
