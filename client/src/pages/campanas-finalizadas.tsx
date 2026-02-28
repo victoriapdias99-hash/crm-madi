@@ -16,9 +16,12 @@ import { CPLStorage } from "@/lib/cpl-storage";
 import { memoize } from "@/lib/performance";
 import { BrandDisplay } from "@/components/ui/brand-display";
 import { getCampaignBrandInfo as getEnhancedCampaignBrandInfo } from "@shared/utils/brand-display-utils";
+import { MARCAS_DISPONIBLES } from "@shared/schema";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { SentLeadsModal } from "@/components/sent-leads-modal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useColumnVisibility } from "@/hooks/use-column-visibility";
+import { ColumnToggleDropdown } from "@/components/ui/column-toggle-dropdown";
 
 interface DatosDiariosData {
   cliente: string;
@@ -64,6 +67,19 @@ const formatNumber = (value: number | string | undefined | null, decimals: numbe
   return "-";
 };
 
+const FIN_COLS = [
+  { key: 'fecha_inicio', label: 'Fecha Inicio' },
+  { key: 'fecha_fin', label: 'Fecha Fin' },
+  { key: 'cliente', label: 'Cliente' },
+  { key: 'marca', label: 'Marca' },
+  { key: 'leads_dia', label: 'Leads x Día' },
+  { key: 'leads', label: 'Leads' },
+  { key: 'progreso', label: 'Progreso' },
+  { key: 'cpl', label: 'CPL' },
+  { key: 'inversion', label: 'Inversión' },
+  { key: 'acciones', label: 'Acciones' },
+];
+
 export default function CampanasFinalizadas() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -80,6 +96,20 @@ export default function CampanasFinalizadas() {
   const [filtroCliente, setFiltroCliente] = useState<string>('');
   const [filtroFechaInicio, setFiltroFechaInicio] = useState<string>('');
   const [filtroFechaFin, setFiltroFechaFin] = useState<string>('');
+
+  const { isVisible: isVisibleCol, toggleColumn: toggleCol, showAll: showAllCol, visibility: visibilityCol, hiddenCount: hiddenCountCol } = useColumnVisibility('campanas-finalizadas', FIN_COLS);
+
+  const cssFin = useMemo(() => {
+    const rules: string[] = [];
+    FIN_COLS.forEach((col, idx) => {
+      if (!isVisibleCol(col.key)) {
+        const pos = idx + 1;
+        rules.push(`#table-finalizadas thead tr th:nth-child(${pos}), #table-finalizadas tbody tr td:nth-child(${pos}) { display: none !important; }`);
+      }
+    });
+    return rules.join('\n');
+  }, [visibilityCol, isVisibleCol]);
+
 
   // Estados para modal de detalles
   const [selectedCampaign, setSelectedCampaign] = useState<DatosDiariosData | null>(null);
@@ -314,12 +344,13 @@ export default function CampanasFinalizadas() {
   }, [datosDiarios]);
 
   const opcionesMarca = useMemo(() => {
-    if (!datosDiarios || !Array.isArray(datosDiarios)) return [];
-    const marcasSet = new Set<string>();
-    datosDiarios.forEach(data => {
-      const brands = getEnhancedCampaignBrandInfo(data, campanasComerciales as any);
-      brands.forEach(brand => marcasSet.add(brand.marca));
-    });
+    const marcasSet = new Set<string>(MARCAS_DISPONIBLES);
+    if (datosDiarios && Array.isArray(datosDiarios)) {
+      datosDiarios.forEach(data => {
+        const brands = getEnhancedCampaignBrandInfo(data, campanasComerciales as any);
+        brands.forEach(brand => { if (brand.marca) marcasSet.add(brand.marca); });
+      });
+    }
     return Array.from(marcasSet).filter(Boolean).sort();
   }, [datosDiarios, campanasComerciales]);
 
@@ -576,6 +607,14 @@ export default function CampanasFinalizadas() {
                   placeholder="Hasta"
                 />
 
+                <ColumnToggleDropdown
+                  columns={FIN_COLS}
+                  isVisible={isVisibleCol}
+                  toggleColumn={toggleCol}
+                  showAll={showAllCol}
+                  hiddenCount={hiddenCountCol}
+                />
+
                 {(filtroZona || filtroMarca || filtroCliente || filtroFechaInicio || filtroFechaFin) && (
                   <Button
                     onClick={() => {
@@ -605,7 +644,8 @@ export default function CampanasFinalizadas() {
                 </div>
               ) : (
                 <>
-                  <table className={`w-full border-collapse transition-opacity duration-300 ${isFetching && !isLoading ? 'opacity-90' : 'opacity-100'}`}>
+                  {cssFin && <style>{cssFin}</style>}
+                  <table id="table-finalizadas" className={`w-full border-collapse transition-opacity duration-300 ${isFetching && !isLoading ? 'opacity-90' : 'opacity-100'}`}>
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200">
                         <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Fecha Inicio</th>

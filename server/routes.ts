@@ -1178,9 +1178,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (campanasFinalizadas.length > 0) {
         const campIds = campanasFinalizadas.map((c) => c.campanaId);
+        // Usar op_lead (no op_leads_rep) porque op_leads_rep.campaign_ids no se actualiza
+        // cuando se cierra una campaña — solo se actualiza al hacer sync de Google Sheets
         const leadsFinalizadosResult = await db.execute(sql`
-          SELECT unnest_id as campaign_id, COUNT(*)::int as count
-          FROM op_leads_rep, unnest(campaign_ids) as unnest_id
+          SELECT unnest_id as campaign_id, COUNT(DISTINCT telefono)::int as count
+          FROM op_lead, unnest(campaign_ids) as unnest_id
           WHERE unnest_id IN (${sql.join(campIds.map(id => sql`${id}`), sql`, `)})
           GROUP BY unnest_id
         `);

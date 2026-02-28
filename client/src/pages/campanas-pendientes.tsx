@@ -31,6 +31,8 @@ import { getCampaignBrandInfo as getEnhancedCampaignBrandInfo } from "@shared/ut
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { SentLeadsModal } from "@/components/sent-leads-modal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useColumnVisibility } from "@/hooks/use-column-visibility";
+import { ColumnToggleDropdown } from "@/components/ui/column-toggle-dropdown";
 
 interface DatosDiariosData {
   cliente: string;
@@ -76,6 +78,19 @@ const formatNumber = (value: number | string | undefined | null, decimals: numbe
   return "-";
 };
 
+const PEND_COLS = [
+  { key: 'fecha_inicio', label: 'Fecha Inicio' },
+  { key: 'cliente', label: 'Cliente' },
+  { key: 'marca', label: 'Marca' },
+  { key: 'leads_dia', label: 'Leads x Día' },
+  { key: 'leads', label: 'Leads' },
+  { key: 'progreso', label: 'Progreso' },
+  { key: 'faltantes', label: 'Faltantes' },
+  { key: 'cpl', label: 'CPL' },
+  { key: 'inversion', label: 'Inversión' },
+  { key: 'acciones', label: 'Acciones' },
+];
+
 export default function CampanasPendientes() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -93,6 +108,20 @@ export default function CampanasPendientes() {
   const [filtroCliente, setFiltroCliente] = useState<string>('');
   const [filtroFechaInicio, setFiltroFechaInicio] = useState<string>('');
   const [filtroFechaFin, setFiltroFechaFin] = useState<string>('');
+
+  const { isVisible: isVisibleCol, toggleColumn: toggleCol, showAll: showAllCol, visibility: visibilityCol, hiddenCount: hiddenCountCol } = useColumnVisibility('campanas-pendientes', PEND_COLS);
+
+  const cssPend = useMemo(() => {
+    const rules: string[] = [];
+    PEND_COLS.forEach((col, idx) => {
+      if (!isVisibleCol(col.key)) {
+        const pos = idx + 1;
+        rules.push(`#table-pendientes thead tr th:nth-child(${pos}), #table-pendientes tbody tr td:nth-child(${pos}) { display: none !important; }`);
+      }
+    });
+    return rules.join('\n');
+  }, [visibilityCol, isVisibleCol]);
+
 
   // Estados para modal de detalles y acciones
   const [selectedCampaign, setSelectedCampaign] = useState<DatosDiariosData | null>(null);
@@ -849,6 +878,14 @@ export default function CampanasPendientes() {
                   placeholder="Hasta"
                 />
 
+                <ColumnToggleDropdown
+                  columns={PEND_COLS}
+                  isVisible={isVisibleCol}
+                  toggleColumn={toggleCol}
+                  showAll={showAllCol}
+                  hiddenCount={hiddenCountCol}
+                />
+
                 {(filtroZona || filtroMarca || filtroCliente || filtroFechaInicio || filtroFechaFin || !showReadyToCloseOnly || showDuplicatesOnly) && (
                   <Button
                     onClick={() => {
@@ -880,7 +917,8 @@ export default function CampanasPendientes() {
                 </div>
               ) : (
                 <>
-                  <table className={`w-full border-collapse transition-opacity duration-300 ${isFetching && !isLoading ? 'opacity-90' : 'opacity-100'}`}>
+                  {cssPend && <style>{cssPend}</style>}
+                  <table id="table-pendientes" className={`w-full border-collapse transition-opacity duration-300 ${isFetching && !isLoading ? 'opacity-90' : 'opacity-100'}`}>
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200">
                         <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Fecha Inicio</th>

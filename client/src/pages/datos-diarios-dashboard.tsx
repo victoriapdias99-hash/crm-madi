@@ -8,6 +8,8 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Loader2, Save, RefreshCw, Download, Filter, Power, Edit, Eye, X, RotateCcw, MoreVertical } from "lucide-react";
+import { useColumnVisibility } from "@/hooks/use-column-visibility";
+import { ColumnToggleDropdown } from "@/components/ui/column-toggle-dropdown";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useDashboardWebSocket } from "@/hooks/use-dashboard-websocket";
@@ -130,6 +132,25 @@ const hasActiveCounting = (campaign: DatosDiariosData): boolean => {
   return enviadosActive || entregadosActive;
 };
 
+const DD_COLS = [
+  { key: 'acciones', label: 'Acciones' },
+  { key: 'cliente', label: 'Cliente' },
+  { key: 'marca', label: 'Marca' },
+  { key: 'fecha_inicio', label: 'Fecha de Inicio' },
+  { key: 'pedidos_total', label: 'Pedidos Total' },
+  { key: 'enviados', label: 'Enviados' },
+  { key: 'duplicados', label: 'Duplicados' },
+  { key: 'entregados_dia', label: 'Entregados/día' },
+  { key: 'pedidos_dia', label: 'Pedidos/día' },
+  { key: 'desvio', label: '% Desvío' },
+  { key: 'datos_enviados', label: '% Datos Enviados' },
+  { key: 'faltantes', label: 'Faltantes' },
+  { key: 'cpa', label: 'CPA Meta Ads' },
+  { key: 'cpl', label: 'CPL Guardado' },
+  { key: 'inv_realizada', label: 'Inversión Realizada' },
+  { key: 'inv_pendiente', label: 'Inversión Pendiente' },
+];
+
 export default function DatosDiariosDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -161,7 +182,34 @@ export default function DatosDiariosDashboard() {
   const [filtroFinalizadasFechaInicio, setFiltroFinalizadasFechaInicio] = useState<string>('');
   const [filtroFinalizadasFechaFin, setFiltroFinalizadasFechaFin] = useState<string>('');
   const [filtroMesFinalizadas, setFiltroMesFinalizadas] = useState<string>('all');
-  
+
+  const { isVisible: isVisibleP, toggleColumn: toggleP, showAll: showAllP, visibility: visibilityP, hiddenCount: hiddenCountP } = useColumnVisibility('dd-proceso', DD_COLS);
+  const { isVisible: isVisibleF, toggleColumn: toggleF, showAll: showAllF, visibility: visibilityF, hiddenCount: hiddenCountF } = useColumnVisibility('dd-finalizadas', DD_COLS);
+
+  const cssP = useMemo(() => {
+    const rules: string[] = [];
+    DD_COLS.forEach((col, idx) => {
+      if (!isVisibleP(col.key)) {
+        let pos = idx + 1;
+        if (showDuplicatesOnly && idx >= 13) pos += 1;
+        rules.push(`#dd-table-proceso thead tr th:nth-child(${pos}), #dd-table-proceso tbody tr td:nth-child(${pos}) { display: none !important; }`);
+      }
+    });
+    return rules.join('\n');
+  }, [visibilityP, showDuplicatesOnly, isVisibleP]);
+
+  const cssF = useMemo(() => {
+    const rules: string[] = [];
+    DD_COLS.forEach((col, idx) => {
+      if (!isVisibleF(col.key)) {
+        const pos = idx + 1;
+        rules.push(`#dd-table-finalizadas thead tr th:nth-child(${pos}), #dd-table-finalizadas tbody tr td:nth-child(${pos}) { display: none !important; }`);
+      }
+    });
+    return rules.join('\n');
+  }, [visibilityF, isVisibleF]);
+
+
   // Estados para modal de detalles y acciones
   const [selectedCampaign, setSelectedCampaign] = useState<DatosDiariosData | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -1595,6 +1643,14 @@ export default function DatosDiariosDashboard() {
                     ✕ Limpiar filtros
                   </Button>
                 )}
+                <ColumnToggleDropdown
+                  columns={DD_COLS as any}
+                  isVisible={isVisibleP}
+                  toggleColumn={toggleP}
+                  showAll={showAllP}
+                  hiddenCount={hiddenCountP}
+                  className="bg-white/20 text-white border-white/30 hover:bg-white/30"
+                />
               </div>
             </div>
           </CardHeader>
@@ -1604,7 +1660,8 @@ export default function DatosDiariosDashboard() {
                 <TableSkeleton rows={10} columns={17} />
               ) : (
                 <>
-                  <table className="w-full border-collapse border border-gray-300 dark:border-gray-600">
+                  {cssP && <style>{cssP}</style>}
+                  <table id="dd-table-proceso" className="w-full border-collapse border border-gray-300 dark:border-gray-600">
                     <thead>
                       <tr className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20">
                         <th className="border border-amber-200 dark:border-amber-600 p-3 text-center font-semibold text-amber-900 dark:text-amber-100">Acciones</th>
@@ -2095,6 +2152,14 @@ export default function DatosDiariosDashboard() {
                     ✕ Limpiar filtros
                   </Button>
                 )}
+                <ColumnToggleDropdown
+                  columns={DD_COLS as any}
+                  isVisible={isVisibleF}
+                  toggleColumn={toggleF}
+                  showAll={showAllF}
+                  hiddenCount={hiddenCountF}
+                  className="bg-white/20 text-white border-white/30 hover:bg-white/30"
+                />
               </div>
             </div>
           </CardHeader>
@@ -2104,7 +2169,8 @@ export default function DatosDiariosDashboard() {
                 <TableSkeleton rows={8} columns={16} />
               ) : (
                 <>
-                  <table className="w-full border-collapse border border-gray-300 dark:border-gray-600">
+                  {cssF && <style>{cssF}</style>}
+                  <table id="dd-table-finalizadas" className="w-full border-collapse border border-gray-300 dark:border-gray-600">
                     <thead>
                       <tr className="bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20">
                         <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100">Acciones</th>
