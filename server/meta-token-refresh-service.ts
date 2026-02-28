@@ -45,11 +45,8 @@ class MetaTokenRefreshService {
       console.log(`✅ Token Meta guardado en BD, vence en ~${days} días (${expiresAt.toISOString().slice(0, 10)})`);
     } catch (error) {
       console.warn('⚠️ No se pudo hacer exchange del token, guardando token actual:', (error as Error).message);
-      const existing = await this.getStoredToken();
-      if (!existing) {
-        await this.saveToken(envToken, null, 'user');
-        console.log('💾 Token Meta guardado en BD (sin exchange)');
-      }
+      await this.saveToken(envToken, null, 'user');
+      console.log('💾 Token Meta actualizado en BD (sin exchange)');
     }
   }
 
