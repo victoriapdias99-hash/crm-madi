@@ -467,20 +467,15 @@ export default function DatosDiariosDashboard() {
       const key = makeSpendKey(d.marca || '', d.zona || 'NACIONAL', fi, ff);
       if (!uniqueKeys.has(key)) uniqueKeys.set(key, { marca: d.marca || '', zona: d.zona || 'NACIONAL', fechaInicio: fi, fechaFin: ff });
     });
-    const fetchAll = async () => {
-      const results = await Promise.allSettled([...uniqueKeys.entries()].map(async ([key, p]) => {
-        try {
-          const res = await fetch(`/api/meta-ads/campaign-spend?marca=${encodeURIComponent(p.marca)}&zona=${encodeURIComponent(p.zona)}&fechaInicio=${p.fechaInicio}&fechaFin=${p.fechaFin}`);
-          if (!res.ok) return [key, { spend: 0, results: 0, cpl: 0 }] as [string, { spend: number; results: number; cpl: number }];
-          const data = await res.json();
-          return [key, { spend: data.spend || 0, results: data.results || 0, cpl: data.cpl || 0 }] as [string, { spend: number; results: number; cpl: number }];
-        } catch { return [key, { spend: 0, results: 0, cpl: 0 }] as [string, { spend: number; results: number; cpl: number }]; }
-      }));
-      const map = new Map<string, { spend: number; results: number; cpl: number }>();
-      results.forEach(r => { if (r.status === 'fulfilled') map.set(r.value[0] as string, r.value[1] as { spend: number; results: number; cpl: number }); });
-      setSpendMap(map);
-    };
-    fetchAll();
+    setSpendMap(new Map());
+    [...uniqueKeys.entries()].forEach(async ([key, p]) => {
+      try {
+        const res = await fetch(`/api/meta-ads/campaign-spend?marca=${encodeURIComponent(p.marca)}&zona=${encodeURIComponent(p.zona)}&fechaInicio=${p.fechaInicio}&fechaFin=${p.fechaFin}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        setSpendMap(prev => new Map(prev).set(key, { spend: data.spend || 0, results: data.results || 0, cpl: data.cpl || 0 }));
+      } catch { /* silencioso */ }
+    });
   }, [datosDiarios]);
 
   // Limpiar actualizaciones optimistas cuando lleguen los datos reales
