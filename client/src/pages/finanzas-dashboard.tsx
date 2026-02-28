@@ -136,6 +136,7 @@ export default function FinanzasDashboard() {
     ganancia: number;
     roiNegocio: number;
     impuestosIIBB: number;
+    feeTarjeta: number;
     totalFacturado: number;
   } => {
     const venta = ventaManual || data.ventaPorCampana || 0;
@@ -153,6 +154,9 @@ export default function FinanzasDashboard() {
     // Impuestos IIBB: 4% sobre la venta de cada campaña
     const impuestosIIBB = ingresosTotales * 0.04;
 
+    // Fee de Tarjeta: 5.5% sobre la inversión total (gasto con tarjeta de crédito)
+    const feeTarjeta = inversion * 0.055;
+
     // Total facturado: coste de venta * cantidad de leads * CPL
     const totalFacturado = totalLeads * cpl * venta;
 
@@ -160,6 +164,7 @@ export default function FinanzasDashboard() {
       ganancia,
       roiNegocio,
       impuestosIIBB,
+      feeTarjeta,
       totalFacturado
     };
   };
@@ -319,6 +324,7 @@ export default function FinanzasDashboard() {
                   <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Ganancia</th>
                   <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">ROI Negocio</th>
                   <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Impuestos IIBB</th>
+                  <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Fee de Tarjeta (5.5%)</th>
                   <th className="border border-gray-300 dark:border-gray-600 p-2 text-center">Total Facturado</th>
                 </tr>
               </thead>
@@ -388,6 +394,11 @@ export default function FinanzasDashboard() {
                       </td>
                       <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
                         {formatCurrency(metrics.impuestosIIBB)}
+                      </td>
+                      <td className="border border-gray-300 dark:border-gray-600 p-2 text-center">
+                        <span className="text-orange-600 font-medium">
+                          {formatCurrency(metrics.feeTarjeta)}
+                        </span>
                       </td>
                       <td className="border border-gray-300 dark:border-gray-600 p-2 text-center font-medium">
                         {formatCurrency(metrics.totalFacturado)}
