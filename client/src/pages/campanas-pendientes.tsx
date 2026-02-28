@@ -99,6 +99,7 @@ const PEND_COLS = [
   { key: 'margenReal', label: 'Margen Real' },
   { key: 'cplActual', label: 'CPL Actual' },
   { key: 'reposiciones', label: 'Reposiciones' },
+  { key: 'beneficioSinMerma', label: 'Beneficio sin Merma' },
   { key: 'margenSinMerma', label: 'Margen sin Merma' },
   { key: 'acciones', label: 'Acciones' },
 ];
@@ -998,6 +999,7 @@ export default function CampanasPendientes() {
                         <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase tracking-wider">Margen Real</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase tracking-wider">CPL Actual</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-orange-700 uppercase tracking-wider">Reposiciones</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-orange-700 uppercase tracking-wider">Beneficio sin Merma</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-orange-700 uppercase tracking-wider">Margen sin Merma</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider">Acciones</th>
                       </tr>
@@ -1189,6 +1191,11 @@ export default function CampanasPendientes() {
                                   </td>
                                   <td className="px-4 py-3 text-center text-sm">
                                     <span className={`font-semibold ${reposiciones > 0 ? 'text-orange-600' : 'text-slate-400'}`}>{reposiciones > 0 ? reposiciones : '0'}</span>
+                                  </td>
+                                  <td className="px-4 py-3 text-center text-sm">
+                                    {fb > 0 && hasMeta ? (
+                                      <span className={`font-bold ${(beneficio + merma) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{fmtCur(beneficio + merma)}</span>
+                                    ) : <span className="text-slate-400">-</span>}
                                   </td>
                                   <td className="px-4 py-3 text-center text-sm">
                                     {fb > 0 && hasMeta ? (

@@ -160,6 +160,7 @@ const DD_COLS = [
   { key: 'margenReal', label: 'Margen Real' },
   { key: 'cplActual', label: 'CPL Actual' },
   { key: 'reposiciones', label: 'Reposiciones' },
+  { key: 'beneficioSinMerma', label: 'Beneficio sin Merma' },
   { key: 'margenSinMerma', label: 'Margen sin Merma' },
 ];
 
@@ -1727,6 +1728,7 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">Margen Real</th>
                     <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">CPL Actual</th>
                     <th className="border border-orange-200 dark:border-orange-600 p-3 text-center font-semibold text-orange-900 dark:text-orange-100">Reposiciones</th>
+                    <th className="border border-orange-200 dark:border-orange-600 p-3 text-center font-semibold text-orange-900 dark:text-orange-100">Beneficio sin Merma</th>
                     <th className="border border-orange-200 dark:border-orange-600 p-3 text-center font-semibold text-orange-900 dark:text-orange-100">Margen sin Merma</th>
                   </tr>
                 </thead>
@@ -2011,6 +2013,11 @@ export default function DatosDiariosDashboard() {
                               </td>
                               <td className="border border-orange-200 dark:border-orange-600 p-2 text-center text-sm">
                                 {fb > 0 && hasMeta ? (
+                                  <span className={`font-bold ${(beneficio + merma) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{fmtCur(beneficio + merma)}</span>
+                                ) : <span className="text-gray-400">-</span>}
+                              </td>
+                              <td className="border border-orange-200 dark:border-orange-600 p-2 text-center text-sm">
+                                {fb > 0 && hasMeta ? (
                                   <span className={`font-bold ${margenSinMerma >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{margenSinMerma.toFixed(1)}%</span>
                                 ) : <span className="text-gray-400">-</span>}
                               </td>
@@ -2053,7 +2060,7 @@ export default function DatosDiariosDashboard() {
                           </div>
                         </td>
                       )}
-                      <td colSpan={11} className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100">
+                      <td colSpan={12} className="border border-amber-200 dark:border-amber-600 p-3 text-center font-bold text-amber-900 dark:text-amber-100">
                         —
                       </td>
                     </tr>
@@ -2238,6 +2245,7 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">Margen Real</th>
                     <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">CPL Actual</th>
                     <th className="border border-orange-200 dark:border-orange-600 p-3 text-center font-semibold text-orange-900 dark:text-orange-100">Reposiciones</th>
+                    <th className="border border-orange-200 dark:border-orange-600 p-3 text-center font-semibold text-orange-900 dark:text-orange-100">Beneficio sin Merma</th>
                     <th className="border border-orange-200 dark:border-orange-600 p-3 text-center font-semibold text-orange-900 dark:text-orange-100">Margen sin Merma</th>
                   </tr>
                 </thead>
@@ -2421,6 +2429,11 @@ export default function DatosDiariosDashboard() {
                               </td>
                               <td className="border border-orange-200 dark:border-orange-600 p-2 text-center text-sm">
                                 {fb > 0 && hasMeta ? (
+                                  <span className={`font-bold ${(beneficio + merma) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{fmtCur(beneficio + merma)}</span>
+                                ) : <span className="text-gray-400">-</span>}
+                              </td>
+                              <td className="border border-orange-200 dark:border-orange-600 p-2 text-center text-sm">
+                                {fb > 0 && hasMeta ? (
                                   <span className={`font-bold ${margenSinMerma >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{margenSinMerma.toFixed(1)}%</span>
                                 ) : <span className="text-gray-400">-</span>}
                               </td>
@@ -2450,7 +2463,7 @@ export default function DatosDiariosDashboard() {
                           </span>
                         </div>
                       </td>
-                      <td colSpan={11} className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-bold text-emerald-900 dark:text-emerald-100">
+                      <td colSpan={12} className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-bold text-emerald-900 dark:text-emerald-100">
                         —
                       </td>
                     </tr>
