@@ -13,7 +13,7 @@ import { Navigation } from "@/components/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { CPLStorage } from "@/lib/cpl-storage";
-import { calcularIIBB, calcularIVA, calcularImpuestoTarjeta, calcularBeneficio, calcularMargenReal, makeSpendKey, getDefaultFechaFin, calcularCPLObjetivo } from "@/lib/financial-utils";
+import { calcularIIBB, calcularIVA, calcularImpuestoTarjeta, calcularBeneficio, calcularMargenReal, makeSpendKey, getDefaultFechaFin, calcularCPLObjetivo, calcularValorLead, calcularValorObjetivo } from "@/lib/financial-utils";
 import { memoize } from "@/lib/performance";
 import { BrandDisplay } from "@/components/ui/brand-display";
 import { getCampaignBrandInfo as getEnhancedCampaignBrandInfo } from "@shared/utils/brand-display-utils";
@@ -91,6 +91,8 @@ const FIN_COLS = [
   { key: 'margenReal', label: 'Margen Real' },
   { key: 'cplActual', label: 'CPL Actual' },
   { key: 'cplObjetivo', label: 'CPL Objetivo' },
+  { key: 'valorLead', label: 'Valor del Lead' },
+  { key: 'valorObjetivo', label: 'Valor Objetivo' },
   { key: 'reposiciones', label: 'Reposiciones' },
   { key: 'beneficioSinMerma', label: 'Beneficio sin Merma' },
   { key: 'margenSinMerma', label: 'Margen sin Merma' },
@@ -774,6 +776,8 @@ export default function CampanasFinalizadas() {
                         <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase tracking-wider">Margen Real</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase tracking-wider">CPL Actual</th>
                         {isVisibleCol('cplObjetivo') && <th className="px-4 py-3 text-center text-xs font-semibold text-emerald-700 uppercase tracking-wider whitespace-nowrap">CPL Obj {cplObjetivoMargen}%</th>}
+                        {isVisibleCol('valorLead') && <th className="px-4 py-3 text-center text-xs font-semibold text-blue-700 uppercase tracking-wider whitespace-nowrap">Valor del Lead</th>}
+                        {isVisibleCol('valorObjetivo') && <th className="px-4 py-3 text-center text-xs font-semibold text-blue-700 uppercase tracking-wider whitespace-nowrap">Valor Obj {cplObjetivoMargen}%</th>}
                         <th className="px-4 py-3 text-center text-xs font-semibold text-orange-700 uppercase tracking-wider">Reposiciones</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-orange-700 uppercase tracking-wider">Beneficio sin Merma</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-orange-700 uppercase tracking-wider">Margen sin Merma</th>
@@ -1000,6 +1004,50 @@ export default function CampanasFinalizadas() {
                                       </td>
                                     );
                                   })()}
+                                  {isVisibleCol('valorLead') && (() => {
+                                    const vl = calcularValorLead(fb, safeEnv);
+                                    return (
+                                      <td className="px-4 py-3 text-center text-sm">
+                                        {fb > 0 && safeEnv > 0 ? (
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <span className="font-semibold text-blue-600 cursor-help">{fmtCur(vl)}</span>
+                                              </TooltipTrigger>
+                                              <TooltipContent side="top" className="text-xs">
+                                                <p>Facturación Bruta: {fmtCur(fb)}</p>
+                                                <p>Leads enviados: {safeEnv}</p>
+                                                <p>= {fmtCur(fb)} ÷ {safeEnv} leads</p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                        ) : <span className="text-slate-400">-</span>}
+                                      </td>
+                                    );
+                                  })()} 
+                                  {isVisibleCol('valorObjetivo') && (() => {
+                                    const vl = calcularValorLead(fb, safeEnv);
+                                    const vo = calcularValorObjetivo(spend, safeEnv, cplObjetivoMargen / 100, tf);
+                                    const bajoObj = hasMeta && safeEnv > 0 && vo > 0 && vl < vo;
+                                    return (
+                                      <td className="px-4 py-3 text-center text-sm">
+                                        {hasMeta && safeEnv > 0 ? (
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <span className={`font-semibold cursor-help ${bajoObj ? 'text-red-600' : 'text-emerald-600'}`}>{fmtCur(vo)}</span>
+                                              </TooltipTrigger>
+                                              <TooltipContent side="top" className="text-xs">
+                                                <p>Margen objetivo: {cplObjetivoMargen}%</p>
+                                                <p>Valor actual: {fmtCur(vl)}</p>
+                                                <p className={bajoObj ? 'text-red-400 font-semibold' : 'text-emerald-400 font-semibold'}>{bajoObj ? '⚠ Precio por debajo del objetivo' : '✓ Precio sobre el objetivo'}</p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                        ) : <span className="text-slate-400">-</span>}
+                                      </td>
+                                    );
+                                  })()} 
                                   <td className="px-4 py-3 text-center text-sm">
                                     <span className={`font-semibold ${reposiciones > 0 ? 'text-orange-600' : 'text-slate-400'}`}>{reposiciones > 0 ? reposiciones : '0'}</span>
                                   </td>

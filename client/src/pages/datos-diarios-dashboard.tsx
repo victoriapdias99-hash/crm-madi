@@ -19,7 +19,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useLocation } from "wouter";
 import { CPLStorage } from "@/lib/cpl-storage";
-import { calcularIIBB, calcularIVA, calcularImpuestoTarjeta, calcularBeneficio, calcularMargenReal, makeSpendKey, getDefaultFechaFin, calcularCPLObjetivo } from "@/lib/financial-utils";
+import { calcularIIBB, calcularIVA, calcularImpuestoTarjeta, calcularBeneficio, calcularMargenReal, makeSpendKey, getDefaultFechaFin, calcularCPLObjetivo, calcularValorLead, calcularValorObjetivo } from "@/lib/financial-utils";
 import { debounce, memoize, measurePerformance } from "@/lib/performance";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -163,6 +163,8 @@ const DD_COLS = [
   { key: 'margenReal', label: 'Margen Real' },
   { key: 'cplActual', label: 'CPL Actual' },
   { key: 'cplObjetivo', label: 'CPL Objetivo' },
+  { key: 'valorLead', label: 'Valor del Lead' },
+  { key: 'valorObjetivo', label: 'Valor Objetivo' },
   { key: 'reposiciones', label: 'Reposiciones' },
   { key: 'beneficioSinMerma', label: 'Beneficio sin Merma' },
   { key: 'margenSinMerma', label: 'Margen sin Merma' },
@@ -1774,6 +1776,8 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">Margen Real</th>
                     <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">CPL Actual</th>
                     {isVisibleP('cplObjetivo') && <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100 whitespace-nowrap">CPL Obj {cplObjetivoMargen}%</th>}
+                    {isVisibleP('valorLead') && <th className="border border-blue-200 dark:border-blue-600 p-3 text-center font-semibold text-blue-900 dark:text-blue-100 whitespace-nowrap">Valor del Lead</th>}
+                    {isVisibleP('valorObjetivo') && <th className="border border-blue-200 dark:border-blue-600 p-3 text-center font-semibold text-blue-900 dark:text-blue-100 whitespace-nowrap">Valor Obj {cplObjetivoMargen}%</th>}
                     <th className="border border-orange-200 dark:border-orange-600 p-3 text-center font-semibold text-orange-900 dark:text-orange-100">Reposiciones</th>
                     <th className="border border-orange-200 dark:border-orange-600 p-3 text-center font-semibold text-orange-900 dark:text-orange-100">Beneficio sin Merma</th>
                     <th className="border border-orange-200 dark:border-orange-600 p-3 text-center font-semibold text-orange-900 dark:text-orange-100">Margen sin Merma</th>
@@ -2093,6 +2097,50 @@ export default function DatosDiariosDashboard() {
                                   </td>
                                 );
                               })()}
+                              {isVisibleP('valorLead') && (() => {
+                                const vl = calcularValorLead(fb, safeEnv);
+                                return (
+                                  <td className="border border-blue-200 dark:border-blue-600 p-2 text-center text-sm">
+                                    {fb > 0 && safeEnv > 0 ? (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <span className="font-semibold text-blue-600 dark:text-blue-400 cursor-help">{fmtCur(vl)}</span>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="top" className="text-xs">
+                                            <p>Facturación Bruta: {fmtCur(fb)}</p>
+                                            <p>Leads enviados: {safeEnv}</p>
+                                            <p>= {fmtCur(fb)} ÷ {safeEnv} leads</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    ) : <span className="text-gray-400">-</span>}
+                                  </td>
+                                );
+                              })()} 
+                              {isVisibleP('valorObjetivo') && (() => {
+                                const vl = calcularValorLead(fb, safeEnv);
+                                const vo = calcularValorObjetivo(spend, safeEnv, cplObjetivoMargen / 100, tf);
+                                const bajoObj = hasMeta && safeEnv > 0 && vo > 0 && vl < vo;
+                                return (
+                                  <td className="border border-blue-200 dark:border-blue-600 p-2 text-center text-sm">
+                                    {hasMeta && safeEnv > 0 ? (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <span className={`font-semibold cursor-help ${bajoObj ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>{fmtCur(vo)}</span>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="top" className="text-xs">
+                                            <p>Margen objetivo: {cplObjetivoMargen}%</p>
+                                            <p>Valor actual: {fmtCur(vl)}</p>
+                                            <p className={bajoObj ? 'text-red-400 font-semibold' : 'text-emerald-400 font-semibold'}>{bajoObj ? '⚠ Precio por debajo del objetivo' : '✓ Precio sobre el objetivo'}</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    ) : <span className="text-gray-400">-</span>}
+                                  </td>
+                                );
+                              })()} 
                               <td className="border border-orange-200 dark:border-orange-600 p-2 text-center text-sm">
                                 <span className={`font-semibold ${reposiciones > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-400'}`}>{reposiciones > 0 ? reposiciones : '0'}</span>
                               </td>
@@ -2352,6 +2400,8 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">Margen Real</th>
                     <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">CPL Actual</th>
                     {isVisibleF('cplObjetivo') && <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100 whitespace-nowrap">CPL Obj {cplObjetivoMargen}%</th>}
+                    {isVisibleF('valorLead') && <th className="border border-blue-200 dark:border-blue-600 p-3 text-center font-semibold text-blue-900 dark:text-blue-100 whitespace-nowrap">Valor del Lead</th>}
+                    {isVisibleF('valorObjetivo') && <th className="border border-blue-200 dark:border-blue-600 p-3 text-center font-semibold text-blue-900 dark:text-blue-100 whitespace-nowrap">Valor Obj {cplObjetivoMargen}%</th>}
                     <th className="border border-orange-200 dark:border-orange-600 p-3 text-center font-semibold text-orange-900 dark:text-orange-100">Reposiciones</th>
                     <th className="border border-orange-200 dark:border-orange-600 p-3 text-center font-semibold text-orange-900 dark:text-orange-100">Beneficio sin Merma</th>
                     <th className="border border-orange-200 dark:border-orange-600 p-3 text-center font-semibold text-orange-900 dark:text-orange-100">Margen sin Merma</th>
@@ -2570,6 +2620,50 @@ export default function DatosDiariosDashboard() {
                                   </td>
                                 );
                               })()}
+                              {isVisibleF('valorLead') && (() => {
+                                const vl = calcularValorLead(fb, safeEnv);
+                                return (
+                                  <td className="border border-blue-200 dark:border-blue-600 p-2 text-center text-sm">
+                                    {fb > 0 && safeEnv > 0 ? (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <span className="font-semibold text-blue-600 dark:text-blue-400 cursor-help">{fmtCur(vl)}</span>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="top" className="text-xs">
+                                            <p>Facturación Bruta: {fmtCur(fb)}</p>
+                                            <p>Leads enviados: {safeEnv}</p>
+                                            <p>= {fmtCur(fb)} ÷ {safeEnv} leads</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    ) : <span className="text-gray-400">-</span>}
+                                  </td>
+                                );
+                              })()} 
+                              {isVisibleF('valorObjetivo') && (() => {
+                                const vl = calcularValorLead(fb, safeEnv);
+                                const vo = calcularValorObjetivo(spend, safeEnv, cplObjetivoMargen / 100, tf);
+                                const bajoObj = hasMeta && safeEnv > 0 && vo > 0 && vl < vo;
+                                return (
+                                  <td className="border border-blue-200 dark:border-blue-600 p-2 text-center text-sm">
+                                    {hasMeta && safeEnv > 0 ? (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <span className={`font-semibold cursor-help ${bajoObj ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>{fmtCur(vo)}</span>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="top" className="text-xs">
+                                            <p>Margen objetivo: {cplObjetivoMargen}%</p>
+                                            <p>Valor actual: {fmtCur(vl)}</p>
+                                            <p className={bajoObj ? 'text-red-400 font-semibold' : 'text-emerald-400 font-semibold'}>{bajoObj ? '⚠ Precio por debajo del objetivo' : '✓ Precio sobre el objetivo'}</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    ) : <span className="text-gray-400">-</span>}
+                                  </td>
+                                );
+                              })()} 
                               <td className="border border-orange-200 dark:border-orange-600 p-2 text-center text-sm">
                                 <span className={`font-semibold ${reposiciones > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-400'}`}>{reposiciones > 0 ? reposiciones : '0'}</span>
                               </td>

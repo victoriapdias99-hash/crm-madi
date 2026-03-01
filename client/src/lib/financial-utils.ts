@@ -63,6 +63,34 @@ export function makeSpendKey(marca: string, zona: string, fechaInicio: string, f
  * Siempre puede ser sobreescrita por metaFechaFin o fechaFin del backend.
  */
 /**
+ * Calcula el valor por lead actual: Facturación Bruta / leads enviados al cliente.
+ */
+export function calcularValorLead(facturacionBruta: number, enviados: number): number {
+  if (enviados <= 0 || facturacionBruta <= 0) return 0;
+  return facturacionBruta / enviados;
+}
+
+/**
+ * Calcula el precio mínimo por lead (Valor Objetivo) para alcanzar un margen objetivo.
+ * Fórmula: FB_min = (GM × 1.055) / (1 - 0.045 - IVA_rate - margenObj)
+ *          Valor_obj = FB_min / enviados
+ * Donde IVA_rate = 21/121 si tipo A, 0 si tipo C.
+ */
+export function calcularValorObjetivo(
+  spend: number,
+  enviados: number,
+  margenObjetivo: number,
+  tipoFacturacion: string
+): number {
+  if (enviados <= 0 || spend <= 0) return 0;
+  const ivaRate = tipoFacturacion === 'A' ? 21 / 121 : 0;
+  const denominador = 1 - 0.045 - ivaRate - margenObjetivo;
+  if (denominador <= 0) return 0;
+  const fbMin = (spend * 1.055) / denominador;
+  return fbMin / enviados;
+}
+
+/**
  * Calcula el CPL máximo permitido para alcanzar un margen objetivo.
  * Fórmula: GM_max = (FB × (1 - 0.045 - margenObj) - IVA) / 1.055
  *          CPL_obj = GM_max / leads
