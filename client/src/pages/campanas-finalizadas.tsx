@@ -1005,7 +1005,8 @@ export default function CampanasFinalizadas() {
                                     );
                                   })()}
                                   {isVisibleCol('valorLead') && (() => {
-                                    const vl = parseFloat(String(data.costeVenta || 0)) || 0;
+                                    const costeVenta = parseFloat(String(data.costeVenta || 0)) || 0;
+                                    const vl = costeVenta > 0 ? costeVenta : (fb > 0 && safePed > 0 ? fb / safePed : 0);
                                     return (
                                       <td className="px-4 py-3 text-center text-sm">
                                         {vl > 0 ? <span className="font-semibold text-blue-600">{fmtCur(vl)}</span> : <span className="text-slate-400">-</span>}
@@ -1013,7 +1014,8 @@ export default function CampanasFinalizadas() {
                                     );
                                   })()} 
                                   {isVisibleCol('valorObjetivo') && (() => {
-                                    const vl = parseFloat(String(data.costeVenta || 0)) || 0;
+                                    const costeVenta = parseFloat(String(data.costeVenta || 0)) || 0;
+                                    const vl = costeVenta > 0 ? costeVenta : (fb > 0 && safePed > 0 ? fb / safePed : 0);
                                     const vo = calcularValorObjetivo(spend, safeEnv, cplObjetivoMargen / 100, tf);
                                     const bajoObj = hasMeta && safeEnv > 0 && vo > 0 && vl < vo;
                                     return (
