@@ -56,6 +56,7 @@ interface DatosDiariosData {
   fechaCampana: string;
   fechaFinReal: string | null;
   fechaFin?: string | null;
+  metaCampanaFiltro?: string | null;
   cantidadSolicitada: number;
   cantidadDatosSolicitados?: number;
   diasProcesados: number;
@@ -204,17 +205,19 @@ export default function CampanasPendientes() {
   useEffect(() => {
     if (!datosDiarios || datosDiarios.length === 0) return;
     const today = new Date().toISOString().split('T')[0];
-    const uniqueKeys = new Map<string, { marca: string; zona: string; fechaInicio: string; fechaFin: string }>();
+    const uniqueKeys = new Map<string, { marca: string; zona: string; fechaInicio: string; fechaFin: string; metaCampanaFiltro?: string | null }>();
     datosDiarios.forEach(d => {
       const fi = d.fechaCampana || today;
       const ff = d.fechaFin || today;
-      const key = makeSpendKey(d.marca || '', d.zona || 'NACIONAL', fi, ff);
-      if (!uniqueKeys.has(key)) uniqueKeys.set(key, { marca: d.marca || '', zona: d.zona || 'NACIONAL', fechaInicio: fi, fechaFin: ff });
+      const key = makeSpendKey(d.marca || '', d.zona || 'NACIONAL', fi, ff, d.metaCampanaFiltro);
+      if (!uniqueKeys.has(key)) uniqueKeys.set(key, { marca: d.marca || '', zona: d.zona || 'NACIONAL', fechaInicio: fi, fechaFin: ff, metaCampanaFiltro: d.metaCampanaFiltro });
     });
     setSpendMap(new Map());
     [...uniqueKeys.entries()].forEach(async ([key, p]) => {
       try {
-        const res = await fetch(`/api/meta-ads/campaign-spend?marca=${encodeURIComponent(p.marca)}&zona=${encodeURIComponent(p.zona)}&fechaInicio=${p.fechaInicio}&fechaFin=${p.fechaFin}`);
+        let url = `/api/meta-ads/campaign-spend?marca=${encodeURIComponent(p.marca)}&zona=${encodeURIComponent(p.zona)}&fechaInicio=${p.fechaInicio}&fechaFin=${p.fechaFin}`;
+        if (p.metaCampanaFiltro && p.metaCampanaFiltro.trim()) url += `&metaCampanaFiltro=${encodeURIComponent(p.metaCampanaFiltro.trim())}`;
+        const res = await fetch(url);
         if (!res.ok) return;
         const data = await res.json();
         setSpendMap(prev => new Map(prev).set(key, { spend: data.spend || 0, results: data.results || 0, cpl: data.cpl || 0 }));
@@ -1142,7 +1145,7 @@ export default function CampanasPendientes() {
                               const today = new Date().toISOString().split('T')[0];
                               const fi = data.fechaCampana || today;
                               const ff = (data.fechaFin as string) || today;
-                              const sk = makeSpendKey(data.marca || '', data.zona || 'NACIONAL', fi, ff);
+                              const sk = makeSpendKey(data.marca || '', data.zona || 'NACIONAL', fi, ff, data.metaCampanaFiltro);
                               const spendData = spendMap.get(sk) || { spend: 0, results: 0, cpl: 0 };
                               const fb = parseFloat(String(data.facturacionBruta || 0)) || 0;
                               const tf = data.tipoFacturacion || 'C';

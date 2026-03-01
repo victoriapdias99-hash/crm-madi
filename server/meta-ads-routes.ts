@@ -342,13 +342,15 @@ export function registerMetaAdsRoutes(app: Express) {
       if (!service) {
         return res.json({ spend: 0, results: 0, cpl: 0, available: false });
       }
-      const { marca, zona, fechaInicio, fechaFin } = req.query as Record<string, string>;
+      const { marca, zona, fechaInicio, fechaFin, metaCampanaFiltro } = req.query as Record<string, string>;
       if (!marca || !fechaInicio) {
         return res.status(400).json({ error: 'marca y fechaInicio son requeridos' });
       }
       const today = new Date().toISOString().split('T')[0];
+      // Usar metaCampanaFiltro si está definido, si no usar marca
+      const campanaFiltro = metaCampanaFiltro && metaCampanaFiltro.trim() ? metaCampanaFiltro.trim() : marca;
       const result = await service.getSpendByCampaign(
-        marca,
+        campanaFiltro,
         zona || 'NACIONAL',
         fechaInicio,
         fechaFin || today

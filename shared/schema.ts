@@ -343,6 +343,7 @@ export const campanasComerciales = pgTable("campanas_comerciales", {
     precision: 12,
     scale: 2,
   }).default("0"), // Coste por lead (para calcular facturación bruta)
+  metaCampanaFiltro: text("meta_campana_filtro"), // Filtro exacto para Meta Ads (ej: "Toyota | Interaccion"). Si vacío usa marca.
   fechaCreacion: timestamp("fecha_creacion").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -603,6 +604,7 @@ export const insertCampanaComercialSchema = createInsertSchema(
     facturacionBruta: true,
     tipoFacturacion: true,
     costeVenta: true,
+    metaCampanaFiltro: true,
   })
   .extend({
     facturacionBruta: z
@@ -613,6 +615,7 @@ export const insertCampanaComercialSchema = createInsertSchema(
       .transform((val) => String(val))
       .optional(),
     tipoFacturacion: z.enum(["C", "A"]).default("C"),
+    metaCampanaFiltro: z.string().optional().nullable(),
   });
 
 // Schema para crear campañas sin campos calculados automáticamente

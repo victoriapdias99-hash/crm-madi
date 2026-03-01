@@ -506,7 +506,7 @@ class MetaAdsService {
     zona: string,
     fechaInicio: string,
     fechaFin: string
-  ): Promise<{ spend: number; results: number; cpl: number }> {
+  ): Promise<{ spend: number; results: number; cpl: number; debug?: any }> {
     try {
       const dateRange = {
         since: fechaInicio,
@@ -516,6 +516,7 @@ class MetaAdsService {
       const adsets = await this.getAdsetSpendData({ campaignName: marca, dateRange });
 
       if (!adsets || adsets.length === 0) {
+        console.log(`[SpendByCampaign] marca="${marca}" zona="${zona}" ${fechaInicio}→${fechaFin || 'hoy'} → 0 adsets encontrados`);
         return { spend: 0, results: 0, cpl: 0 };
       }
 
@@ -537,8 +538,15 @@ class MetaAdsService {
       const totalResults = adsetsToUse.reduce((sum, a) => sum + (a.results || 0), 0);
       const cpl = totalResults > 0 ? totalSpend / totalResults : 0;
 
+      console.log(`[SpendByCampaign] marca="${marca}" zona="${zona}" ${fechaInicio}→${dateRange.until}`);
+      console.log(`  Adsets totales: ${adsets.length} | Con filtro zona: ${filteredAdsets.length} | Usando: ${adsetsToUse.length}`);
+      console.log(`  Adset names: ${adsets.map(a => a.adsetName).join(' | ')}`);
+      console.log(`  Spend por adset: ${adsetsToUse.map(a => `${a.adsetName}=$${a.spend}`).join(' | ')}`);
+      console.log(`  TOTAL spend: $${totalSpend} | results: ${totalResults} | CPL: $${cpl.toFixed(2)}`);
+
       return { spend: totalSpend, results: totalResults, cpl };
     } catch (error) {
+      console.log(`[SpendByCampaign] ERROR marca="${marca}":`, error);
       return { spend: 0, results: 0, cpl: 0 };
     }
   }

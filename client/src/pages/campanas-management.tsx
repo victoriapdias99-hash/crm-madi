@@ -157,6 +157,7 @@ export default function CampanasManagement() {
       tipoFacturacion: "C",
       costeVenta: "0",
       facturacionBruta: "0",
+      metaCampanaFiltro: "",
     },
   });
 
@@ -389,6 +390,7 @@ export default function CampanasManagement() {
         tipoFacturacion: (campana.tipoFacturacion as "C" | "A") || "C",
         costeVenta: campana.costeVenta || "0",
         facturacionBruta: campana.facturacionBruta || "0",
+        metaCampanaFiltro: campana.metaCampanaFiltro || "",
       });
     } else {
       setEditingCampana(null);
@@ -419,6 +421,7 @@ export default function CampanasManagement() {
         tipoFacturacion: "C",
         costeVenta: "0",
         facturacionBruta: "0",
+        metaCampanaFiltro: "",
       });
     }
     setIsDialogOpen(true);
@@ -437,6 +440,7 @@ export default function CampanasManagement() {
       tipoFacturacion: (campana.tipoFacturacion as "C" | "A") || "C",
       costeVenta: campana.costeVenta || "0",
       facturacionBruta: campana.facturacionBruta || "0",
+      metaCampanaFiltro: campana.metaCampanaFiltro || "",
     });
     setFacturacionManual(false);
     setIsDialogOpen(true);
@@ -995,6 +999,28 @@ export default function CampanasManagement() {
                             <SelectItem value="A">A — Con IVA (se suma 21%)</SelectItem>
                           </SelectContent>
                         </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Filtro Meta Ads */}
+                  <FormField
+                    control={form.control}
+                    name="metaCampanaFiltro"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Filtro Meta Ads (opcional)</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder='Ej: "Toyota | Interaccion" — Si se deja vacío, usa la marca'
+                            {...field}
+                            value={field.value || ""}
+                          />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">
+                          Nombre exacto de la campaña en Meta Ads para filtrar el gasto. Útil cuando la marca aparece en múltiples campañas.
+                        </p>
                         <FormMessage />
                       </FormItem>
                     )}

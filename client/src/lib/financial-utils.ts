@@ -4,7 +4,7 @@ export function calcularIIBB(facturacionBruta: number): number {
 
 export function calcularIVA(facturacionBruta: number, tipoFacturacion: string): number {
   if (tipoFacturacion === 'A') {
-    return facturacionBruta * 0.21;
+    return facturacionBruta * (21 / 121);
   }
   return 0;
 }
@@ -51,6 +51,7 @@ export interface CampaignSpendResult {
   available: boolean;
 }
 
-export function makeSpendKey(marca: string, zona: string, fechaInicio: string, fechaFin: string): string {
-  return `${marca}|${zona}|${fechaInicio}|${fechaFin}`;
+export function makeSpendKey(marca: string, zona: string, fechaInicio: string, fechaFin: string, metaCampanaFiltro?: string | null): string {
+  const filtro = metaCampanaFiltro && metaCampanaFiltro.trim() ? metaCampanaFiltro.trim() : marca;
+  return `${filtro}|${zona}|${fechaInicio}|${fechaFin}`;
 }
