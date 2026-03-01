@@ -19,7 +19,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useLocation } from "wouter";
 import { CPLStorage } from "@/lib/cpl-storage";
-import { calcularIIBB, calcularIVA, calcularImpuestoTarjeta, calcularBeneficio, calcularMargenReal, makeSpendKey, getDefaultFechaFin } from "@/lib/financial-utils";
+import { calcularIIBB, calcularIVA, calcularImpuestoTarjeta, calcularBeneficio, calcularMargenReal, makeSpendKey, getDefaultFechaFin, calcularCPLObjetivo } from "@/lib/financial-utils";
 import { debounce, memoize, measurePerformance } from "@/lib/performance";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -162,6 +162,7 @@ const DD_COLS = [
   { key: 'beneficio', label: 'Beneficio' },
   { key: 'margenReal', label: 'Margen Real' },
   { key: 'cplActual', label: 'CPL Actual' },
+  { key: 'cplObjetivo', label: 'CPL Objetivo' },
   { key: 'reposiciones', label: 'Reposiciones' },
   { key: 'beneficioSinMerma', label: 'Beneficio sin Merma' },
   { key: 'margenSinMerma', label: 'Margen sin Merma' },
@@ -461,6 +462,20 @@ export default function DatosDiariosDashboard() {
   // Mapa de gasto Meta Ads: key = marca|zona|fechaInicio|fechaFin => { spend, results, cpl }
   const [spendMap, setSpendMap] = useState<Map<string, { spend: number; results: number; cpl: number }>>(new Map());
   const [campaignCountMap, setCampaignCountMap] = useState<Map<string, number>>(new Map());
+  const [cplObjetivoMargen, setCplObjetivoMargen] = useState<number>(() => {
+    const saved = localStorage.getItem('cplObjetivoMargen');
+    return saved ? parseFloat(saved) : 25;
+  });
+  const [cplObjetivoInput, setCplObjetivoInput] = useState<string>(() => {
+    const saved = localStorage.getItem('cplObjetivoMargen');
+    return saved ? saved : '25';
+  });
+  const handleCplMargenChange = (val: number) => {
+    const clamped = Math.max(1, Math.min(99, val));
+    setCplObjetivoMargen(clamped);
+    setCplObjetivoInput(String(clamped));
+    localStorage.setItem('cplObjetivoMargen', String(clamped));
+  };
 
   useEffect(() => {
     if (!datosDiarios || datosDiarios.length === 0) return;
@@ -1689,6 +1704,28 @@ export default function DatosDiariosDashboard() {
                     ✕ Limpiar filtros
                   </Button>
                 )}
+                <div className="flex items-center gap-1 bg-white/20 border border-white/30 rounded-lg px-2 py-1 h-8">
+                  <span className="text-xs text-white/80 font-medium whitespace-nowrap">CPL Obj:</span>
+                  {[25, 50, 75].map(p => (
+                    <button
+                      key={p}
+                      onClick={() => handleCplMargenChange(p)}
+                      className={`text-xs px-1.5 py-0.5 rounded font-medium transition-colors ${cplObjetivoMargen === p ? 'bg-white text-violet-700' : 'text-white/80 hover:bg-white/20'}`}
+                    >{p}%</button>
+                  ))}
+                  <input
+                    type="number"
+                    min={1}
+                    max={99}
+                    value={cplObjetivoInput}
+                    onChange={e => setCplObjetivoInput(e.target.value)}
+                    onBlur={e => { const v = parseFloat(e.target.value); if (!isNaN(v)) handleCplMargenChange(v); }}
+                    onKeyDown={e => { if (e.key === 'Enter') { const v = parseFloat(cplObjetivoInput); if (!isNaN(v)) handleCplMargenChange(v); } }}
+                    className="w-10 text-xs text-center bg-white/20 text-white border border-white/30 rounded px-1 py-0.5 focus:outline-none focus:border-white placeholder-white/50"
+                    title="Margen objetivo personalizado (%)"
+                  />
+                  <span className="text-xs text-white/60">%</span>
+                </div>
                 <ColumnToggleDropdown
                   columns={DD_COLS as any}
                   isVisible={isVisibleP}
@@ -1736,6 +1773,7 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">Beneficio</th>
                     <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">Margen Real</th>
                     <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">CPL Actual</th>
+                    {isVisibleP('cplObjetivo') && <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100 whitespace-nowrap">CPL Obj {cplObjetivoMargen}%</th>}
                     <th className="border border-orange-200 dark:border-orange-600 p-3 text-center font-semibold text-orange-900 dark:text-orange-100">Reposiciones</th>
                     <th className="border border-orange-200 dark:border-orange-600 p-3 text-center font-semibold text-orange-900 dark:text-orange-100">Beneficio sin Merma</th>
                     <th className="border border-orange-200 dark:border-orange-600 p-3 text-center font-semibold text-orange-900 dark:text-orange-100">Margen sin Merma</th>
@@ -2033,6 +2071,28 @@ export default function DatosDiariosDashboard() {
                               <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
                                 {hasMeta ? <span className="font-semibold text-violet-700 dark:text-violet-300">{fmtCur(cplActual)}</span> : <span className="text-gray-400">-</span>}
                               </td>
+                              {isVisibleP('cplObjetivo') && (() => {
+                                const cplObj = calcularCPLObjetivo(fb, results, cplObjetivoMargen / 100, tf);
+                                const superaObj = hasMeta && cplObj > 0 && cplActual > cplObj;
+                                return (
+                                  <td className="border border-emerald-200 dark:border-emerald-600 p-2 text-center text-sm">
+                                    {hasMeta && fb > 0 ? (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <span className={`font-semibold cursor-help ${superaObj ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>{fmtCur(cplObj)}</span>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="top" className="text-xs">
+                                            <p>Margen objetivo: {cplObjetivoMargen}%</p>
+                                            <p>CPL Actual: {fmtCur(cplActual)}</p>
+                                            <p className={superaObj ? 'text-red-400 font-semibold' : 'text-emerald-400 font-semibold'}>{superaObj ? '⚠ CPL supera el objetivo' : '✓ CPL dentro del objetivo'}</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    ) : <span className="text-gray-400">-</span>}
+                                  </td>
+                                );
+                              })()}
                               <td className="border border-orange-200 dark:border-orange-600 p-2 text-center text-sm">
                                 <span className={`font-semibold ${reposiciones > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-400'}`}>{reposiciones > 0 ? reposiciones : '0'}</span>
                               </td>
@@ -2227,6 +2287,28 @@ export default function DatosDiariosDashboard() {
                     ✕ Limpiar filtros
                   </Button>
                 )}
+                <div className="flex items-center gap-1 bg-white/20 border border-white/30 rounded-lg px-2 py-1 h-8">
+                  <span className="text-xs text-white/80 font-medium whitespace-nowrap">CPL Obj:</span>
+                  {[25, 50, 75].map(p => (
+                    <button
+                      key={p}
+                      onClick={() => handleCplMargenChange(p)}
+                      className={`text-xs px-1.5 py-0.5 rounded font-medium transition-colors ${cplObjetivoMargen === p ? 'bg-white text-violet-700' : 'text-white/80 hover:bg-white/20'}`}
+                    >{p}%</button>
+                  ))}
+                  <input
+                    type="number"
+                    min={1}
+                    max={99}
+                    value={cplObjetivoInput}
+                    onChange={e => setCplObjetivoInput(e.target.value)}
+                    onBlur={e => { const v = parseFloat(e.target.value); if (!isNaN(v)) handleCplMargenChange(v); }}
+                    onKeyDown={e => { if (e.key === 'Enter') { const v = parseFloat(cplObjetivoInput); if (!isNaN(v)) handleCplMargenChange(v); } }}
+                    className="w-10 text-xs text-center bg-white/20 text-white border border-white/30 rounded px-1 py-0.5 focus:outline-none focus:border-white placeholder-white/50"
+                    title="Margen objetivo personalizado (%)"
+                  />
+                  <span className="text-xs text-white/60">%</span>
+                </div>
                 <ColumnToggleDropdown
                   columns={DD_COLS as any}
                   isVisible={isVisibleF}
@@ -2269,6 +2351,7 @@ export default function DatosDiariosDashboard() {
                     <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">Beneficio</th>
                     <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">Margen Real</th>
                     <th className="border border-violet-200 dark:border-violet-600 p-3 text-center font-semibold text-violet-900 dark:text-violet-100">CPL Actual</th>
+                    {isVisibleF('cplObjetivo') && <th className="border border-emerald-200 dark:border-emerald-600 p-3 text-center font-semibold text-emerald-900 dark:text-emerald-100 whitespace-nowrap">CPL Obj {cplObjetivoMargen}%</th>}
                     <th className="border border-orange-200 dark:border-orange-600 p-3 text-center font-semibold text-orange-900 dark:text-orange-100">Reposiciones</th>
                     <th className="border border-orange-200 dark:border-orange-600 p-3 text-center font-semibold text-orange-900 dark:text-orange-100">Beneficio sin Merma</th>
                     <th className="border border-orange-200 dark:border-orange-600 p-3 text-center font-semibold text-orange-900 dark:text-orange-100">Margen sin Merma</th>
@@ -2465,6 +2548,28 @@ export default function DatosDiariosDashboard() {
                               <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
                                 {hasMeta ? <span className="font-semibold text-violet-700 dark:text-violet-300">{fmtCur(cplActual)}</span> : <span className="text-gray-400">-</span>}
                               </td>
+                              {isVisibleF('cplObjetivo') && (() => {
+                                const cplObj = calcularCPLObjetivo(fb, results, cplObjetivoMargen / 100, tf);
+                                const superaObj = hasMeta && cplObj > 0 && cplActual > cplObj;
+                                return (
+                                  <td className="border border-emerald-200 dark:border-emerald-600 p-2 text-center text-sm">
+                                    {hasMeta && fb > 0 ? (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <span className={`font-semibold cursor-help ${superaObj ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>{fmtCur(cplObj)}</span>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="top" className="text-xs">
+                                            <p>Margen objetivo: {cplObjetivoMargen}%</p>
+                                            <p>CPL Actual: {fmtCur(cplActual)}</p>
+                                            <p className={superaObj ? 'text-red-400 font-semibold' : 'text-emerald-400 font-semibold'}>{superaObj ? '⚠ CPL supera el objetivo' : '✓ CPL dentro del objetivo'}</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    ) : <span className="text-gray-400">-</span>}
+                                  </td>
+                                );
+                              })()}
                               <td className="border border-orange-200 dark:border-orange-600 p-2 text-center text-sm">
                                 <span className={`font-semibold ${reposiciones > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-400'}`}>{reposiciones > 0 ? reposiciones : '0'}</span>
                               </td>

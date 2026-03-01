@@ -13,7 +13,7 @@ import { Navigation } from "@/components/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { CPLStorage } from "@/lib/cpl-storage";
-import { calcularIIBB, calcularIVA, calcularImpuestoTarjeta, calcularBeneficio, calcularMargenReal, makeSpendKey, getDefaultFechaFin } from "@/lib/financial-utils";
+import { calcularIIBB, calcularIVA, calcularImpuestoTarjeta, calcularBeneficio, calcularMargenReal, makeSpendKey, getDefaultFechaFin, calcularCPLObjetivo } from "@/lib/financial-utils";
 import { memoize } from "@/lib/performance";
 import { BrandDisplay } from "@/components/ui/brand-display";
 import { getCampaignBrandInfo as getEnhancedCampaignBrandInfo } from "@shared/utils/brand-display-utils";
@@ -90,6 +90,7 @@ const FIN_COLS = [
   { key: 'beneficio', label: 'Beneficio' },
   { key: 'margenReal', label: 'Margen Real' },
   { key: 'cplActual', label: 'CPL Actual' },
+  { key: 'cplObjetivo', label: 'CPL Objetivo' },
   { key: 'reposiciones', label: 'Reposiciones' },
   { key: 'beneficioSinMerma', label: 'Beneficio sin Merma' },
   { key: 'margenSinMerma', label: 'Margen sin Merma' },
@@ -339,6 +340,20 @@ export default function CampanasFinalizadas() {
   // Mapa de gasto Meta Ads
   const [spendMap, setSpendMap] = useState<Map<string, { spend: number; results: number; cpl: number }>>(new Map());
   const [campaignCountMap, setCampaignCountMap] = useState<Map<string, number>>(new Map());
+  const [cplObjetivoMargen, setCplObjetivoMargen] = useState<number>(() => {
+    const saved = localStorage.getItem('cplObjetivoMargen');
+    return saved ? parseFloat(saved) : 25;
+  });
+  const [cplObjetivoInput, setCplObjetivoInput] = useState<string>(() => {
+    const saved = localStorage.getItem('cplObjetivoMargen');
+    return saved ? saved : '25';
+  });
+  const handleCplMargenChange = (val: number) => {
+    const clamped = Math.max(1, Math.min(99, val));
+    setCplObjetivoMargen(clamped);
+    setCplObjetivoInput(String(clamped));
+    localStorage.setItem('cplObjetivoMargen', String(clamped));
+  };
 
   useEffect(() => {
     if (!datosDiarios || datosDiarios.length === 0) return;
@@ -653,6 +668,29 @@ export default function CampanasFinalizadas() {
                   placeholder="Hasta"
                 />
 
+                <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-2 py-1 h-8">
+                  <span className="text-xs text-slate-500 font-medium whitespace-nowrap">CPL Obj:</span>
+                  {[25, 50, 75].map(p => (
+                    <button
+                      key={p}
+                      onClick={() => handleCplMargenChange(p)}
+                      className={`text-xs px-1.5 py-0.5 rounded font-medium transition-colors ${cplObjetivoMargen === p ? 'bg-violet-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+                    >{p}%</button>
+                  ))}
+                  <input
+                    type="number"
+                    min={1}
+                    max={99}
+                    value={cplObjetivoInput}
+                    onChange={e => setCplObjetivoInput(e.target.value)}
+                    onBlur={e => { const v = parseFloat(e.target.value); if (!isNaN(v)) handleCplMargenChange(v); }}
+                    onKeyDown={e => { if (e.key === 'Enter') { const v = parseFloat(cplObjetivoInput); if (!isNaN(v)) handleCplMargenChange(v); } }}
+                    className="w-10 text-xs text-center border border-slate-200 rounded px-1 py-0.5 focus:outline-none focus:border-violet-400"
+                    title="Margen objetivo personalizado (%)"
+                  />
+                  <span className="text-xs text-slate-400">%</span>
+                </div>
+
                 <ColumnToggleDropdown
                   columns={FIN_COLS}
                   isVisible={isVisibleCol}
@@ -735,6 +773,7 @@ export default function CampanasFinalizadas() {
                         <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase tracking-wider">Beneficio</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase tracking-wider">Margen Real</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase tracking-wider">CPL Actual</th>
+                        {isVisibleCol('cplObjetivo') && <th className="px-4 py-3 text-center text-xs font-semibold text-emerald-700 uppercase tracking-wider whitespace-nowrap">CPL Obj {cplObjetivoMargen}%</th>}
                         <th className="px-4 py-3 text-center text-xs font-semibold text-orange-700 uppercase tracking-wider">Reposiciones</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-orange-700 uppercase tracking-wider">Beneficio sin Merma</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-orange-700 uppercase tracking-wider">Margen sin Merma</th>
@@ -939,6 +978,28 @@ export default function CampanasFinalizadas() {
                                   <td className="px-4 py-3 text-center text-sm">
                                     {hasMeta ? <span className="font-semibold text-violet-700">{fmtCur(cplActual)}</span> : <span className="text-slate-400">-</span>}
                                   </td>
+                                  {isVisibleCol('cplObjetivo') && (() => {
+                                    const cplObj = calcularCPLObjetivo(fb, results, cplObjetivoMargen / 100, tf);
+                                    const superaObj = hasMeta && cplObj > 0 && cplActual > cplObj;
+                                    return (
+                                      <td className="px-4 py-3 text-center text-sm">
+                                        {hasMeta && fb > 0 ? (
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <span className={`font-semibold cursor-help ${superaObj ? 'text-red-600' : 'text-emerald-600'}`}>{fmtCur(cplObj)}</span>
+                                              </TooltipTrigger>
+                                              <TooltipContent side="top" className="text-xs">
+                                                <p>Margen objetivo: {cplObjetivoMargen}%</p>
+                                                <p>CPL Actual: {fmtCur(cplActual)}</p>
+                                                <p className={superaObj ? 'text-red-400 font-semibold' : 'text-emerald-400 font-semibold'}>{superaObj ? '⚠ CPL supera el objetivo' : '✓ CPL dentro del objetivo'}</p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                        ) : <span className="text-slate-400">-</span>}
+                                      </td>
+                                    );
+                                  })()}
                                   <td className="px-4 py-3 text-center text-sm">
                                     <span className={`font-semibold ${reposiciones > 0 ? 'text-orange-600' : 'text-slate-400'}`}>{reposiciones > 0 ? reposiciones : '0'}</span>
                                   </td>

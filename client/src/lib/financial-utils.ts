@@ -62,6 +62,24 @@ export function makeSpendKey(marca: string, zona: string, fechaInicio: string, f
  * - Si la campaña es del mes actual o futuro: usa hoy.
  * Siempre puede ser sobreescrita por metaFechaFin o fechaFin del backend.
  */
+/**
+ * Calcula el CPL máximo permitido para alcanzar un margen objetivo.
+ * Fórmula: GM_max = (FB × (1 - 0.045 - margenObj) - IVA) / 1.055
+ *          CPL_obj = GM_max / leads
+ */
+export function calcularCPLObjetivo(
+  facturacionBruta: number,
+  results: number,
+  margenObjetivo: number,
+  tipoFacturacion: string
+): number {
+  if (results <= 0 || facturacionBruta <= 0) return 0;
+  const iva = calcularIVA(facturacionBruta, tipoFacturacion);
+  const gmMax = (facturacionBruta * (1 - 0.045 - margenObjetivo) - iva) / 1.055;
+  if (gmMax <= 0) return 0;
+  return gmMax / results;
+}
+
 export function getDefaultFechaFin(fechaCampana: string | null | undefined): string {
   const today = new Date().toISOString().split('T')[0];
   if (!fechaCampana) return today;
