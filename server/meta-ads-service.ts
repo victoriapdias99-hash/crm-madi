@@ -113,13 +113,10 @@ class MetaAdsService {
         fields: fields,
         level: 'campaign',
         time_range: JSON.stringify(effectiveTimeRange),
-        limit: 100
+        limit: 200
       };
 
-      const response = await axios.get(`${this.baseUrl}/${this.config.accountId}/insights`, { params });
-      
-      if (response.data?.data) {
-        const campaigns = response.data.data.map((campaign: any) => {
+      const mapCampaign = (campaign: any): CampaignSpendData => {
           // Obtener estado actual de la campaña
           const campaignStatus = campaignStatusData.find(cs => cs.id === campaign.campaign_id);
           const isActive = campaignStatus?.effective_status === 'ACTIVE';
@@ -201,18 +198,35 @@ class MetaAdsService {
             effectiveStatus: campaignStatus?.effective_status || 'UNKNOWN',
             isActive: isActive
           };
-        });
+        };
+
+        // Paginación completa
+        const allCampaigns: CampaignSpendData[] = [];
+        let nextUrl: string | null = null;
+
+        const firstResponse = await axios.get(`${this.baseUrl}/${this.config.accountId}/insights`, { params });
+        if (firstResponse.data?.data) {
+          allCampaigns.push(...firstResponse.data.data.map(mapCampaign));
+          nextUrl = firstResponse.data?.paging?.next || null;
+        }
+
+        while (nextUrl) {
+          const pageResponse = await axios.get(nextUrl);
+          if (pageResponse.data?.data) {
+            allCampaigns.push(...pageResponse.data.data.map(mapCampaign));
+            nextUrl = pageResponse.data?.paging?.next || null;
+          } else {
+            nextUrl = null;
+          }
+        }
 
         // Actualizar cache
-        campaigns.forEach((campaign: CampaignSpendData) => {
+        allCampaigns.forEach((campaign: CampaignSpendData) => {
           this.campaignCache.set(campaign.campaignId, campaign);
         });
 
         this.lastSyncTime = new Date();
-        return campaigns;
-      }
-
-      return [];
+        return allCampaigns;
     } catch (error) {
       // Mejorar logging del error para debugging
       console.error('🔴 Meta Ads API Error Details:', {
@@ -351,7 +365,7 @@ class MetaAdsService {
         fields: fields,
         level: 'adset',
         time_range: JSON.stringify(effectiveTimeRange),
-        limit: 100
+        limit: 200
       };
 
       // Si se especifica campaña, filtrar por nombre de campaña
@@ -363,94 +377,98 @@ class MetaAdsService {
         }]);
       }
 
-      const response = await axios.get(`${this.baseUrl}/${this.config.accountId}/insights`, { params });
-      
-      if (response.data?.data) {
-        const adsets = response.data.data.map((adset: any) => {
-          // Obtener estado actual del adset
-          const adsetStatus = adsetStatusData.find(ads => ads.id === adset.adset_id);
-          const isActive = adsetStatus?.effective_status === 'ACTIVE';
-          
-          // Extraer coste por resultado de Meta Ads para adsets
-          let costPerResult = 0;
-          
-          // Intentar obtener cost_per_result directamente (nueva estructura de Meta Ads)
-          if (adset.cost_per_result && Array.isArray(adset.cost_per_result)) {
-            // Nueva estructura: array de objetos con indicator y values
-            const conversationAction = adset.cost_per_result.find((item: any) =>
-              item.indicator?.includes('messaging_conversation') ||
-              item.indicator?.includes('total_messaging_connection') ||
-              item.indicator?.includes('lead')
-            );
-            
-            if (conversationAction && conversationAction.values && conversationAction.values[0]) {
-              const value = conversationAction.values[0].value || conversationAction.values[0];
-              costPerResult = parseFloat(value);
-            }
-          }
-          // Fallback a estructura antigua si no es array
-          else if (adset.cost_per_result && typeof adset.cost_per_result === 'string' && adset.cost_per_result !== "0") {
-            costPerResult = parseFloat(adset.cost_per_result || '0');
-          }
-          // Si no, intentar obtener de cost_per_action_type
-          else if (adset.cost_per_action_type && Array.isArray(adset.cost_per_action_type)) {
-            const leadCost = adset.cost_per_action_type.find((action: any) => 
-              action.action_type === 'lead' || 
-              action.action_type === 'onsite_conversion.lead_grouping' ||
-              action.action_type === 'messaging_conversation_started_7d' ||
-              action.action_type === 'onsite_conversion.total_messaging_connection' ||
-              action.action_type === 'messaging_conversation' ||
-              action.action_type === 'conversion'
-            );
-            if (leadCost && leadCost.value) {
-              costPerResult = parseFloat(leadCost.value);
-            }
-          }
-          
-          // Extraer cantidad de resultados (conversiones/leads) para adsets
-          let results = 0;
-          if (adset.actions && Array.isArray(adset.actions)) {
-            const resultsAction = adset.actions.find((action: any) => 
-              action.action_type === 'lead' || 
-              action.action_type === 'onsite_conversion.lead_grouping' ||
-              action.action_type === 'messaging_conversation_started_7d' ||
-              action.action_type === 'onsite_conversion.total_messaging_connection' ||
-              action.action_type === 'messaging_conversation' ||
-              action.action_type === 'conversion' ||
-              action.action_type === 'omni_initiated_checkout'
-            );
-            if (resultsAction && resultsAction.value) {
-              results = parseInt(resultsAction.value);
-            }
-          }
-          
-          return {
-            adsetId: adset.adset_id,
-            adsetName: adset.adset_name,
-            campaignId: adset.campaign_id,
-            campaignName: adset.campaign_name,
-            spend: parseFloat(adset.spend || '0'),
-            accountCurrency: adset.account_currency || 'ARS',
-            impressions: parseInt(adset.impressions || '0'),
-            clicks: parseInt(adset.clicks || '0'),
-            cpc: parseFloat(adset.cpc || '0'),
-            cpm: parseFloat(adset.cpm || '0'),
-            dateStart: adset.date_start,
-            dateStop: adset.date_stop,
-            lastUpdated: new Date(),
-            costPerResult: costPerResult,
-            results: results,
-            actions: adset.actions || [],
-            costPerActionType: adset.cost_per_action_type || [],
-            effectiveStatus: adsetStatus?.effective_status || 'UNKNOWN',
-            isActive: isActive
-          };
-        });
+      const mapAdset = (adset: any): AdsetSpendData => {
+        const adsetStatus = adsetStatusData.find(ads => ads.id === adset.adset_id);
+        const isActive = adsetStatus?.effective_status === 'ACTIVE';
 
-        return adsets;
+        let costPerResult = 0;
+
+        if (adset.cost_per_result && Array.isArray(adset.cost_per_result)) {
+          const conversationAction = adset.cost_per_result.find((item: any) =>
+            item.indicator?.includes('messaging_conversation') ||
+            item.indicator?.includes('total_messaging_connection') ||
+            item.indicator?.includes('lead')
+          );
+          if (conversationAction && conversationAction.values && conversationAction.values[0]) {
+            const value = conversationAction.values[0].value || conversationAction.values[0];
+            costPerResult = parseFloat(value);
+          }
+        } else if (adset.cost_per_result && typeof adset.cost_per_result === 'string' && adset.cost_per_result !== "0") {
+          costPerResult = parseFloat(adset.cost_per_result || '0');
+        } else if (adset.cost_per_action_type && Array.isArray(adset.cost_per_action_type)) {
+          const leadCost = adset.cost_per_action_type.find((action: any) =>
+            action.action_type === 'lead' ||
+            action.action_type === 'onsite_conversion.lead_grouping' ||
+            action.action_type === 'messaging_conversation_started_7d' ||
+            action.action_type === 'onsite_conversion.total_messaging_connection' ||
+            action.action_type === 'messaging_conversation' ||
+            action.action_type === 'conversion'
+          );
+          if (leadCost && leadCost.value) {
+            costPerResult = parseFloat(leadCost.value);
+          }
+        }
+
+        let results = 0;
+        if (adset.actions && Array.isArray(adset.actions)) {
+          const resultsAction = adset.actions.find((action: any) =>
+            action.action_type === 'lead' ||
+            action.action_type === 'onsite_conversion.lead_grouping' ||
+            action.action_type === 'messaging_conversation_started_7d' ||
+            action.action_type === 'onsite_conversion.total_messaging_connection' ||
+            action.action_type === 'messaging_conversation' ||
+            action.action_type === 'conversion' ||
+            action.action_type === 'omni_initiated_checkout'
+          );
+          if (resultsAction && resultsAction.value) {
+            results = parseInt(resultsAction.value);
+          }
+        }
+
+        return {
+          adsetId: adset.adset_id,
+          adsetName: adset.adset_name,
+          campaignId: adset.campaign_id,
+          campaignName: adset.campaign_name,
+          spend: parseFloat(adset.spend || '0'),
+          accountCurrency: adset.account_currency || 'ARS',
+          impressions: parseInt(adset.impressions || '0'),
+          clicks: parseInt(adset.clicks || '0'),
+          cpc: parseFloat(adset.cpc || '0'),
+          cpm: parseFloat(adset.cpm || '0'),
+          dateStart: adset.date_start,
+          dateStop: adset.date_stop,
+          lastUpdated: new Date(),
+          costPerResult: costPerResult,
+          results: results,
+          actions: adset.actions || [],
+          costPerActionType: adset.cost_per_action_type || [],
+          effectiveStatus: adsetStatus?.effective_status || 'UNKNOWN',
+          isActive: isActive
+        };
+      };
+
+      // Paginación completa — Meta usa cursor-based pagination
+      const allAdsets: AdsetSpendData[] = [];
+      let nextUrl: string | null = null;
+
+      const firstResponse = await axios.get(`${this.baseUrl}/${this.config.accountId}/insights`, { params });
+      if (firstResponse.data?.data) {
+        allAdsets.push(...firstResponse.data.data.map(mapAdset));
+        nextUrl = firstResponse.data?.paging?.next || null;
       }
 
-      return [];
+      while (nextUrl) {
+        const pageResponse = await axios.get(nextUrl);
+        if (pageResponse.data?.data) {
+          allAdsets.push(...pageResponse.data.data.map(mapAdset));
+          nextUrl = pageResponse.data?.paging?.next || null;
+        } else {
+          nextUrl = null;
+        }
+      }
+
+      return allAdsets;
     } catch (error) {
       throw new Error(`Meta Ads Adset API Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
