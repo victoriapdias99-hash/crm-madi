@@ -165,6 +165,7 @@ export default function CampanasManagement() {
   const watchedCosteVenta = form.watch("costeVenta");
   const watchedCantidad = form.watch("cantidadDatosSolicitados");
   const watchedTipoFact = form.watch("tipoFacturacion");
+  const watchedFacBruta = form.watch("facturacionBruta");
 
   const facturacionCalculada = useMemo(() => {
     const coste = parseFloat(String(watchedCosteVenta || "0")) || 0;
@@ -179,6 +180,16 @@ export default function CampanasManagement() {
       form.setValue("facturacionBruta", String(facturacionCalculada));
     }
   }, [facturacionCalculada, facturacionManual]);
+
+  // Cuando está en modo manual: auto-calcular costeVenta = FB / cantidad
+  useEffect(() => {
+    if (!facturacionManual) return;
+    const fb = parseFloat(String(watchedFacBruta || "0")) || 0;
+    const cant = parseInt(String(watchedCantidad || "0")) || 0;
+    if (fb > 0 && cant > 0) {
+      form.setValue("costeVenta", String((fb / cant).toFixed(2)));
+    }
+  }, [facturacionManual, watchedFacBruta, watchedCantidad]);
 
   // Fetch campañas comerciales
   const { data: campanas = [], isLoading } = useQuery({
@@ -1131,6 +1142,18 @@ export default function CampanasManagement() {
                             <p className="text-xs text-amber-600">
                               Valor automático (referencia): ${facturacionCalculada.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </p>
+                            {(() => {
+                              const fb = parseFloat(String(watchedFacBruta || "0")) || 0;
+                              const cant = parseInt(String(watchedCantidad || "0")) || 0;
+                              if (fb > 0 && cant > 0) {
+                                return (
+                                  <p className="text-xs text-blue-600 font-medium">
+                                    Valor del Lead calculado: ${(fb / cant).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} por lead
+                                  </p>
+                                );
+                              }
+                              return null;
+                            })()}
                             <FormMessage />
                           </FormItem>
                         )}
