@@ -531,17 +531,20 @@ class MetaAdsService {
             return zonaKeywords.some(kw => name.includes(kw));
           });
 
-      // Si no hay adsets que coincidan con la zona, usar todos (fallback)
-      const adsetsToUse = filteredAdsets.length > 0 ? filteredAdsets : adsets;
+      if (filteredAdsets.length === 0) {
+        console.log(`[SpendByCampaign] marca="${marca}" zona="${zona}" ${fechaInicio}→${dateRange.until} → Sin adsets con zona en el nombre. Retornando 0.`);
+        console.log(`  Adset names disponibles: ${adsets.map(a => a.adsetName).join(' | ')}`);
+        return { spend: 0, results: 0, cpl: 0 };
+      }
 
-      const totalSpend = adsetsToUse.reduce((sum, a) => sum + (a.spend || 0), 0);
-      const totalResults = adsetsToUse.reduce((sum, a) => sum + (a.results || 0), 0);
+      const totalSpend = filteredAdsets.reduce((sum, a) => sum + (a.spend || 0), 0);
+      const totalResults = filteredAdsets.reduce((sum, a) => sum + (a.results || 0), 0);
       const cpl = totalResults > 0 ? totalSpend / totalResults : 0;
 
       console.log(`[SpendByCampaign] marca="${marca}" zona="${zona}" ${fechaInicio}→${dateRange.until}`);
-      console.log(`  Adsets totales: ${adsets.length} | Con filtro zona: ${filteredAdsets.length} | Usando: ${adsetsToUse.length}`);
+      console.log(`  Adsets totales: ${adsets.length} | Con filtro zona: ${filteredAdsets.length}`);
       console.log(`  Adset names: ${adsets.map(a => a.adsetName).join(' | ')}`);
-      console.log(`  Spend por adset: ${adsetsToUse.map(a => `${a.adsetName}=$${a.spend}`).join(' | ')}`);
+      console.log(`  Spend por adset: ${filteredAdsets.map(a => `${a.adsetName}=$${a.spend}`).join(' | ')}`);
       console.log(`  TOTAL spend: $${totalSpend} | results: ${totalResults} | CPL: $${cpl.toFixed(2)}`);
 
       return { spend: totalSpend, results: totalResults, cpl };

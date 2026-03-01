@@ -1079,6 +1079,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       tipoFacturacion: campana.tipoFacturacion ?? "C",
       costeVenta: campana.costeVenta,
       metaCampanaFiltro: campana.metaCampanaFiltro ?? null,
+      metaFechaFin: campana.metaFechaFin ?? null,
       pedidosPorDia: campana.pedidosPorDia ?? 0,
       pedidosTotal: campana.cantidadDatosSolicitados,
       faltantes: tieneCampanaAnterior
@@ -1158,6 +1159,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tipoFacturacion: campanasComerciales.tipoFacturacion,
           costeVenta: campanasComerciales.costeVenta,
           metaCampanaFiltro: campanasComerciales.metaCampanaFiltro,
+          metaFechaFin: campanasComerciales.metaFechaFin,
           pedidosPorDia: campanasComerciales.pedidosPorDia,
           asignacionAutomatica: campanasComerciales.asignacionAutomatica,
           // Cliente data (JOIN)
@@ -1394,6 +1396,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             tipoFacturacion: campana.tipoFacturacion ?? "C",
             costeVenta: campana.costeVenta,
             metaCampanaFiltro: campana.metaCampanaFiltro ?? null,
+            metaFechaFin: campana.metaFechaFin ?? null,
             pedidosPorDia: campana.pedidosPorDia ?? 0, // Campo "Día" desde tabla campañas
             pedidosTotal: campana.cantidadDatosSolicitados, // Campo "Pedidos Total" (Datos Solicitados)
             faltantes: tieneCampanaAnterior

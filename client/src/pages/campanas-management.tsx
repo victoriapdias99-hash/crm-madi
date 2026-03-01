@@ -158,6 +158,7 @@ export default function CampanasManagement() {
       costeVenta: "0",
       facturacionBruta: "0",
       metaCampanaFiltro: "",
+      metaFechaFin: "",
     },
   });
 
@@ -391,6 +392,7 @@ export default function CampanasManagement() {
         costeVenta: campana.costeVenta || "0",
         facturacionBruta: campana.facturacionBruta || "0",
         metaCampanaFiltro: campana.metaCampanaFiltro || "",
+        metaFechaFin: campana.metaFechaFin || "",
       });
     } else {
       setEditingCampana(null);
@@ -422,6 +424,7 @@ export default function CampanasManagement() {
         costeVenta: "0",
         facturacionBruta: "0",
         metaCampanaFiltro: "",
+        metaFechaFin: "",
       });
     }
     setIsDialogOpen(true);
@@ -441,6 +444,7 @@ export default function CampanasManagement() {
       costeVenta: campana.costeVenta || "0",
       facturacionBruta: campana.facturacionBruta || "0",
       metaCampanaFiltro: campana.metaCampanaFiltro || "",
+      metaFechaFin: "",
     });
     setFacturacionManual(false);
     setIsDialogOpen(true);
@@ -1020,6 +1024,28 @@ export default function CampanasManagement() {
                         </FormControl>
                         <p className="text-xs text-muted-foreground">
                           Nombre exacto de la campaña en Meta Ads para filtrar el gasto. Útil cuando la marca aparece en múltiples campañas.
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Fecha Fin Meta Ads */}
+                  <FormField
+                    control={form.control}
+                    name="metaFechaFin"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Fecha Fin Meta Ads (opcional)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            {...field}
+                            value={field.value || ""}
+                          />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">
+                          Limita la consulta de gasto hasta esta fecha. Útil para campañas activas que solo deben mostrar el gasto de un período específico (ej: enero 2026).
                         </p>
                         <FormMessage />
                       </FormItem>

@@ -57,6 +57,7 @@ interface DatosDiariosData {
   fechaFinReal: string | null;
   fechaFin?: string | null;
   metaCampanaFiltro?: string | null;
+  metaFechaFin?: string | null;
   cantidadSolicitada: number;
   cantidadDatosSolicitados?: number;
   diasProcesados: number;
@@ -208,7 +209,7 @@ export default function CampanasPendientes() {
     const uniqueKeys = new Map<string, { marca: string; zona: string; fechaInicio: string; fechaFin: string; metaCampanaFiltro?: string | null }>();
     datosDiarios.forEach(d => {
       const fi = d.fechaCampana || today;
-      const ff = d.fechaFin || today;
+      const ff = d.metaFechaFin || d.fechaFin || today;
       const key = makeSpendKey(d.marca || '', d.zona || 'NACIONAL', fi, ff, d.metaCampanaFiltro);
       if (!uniqueKeys.has(key)) uniqueKeys.set(key, { marca: d.marca || '', zona: d.zona || 'NACIONAL', fechaInicio: fi, fechaFin: ff, metaCampanaFiltro: d.metaCampanaFiltro });
     });
@@ -1144,7 +1145,7 @@ export default function CampanasPendientes() {
                             {(() => {
                               const today = new Date().toISOString().split('T')[0];
                               const fi = data.fechaCampana || today;
-                              const ff = (data.fechaFin as string) || today;
+                              const ff = data.metaFechaFin || (data.fechaFin as string) || today;
                               const sk = makeSpendKey(data.marca || '', data.zona || 'NACIONAL', fi, ff, data.metaCampanaFiltro);
                               const spendData = spendMap.get(sk) || { spend: 0, results: 0, cpl: 0 };
                               const fb = parseFloat(String(data.facturacionBruta || 0)) || 0;
@@ -1162,13 +1163,26 @@ export default function CampanasPendientes() {
                               const margenSinMerma = fb > 0 ? ((beneficio + merma) / fb) * 100 : 0;
                               const fmtCur = (v: number) => v === 0 ? '$0' : v.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
                               const hasMeta = spendData.spend > 0 || spendData.results > 0;
+                              const fmtDate = (d: string) => d ? d.split('-').reverse().join('/') : '?';
                               return (
                                 <>
                                   <td className="px-4 py-3 text-center text-sm">
                                     {fb > 0 ? <span className="font-semibold text-violet-700">{fmtCur(fb)}</span> : <span className="text-slate-400">-</span>}
                                   </td>
                                   <td className="px-4 py-3 text-center text-sm">
-                                    {hasMeta ? <span className="font-semibold text-violet-700">{fmtCur(spendData.spend)}</span> : <span className="text-slate-400">-</span>}
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span className="cursor-help">
+                                            {hasMeta ? <span className="font-semibold text-violet-700">{fmtCur(spendData.spend)}</span> : <span className="text-slate-400">-</span>}
+                                          </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="top" className="text-xs">
+                                          <p>Período consultado:</p>
+                                          <p className="font-semibold">{fmtDate(fi)} → {fmtDate(ff)}</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
                                   </td>
                                   <td className="px-4 py-3 text-center text-sm">
                                     {fb > 0 ? <span className="text-violet-600">{fmtCur(iibb)}</span> : <span className="text-slate-400">-</span>}

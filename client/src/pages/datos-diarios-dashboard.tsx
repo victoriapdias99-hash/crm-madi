@@ -15,6 +15,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useDashboardWebSocket } from "@/hooks/use-dashboard-websocket";
 import { Navigation } from "@/components/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useLocation } from "wouter";
 import { CPLStorage } from "@/lib/cpl-storage";
@@ -69,6 +70,7 @@ interface DatosDiariosData {
   tipoFacturacion?: string;
   costeVenta?: number;
   metaCampanaFiltro?: string | null;
+  metaFechaFin?: string | null;
   campaignId?: number;
 }
 
@@ -465,7 +467,7 @@ export default function DatosDiariosDashboard() {
     const uniqueKeys = new Map<string, { marca: string; zona: string; fechaInicio: string; fechaFin: string; metaCampanaFiltro?: string | null }>();
     datosDiarios.forEach(d => {
       const fi = d.fechaCampana || today;
-      const ff = d.fechaFin || today;
+      const ff = d.metaFechaFin || d.fechaFin || today;
       const key = makeSpendKey(d.marca || '', d.zona || 'NACIONAL', fi, ff, d.metaCampanaFiltro);
       if (!uniqueKeys.has(key)) uniqueKeys.set(key, { marca: d.marca || '', zona: d.zona || 'NACIONAL', fechaInicio: fi, fechaFin: ff, metaCampanaFiltro: d.metaCampanaFiltro });
     });
@@ -1963,7 +1965,7 @@ export default function DatosDiariosDashboard() {
                         {(() => {
                           const today = new Date().toISOString().split('T')[0];
                           const fi = data.fechaCampana || today;
-                          const ff = (data.fechaFin as string) || today;
+                          const ff = data.metaFechaFin || (data.fechaFin as string) || today;
                           const sk = makeSpendKey(data.marca || '', data.zona || 'NACIONAL', fi, ff, data.metaCampanaFiltro);
                           const spendData = spendMap.get(sk) || { spend: 0, results: 0, cpl: 0 };
                           const fb = parseFloat(String(data.facturacionBruta || 0)) || 0;
@@ -1981,13 +1983,26 @@ export default function DatosDiariosDashboard() {
                           const margenSinMerma = fb > 0 ? ((beneficio + merma) / fb) * 100 : 0;
                           const fmtCur = (v: number) => v === 0 ? '$0' : v.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
                           const hasMeta = spendData.spend > 0 || spendData.results > 0;
+                          const fmtDate = (d: string) => d ? d.split('-').reverse().join('/') : '?';
                           return (
                             <>
                               <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
                                 {fb > 0 ? <span className="font-semibold text-violet-700 dark:text-violet-300">{fmtCur(fb)}</span> : <span className="text-gray-400">-</span>}
                               </td>
                               <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
-                                {hasMeta ? <span className="font-semibold text-violet-700 dark:text-violet-300">{fmtCur(spendData.spend)}</span> : <span className="text-gray-400">-</span>}
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="cursor-help">
+                                        {hasMeta ? <span className="font-semibold text-violet-700 dark:text-violet-300">{fmtCur(spendData.spend)}</span> : <span className="text-gray-400">-</span>}
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="text-xs">
+                                      <p>Período consultado:</p>
+                                      <p className="font-semibold">{fmtDate(fi)} → {fmtDate(ff)}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               </td>
                               <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
                                 {fb > 0 ? <span className="text-violet-600 dark:text-violet-400">{fmtCur(iibb)}</span> : <span className="text-gray-400">-</span>}
@@ -2379,7 +2394,7 @@ export default function DatosDiariosDashboard() {
                         {(() => {
                           const today = new Date().toISOString().split('T')[0];
                           const fi = data.fechaCampana || today;
-                          const ff = (data.fechaFin as string) || today;
+                          const ff = data.metaFechaFin || (data.fechaFin as string) || today;
                           const sk = makeSpendKey(data.marca || '', data.zona || 'NACIONAL', fi, ff, data.metaCampanaFiltro);
                           const spendData = spendMap.get(sk) || { spend: 0, results: 0, cpl: 0 };
                           const fb = parseFloat(String(data.facturacionBruta || 0)) || 0;
@@ -2397,13 +2412,26 @@ export default function DatosDiariosDashboard() {
                           const margenSinMerma = fb > 0 ? ((beneficio + merma) / fb) * 100 : 0;
                           const fmtCur = (v: number) => v === 0 ? '$0' : v.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
                           const hasMeta = spendData.spend > 0 || spendData.results > 0;
+                          const fmtDate = (d: string) => d ? d.split('-').reverse().join('/') : '?';
                           return (
                             <>
                               <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
                                 {fb > 0 ? <span className="font-semibold text-violet-700 dark:text-violet-300">{fmtCur(fb)}</span> : <span className="text-gray-400">-</span>}
                               </td>
                               <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
-                                {hasMeta ? <span className="font-semibold text-violet-700 dark:text-violet-300">{fmtCur(spendData.spend)}</span> : <span className="text-gray-400">-</span>}
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="cursor-help">
+                                        {hasMeta ? <span className="font-semibold text-violet-700 dark:text-violet-300">{fmtCur(spendData.spend)}</span> : <span className="text-gray-400">-</span>}
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="text-xs">
+                                      <p>Período consultado:</p>
+                                      <p className="font-semibold">{fmtDate(fi)} → {fmtDate(ff)}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               </td>
                               <td className="border border-violet-200 dark:border-violet-600 p-2 text-center text-sm">
                                 {fb > 0 ? <span className="text-violet-600 dark:text-violet-400">{fmtCur(iibb)}</span> : <span className="text-gray-400">-</span>}
