@@ -460,17 +460,21 @@ export default function DatosDiariosDashboard() {
 
   // Mapa de gasto Meta Ads: key = marca|zona|fechaInicio|fechaFin => { spend, results, cpl }
   const [spendMap, setSpendMap] = useState<Map<string, { spend: number; results: number; cpl: number }>>(new Map());
+  const [campaignCountMap, setCampaignCountMap] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     if (!datosDiarios || datosDiarios.length === 0) return;
     const today = new Date().toISOString().split('T')[0];
     const uniqueKeys = new Map<string, { marca: string; zona: string; fechaInicio: string; fechaFin: string; metaCampanaFiltro?: string | null }>();
+    const countMap = new Map<string, number>();
     datosDiarios.forEach(d => {
       const fi = d.fechaCampana || today;
       const ff = d.metaFechaFin || d.fechaFin || today;
       const key = makeSpendKey(d.marca || '', d.zona || 'NACIONAL', fi, ff, d.metaCampanaFiltro);
       if (!uniqueKeys.has(key)) uniqueKeys.set(key, { marca: d.marca || '', zona: d.zona || 'NACIONAL', fechaInicio: fi, fechaFin: ff, metaCampanaFiltro: d.metaCampanaFiltro });
+      countMap.set(key, (countMap.get(key) || 0) + 1);
     });
+    setCampaignCountMap(countMap);
     setSpendMap(new Map());
     [...uniqueKeys.entries()].forEach(async ([key, p]) => {
       try {
@@ -1967,22 +1971,25 @@ export default function DatosDiariosDashboard() {
                           const fi = data.fechaCampana || today;
                           const ff = data.metaFechaFin || (data.fechaFin as string) || today;
                           const sk = makeSpendKey(data.marca || '', data.zona || 'NACIONAL', fi, ff, data.metaCampanaFiltro);
-                          const spendData = spendMap.get(sk) || { spend: 0, results: 0, cpl: 0 };
+                          const rawSpend = spendMap.get(sk) || { spend: 0, results: 0, cpl: 0 };
+                          const divisor = campaignCountMap.get(sk) || 1;
+                          const spend = rawSpend.spend / divisor;
+                          const results = rawSpend.results / divisor;
+                          const cplActual = results > 0 ? spend / results : 0;
                           const fb = parseFloat(String(data.facturacionBruta || 0)) || 0;
                           const tf = data.tipoFacturacion || 'C';
                           const iibb = calcularIIBB(fb);
                           const iva = calcularIVA(fb, tf);
-                          const impTarjeta = calcularImpuestoTarjeta(spendData.spend);
-                          const beneficio = calcularBeneficio(fb, spendData.spend, iibb, iva, impTarjeta);
+                          const impTarjeta = calcularImpuestoTarjeta(spend);
+                          const beneficio = calcularBeneficio(fb, spend, iibb, iva, impTarjeta);
                           const margen = calcularMargenReal(beneficio, fb);
-                          const cplActual = spendData.results > 0 ? spendData.spend / spendData.results : 0;
                           const safeEnv = parseFloat(String(data.enviados || 0)) || 0;
                           const safePed = parseFloat(String(data.pedidosTotal || 0)) || 0;
                           const reposiciones = Math.max(0, safeEnv - safePed);
                           const merma = reposiciones * cplActual;
                           const margenSinMerma = fb > 0 ? ((beneficio + merma) / fb) * 100 : 0;
                           const fmtCur = (v: number) => v === 0 ? '$0' : v.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
-                          const hasMeta = spendData.spend > 0 || spendData.results > 0;
+                          const hasMeta = spend > 0 || results > 0;
                           const fmtDate = (d: string) => d ? d.split('-').reverse().join('/') : '?';
                           return (
                             <>
@@ -1994,12 +2001,12 @@ export default function DatosDiariosDashboard() {
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <span className="cursor-help">
-                                        {hasMeta ? <span className="font-semibold text-violet-700 dark:text-violet-300">{fmtCur(spendData.spend)}</span> : <span className="text-gray-400">-</span>}
+                                        {hasMeta ? <span className="font-semibold text-violet-700 dark:text-violet-300">{fmtCur(spend)}</span> : <span className="text-gray-400">-</span>}
                                       </span>
                                     </TooltipTrigger>
                                     <TooltipContent side="top" className="text-xs">
-                                      <p>Período consultado:</p>
-                                      <p className="font-semibold">{fmtDate(fi)} → {fmtDate(ff)}</p>
+                                      <p>Período: {fmtDate(fi)} → {fmtDate(ff)}</p>
+                                      {divisor > 1 && <p className="font-semibold text-amber-400">Total Meta: {fmtCur(rawSpend.spend)} ÷ {divisor} campañas</p>}
                                     </TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
@@ -2396,22 +2403,25 @@ export default function DatosDiariosDashboard() {
                           const fi = data.fechaCampana || today;
                           const ff = data.metaFechaFin || (data.fechaFin as string) || today;
                           const sk = makeSpendKey(data.marca || '', data.zona || 'NACIONAL', fi, ff, data.metaCampanaFiltro);
-                          const spendData = spendMap.get(sk) || { spend: 0, results: 0, cpl: 0 };
+                          const rawSpend = spendMap.get(sk) || { spend: 0, results: 0, cpl: 0 };
+                          const divisor = campaignCountMap.get(sk) || 1;
+                          const spend = rawSpend.spend / divisor;
+                          const results = rawSpend.results / divisor;
+                          const cplActual = results > 0 ? spend / results : 0;
                           const fb = parseFloat(String(data.facturacionBruta || 0)) || 0;
                           const tf = data.tipoFacturacion || 'C';
                           const iibb = calcularIIBB(fb);
                           const iva = calcularIVA(fb, tf);
-                          const impTarjeta = calcularImpuestoTarjeta(spendData.spend);
-                          const beneficio = calcularBeneficio(fb, spendData.spend, iibb, iva, impTarjeta);
+                          const impTarjeta = calcularImpuestoTarjeta(spend);
+                          const beneficio = calcularBeneficio(fb, spend, iibb, iva, impTarjeta);
                           const margen = calcularMargenReal(beneficio, fb);
-                          const cplActual = spendData.results > 0 ? spendData.spend / spendData.results : 0;
                           const safeEnv = parseFloat(String(data.enviados || 0)) || 0;
                           const safePed = parseFloat(String(data.pedidosTotal || 0)) || 0;
                           const reposiciones = Math.max(0, safeEnv - safePed);
                           const merma = reposiciones * cplActual;
                           const margenSinMerma = fb > 0 ? ((beneficio + merma) / fb) * 100 : 0;
                           const fmtCur = (v: number) => v === 0 ? '$0' : v.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
-                          const hasMeta = spendData.spend > 0 || spendData.results > 0;
+                          const hasMeta = spend > 0 || results > 0;
                           const fmtDate = (d: string) => d ? d.split('-').reverse().join('/') : '?';
                           return (
                             <>
@@ -2423,12 +2433,12 @@ export default function DatosDiariosDashboard() {
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <span className="cursor-help">
-                                        {hasMeta ? <span className="font-semibold text-violet-700 dark:text-violet-300">{fmtCur(spendData.spend)}</span> : <span className="text-gray-400">-</span>}
+                                        {hasMeta ? <span className="font-semibold text-violet-700 dark:text-violet-300">{fmtCur(spend)}</span> : <span className="text-gray-400">-</span>}
                                       </span>
                                     </TooltipTrigger>
                                     <TooltipContent side="top" className="text-xs">
-                                      <p>Período consultado:</p>
-                                      <p className="font-semibold">{fmtDate(fi)} → {fmtDate(ff)}</p>
+                                      <p>Período: {fmtDate(fi)} → {fmtDate(ff)}</p>
+                                      {divisor > 1 && <p className="font-semibold text-amber-400">Total Meta: {fmtCur(rawSpend.spend)} ÷ {divisor} campañas</p>}
                                     </TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
