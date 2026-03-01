@@ -19,7 +19,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useLocation } from "wouter";
 import { CPLStorage } from "@/lib/cpl-storage";
-import { calcularIIBB, calcularIVA, calcularImpuestoTarjeta, calcularBeneficio, calcularMargenReal, makeSpendKey } from "@/lib/financial-utils";
+import { calcularIIBB, calcularIVA, calcularImpuestoTarjeta, calcularBeneficio, calcularMargenReal, makeSpendKey, getDefaultFechaFin } from "@/lib/financial-utils";
 import { debounce, memoize, measurePerformance } from "@/lib/performance";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -469,7 +469,7 @@ export default function DatosDiariosDashboard() {
     const countMap = new Map<string, number>();
     datosDiarios.forEach(d => {
       const fi = d.fechaCampana || today;
-      const ff = d.metaFechaFin || d.fechaFin || today;
+      const ff = d.metaFechaFin || d.fechaFin || getDefaultFechaFin(d.fechaCampana);
       const key = makeSpendKey(d.marca || '', d.zona || 'NACIONAL', fi, ff, d.metaCampanaFiltro);
       if (!uniqueKeys.has(key)) uniqueKeys.set(key, { marca: d.marca || '', zona: d.zona || 'NACIONAL', fechaInicio: fi, fechaFin: ff, metaCampanaFiltro: d.metaCampanaFiltro });
       countMap.set(key, (countMap.get(key) || 0) + 1);
@@ -1969,7 +1969,7 @@ export default function DatosDiariosDashboard() {
                         {(() => {
                           const today = new Date().toISOString().split('T')[0];
                           const fi = data.fechaCampana || today;
-                          const ff = data.metaFechaFin || (data.fechaFin as string) || today;
+                          const ff = data.metaFechaFin || (data.fechaFin as string) || getDefaultFechaFin(data.fechaCampana);
                           const sk = makeSpendKey(data.marca || '', data.zona || 'NACIONAL', fi, ff, data.metaCampanaFiltro);
                           const rawSpend = spendMap.get(sk) || { spend: 0, results: 0, cpl: 0 };
                           const divisor = campaignCountMap.get(sk) || 1;
@@ -2401,7 +2401,7 @@ export default function DatosDiariosDashboard() {
                         {(() => {
                           const today = new Date().toISOString().split('T')[0];
                           const fi = data.fechaCampana || today;
-                          const ff = data.metaFechaFin || (data.fechaFin as string) || today;
+                          const ff = data.metaFechaFin || (data.fechaFin as string) || getDefaultFechaFin(data.fechaCampana);
                           const sk = makeSpendKey(data.marca || '', data.zona || 'NACIONAL', fi, ff, data.metaCampanaFiltro);
                           const rawSpend = spendMap.get(sk) || { spend: 0, results: 0, cpl: 0 };
                           const divisor = campaignCountMap.get(sk) || 1;

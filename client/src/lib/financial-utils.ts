@@ -55,3 +55,24 @@ export function makeSpendKey(marca: string, zona: string, fechaInicio: string, f
   const filtro = metaCampanaFiltro && metaCampanaFiltro.trim() ? metaCampanaFiltro.trim() : marca;
   return `${filtro}|${zona}|${fechaInicio}|${fechaFin}`;
 }
+
+/**
+ * Calcula la fecha fin predeterminada para una consulta de Meta Ads.
+ * - Si la campaña es de un mes pasado: usa el último día de ese mes (no acumula meses siguientes).
+ * - Si la campaña es del mes actual o futuro: usa hoy.
+ * Siempre puede ser sobreescrita por metaFechaFin o fechaFin del backend.
+ */
+export function getDefaultFechaFin(fechaCampana: string | null | undefined): string {
+  const today = new Date().toISOString().split('T')[0];
+  if (!fechaCampana) return today;
+  const [year, month] = fechaCampana.split('-').map(Number);
+  if (isNaN(year) || isNaN(month)) return today;
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  if (year < currentYear || (year === currentYear && month < currentMonth)) {
+    const lastDay = new Date(year, month, 0);
+    return lastDay.toISOString().split('T')[0];
+  }
+  return today;
+}
