@@ -6,16 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Settings, Key, RefreshCw, Clock } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { CheckCircle, XCircle, Settings, Key, RefreshCw, Clock, AlertTriangle, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Navigation } from "@/components/navigation";
-
-interface ConfigFormData {
-  accessToken: string;
-  accountId: string;
-  appSecret: string;
-}
 
 interface TokenStatus {
   expiresAt: string | null;
@@ -23,11 +18,18 @@ interface TokenStatus {
   lastRefreshed: string | null;
   tokenType: string;
   hasToken: boolean;
+  isExpired?: boolean;
 }
 
-function TokenStatusBadge({ days }: { days: number | null }) {
+function TokenStatusBadge({ days, isExpired }: { days: number | null; isExpired?: boolean }) {
+  if (isExpired) {
+    return <Badge className="bg-red-600 text-white animate-pulse">VENCIDO</Badge>;
+  }
   if (days === null) {
-    return <Badge variant="secondary">Sin vencimiento</Badge>;
+    return <Badge variant="secondary">Sin vencimiento conocido</Badge>;
+  }
+  if (days <= 0) {
+    return <Badge className="bg-red-600 text-white animate-pulse">VENCIDO</Badge>;
   }
   if (days < 5) {
     return <Badge className="bg-red-500 text-white">{days} días restantes</Badge>;
@@ -41,8 +43,9 @@ function TokenStatusBadge({ days }: { days: number | null }) {
 export default function MetaAdsConfig() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
-  const [formData, setFormData] = useState<ConfigFormData>({
+
+  const [newToken, setNewToken] = useState('');
+  const [fullConfigData, setFullConfigData] = useState({
     accessToken: '',
     accountId: 'act_9696169217103588',
     appSecret: ''
@@ -51,17 +54,64 @@ export default function MetaAdsConfig() {
   const tokenStatusQuery = useQuery<TokenStatus>({
     queryKey: ['/api/meta-ads/token-status'],
     retry: false,
-    refetchInterval: 60000,
+    refetchInterval: 30000,
+  });
+
+  const tokenStatus = tokenStatusQuery.data;
+  const tokenExpiredOrLow = tokenStatus && (tokenStatus.isExpired || (tokenStatus.daysRemaining !== null && tokenStatus.daysRemaining < 10));
+
+  // Mutación para actualizar solo el token
+  const updateTokenMutation = useMutation({
+    mutationFn: async (token: string) => {
+      return await apiRequest('/api/meta-ads/update-token', {
+        method: 'POST',
+        body: JSON.stringify({ accessToken: token }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Token actualizado",
+        description: data?.message || "El token fue actualizado y verificado correctamente",
+      });
+      setNewToken('');
+      queryClient.invalidateQueries({ queryKey: ['/api/meta-ads/token-status'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error al actualizar token",
+        description: error.message || "No se pudo actualizar el token",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const refreshTokenMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest('/api/meta-ads/token-refresh', { method: 'POST' });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Verificación completada",
+        description: "Se verificó el estado del token",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/meta-ads/token-status'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo verificar el token",
+        variant: "destructive",
+      });
+    },
   });
 
   const configMutation = useMutation({
-    mutationFn: async (data: ConfigFormData) => {
+    mutationFn: async (data: typeof fullConfigData) => {
       return await apiRequest('/api/meta-ads/config', {
         method: 'POST',
         body: JSON.stringify(data),
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Content-Type': 'application/json' }
       });
     },
     onSuccess: () => {
@@ -69,7 +119,7 @@ export default function MetaAdsConfig() {
         title: "Configuración exitosa",
         description: "Meta Ads API configurado correctamente",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/meta-ads/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/meta-ads/token-status'] });
     },
     onError: (error: any) => {
       toast({
@@ -80,69 +130,114 @@ export default function MetaAdsConfig() {
     },
   });
 
-  const refreshTokenMutation = useMutation({
-    mutationFn: async () => {
-      return await apiRequest('/api/meta-ads/token-refresh', {
-        method: 'POST',
-      });
-    },
-    onSuccess: () => {
+  const handleUpdateToken = () => {
+    if (!newToken.trim()) {
       toast({
-        title: "Token refrescado",
-        description: "El token de Meta Ads fue renovado correctamente",
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/meta-ads/token-status'] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error al refrescar token",
-        description: error.message || "No se pudo renovar el token",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.accessToken || !formData.accountId || !formData.appSecret) {
-      toast({
-        title: "Campos requeridos",
-        description: "Por favor completa todos los campos",
+        title: "Token requerido",
+        description: "Pega el nuevo access token en el campo",
         variant: "destructive",
       });
       return;
     }
-    configMutation.mutate(formData);
+    updateTokenMutation.mutate(newToken.trim());
   };
-
-  const handleInputChange = (field: keyof ConfigFormData, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const tokenStatus = tokenStatusQuery.data;
 
   return (
     <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
       <Navigation />
-      
+
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="text-center">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Configuración Meta Ads API
           </h1>
           <p className="text-gray-600 mt-2">
-            Configura las credenciales para conectar con Meta Ads
+            Administrá las credenciales de Meta Ads para datos de gasto y campañas
           </p>
         </div>
 
-        {/* Estado del token actual */}
-        <Card className="shadow-lg border-2 border-blue-100">
+        {/* ALERTA: Token vencido o por vencer */}
+        {tokenExpiredOrLow && (
+          <Alert className="border-red-400 bg-red-50">
+            <AlertTriangle className="h-5 w-5 text-red-600" />
+            <AlertDescription className="text-red-800">
+              <strong>
+                {tokenStatus?.isExpired || (tokenStatus?.daysRemaining !== null && tokenStatus?.daysRemaining! <= 0)
+                  ? '⚠️ El token de Meta Ads ha VENCIDO.'
+                  : `⚠️ El token vence en ${tokenStatus?.daysRemaining} días.`}
+              </strong>
+              <br />
+              Generá un nuevo token en el Graph API Explorer y pegalo en la sección de abajo para restablecer la conexión.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* SECCIÓN PRINCIPAL: Actualizar Token */}
+        <Card className={`shadow-lg border-2 ${tokenExpiredOrLow ? 'border-red-300' : 'border-blue-200'}`}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-blue-600" />
+              <Key className={`h-5 w-5 ${tokenExpiredOrLow ? 'text-red-600' : 'text-blue-600'}`} />
+              Actualizar Access Token
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert className="border-blue-200 bg-blue-50">
+              <AlertDescription>
+                <strong>¿Cómo obtener un nuevo token?</strong>
+                <ol className="list-decimal ml-4 mt-2 space-y-1 text-sm">
+                  <li>
+                    Ir al{' '}
+                    <a
+                      href="https://developers.facebook.com/tools/explorer/?app_id=1282943593506408"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 underline inline-flex items-center gap-1"
+                    >
+                      Graph API Explorer <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </li>
+                  <li>Seleccionar la app <strong>MADI</strong> (App ID: 1282943593506408)</li>
+                  <li>Hacer clic en <strong>"Generate Access Token"</strong></li>
+                  <li>Conceder los permisos: <code className="bg-gray-100 px-1 rounded">ads_read</code>, <code className="bg-gray-100 px-1 rounded">ads_management</code></li>
+                  <li>Copiar el token generado y pegarlo abajo</li>
+                </ol>
+              </AlertDescription>
+            </Alert>
+
+            <div>
+              <Label htmlFor="newToken">Nuevo Access Token</Label>
+              <Textarea
+                id="newToken"
+                value={newToken}
+                onChange={(e) => setNewToken(e.target.value)}
+                placeholder="EAAxxxxxxxxxx..."
+                className="mt-1 font-mono text-sm"
+                rows={3}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                El sistema intentará canjearlo por un token de larga duración (~60 días) automáticamente.
+              </p>
+            </div>
+
+            <Button
+              onClick={handleUpdateToken}
+              disabled={updateTokenMutation.isPending || !newToken.trim()}
+              className={`w-full ${tokenExpiredOrLow ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'} text-white`}
+            >
+              {updateTokenMutation.isPending ? (
+                <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Verificando y guardando...</>
+              ) : (
+                <><CheckCircle className="h-4 w-4 mr-2" />Actualizar Token</>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Estado del token actual */}
+        <Card className="shadow-lg border-2 border-gray-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-gray-600" />
               Estado del Token Actual
             </CardTitle>
           </CardHeader>
@@ -153,7 +248,7 @@ export default function MetaAdsConfig() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-gray-700">Estado:</span>
-                  <TokenStatusBadge days={tokenStatus.daysRemaining} />
+                  <TokenStatusBadge days={tokenStatus.daysRemaining} isExpired={tokenStatus.isExpired} />
                 </div>
                 {tokenStatus.expiresAt && (
                   <div className="flex items-center justify-between">
@@ -163,9 +258,15 @@ export default function MetaAdsConfig() {
                     </span>
                   </div>
                 )}
+                {!tokenStatus.expiresAt && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700">Vencimiento:</span>
+                    <span className="text-sm text-amber-600 font-medium">No determinado — puede estar vencido</span>
+                  </div>
+                )}
                 {tokenStatus.lastRefreshed && (
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700">Último refresco:</span>
+                    <span className="text-sm font-medium text-gray-700">Último update:</span>
                     <span className="text-sm text-gray-600">
                       {new Date(tokenStatus.lastRefreshed).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
                     </span>
@@ -173,13 +274,9 @@ export default function MetaAdsConfig() {
                 )}
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-gray-700">Tipo:</span>
-                  <span className="text-sm text-gray-600 capitalize">{tokenStatus.tokenType}</span>
+                  <span className="text-sm text-gray-600 capitalize font-mono">{tokenStatus.tokenType}</span>
                 </div>
                 <div className="pt-2 border-t">
-                  <p className="text-xs text-gray-500 mb-2">
-                    El token se renueva automáticamente cuando quedan menos de 15 días para vencer.
-                    También puedes forzar un refresco manual:
-                  </p>
                   <Button
                     variant="outline"
                     size="sm"
@@ -188,143 +285,119 @@ export default function MetaAdsConfig() {
                     className="w-full"
                   >
                     <RefreshCw className={`h-4 w-4 mr-2 ${refreshTokenMutation.isPending ? 'animate-spin' : ''}`} />
-                    {refreshTokenMutation.isPending ? 'Refrescando...' : 'Refrescar Token Ahora'}
+                    {refreshTokenMutation.isPending ? 'Verificando...' : 'Verificar Token con Meta'}
                   </Button>
                 </div>
               </div>
             ) : (
               <div className="flex items-center gap-2 text-orange-600">
                 <XCircle className="h-4 w-4" />
-                <span className="text-sm">No hay token almacenado. Configure las credenciales abajo.</span>
+                <span className="text-sm">No hay token almacenado. Actualizá el token arriba.</span>
               </div>
             )}
           </CardContent>
         </Card>
 
-        <Card className="shadow-lg">
+        {/* Configuración completa (avanzada) */}
+        <Card className="shadow-lg border border-gray-200">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5 text-blue-600" />
-              Credenciales API
+            <CardTitle className="flex items-center gap-2 text-gray-700">
+              <Settings className="h-5 w-5" />
+              Configuración Completa (Avanzada)
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!fullConfigData.accessToken || !fullConfigData.accountId || !fullConfigData.appSecret) {
+                  toast({ title: "Campos requeridos", description: "Completá todos los campos", variant: "destructive" });
+                  return;
+                }
+                configMutation.mutate(fullConfigData);
+              }}
+              className="space-y-4"
+            >
               <div>
                 <Label htmlFor="accessToken">Access Token</Label>
                 <Input
                   id="accessToken"
                   type="password"
-                  value={formData.accessToken}
-                  onChange={(e) => handleInputChange('accessToken', e.target.value)}
+                  value={fullConfigData.accessToken}
+                  onChange={(e) => setFullConfigData(p => ({ ...p, accessToken: e.target.value }))}
                   placeholder="EAA..."
                   className="mt-1"
                 />
-                <p className="text-sm text-gray-500 mt-1">
-                  Token del Graph API Explorer con permisos ads_management
-                </p>
               </div>
-
               <div>
                 <Label htmlFor="accountId">Account ID</Label>
                 <Input
                   id="accountId"
-                  value={formData.accountId}
-                  onChange={(e) => handleInputChange('accountId', e.target.value)}
+                  value={fullConfigData.accountId}
+                  onChange={(e) => setFullConfigData(p => ({ ...p, accountId: e.target.value }))}
                   placeholder="act_123456789"
                   className="mt-1"
                 />
-                <p className="text-sm text-gray-500 mt-1">
-                  ID de tu cuenta publicitaria (formato: act_123456789)
-                </p>
               </div>
-
               <div>
                 <Label htmlFor="appSecret">App Secret</Label>
                 <Input
                   id="appSecret"
                   type="password"
-                  value={formData.appSecret}
-                  onChange={(e) => handleInputChange('appSecret', e.target.value)}
-                  placeholder="Obtén desde: developers.facebook.com/apps/..."
+                  value={fullConfigData.appSecret}
+                  onChange={(e) => setFullConfigData(p => ({ ...p, appSecret: e.target.value }))}
+                  placeholder="Desde developers.facebook.com"
                   className="mt-1"
                 />
-                <p className="text-sm text-gray-500 mt-1">
-                  Secret de tu aplicación Meta (opcional para funcionalidad básica)
-                </p>
               </div>
-
-              <Alert className="border-blue-200 bg-blue-50">
-                <Key className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Para obtener App Secret:</strong>
-                  <br />
-                  1. Ve a: <a href="https://developers.facebook.com/apps/1282943593506408/settings/basic/" target="_blank" className="text-blue-600 underline">developers.facebook.com/apps/1282943593506408/settings/basic/</a>
-                  <br />
-                  2. En "App Secret", haz clic en "Mostrar"
-                  <br />
-                  3. Copia el valor que aparece
-                </AlertDescription>
-              </Alert>
-
               <Button
                 type="submit"
                 disabled={configMutation.isPending}
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+                variant="outline"
+                className="w-full"
               >
-                {configMutation.isPending ? (
-                  "Configurando..."
-                ) : (
-                  <>
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Configurar Meta Ads API
-                  </>
-                )}
+                {configMutation.isPending ? "Configurando..." : "Reconfigurar servicio completo"}
               </Button>
             </form>
           </CardContent>
         </Card>
 
-        <Card className="shadow-lg">
+        {/* Info de configuración actual */}
+        <Card className="shadow-lg border border-gray-100">
           <CardHeader>
-            <CardTitle>Información de Configuración</CardTitle>
+            <CardTitle className="text-sm text-gray-600">Configuración del servidor</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CardContent>
+            <div className="grid grid-cols-2 gap-3">
               <div className="p-3 bg-green-50 rounded-lg">
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span className="text-sm font-medium">App ID</span>
+                  <span className="text-xs font-medium">App ID</span>
                 </div>
-                <p className="text-sm text-gray-600 mt-1">1282943593506408</p>
+                <p className="text-xs text-gray-600 mt-1 font-mono">1282943593506408</p>
               </div>
-              
               <div className="p-3 bg-green-50 rounded-lg">
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span className="text-sm font-medium">Account ID</span>
+                  <span className="text-xs font-medium">Account ID</span>
                 </div>
-                <p className="text-sm text-gray-600 mt-1">act_9696169217103588</p>
+                <p className="text-xs text-gray-600 mt-1 font-mono">act_9696169217103588</p>
               </div>
-              
-              <div className="p-3 bg-blue-50 rounded-lg">
+              <div className={`p-3 rounded-lg ${tokenStatus?.hasToken ? 'bg-green-50' : 'bg-orange-50'}`}>
                 <div className="flex items-center gap-2">
-                  <Key className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm font-medium">Access Token</span>
+                  {tokenStatus?.hasToken
+                    ? <CheckCircle className="h-4 w-4 text-green-600" />
+                    : <XCircle className="h-4 w-4 text-orange-600" />}
+                  <span className="text-xs font-medium">Access Token</span>
                 </div>
-                <p className="text-sm text-gray-600 mt-1">
-                  {tokenStatus?.hasToken ? '✓ Configurado en servidor' : '⚠ Pendiente'}
-                </p>
+                <p className="text-xs text-gray-600 mt-1">{tokenStatus?.hasToken ? '✓ Almacenado en servidor' : '⚠ Pendiente'}</p>
               </div>
-              
-              <div className="p-3 bg-orange-50 rounded-lg">
+              <div className="p-3 bg-green-50 rounded-lg">
                 <div className="flex items-center gap-2">
-                  <XCircle className="h-4 w-4 text-orange-600" />
-                  <span className="text-sm font-medium">App Secret</span>
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span className="text-xs font-medium">App Secret</span>
                 </div>
-                <p className="text-sm text-gray-600 mt-1">
-                  {formData.appSecret ? '✓ Configurado' : '⚠ Pendiente'}
-                </p>
+                <p className="text-xs text-gray-600 mt-1">✓ Configurado en servidor</p>
               </div>
             </div>
           </CardContent>

@@ -381,6 +381,63 @@ export function registerMetaAdsRoutes(app: Express) {
       res.status(500).json({ error: 'Failed to refresh token' });
     }
   });
+
+  // Actualizar token manualmente (cuando el token vence y el usuario pega uno nuevo)
+  app.post('/api/meta-ads/update-token', async (req, res) => {
+    try {
+      const { accessToken } = req.body;
+      if (!accessToken || typeof accessToken !== 'string' || accessToken.trim().length < 10) {
+        return res.status(400).json({ error: 'Se requiere un access token válido' });
+      }
+
+      const result = await metaTokenRefreshService.updateToken(accessToken.trim());
+      if (!result.success) {
+        return res.status(400).json({ error: result.message });
+      }
+
+      // Reinicializar el servicio de Meta Ads con el nuevo token
+      const storedToken = await metaTokenRefreshService.getToken();
+      const accountId = process.env.META_AD_ACCOUNT_ID;
+      if (storedToken && accountId) {
+        const { MetaAdsService } = await import('./meta-ads-service');
+        const newService = new MetaAdsService({
+          accessToken: storedToken,
+          accountId,
+          appSecret: process.env.META_APP_SECRET,
+        });
+        global.metaAdsService = newService;
+        console.log('✅ Servicio Meta Ads reinicializado con nuevo token');
+      }
+
+      const status = await metaTokenRefreshService.getStatus();
+      res.json({ success: true, message: result.message, ...status });
+    } catch (error) {
+      console.error('Error actualizando token:', error);
+      res.status(500).json({ error: `Error actualizando token: ${error instanceof Error ? error.message : 'Error desconocido'}` });
+    }
+  });
+
+  // Verificar token con Meta (debug_token)
+  app.get('/api/meta-ads/verify-token', async (req, res) => {
+    try {
+      const stored = await metaTokenRefreshService.getToken();
+      if (!stored) {
+        return res.json({ valid: false, message: 'No hay token almacenado' });
+      }
+      const debugInfo = await metaTokenRefreshService.debugToken(stored);
+      if (!debugInfo) {
+        return res.json({ valid: false, message: 'No se pudo verificar con Meta (APP_ID/SECRET no configurados)' });
+      }
+      res.json({
+        valid: debugInfo.is_valid,
+        expiresAt: debugInfo.expires_at ? new Date(debugInfo.expires_at * 1000) : null,
+        type: debugInfo.type,
+        error: debugInfo.error?.message || null,
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Error verificando token' });
+    }
+  });
 }
 
 // Cleanup function para cerrar recursos
