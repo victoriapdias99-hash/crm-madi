@@ -1005,28 +1005,15 @@ export default function CampanasFinalizadas() {
                                     );
                                   })()}
                                   {isVisibleCol('valorLead') && (() => {
-                                    const vl = calcularValorLead(fb, safeEnv);
+                                    const vl = parseFloat(String(data.costeVenta || 0)) || 0;
                                     return (
                                       <td className="px-4 py-3 text-center text-sm">
-                                        {fb > 0 && safeEnv > 0 ? (
-                                          <TooltipProvider>
-                                            <Tooltip>
-                                              <TooltipTrigger asChild>
-                                                <span className="font-semibold text-blue-600 cursor-help">{fmtCur(vl)}</span>
-                                              </TooltipTrigger>
-                                              <TooltipContent side="top" className="text-xs">
-                                                <p>Facturación Bruta: {fmtCur(fb)}</p>
-                                                <p>Leads enviados: {safeEnv}</p>
-                                                <p>= {fmtCur(fb)} ÷ {safeEnv} leads</p>
-                                              </TooltipContent>
-                                            </Tooltip>
-                                          </TooltipProvider>
-                                        ) : <span className="text-slate-400">-</span>}
+                                        {vl > 0 ? <span className="font-semibold text-blue-600">{fmtCur(vl)}</span> : <span className="text-slate-400">-</span>}
                                       </td>
                                     );
                                   })()} 
                                   {isVisibleCol('valorObjetivo') && (() => {
-                                    const vl = calcularValorLead(fb, safeEnv);
+                                    const vl = parseFloat(String(data.costeVenta || 0)) || 0;
                                     const vo = calcularValorObjetivo(spend, safeEnv, cplObjetivoMargen / 100, tf);
                                     const bajoObj = hasMeta && safeEnv > 0 && vo > 0 && vl < vo;
                                     return (

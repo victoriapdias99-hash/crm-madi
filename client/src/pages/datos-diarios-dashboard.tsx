@@ -2098,28 +2098,15 @@ export default function DatosDiariosDashboard() {
                                 );
                               })()}
                               {isVisibleP('valorLead') && (() => {
-                                const vl = calcularValorLead(fb, safeEnv);
+                                const vl = parseFloat(String(data.costeVenta || 0)) || 0;
                                 return (
                                   <td className="border border-blue-200 dark:border-blue-600 p-2 text-center text-sm">
-                                    {fb > 0 && safeEnv > 0 ? (
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <span className="font-semibold text-blue-600 dark:text-blue-400 cursor-help">{fmtCur(vl)}</span>
-                                          </TooltipTrigger>
-                                          <TooltipContent side="top" className="text-xs">
-                                            <p>Facturación Bruta: {fmtCur(fb)}</p>
-                                            <p>Leads enviados: {safeEnv}</p>
-                                            <p>= {fmtCur(fb)} ÷ {safeEnv} leads</p>
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
-                                    ) : <span className="text-gray-400">-</span>}
+                                    {vl > 0 ? <span className="font-semibold text-blue-600 dark:text-blue-400">{fmtCur(vl)}</span> : <span className="text-gray-400">-</span>}
                                   </td>
                                 );
                               })()} 
                               {isVisibleP('valorObjetivo') && (() => {
-                                const vl = calcularValorLead(fb, safeEnv);
+                                const vl = parseFloat(String(data.costeVenta || 0)) || 0;
                                 const vo = calcularValorObjetivo(spend, safeEnv, cplObjetivoMargen / 100, tf);
                                 const bajoObj = hasMeta && safeEnv > 0 && vo > 0 && vl < vo;
                                 return (
@@ -2621,28 +2608,15 @@ export default function DatosDiariosDashboard() {
                                 );
                               })()}
                               {isVisibleF('valorLead') && (() => {
-                                const vl = calcularValorLead(fb, safeEnv);
+                                const vl = parseFloat(String(data.costeVenta || 0)) || 0;
                                 return (
                                   <td className="border border-blue-200 dark:border-blue-600 p-2 text-center text-sm">
-                                    {fb > 0 && safeEnv > 0 ? (
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <span className="font-semibold text-blue-600 dark:text-blue-400 cursor-help">{fmtCur(vl)}</span>
-                                          </TooltipTrigger>
-                                          <TooltipContent side="top" className="text-xs">
-                                            <p>Facturación Bruta: {fmtCur(fb)}</p>
-                                            <p>Leads enviados: {safeEnv}</p>
-                                            <p>= {fmtCur(fb)} ÷ {safeEnv} leads</p>
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
-                                    ) : <span className="text-gray-400">-</span>}
+                                    {vl > 0 ? <span className="font-semibold text-blue-600 dark:text-blue-400">{fmtCur(vl)}</span> : <span className="text-gray-400">-</span>}
                                   </td>
                                 );
                               })()} 
                               {isVisibleF('valorObjetivo') && (() => {
-                                const vl = calcularValorLead(fb, safeEnv);
+                                const vl = parseFloat(String(data.costeVenta || 0)) || 0;
                                 const vo = calcularValorObjetivo(spend, safeEnv, cplObjetivoMargen / 100, tf);
                                 const bajoObj = hasMeta && safeEnv > 0 && vo > 0 && vl < vo;
                                 return (
